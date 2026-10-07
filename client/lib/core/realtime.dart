@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 
 import '../models/models.dart';
+import 'api.dart';
 import 'config.dart';
-import 'session.dart';
 
 /// Подключение к /hubs/play. Ходы и чат идут через REST, хаб — для подписок и обновлений.
 class Realtime {
@@ -32,18 +32,32 @@ class Realtime {
 
   Stream<bool> get connected => _connected.stream;
 
-  Future<HubConnection> _connection() async {
-    final existing = _hub;
-    if (existing != null && existing.state == HubConnectionState.Connected) return existing;
-    if (existing != null && existing.state != HubConnectionState.Disconnected) {
-      await existing.stop();
+  Future<HubConnection>? _connecting;
+  Timer? _restart;
+  int _attempt = 0;
+  bool _stopped = false;
+
+  /// Готовое подключение; одновременные вызовы ждут одно и то же.
+  Future<HubConnection> _connection() {
+    final hub = _hub;
+    if (hub != null && hub.state == HubConnectionState.Connected) return Future.value(hub);
+    return _connecting ??= _connect().whenComplete(() => _connecting = null);
+  }
+
+  Future<HubConnection> _connect() async {
+    _stopped = false;
+    final old = _hub;
+    _hub = null;
+    if (old != null && old.state != HubConnectionState.Disconnected) {
+      await old.stop();
     }
 
     final hub = HubConnectionBuilder()
         .withUrl(
           AppConfig.hub,
           options: HttpConnectionOptions(
-            accessTokenFactory: () async => _ref.read(sessionProvider).accessToken ?? '',
+            // Токен живёт 15 минут: при каждом (пере)подключении берём свежий.
+            accessTokenFactory: () => _ref.read(apiProvider).freshAccessToken(),
           ),
         )
         .withAutomaticReconnect()
@@ -71,19 +85,54 @@ class Realtime {
     });
     hub.onreconnected(({connectionId}) async {
       _connected.add(true);
-      for (final id in _lobbies) {
-        await hub.invoke('SubscribeLobby', args: <Object>[id]);
-      }
-      for (final id in _games) {
-        await hub.invoke('SubscribeGame', args: <Object>[id]);
-      }
+      await _resubscribe(hub);
     });
     hub.onreconnecting(({error}) => _connected.add(false));
+    // Автоматические попытки кончились — пересоздаём подключение сами, пока есть подписки.
+    hub.onclose(({error}) {
+      _connected.add(false);
+      if (!_stopped && identical(_hub, hub)) _scheduleRestart();
+    });
 
     await hub.start();
     _hub = hub;
+    _attempt = 0;
     _connected.add(true);
     return hub;
+  }
+
+  void _scheduleRestart() {
+    if (_lobbies.isEmpty && _games.isEmpty) return;
+    _restart?.cancel();
+    final delay = Duration(seconds: [2, 5, 10, 30][_attempt.clamp(0, 3)]);
+    _attempt++;
+    _restart = Timer(delay, () async {
+      try {
+        await resync();
+      } catch (_) {
+        if (!_stopped) _scheduleRestart();
+      }
+    });
+  }
+
+  /// Подписаться заново и разослать свежие снимки — например, после возврата приложения из фона.
+  Future<void> resync() async {
+    if (_lobbies.isEmpty && _games.isEmpty) return;
+    await _resubscribe(await _connection());
+  }
+
+  Future<void> _resubscribe(HubConnection hub) async {
+    for (final id in _lobbies.toList()) {
+      final r = await hub.invoke('SubscribeLobby', args: <Object>[id]);
+      if (r is Map) _lobbyUpdates.add(Lobby.fromJson(Map<String, dynamic>.from(r)));
+    }
+    for (final id in _games.toList()) {
+      final r = await hub.invoke('SubscribeGame', args: <Object>[id]);
+      if (r is Map) {
+        final snap = GameSnapshot.fromJson(Map<String, dynamic>.from(r));
+        _views.add((view: snap.view, deadline: snap.deadline));
+      }
+    }
   }
 
   Future<Lobby> subscribeLobby(String lobbyId) async {
@@ -111,6 +160,8 @@ class Realtime {
   void forgetGame(String gameId) => _games.remove(gameId);
 
   Future<void> disconnect() async {
+    _stopped = true;
+    _restart?.cancel();
     _lobbies.clear();
     _games.clear();
     await _hub?.stop();
