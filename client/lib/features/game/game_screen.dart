@@ -147,8 +147,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final stage = v.finale?.currentStage;
     if (v.can('ChooseTruth') || v.can('NameTruth')) {
       setState(() => truth[row] = column);
-    } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row && stage.candidateColumns.contains(column)) {
-      setState(() => voteColumn = column);
+    } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row) {
+      // В ряду голосования выбираются только кандидаты; остальные карты не реагируют.
+      if (stage.candidateColumns.contains(column)) setState(() => voteColumn = column);
     } else if (v.me != null) {
       MarkSheet.show(context, this, cardId);
     }
