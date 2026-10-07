@@ -45,7 +45,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
         controller: scroll,
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Настройки партии', style: Theme.of(context).textTheme.titleLarge),
+          Text(widget.inGame ? 'НАСТРОЙКИ ПАРТИИ' : 'НОВАЯ ИГРА', style: heading(22, spacing: 1.5)),
           if (_rulesLocked)
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -71,7 +71,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
             onChanged: (v) => setState(() => s = v == null ? s.copyWith(clearRounds: true) : s.copyWith(rounds: v)),
           ),
           const Divider(),
-          Text('Роли', style: Theme.of(context).textTheme.titleMedium),
+          Text('РОЛИ', style: sectionLabel(size: 13)),
           SwitchListTile(
             title: const Text('Убийца'),
             subtitle: const Text('Без Убийцы — кооперативная игра'),
@@ -106,7 +106,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
             ),
           ),
           const Divider(),
-          Text('Обсуждение и темп', style: Theme.of(context).textTheme.titleMedium),
+          Text('ОБСУЖДЕНИЕ И ТЕМП', style: sectionLabel(size: 13)),
           const SizedBox(height: 8),
           SegmentedButton<String>(
             segments: const [
@@ -135,7 +135,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
             _Stepper(label: 'Голосование, сек', value: s.timer('voting', 60), min: 15, max: 600, step: 15, onChanged: (v) => _timer('voting', v)),
           ],
           const Divider(),
-          Text('Наборы карт', style: Theme.of(context).textTheme.titleMedium),
+          Text('НАБОРЫ КАРТ', style: sectionLabel(size: 13)),
           for (final e in _sets.entries)
             CheckboxListTile(
               title: Text(e.value),
@@ -149,7 +149,11 @@ class _SettingsSheetState extends State<SettingsSheet> {
                     },
             ),
           const SizedBox(height: 16),
-          FilledButton(onPressed: () => Navigator.pop(context, s), child: const Text('Сохранить')),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+            onPressed: () => Navigator.pop(context, s),
+            child: const Text('Сохранить'),
+          ),
         ],
       ),
     );
