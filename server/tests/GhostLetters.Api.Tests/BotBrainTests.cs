@@ -158,7 +158,8 @@ public sealed class BotBrainTests
         for (var seed = 0; seed < 20; seed++)
         {
             var line = BotPlayer.Say(killer, new Random(seed), Tags)!.Value;
-            line.Cards.Should().ContainSingle().Which.Should().NotBeOneOf("knife", "cat");
+            line.Cards.Should().ContainSingle();
+            new[] { "knife", "cat" }.Should().NotContain(line.Cards[0], "Убийца хвалит ложную карту");
         }
 
         BotPlayer.Say(ghost, new Random(8), Tags).Should().BeNull();
