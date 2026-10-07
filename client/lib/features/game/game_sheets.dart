@@ -8,6 +8,7 @@ import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../core/voice.dart';
+import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
