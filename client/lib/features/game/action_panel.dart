@@ -285,6 +285,13 @@ class ActionPanel extends StatelessWidget {
             ),
           ),
         ]),
+        if (v.raisedHands.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Руку подняли: ${v.raisedHands.map(screen.nick).join(', ')}',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+        ],
         if (v.can('GiveFloor')) ...[
           const SizedBox(height: 10),
           Text('Передать слово:', style: sectionLabel()),
