@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,9 +25,21 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _code = TextEditingController();
   bool _asTable = false;
+  Timer? _refresh;
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Список партий сам обновляется: в походовой игре так видно, что настал ваш ход.
+    _refresh = Timer.periodic(const Duration(seconds: 30), (_) => ref.invalidate(myGamesProvider));
+    _lifecycle = AppLifecycleListener(onResume: () => ref.invalidate(myGamesProvider));
+  }
 
   @override
   void dispose() {
+    _refresh?.cancel();
+    _lifecycle.dispose();
     _code.dispose();
     super.dispose();
   }
