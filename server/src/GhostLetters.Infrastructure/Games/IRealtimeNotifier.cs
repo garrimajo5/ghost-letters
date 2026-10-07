@@ -11,7 +11,7 @@ public interface IRealtimeNotifier
     Task GameStartedAsync(Guid lobbyId, Guid gameId, CancellationToken ct);
 
     /// <summary>Новое состояние партии: каждому игроку — его проекция, экрану стола — общая.</summary>
-    Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, CancellationToken ct);
+    Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, DateTimeOffset? deadline, CancellationToken ct);
 
     /// <summary>Сообщение чата: адресатам по id и, если toTable, экрану стола.</summary>
     Task ChatAsync(ChatMessageDto message, IReadOnlyList<Guid> recipients, bool toTable, CancellationToken ct);
@@ -24,7 +24,8 @@ public sealed class NullRealtimeNotifier : IRealtimeNotifier
 
     public Task GameStartedAsync(Guid lobbyId, Guid gameId, CancellationToken ct) => Task.CompletedTask;
 
-    public Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, CancellationToken ct) => Task.CompletedTask;
+    public Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, DateTimeOffset? deadline, CancellationToken ct) =>
+        Task.CompletedTask;
 
     public Task ChatAsync(ChatMessageDto message, IReadOnlyList<Guid> recipients, bool toTable, CancellationToken ct) =>
         Task.CompletedTask;

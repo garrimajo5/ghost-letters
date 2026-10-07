@@ -247,7 +247,7 @@ public sealed class LobbyService(
         await db.SaveChangesAsync(ct);
         await PublishAsync(lobbyId, ct);
         await notifier.GameStartedAsync(lobbyId, gameId, ct);
-        await notifier.GameChangedAsync(state, [new GameEvent("GameStarted")], ct);
+        await notifier.GameChangedAsync(state, [new GameEvent("GameStarted")], game.PhaseDeadline, ct);
         return new StartGameResponse(gameId);
     }
 

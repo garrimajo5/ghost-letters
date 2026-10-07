@@ -79,3 +79,19 @@ dotnet ef migrations add <Name> --project src/GhostLetters.Infrastructure --star
 - `GET /api/v1/me`, `PATCH /api/v1/me` `{nickname?, avatarColor?}` — с `Authorization: Bearer <accessToken>`
 
 Ключ подписи — `Jwt:SigningKey` (не короче 32 символов). В Development задан тестовый ключ, в продакшене — только через секреты.
+
+## Клиент (Flutter)
+
+Код — в `client/`. Платформенные папки (`android/`, `ios/`) создаются workflow «Flutter scaffold».
+
+Локальный запуск на эмуляторе Android:
+
+```bash
+docker compose up -d --build        # сервер и база на http://localhost:8080
+cd client
+flutter pub get
+flutter run                          # эмулятор видит компьютер по адресу 10.0.2.2
+```
+
+Другой адрес сервера (например, телефон в той же Wi-Fi сети):
+`flutter run --dart-define=API_URL=http://192.168.1.10:8080`.

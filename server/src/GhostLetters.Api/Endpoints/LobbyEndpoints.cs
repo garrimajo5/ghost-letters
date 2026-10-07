@@ -47,11 +47,8 @@ public static class LobbyEndpoints
     {
         var games = api.MapGroup("/games/{id:guid}").WithTags("Games").RequireAuthorization();
 
-        games.MapGet("/view", async (Guid id, HttpContext http, GameService service, CancellationToken ct) =>
-        {
-            var view = await service.GetViewAsync(id, http.User.UserId(), ct);
-            return new { view, deadline = await service.GetDeadlineAsync(id, ct) };
-        }).WithName("GetGameView");
+        games.MapGet("/view", (Guid id, HttpContext http, GameService service, CancellationToken ct) =>
+            service.SnapshotAsync(id, http.User.UserId(), ct)).WithName("GetGameView");
 
         games.MapPost("/commands", (Guid id, CommandRequest request, HttpContext http, GameService service, CancellationToken ct) =>
             service.ExecuteAsync(id, http.User.UserId(), request, ct)).WithName("SendCommand");

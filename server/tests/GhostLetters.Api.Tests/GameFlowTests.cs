@@ -194,8 +194,11 @@ public sealed class GameFlowTests(PostgresFixture postgres) : IAsyncLifetime
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var pushed = await views.Reader.ReadAsync(timeout.Token);
-        pushed.GetProperty("version").GetInt32().Should().Be(1);
-        pushed.GetProperty("me").Id("id").Should().Be(watcher.Id);
+        pushed.GetProperty("view").GetProperty("version").GetInt32().Should().Be(1);
+        pushed.GetProperty("view").GetProperty("me").Id("id").Should().Be(watcher.Id);
+        pushed.GetProperty("deadline").ValueKind.Should().Be(JsonValueKind.String);
+        snapshot.GetProperty("roster").GetArrayLength().Should().Be(4);
+        snapshot.GetProperty("roster")[0].Str("nickname").Should().Be("Игрок 1");
 
         var payload = JsonSerializer.SerializeToElement(new { columns = new[] { 0, 0, 0, 0 } });
         var error = async () => await actor.InvokeAsync<JsonElement>("Command", game.GameId, "ChooseTruth", payload, null, null);
