@@ -1,0 +1,24 @@
+name: iOS build
+
+# Проверка, что клиент собирается под iPhone (без подписи) — задел этапа 6.
+# Запускается в PR, меняющих client/ios, и вручную (Actions → iOS build → Run workflow).
+on:
+  pull_request:
+    paths: ['client/ios/**', 'client/pubspec.yaml', '.github/workflows/ios-build.yml']
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build (no codesign)
+        run: flutter build ios --release --no-codesign
