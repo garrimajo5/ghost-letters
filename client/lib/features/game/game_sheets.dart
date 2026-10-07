@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,7 @@ import '../../core/api.dart';
 import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
+import '../../core/voice.dart';
 import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
@@ -162,7 +165,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
   }
 }
 
-/// Чат партии: общий канал и, для команды Убийцы, свой канал.
+/// Чат партии: общий канал и, для команды Убийцы, свой канал. Текст, голосовые и упоминания карт.
 class ChatSheet extends ConsumerStatefulWidget {
   const ChatSheet({super.key, required this.screen});
 
@@ -181,30 +184,118 @@ class ChatSheet extends ConsumerStatefulWidget {
 
 class _ChatSheetState extends ConsumerState<ChatSheet> {
   final _text = TextEditingController();
+  final _cards = <String>[];
   String _channel = 'public';
+  bool _recording = false;
+  bool _sending = false;
+  Timer? _ticker;
+  late final Voice _voice;
+
+  @override
+  void initState() {
+    super.initState();
+    _voice = ref.read(voiceProvider);
+  }
 
   @override
   void dispose() {
+    _ticker?.cancel();
+    if (_recording) _voice.cancel();
     _text.dispose();
     super.dispose();
   }
+
+  String get _gameId => widget.screen.widget.gameId;
 
   bool get _killerTeam => const {'Killer', 'Accomplice'}.contains(widget.screen.view?.me?.role);
 
   Future<void> _send() async {
     final text = _text.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _cards.isEmpty) return;
     final sent = await runAction(
       context,
-      () => ref.read(apiProvider).sendChat(widget.screen.widget.gameId, text, channel: _channel),
+      () => ref.read(apiProvider).sendChat(_gameId, text.isEmpty ? '🃏' : text, channel: _channel, cards: List.of(_cards)),
     );
-    if (sent != null) _text.clear();
+    if (sent != null && mounted) {
+      _text.clear();
+      setState(_cards.clear);
+    }
+  }
+
+  Future<void> _startRecording() async {
+    final ok = await runAction(context, _voice.start);
+    if (ok != true) {
+      if (ok == false && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет доступа к микрофону')));
+      }
+      return;
+    }
+
+    setState(() => _recording = true);
+    _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      if (!mounted) return;
+      if (_voice.elapsed >= Voice.maxDuration) {
+        _stopRecording(send: true);
+      } else {
+        setState(() {});
+      }
+    });
+  }
+
+  Future<void> _stopRecording({required bool send}) async {
+    _ticker?.cancel();
+    final voice = _voice;
+    setState(() => _recording = false);
+    if (!send) {
+      await voice.cancel();
+      return;
+    }
+
+    final take = await voice.stop();
+    if (take == null || !mounted) return;
+    setState(() => _sending = true);
+    await runAction(context, () async {
+      final api = ref.read(apiProvider);
+      final mediaId = await api.uploadVoice(take.path, take.durationMs);
+      await api.sendChat(_gameId, '', channel: _channel, cards: List.of(_cards), mediaId: mediaId);
+    });
+    if (mounted) {
+      setState(() {
+        _sending = false;
+        _cards.clear();
+      });
+    }
+  }
+
+  Future<void> _pickCards() async {
+    final v = widget.screen.view;
+    if (v == null) return;
+    final options = <String>{
+      for (final row in v.board) ...row.cards,
+      for (final h in v.hints) ...h.cards,
+      ...?v.me?.hand,
+    }.toList();
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => GridView.count(
+        crossAxisCount: 6,
+        padding: const EdgeInsets.all(8),
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
+        children: [
+          for (final c in options)
+            GestureDetector(onTap: () => Navigator.pop(context, c), child: CardImage(cardId: c, size: 56)),
+        ],
+      ),
+    );
+    if (picked != null && !_cards.contains(picked) && _cards.length < 5) setState(() => _cards.add(picked));
   }
 
   @override
   Widget build(BuildContext context) {
     final screen = widget.screen;
     final canWrite = screen.view?.me != null;
+    final voice = _voice;
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
@@ -228,43 +319,98 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
               builder: (context, _) {
                 final messages = screen.chat.where((m) => m.channel == _channel).toList();
                 return ListView.builder(
-                reverse: true,
-                padding: const EdgeInsets.all(8),
-                itemCount: messages.length,
-                itemBuilder: (context, i) {
-                  final m = messages[messages.length - 1 - i];
-                  final author = screen.rosterOf(m.authorId);
-                  return ListTile(
-                    leading: Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#5C7C99', size: 32),
-                    title: Text(author?.nickname ?? 'Система', style: Theme.of(context).textTheme.labelMedium),
-                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(m.kind == 'voice' ? '🎤 Голосовое сообщение' : (m.text ?? '')),
-                      if (m.cardIds.isNotEmpty)
-                        Wrap(spacing: 4, children: [for (final c in m.cardIds) CardImage(cardId: c, size: 36)]),
-                    ]),
-                  );
-                },
-              );
+                  reverse: true,
+                  padding: const EdgeInsets.all(8),
+                  itemCount: messages.length,
+                  itemBuilder: (context, i) {
+                    final m = messages[messages.length - 1 - i];
+                    final author = screen.rosterOf(m.authorId);
+                    return ListTile(
+                      leading: Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#5C7C99', size: 32),
+                      title: Text(author?.nickname ?? 'Система', style: Theme.of(context).textTheme.labelMedium),
+                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        if (m.isVoice)
+                          _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
+                        else if ((m.text ?? '').isNotEmpty)
+                          Text(m.text!),
+                        if (m.cardIds.isNotEmpty)
+                          Wrap(spacing: 4, children: [for (final c in m.cardIds) CardImage(cardId: c, size: 36)]),
+                      ]),
+                    );
+                  },
+                );
               },
             ),
           ),
+          if (canWrite && _cards.isNotEmpty)
+            SizedBox(
+              height: 52,
+              child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
+                for (final c in _cards)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: GestureDetector(onTap: () => setState(() => _cards.remove(c)), child: CardImage(cardId: c, size: 48)),
+                  ),
+              ]),
+            ),
           if (canWrite)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _text,
-                    maxLength: 1000,
-                    decoration: const InputDecoration(hintText: 'Сообщение', counterText: ''),
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-                IconButton(onPressed: _send, icon: const Icon(Icons.send)),
-              ]),
+              child: _recording
+                  ? Row(children: [
+                      const Icon(Icons.fiber_manual_record, color: AppTheme.danger),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text('Запись ${voice.elapsed.inSeconds} / ${Voice.maxDuration.inSeconds} с')),
+                      TextButton(onPressed: () => _stopRecording(send: false), child: const Text('Отмена')),
+                      FilledButton.icon(
+                        onPressed: () => _stopRecording(send: true),
+                        icon: const Icon(Icons.send),
+                        label: const Text('Отправить'),
+                      ),
+                    ])
+                  : Row(children: [
+                      IconButton(tooltip: 'Упомянуть карту', onPressed: _pickCards, icon: const Icon(Icons.style_outlined)),
+                      Expanded(
+                        child: TextField(
+                          controller: _text,
+                          maxLength: 1000,
+                          decoration: const InputDecoration(hintText: 'Сообщение', counterText: ''),
+                          onSubmitted: (_) => _send(),
+                        ),
+                      ),
+                      if (_sending)
+                        const Padding(padding: EdgeInsets.all(12), child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                      else
+                        IconButton(tooltip: 'Голосовое', onPressed: _startRecording, icon: const Icon(Icons.mic_none)),
+                      IconButton(onPressed: _send, icon: const Icon(Icons.send)),
+                    ]),
             ),
         ]),
       ),
     );
   }
+}
+
+/// Голосовое в ленте: кнопка воспроизведения и длительность.
+class _VoiceTile extends StatelessWidget {
+  const _VoiceTile({required this.voice, required this.mediaId, required this.durationMs});
+
+  final Voice voice;
+  final String mediaId;
+  final int durationMs;
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<String?>(
+        stream: voice.playing,
+        builder: (context, snap) {
+          final playing = snap.data == mediaId;
+          return Row(mainAxisSize: MainAxisSize.min, children: [
+            IconButton(
+              icon: Icon(playing ? Icons.stop_circle_outlined : Icons.play_circle_outline),
+              onPressed: () => runAction(context, () => playing ? voice.stopPlaying() : voice.play(mediaId)),
+            ),
+            Text('🎤 ${(durationMs / 1000).toStringAsFixed(0)} с'),
+          ]);
+        },
+      );
 }

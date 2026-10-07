@@ -639,6 +639,8 @@ class ChatMessage {
     required this.cardIds,
     required this.createdAt,
     required this.round,
+    this.mediaId,
+    this.durationMs,
   });
 
   factory ChatMessage.fromJson(Json j) => ChatMessage(
@@ -650,6 +652,8 @@ class ChatMessage {
         cardIds: _strings(j['cardIds']),
         createdAt: _date(j['createdAt']) ?? DateTime.now(),
         round: (j['round'] as num?)?.toInt() ?? 0,
+        mediaId: j['mediaId'] as String?,
+        durationMs: (j['durationMs'] as num?)?.toInt(),
       );
 
   final String id;
@@ -660,6 +664,12 @@ class ChatMessage {
   final List<String> cardIds;
   final DateTime createdAt;
   final int round;
+
+  /// Голосовое: id файла на сервере и длительность.
+  final String? mediaId;
+  final int? durationMs;
+
+  bool get isVoice => kind == 'voice' && mediaId != null;
 }
 
 class MyGame {
