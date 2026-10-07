@@ -147,8 +147,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final stage = v.finale?.currentStage;
     if (v.can('ChooseTruth') || v.can('NameTruth')) {
       setState(() => truth[row] = column);
-    } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row && stage.candidateColumns.contains(column)) {
-      setState(() => voteColumn = column);
+    } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row) {
+      // В ряду голосования выбираются только кандидаты; остальные карты не реагируют.
+      if (stage.candidateColumns.contains(column)) setState(() => voteColumn = column);
     } else if (v.me != null) {
       MarkSheet.show(context, this, cardId);
     }
@@ -244,6 +245,7 @@ class _PlayersStrip extends StatelessWidget {
         children: [
           for (final p in [...v.players]..sort((a, b) => a.seat.compareTo(b.seat)))
             GestureDetector(
+              key: Key('player-${p.id}'),
               onTap: () => onTap(p.id),
               child: Container(
                 width: 72,
@@ -316,6 +318,7 @@ class _Board extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(3),
                 child: GestureDetector(
+                  key: Key('board-$r-$c'),
                   onTap: () => onTap(r, c, v.board[r].cards[c]),
                   onLongPress: v.me == null
                       ? null
