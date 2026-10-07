@@ -447,18 +447,64 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                     final m = messages[messages.length - 1 - i];
                     final author = screen.rosterOf(m.authorId);
                     final quotable = m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
-                    return ListTile(
+                    final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
+                    if (m.authorId == null) {
+                      return Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99)),
+                          child: Text(m.text ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                        ),
+                      );
+                    }
+                    final bubble = GestureDetector(
                       onLongPress: quotable ? () => _quoteToNote(m) : null,
-                      leading: Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#5C7C99', size: 32),
-                      title: Text(author?.nickname ?? 'Система', style: Theme.of(context).textTheme.labelMedium),
-                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (m.isVoice)
-                          _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
-                        else if ((m.text ?? '').isNotEmpty)
-                          Text(m.text!),
-                        if (m.cardIds.isNotEmpty)
-                          Wrap(spacing: 4, children: [for (final c in m.cardIds) CardImage(cardId: c, size: 36)]),
-                      ]),
+                      child: Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                        decoration: BoxDecoration(
+                          color: mine ? AppColors.border : AppColors.surface,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(14),
+                            topRight: const Radius.circular(14),
+                            bottomLeft: Radius.circular(mine ? 14 : 4),
+                            bottomRight: Radius.circular(mine ? 4 : 14),
+                          ),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          if (!mine)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(author?.nickname ?? '?', style: const TextStyle(fontSize: 12, color: AppColors.ice)),
+                            ),
+                          if (m.isVoice)
+                            _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
+                          else if ((m.text ?? '').isNotEmpty)
+                            Text(m.text!, style: const TextStyle(fontSize: 14, height: 1.4)),
+                          if (m.cardIds.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Wrap(spacing: 4, runSpacing: 4, children: [
+                                for (final c in m.cardIds) CardImage(cardId: c, size: 44, radius: 8),
+                              ]),
+                            ),
+                        ]),
+                      ),
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(
+                        mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (!mine) ...[
+                            Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#3D6A99', size: 28),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(child: bubble),
+                        ],
+                      ),
                     );
                   },
                 );
@@ -492,26 +538,61 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                       ),
                     ])
                   : Row(children: [
-                      IconButton(tooltip: 'Упомянуть карту', onPressed: _pickCards, icon: const Icon(Icons.style_outlined)),
                       Expanded(
                         child: TextField(
                           controller: _text,
                           maxLength: 1000,
-                          decoration: const InputDecoration(hintText: 'Сообщение', counterText: ''),
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: _channel == 'public' ? 'Сообщение всем' : 'Сообщение команде',
+                            counterText: '',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.amber)),
+                          ),
                           onSubmitted: (_) => _send(),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      _RoundButton(tooltip: 'Упомянуть карту', icon: Icons.style_outlined, onPressed: _pickCards),
+                      const SizedBox(width: 6),
                       if (_sending)
-                        const Padding(padding: EdgeInsets.all(12), child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                        const SizedBox(width: 44, child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))))
                       else
-                        IconButton(tooltip: 'Голосовое', onPressed: _startRecording, icon: const Icon(Icons.mic_none)),
-                      IconButton(onPressed: _send, icon: const Icon(Icons.send)),
+                        _RoundButton(tooltip: 'Голосовое', icon: Icons.mic_none, onPressed: _startRecording, filled: true),
+                      const SizedBox(width: 6),
+                      _RoundButton(tooltip: 'Отправить', icon: Icons.send, onPressed: _send),
                     ]),
             ),
         ]),
       ),
     );
   }
+}
+
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.tooltip, required this.icon, required this.onPressed, this.filled = false});
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Material(
+          color: filled ? AppColors.amber : AppColors.surface,
+          shape: CircleBorder(side: filled ? BorderSide.none : const BorderSide(color: AppColors.border)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: SizedBox.square(dimension: 44, child: Icon(icon, size: 20, color: filled ? AppColors.onAmber : AppColors.ice)),
+          ),
+        ),
+      );
 }
 
 /// Голосовое в ленте: кнопка воспроизведения и длительность.
