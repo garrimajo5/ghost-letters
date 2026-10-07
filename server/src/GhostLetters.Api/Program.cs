@@ -70,6 +70,7 @@ api.MapGet("/rules/roles", (int players, bool? killer, bool? witness, bool? expe
 api.MapAuth();
 api.MapLobbies();
 api.MapGames();
+api.MapSocial();
 app.MapHub<PlayHub>(PlayHub.Path);
 
 await app.Services.MigrateDatabaseAsync(app.Configuration);

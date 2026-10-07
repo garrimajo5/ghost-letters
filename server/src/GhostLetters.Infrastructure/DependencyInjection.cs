@@ -33,6 +33,11 @@ public static class DependencyInjection
         services.AddScoped<CardCatalog>();
         services.AddScoped<LobbyService>();
         services.AddScoped<GameService>();
+        services.AddScoped<GameRecorder>();
+        services.AddScoped<ChatService>();
+        services.AddScoped<NotesService>();
+        services.AddScoped<ProfileService>();
+        services.AddSingleton<IMediaStorage, FileMediaStorage>();
         services.TryAddSingleton<IRealtimeNotifier, NullRealtimeNotifier>();
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
