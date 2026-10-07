@@ -115,6 +115,23 @@ class Api {
 
   // ---------- Лобби ----------
 
+  /// Состав ролей по числу игроков и настройкам (для экрана лобби).
+  Future<RolesPreview> previewRoles(int players, RoleOptions roles) async {
+    final r = await get('/rules/roles', query: {
+      'players': players,
+      'killer': roles.killerEnabled,
+      'witness': roles.useWitness,
+      'expert': roles.useExpert,
+      'blackmailer': roles.useBlackmailer,
+      'imitator': roles.toJson()['imitator'],
+    }) as Json;
+    return RolesPreview(
+      cooperative: r['cooperative'] as bool,
+      rounds: (r['rounds'] as num).toInt(),
+      roles: (r['roles'] as List).map((e) => e.toString()).toList(),
+    );
+  }
+
   Future<Lobby> createLobby(String title, LobbySettings settings) async =>
       Lobby.fromJson(await post('/lobbies', {'title': title, 'settings': settings.toJson()}) as Json);
 
@@ -164,3 +181,15 @@ class Api {
 }
 
 final apiProvider = Provider<Api>((ref) => Api(ref));
+
+class RolesPreview {
+  const RolesPreview({required this.cooperative, required this.rounds, required this.roles});
+
+  final bool cooperative;
+  final int rounds;
+  final List<String> roles;
+}
+
+final rolesPreviewProvider = FutureProvider.autoDispose.family<RolesPreview, ({int players, RoleOptions roles})>(
+  (ref, key) => ref.read(apiProvider).previewRoles(key.players, key.roles),
+);

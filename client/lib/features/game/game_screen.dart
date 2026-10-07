@@ -175,7 +175,14 @@ class GameScreenState extends ConsumerState<GameScreen> {
           child: _error == null
               ? const CircularProgressIndicator()
               : Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_error!),
+                  Padding(padding: const EdgeInsets.all(16), child: Text(_error!, textAlign: TextAlign.center)),
+                  FilledButton.tonal(
+                    onPressed: () {
+                      setState(() => _error = null);
+                      _load();
+                    },
+                    child: const Text('Повторить'),
+                  ),
                   TextButton(onPressed: () => context.go('/'), child: const Text('На главную')),
                 ]),
         ),
@@ -214,6 +221,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
                   _Board(screen: this, width: box.maxWidth - 16, onTap: _onCardTap),
                   const SizedBox(height: 12),
                   _Hints(view: v),
+                  if (v.me != null && v.me!.letters.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    _MyLetters(me: v.me!),
+                  ],
                   const SizedBox(height: 12),
                   ActionPanel(screen: this),
                 ],
@@ -490,5 +501,40 @@ class _Hand extends StatelessWidget {
         ),
       ]),
     );
+  }
+}
+
+/// Мои письма по раундам: что отправил и открыл ли Призрак — чтобы не держать в голове.
+class _MyLetters extends StatelessWidget {
+  const _MyLetters({required this.me});
+
+  final Me me;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Мои письма', style: Theme.of(context).textTheme.titleSmall),
+      const SizedBox(height: 6),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
+          for (final l in me.letters)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Column(children: [
+                Text('Раунд ${l.round}', style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: 4),
+                Opacity(opacity: l.revealed == false ? 0.4 : 1, child: CardImage(cardId: l.cardId, size: 44)),
+                const SizedBox(height: 2),
+                Icon(
+                  l.revealed == null ? Icons.hourglass_empty : (l.revealed! ? Icons.visibility : Icons.visibility_off),
+                  size: 14,
+                  color: l.revealed == true ? AppTheme.ok : Colors.white54,
+                ),
+              ]),
+            ),
+        ]),
+      ),
+    ]);
   }
 }

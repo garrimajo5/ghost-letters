@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
+import '../../core/texts.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'settings_sheet.dart';
@@ -73,7 +74,20 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     if (lobby == null || me == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Лобби')),
-        body: Center(child: _error == null ? const CircularProgressIndicator() : Text(_error!)),
+        body: Center(
+          child: _error == null
+              ? const CircularProgressIndicator()
+              : Column(mainAxisSize: MainAxisSize.min, children: [
+                  Padding(padding: const EdgeInsets.all(16), child: Text(_error!, textAlign: TextAlign.center)),
+                  FilledButton.tonal(
+                    onPressed: () {
+                      setState(() => _error = null);
+                      _load();
+                    },
+                    child: const Text('Повторить'),
+                  ),
+                ]),
+        ),
       );
     }
 
@@ -124,6 +138,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSummary(settings: lobby.settings, players: players.length),
+          _RolesPreview(lobby: lobby, players: players.length),
           const SizedBox(height: 16),
           Text('Игроки (${players.length}/12)', style: Theme.of(context).textTheme.titleMedium),
           for (final p in players)
@@ -188,5 +203,40 @@ class _SettingsSummary extends StatelessWidget {
       settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)',
     ];
     return Text(parts.join(' · '), style: Theme.of(context).textTheme.bodySmall);
+  }
+}
+
+/// Состав ролей для текущего числа игроков и настроек — тот же расчёт, что при старте на сервере.
+class _RolesPreview extends ConsumerWidget {
+  const _RolesPreview({required this.lobby, required this.players});
+
+  final Lobby lobby;
+  final int players;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preview = ref.watch(rolesPreviewProvider((players: players, roles: lobby.settings.roles)));
+    return preview.when(
+      loading: () => const SizedBox(height: 24),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(ApiError.from(e).message, style: const TextStyle(color: Colors.amber)),
+      ),
+      data: (p) => Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(
+          '${p.cooperative ? 'Кооператив' : 'С Убийцей'} · раундов: ${lobby.settings.rounds ?? p.rounds} · ${_describe(p.roles)}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    );
+  }
+
+  static String _describe(List<String> roles) {
+    final counts = <String, int>{};
+    for (final r in roles) {
+      counts[r] = (counts[r] ?? 0) + 1;
+    }
+    return counts.entries.map((e) => e.value > 1 ? '${T.role(e.key)} ×${e.value}' : T.role(e.key)).join(', ');
   }
 }

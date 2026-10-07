@@ -45,6 +45,10 @@ class FakeApi extends Api {
   Future<Lobby> setReady(String id, bool ready) async => _record('setReady', [id, ready], () => lobbyResult!);
 
   @override
+  Future<RolesPreview> previewRoles(int players, RoleOptions roles) async =>
+      const RolesPreview(cooperative: true, rounds: 5, roles: ['Ghost', 'Detective']);
+
+  @override
   Future<String> startGame(String id) async => _record('startGame', [id], () => 'g1');
 
   @override
