@@ -19,7 +19,7 @@ def analyze(path: str) -> None:
 
 
 def tests(path: str) -> None:
-    names, errors = {}, {}
+    names, errors, prints = {}, {}, {}
     for raw in open(path, encoding="utf-8", errors="replace"):
         try:
             event = json.loads(raw)
@@ -29,10 +29,16 @@ def tests(path: str) -> None:
             continue
         if event.get("type") == "testStart":
             names[event["test"]["id"]] = event["test"]["name"]
+        elif event.get("type") == "print":
+            # Виджет-тесты печатают само исключение отдельным print, а error — только «See exception logs above».
+            prints.setdefault(event["testID"], []).append(event.get("message", ""))
         elif event.get("type") == "error":
             errors.setdefault(event["testID"], []).append(event.get("error", "") + "\n" + event.get("stackTrace", "")[:800])
         elif event.get("type") == "testDone" and event.get("result") != "success" and not event.get("hidden"):
-            body = "\n".join(errors.get(event["testID"], ["failed"]))[:1800]
+            printed = "\n".join(prints.get(event["testID"], []))
+            start = printed.find("EXCEPTION CAUGHT")
+            body = (printed[start:start + 2500] + "\n" if start >= 0 else "") + "\n".join(errors.get(event["testID"], ["failed"]))
+            body = body[:3000]
             print(f"::error title={esc(names.get(event['testID'], '?'))[:200]}::{esc(body)}")
 
 
