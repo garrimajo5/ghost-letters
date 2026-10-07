@@ -350,18 +350,22 @@ public static partial class GameEngine
     private static void ApplyHunt(GameState state, PlayerState target, Role? guess, List<GameEvent> events)
     {
         var hunted = state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).Distinct().ToList();
-        if (guess is not null && !hunted.Contains(guess.Value))
-        {
-            throw GameRuleException.Validation("Можно назвать только роль Свидетеля или Эксперта, которая есть в игре.");
-        }
 
-        // Только одна из ролей в игре — роль очевидна; обе — Убийца должен угадать и роль.
-        if (hunted.Count > 1 && guess is null)
+        // Только одна из ролей в игре — роль очевидна, названная роль не важна (Убийца может не знать состав).
+        // Обе — Убийца должен угадать и роль.
+        Role role;
+        if (hunted.Count == 1)
+        {
+            role = hunted[0];
+        }
+        else if (guess is Role.Witness or Role.Expert)
+        {
+            role = guess.Value;
+        }
+        else
         {
             throw GameRuleException.Validation("В игре и Свидетель, и Эксперт — назовите роль.");
         }
-
-        var role = guess ?? hunted[0];
         var success = target.Role == role;
         state.Hunt = new HuntResult { Target = target.Id, Guess = role, Success = success };
         events.Add(new GameEvent(success ? "HuntSucceeded" : "HuntMissed", Detail: target.Id.ToString()));
