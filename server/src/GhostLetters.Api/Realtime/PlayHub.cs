@@ -14,7 +14,7 @@ namespace GhostLetters.Api.Realtime;
 /// GameView (личная проекция) и GameEvents. Ошибки — HubException с текстом «КОД: сообщение».
 /// </summary>
 [Authorize]
-public sealed class PlayHub(LobbyService lobbies, GameService games) : Hub
+public sealed class PlayHub(LobbyService lobbies, GameService games, ChatService chat) : Hub
 {
     public const string Path = "/hubs/play";
 
@@ -47,6 +47,10 @@ public sealed class PlayHub(LobbyService lobbies, GameService games) : Hub
     public Task<CommandResult> Command(Guid gameId, string type, JsonElement? payload, int? expectedVersion, string? clientCommandId) =>
         Guard(() => games.ExecuteAsync(gameId, UserId, new CommandRequest(type, payload, expectedVersion, clientCommandId),
             Context.ConnectionAborted));
+
+    /// <summary>Сообщение в чат партии (текст, голосовое по mediaId, упомянутые карты).</summary>
+    public Task<ChatMessageDto> SendChat(Guid gameId, string? channel, string? text, Guid? mediaId, IReadOnlyList<string>? cardIds) =>
+        Guard(() => chat.SendAsync(gameId, UserId, new SendChatRequest(channel, text, mediaId, cardIds), Context.ConnectionAborted));
 
     private Guid UserId => Context.User!.UserId();
 

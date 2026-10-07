@@ -20,6 +20,7 @@ public sealed class DbApiFactory(PostgresFixture postgres) : WebApplicationFacto
         builder.UseSetting("Jwt:SigningKey", ApiFactory.TestSigningKey);
         builder.UseSetting("Cards:SeedOriginalCount", "300");
         builder.UseSetting("Games:TimersEnabled", "false");
+        builder.UseSetting("Media:StoragePath", Path.Combine(Path.GetTempPath(), "ghost-letters-media", Guid.NewGuid().ToString("N")));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();

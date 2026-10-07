@@ -27,6 +27,7 @@ public sealed class GameService(
     GhostLettersDbContext db,
     IRealtimeNotifier notifier,
     LobbyService lobbies,
+    GameRecorder recorder,
     TimeProvider time,
     ILogger<GameService> logger)
 {
@@ -156,6 +157,8 @@ public sealed class GameService(
                        ?? throw AppException.NotFound("Партия не найдена.");
             var state = GameStore.Read(game);
             var before = GameStore.StepKey(state);
+            var phaseBefore = state.Phase;
+            var hadResult = game.Result is not null;
 
             var (result, applied) = await action(game, state);
             if (applied is null)
@@ -166,6 +169,7 @@ public sealed class GameService(
             var now = time.GetUtcNow();
             var settings = GameJson.Deserialize<LobbySettings>(game.Settings);
             GameStore.Write(game, state, settings, now, phaseChanged: GameStore.StepKey(state) != before);
+            await recorder.RecordAsync(game, state, hadResult, phaseBefore, now, ct);
 
             var seq = await db.GameEvents.Where(e => e.GameId == gameId).MaxAsync(e => (long?)e.Seq, ct) ?? 0;
             var records = applied.Events.DefaultIfEmpty(new GameEvent(applied.Source)).Select(e => new GameEventRecord

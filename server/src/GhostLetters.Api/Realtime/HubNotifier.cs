@@ -32,4 +32,13 @@ public sealed class HubNotifier(IHubContext<PlayHub> hub) : IRealtimeNotifier
         await table.SendAsync("GameEvents",
             new { gameId = state.Id, version = state.Version, events = events.Where(e => e.OnlyFor is null).ToList() }, ct);
     }
+
+    public async Task ChatAsync(ChatMessageDto message, IReadOnlyList<Guid> recipients, bool toTable, CancellationToken ct)
+    {
+        await hub.Clients.Users(recipients.Select(r => r.ToString()).ToList()).SendAsync("ChatMessage", message, ct);
+        if (toTable)
+        {
+            await hub.Clients.Group(PlayHub.TableGroup(message.GameId)).SendAsync("ChatMessage", message, ct);
+        }
+    }
 }

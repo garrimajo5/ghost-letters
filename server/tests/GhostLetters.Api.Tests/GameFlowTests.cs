@@ -112,8 +112,10 @@ public sealed class GameFlowTests(PostgresFixture postgres) : IAsyncLifetime
     {
         var game = await GameHarness.StartAsync(_factory, players: 4);
 
-        (await game.ExpireAsync(TimeSpan.FromSeconds(5))).Should().Be(0, "до дедлайна ещё далеко");
-        (await game.ExpireAsync(TimeSpan.FromSeconds(30))).Should().Be(1);
+        // База общая для всех тестов, поэтому проверяем свою партию, а не число сдвинутых.
+        await game.ExpireAsync(TimeSpan.FromSeconds(5));
+        (await game.StateAsync()).Phase.Should().Be("RoleReveal", "до дедлайна ещё далеко");
+        (await game.ExpireAsync(TimeSpan.FromSeconds(30))).Should().BeGreaterThanOrEqualTo(1);
 
         var (phase, version, _) = await game.StateAsync();
         phase.Should().Be("Night");
