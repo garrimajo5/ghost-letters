@@ -16,6 +16,9 @@ public sealed class User
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset LastSeenAt { get; set; }
+
+    /// <summary>Бот для отладки: ходит сам, в рейтинг не попадает.</summary>
+    public bool IsBot { get; set; }
 }
 
 public static class AuthProviders

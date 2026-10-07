@@ -1,0 +1,114 @@
+using System.Net;
+using GhostLetters.Infrastructure.Games;
+using Microsoft.EntityFrameworkCore;
+
+namespace GhostLetters.Api.Tests;
+
+[Collection(DbCollection.Name)]
+public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
+{
+    private readonly DbApiFactory _factory = new(postgres);
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync() => await _factory.DisposeAsync();
+
+    [Fact]
+    public async Task Host_AddsBots_OnlyHost_BotsAreReady()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var guest = await TestPlayer.LoginAsync(_factory, "Гость");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { });
+        var id = lobby.Id("id");
+        await guest.PostAsync($"/api/v1/lobbies/{lobby.Str("code")}/join", new { });
+
+        (await guest.PostAsync($"/api/v1/lobbies/{id}/bots", null, HttpStatusCode.Forbidden)).Code().Should().Be("FORBIDDEN");
+        await host.PostAsync($"/api/v1/lobbies/{id}/bots", null);
+        var after = await host.PostAsync($"/api/v1/lobbies/{id}/bots", null);
+
+        var bots = after.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("isBot").GetBoolean()).ToList();
+        bots.Should().HaveCount(2);
+        bots.Should().OnlyContain(b => b.GetProperty("isReady").GetBoolean());
+        bots.Select(b => b.Str("nickname")).Should().OnlyHaveUniqueItems().And.OnlyContain(n => n.StartsWith("Бот"));
+        after.GetProperty("members").EnumerateArray().Select(m => m.GetProperty("seat").GetInt32()).Should().Equal(0, 1, 2, 3);
+    }
+
+    [Fact]
+    public async Task OneHumanAndBots_PlayWholeGame()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings { Rounds = 1 } });
+        var id = lobby.Id("id");
+        for (var i = 0; i < 6; i++)
+        {
+            await host.PostAsync($"/api/v1/lobbies/{id}/bots", null);
+        }
+
+        var gameId = (await host.PostAsync($"/api/v1/lobbies/{id}/start", null)).Id("gameId");
+        var game = GameHarness.Existing(_factory, [host], id, lobby.Str("code"), gameId);
+        var driver = new GameDriver(game);
+        var botMoves = 0;
+
+        for (var i = 0; i < 2000 && (await game.StateAsync()).Status == "active"; i++)
+        {
+            var moved = await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
+            botMoves += moved;
+            if (moved == 0 && !await driver.StepAsync())
+            {
+                // Ни боты, ни человек не ходят — значит ждём таймер (например, ход Призрака-человека уже сделан).
+                await game.ExpireAsync();
+            }
+        }
+
+        (await game.StateAsync()).Status.Should().Be("finished");
+        botMoves.Should().BeGreaterThan(30);
+
+        // Партия с ботами рейтинг не меняет, но статистика человека учтена.
+        var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.CountAsync(h => h.GameId == gameId));
+        history.Should().Be(0);
+        var profile = await host.GetAsync($"/api/v1/users/{host.Id}/profile");
+        profile.GetProperty("stats").GetProperty("games").GetInt32().Should().Be(1);
+
+        var board = await host.GetAsync("/api/v1/leaderboard?limit=100");
+        board.EnumerateArray().Select(r => r.GetProperty("user").Str("nickname")).Should().NotContain(n => n.StartsWith("Бот"));
+    }
+
+    [Fact]
+    public void BotPlayer_PicksValidMovesForEveryPhase()
+    {
+        var ids = Enumerable.Range(1, 8).Select(_ => Guid.NewGuid()).ToList();
+        var deck = Enumerable.Range(1, 300).Select(i => $"orig_{i:0000}").ToList();
+        var state = Domain.Game.GameEngine.Create(Guid.NewGuid(), ids,
+            new Domain.Game.GameSettings { Rounds = 1, Roles = new Domain.Roles.RoleOptions(UseBlackmailer: true) }, deck, 11);
+        var rng = new Random(5);
+
+        for (var i = 0; i < 2000 && state.Phase != Domain.Game.Phase.Finished; i++)
+        {
+            var moved = false;
+            foreach (var p in state.Players)
+            {
+                var command = BotPlayer.Decide(Domain.Game.GameProjection.For(state, p.Id), rng);
+                if (command is null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Domain.Game.GameEngine.Execute(state, p.Id, command);
+                }
+                catch (Domain.Game.GameRuleException) when (command is Domain.Game.HuntPick hunt)
+                {
+                    Domain.Game.GameEngine.Execute(state, p.Id, hunt with { Guess = Domain.Roles.Role.Expert });
+                }
+
+                moved = true;
+                break;
+            }
+
+            moved.Should().BeTrue($"в фазе {state.Phase} кто-то из ботов должен ходить");
+        }
+
+        state.Phase.Should().Be(Domain.Game.Phase.Finished);
+    }
+}
