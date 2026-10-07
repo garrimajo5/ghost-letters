@@ -150,8 +150,27 @@ class Api {
   Future<List<ChatMessage>> chat(String gameId) async =>
       ((await get('/games/$gameId/chat')) as List).map((e) => ChatMessage.fromJson(e as Json)).toList();
 
-  Future<ChatMessage> sendChat(String gameId, String text, {String channel = 'public', List<String> cards = const []}) async =>
-      ChatMessage.fromJson(await post('/games/$gameId/chat', {'channel': channel, 'text': text, 'cardIds': cards}) as Json);
+  Future<ChatMessage> sendChat(String gameId, String text,
+          {String channel = 'public', List<String> cards = const [], String? mediaId}) async =>
+      ChatMessage.fromJson(await post('/games/$gameId/chat', {
+        'channel': channel,
+        'text': text.isEmpty ? null : text,
+        'cardIds': cards,
+        if (mediaId != null) 'mediaId': mediaId,
+      }) as Json);
+
+  /// Загрузить голосовое (AAC) и получить его id для сообщения.
+  Future<String> uploadVoice(String filePath, int durationMs) async {
+    final form = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath, filename: 'voice.m4a', contentType: DioMediaType('audio', 'mp4')),
+      'durationMs': durationMs.toString(),
+    });
+    final r = await _call(() => _dio.post<dynamic>('/media', data: form, options: Options(contentType: 'multipart/form-data'))) as Json;
+    return r['mediaId'] as String;
+  }
+
+  /// Скачать голосовое во временный файл (запрос с токеном — файлы доступны только участникам).
+  Future<void> downloadVoice(String mediaId, String toPath) => _call(() => _dio.download('/media/$mediaId', toPath));
 
   Future<void> saveNote(String gameId, String userId, int suspicion, String body) =>
       put('/games/$gameId/notes/$userId', {'suspicion': suspicion, 'body': body});
