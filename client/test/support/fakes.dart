@@ -78,6 +78,15 @@ class FakeApi extends Api {
   @override
   Future<List<Json>> marks(String gameId) async => const [];
 
+  List<Json> notesResult = const [];
+
+  @override
+  Future<List<Json>> notes(String gameId) async => notesResult;
+
+  @override
+  Future<void> saveNote(String gameId, String userId, int suspicion, String body) async =>
+      _record('saveNote', [userId, suspicion, body], () {});
+
   @override
   Future<void> saveMarks(String gameId, List<Json> marks) async => _record('saveMarks', [marks], () {});
 }

@@ -8,6 +8,7 @@ import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../core/voice.dart';
+import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
@@ -267,6 +268,27 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     }
   }
 
+  /// Долгое нажатие на сообщение: цитата уходит в личную заметку об авторе.
+  Future<void> _quoteToNote(ChatMessage m) async {
+    final api = ref.read(apiProvider);
+    final authorId = m.authorId!;
+    final saved = await runAction(context, () async {
+      final notes = await api.notes(_gameId);
+      final note = notes.where((n) => n['targetUserId'] == authorId).firstOrNull;
+      final body = (note?['body'] as String? ?? '').trim();
+      final quote = 'Раунд ${m.round}: «${m.text}»';
+      final text = body.isEmpty ? quote : '$body\n$quote';
+      await api.saveNote(_gameId, authorId, ((note?['suspicion'] as num?) ?? 0).toInt(),
+          text.length > 2000 ? text.substring(text.length - 2000) : text);
+      return true;
+    });
+    if (saved == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Цитата добавлена в заметку о ${widget.screen.nick(authorId)}')),
+      );
+    }
+  }
+
   Future<void> _pickCards() async {
     final v = widget.screen.view;
     if (v == null) return;
@@ -325,7 +347,9 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                   itemBuilder: (context, i) {
                     final m = messages[messages.length - 1 - i];
                     final author = screen.rosterOf(m.authorId);
+                    final quotable = m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
                     return ListTile(
+                      onLongPress: quotable ? () => _quoteToNote(m) : null,
                       leading: Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#5C7C99', size: 32),
                       title: Text(author?.nickname ?? 'Система', style: Theme.of(context).textTheme.labelMedium),
                       subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
