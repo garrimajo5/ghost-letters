@@ -1,3 +1,5 @@
+using GhostLetters.Domain.Roles;
+
 namespace GhostLetters.Domain.Game;
 
 /// <summary>Намерение игрока. Сервер проверяет его правилами и применяет к состоянию.</summary>
@@ -34,3 +36,30 @@ public sealed record ReadyNextRound : GameCommand;
 
 /// <summary>Событие партии для журнала и рассылки. OnlyFor — личное событие.</summary>
 public sealed record GameEvent(string Type, Guid? Actor = null, Guid? OnlyFor = null, string? Detail = null);
+
+/// <summary>Голос на текущем этапе: столбец для ряда или подозреваемый для ареста. Оба null — воздержаться.</summary>
+public sealed record CastVote(int? Column, Guid? Suspect) : GameCommand;
+
+/// <summary>Ничья обсуждена, игрок готов переголосовать.</summary>
+public sealed record ReadyRevote : GameCommand;
+
+/// <summary>
+/// Убийца указывает, кого считает Свидетелем или Экспертом.
+/// Если в игре обе роли, нужно назвать и роль (Guess) — засчитывается только точное попадание.
+/// </summary>
+public sealed record HuntPick(Guid Target, Role? Guess = null) : GameCommand;
+
+/// <summary>Убийца указывает, кого считает Шантажистом.</summary>
+public sealed record BlackmailerPick(Guid Target) : GameCommand;
+
+/// <summary>Шантажист называет истинные улики: столбец для каждого ряда.</summary>
+public sealed record NameTruth(IReadOnlyList<int> Columns) : GameCommand;
+
+/// <summary>Поставить или снять лайк игроку.</summary>
+public sealed record Like(Guid To, bool On) : GameCommand;
+
+/// <summary>Выдвинуть игрока на ачивку; Code == null — пропустить.</summary>
+public sealed record Nominate(string? Code, Guid? Nominee) : GameCommand;
+
+/// <summary>Голос за выдвижение по его номеру; null — пропустить.</summary>
+public sealed record AwardVote(int? Entry) : GameCommand;
