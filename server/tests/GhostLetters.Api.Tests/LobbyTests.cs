@@ -113,8 +113,8 @@ public sealed class LobbyTests(PostgresFixture postgres) : IAsyncLifetime
     public async Task Kick_OnlyByHost()
     {
         var host = await TestPlayer.LoginAsync(_factory, "Хост");
-        var a = await TestPlayer.LoginAsync(_factory, "А");
-        var b = await TestPlayer.LoginAsync(_factory, "Б");
+        var a = await TestPlayer.LoginAsync(_factory, "Аня");
+        var b = await TestPlayer.LoginAsync(_factory, "Боря");
         var lobby = await host.PostAsync("/api/v1/lobbies", new { });
         var id = lobby.Id("id");
         await a.PostAsync($"/api/v1/lobbies/{lobby.Str("code")}/join", new { });
