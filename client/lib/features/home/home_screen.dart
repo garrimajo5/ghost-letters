@@ -86,7 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_horiz, color: AppColors.muted),
                   onSelected: (v) async {
-                    if (v == 'profile') {
+                    if (v == 'rules') {
+                      context.push('/rules');
+                    } else if (v == 'profile') {
                       context.push('/profile/${user.id}');
                     } else if (v == 'logout') {
                       await ref.read(realtimeProvider).disconnect();
@@ -94,6 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'rules', child: Text('Правила')),
                     PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
                     PopupMenuItem(value: 'logout', child: Text('Выйти')),
                   ],

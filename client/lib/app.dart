@@ -9,6 +9,7 @@ import 'features/game/game_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/lobby/lobby_screen.dart';
 import 'features/profile/profile_screen.dart';
+import 'features/rules/rules_screen.dart';
 
 /// Переходы: без сессии — на вход, после входа — на главную.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -29,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/lobby/:id', builder: (_, s) => LobbyScreen(lobbyId: s.pathParameters['id']!)),
       GoRoute(path: '/game/:id', builder: (_, s) => GameScreen(gameId: s.pathParameters['id']!)),
+      GoRoute(path: '/rules', builder: (_, __) => const RulesScreen()),
       GoRoute(path: '/profile/:id', builder: (_, s) => ProfileScreen(userId: s.pathParameters['id']!)),
     ],
   );
