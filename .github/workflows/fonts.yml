@@ -1,0 +1,27 @@
+name: Fetch fonts
+
+# Шрифты дизайна (Oswald + Golos Text, OFL) скачиваются в CI: у локальной среды нет доступа к Google Fonts.
+# Запушьте client/fonts.request — workflow положит TTF в client/assets/fonts и закоммитит их в ту же ветку.
+on:
+  push:
+    paths:
+      - client/fonts.request
+
+permissions:
+  contents: write
+
+jobs:
+  fonts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download
+        run: python3 .github/scripts/fetch_fonts.py client/assets/fonts
+      - name: Commit
+        run: |
+          git rm -q client/fonts.request
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A client/assets/fonts
+          git commit -m "Шрифты Oswald и Golos Text"
+          git push
