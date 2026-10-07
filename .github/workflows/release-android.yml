@@ -13,6 +13,9 @@ name: Release Android
 on:
   push:
     tags: ['v*']
+  # Проверка самого workflow в PR, где он меняется (собирается без секретов).
+  pull_request:
+    paths: ['.github/workflows/release-android.yml']
   workflow_dispatch:
     inputs:
       api_url:
