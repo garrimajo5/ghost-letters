@@ -90,7 +90,12 @@ public sealed class GameRecorder(GhostLettersDbContext db)
             }
         }
 
-        // Рейтинг меняется только в соревновательной партии.
+        // Рейтинг меняется только в соревновательной партии и без ботов.
+        if (await db.Users.AnyAsync(u => ids.Contains(u.Id) && u.IsBot, ct))
+        {
+            return;
+        }
+
         var detectives = state.Players.Where(p => p.Role.IsDetectiveTeam()).ToList();
         var killers = state.Players.Where(p => p.Role.IsKillerTeam()).ToList();
         if (!state.HasKiller || detectives.Count == 0 || killers.Count == 0)
