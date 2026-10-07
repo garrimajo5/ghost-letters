@@ -36,6 +36,10 @@ class FakeApi extends Api {
   Future<List<MyGame>> myGames({String? status}) async => _record('myGames', [status], () => games);
 
   @override
+  Future<RolesPreview> previewRoles(int players, RoleOptions roles) async =>
+      const RolesPreview(cooperative: true, rounds: 5, roles: ['Ghost', 'Detective']);
+
+  @override
   Future<Lobby> createLobby(String title, LobbySettings settings) async => _record('createLobby', [title], () => lobbyResult!);
 
   @override
@@ -43,10 +47,6 @@ class FakeApi extends Api {
 
   @override
   Future<Lobby> setReady(String id, bool ready) async => _record('setReady', [id, ready], () => lobbyResult!);
-
-  @override
-  Future<RolesPreview> previewRoles(int players, RoleOptions roles) async =>
-      const RolesPreview(cooperative: true, rounds: 5, roles: ['Ghost', 'Detective']);
 
   @override
   Future<String> startGame(String id) async => _record('startGame', [id], () => 'g1');
