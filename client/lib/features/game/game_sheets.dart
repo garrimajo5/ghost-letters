@@ -68,7 +68,7 @@ class _MarkSheetState extends State<MarkSheet> {
             child: Column(children: [
               _Counter(
                 key: const Key('mark-crosses'),
-                badge: '✕',
+                badge: Icons.close,
                 color: AppColors.red,
                 label: 'Проверяли — подсказки не было',
                 value: mark.crosses,
@@ -77,7 +77,7 @@ class _MarkSheetState extends State<MarkSheet> {
               const Divider(height: 1, color: AppColors.surface2),
               _Counter(
                 key: const Key('mark-checks'),
-                badge: '✓',
+                badge: Icons.check,
                 color: AppColors.green,
                 label: 'Подсказки указывают сюда',
                 value: mark.checks,
@@ -93,14 +93,22 @@ class _MarkSheetState extends State<MarkSheet> {
                   child: SizedBox(
                     height: 52,
                     child: Center(
-                      child: Text(
-                        mark.believed ? '● Считаю истинной' : '○ Считаю истинной',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(
+                          mark.believed ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          size: 18,
                           color: mark.believed ? Colors.white : AppColors.greenSoft,
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Считаю истинной',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: mark.believed ? Colors.white : AppColors.greenSoft,
+                          ),
+                        ),
+                      ]),
                     ),
                   ),
                 ),
@@ -134,7 +142,7 @@ class _MarkSheetState extends State<MarkSheet> {
 class _Counter extends StatelessWidget {
   const _Counter({super.key, required this.badge, required this.color, required this.label, required this.value, required this.onChanged});
 
-  final String badge;
+  final IconData badge;
   final Color color;
   final String label;
   final int value;
@@ -142,7 +150,7 @@ class _Counter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget button(String text, VoidCallback? onTap, String tooltip) => SizedBox(
+    Widget button(IconData icon, VoidCallback? onTap, String tooltip) => SizedBox(
           width: 40,
           height: 40,
           child: OutlinedButton(
@@ -154,7 +162,7 @@ class _Counter extends StatelessWidget {
               textStyle: const TextStyle(fontSize: 18),
             ),
             onPressed: onTap,
-            child: Tooltip(message: tooltip, child: Text(text)),
+            child: Tooltip(message: tooltip, child: Icon(icon, size: 18)),
           ),
         );
     return Padding(
@@ -165,13 +173,13 @@ class _Counter extends StatelessWidget {
           height: 28,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           alignment: Alignment.center,
-          child: Text(badge, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          child: Icon(badge, size: 16, color: Colors.white),
         ),
         const SizedBox(width: 10),
         Expanded(child: Text(label, style: const TextStyle(fontSize: 14, height: 1.3))),
-        button('−', value > 0 ? () => onChanged(value - 1) : null, 'Меньше'),
+        button(Icons.remove, value > 0 ? () => onChanged(value - 1) : null, 'Меньше'),
         SizedBox(width: 30, child: Text('$value', textAlign: TextAlign.center, style: heading(20, spacing: 0))),
-        button('+', () => onChanged(value + 1), 'Больше'),
+        button(Icons.add, () => onChanged(value + 1), 'Больше'),
       ]),
     );
   }

@@ -141,21 +141,27 @@ class Panel extends StatelessWidget {
       );
 }
 
-/// Маленький круглый бейдж-счётчик: ✕ красный, ✓ зелёный.
+/// Маленький круглый бейдж-счётчик: ✕ красный, ✓ зелёный. Значки — иконками, чтобы не зависеть от шрифта.
 class CountBadge extends StatelessWidget {
-  const CountBadge({super.key, required this.text, required this.color, this.fontSize = 10});
+  const CountBadge({super.key, this.text = '', required this.color, this.icon, this.fontSize = 10});
 
   final String text;
+  final IconData? icon;
   final Color color;
   final double fontSize;
 
   @override
   Widget build(BuildContext context) => Container(
         height: fontSize + 6,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+        constraints: BoxConstraints(minWidth: fontSize + 6),
+        padding: EdgeInsets.symmetric(horizontal: text.isEmpty ? 0 : 4),
         decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(99)),
         alignment: Alignment.center,
-        child: Text(text, style: TextStyle(fontSize: fontSize, height: 1, color: Colors.white, fontWeight: FontWeight.w700)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) Icon(icon, size: fontSize + 1, color: Colors.white),
+          if (text.isNotEmpty)
+            Text(text, style: TextStyle(fontSize: fontSize, height: 1, color: Colors.white, fontWeight: FontWeight.w700)),
+        ]),
       );
 }
 

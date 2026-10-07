@@ -73,3 +73,15 @@ int defaultRounds(int players) => players <= 4
         : players <= 10
             ? 3
             : 2;
+
+/// Финал: раунды закончились — голосование, охота, итоги. Рука и письма больше не нужны.
+bool isFinale(GameView v) => const {
+      'Voting',
+      'VoteTie',
+      'Hunt',
+      'BlackmailerHunt',
+      'BlackmailerClaim',
+      'AwardNomination',
+      'AwardVoting',
+      'Finished',
+    }.contains(v.phase);

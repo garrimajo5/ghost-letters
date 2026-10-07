@@ -55,9 +55,9 @@ void main() {
 
     final cross = tester.widget<CountBadge>(find.byKey(const Key('x-orig_0001')));
     final check = tester.widget<CountBadge>(find.byKey(const Key('v-orig_0001')));
-    expect(cross.text, '✕1');
+    expect((cross.icon, cross.text), (Icons.close, '1'));
     expect(cross.color, AppColors.red);
-    expect(check.text, '✓2');
+    expect((check.icon, check.text), (Icons.check, '2'));
     expect(check.color, AppColors.green);
     expect(tester.getCenter(find.byKey(const Key('x-orig_0001'))).dx,
         lessThan(tester.getCenter(find.byKey(const Key('v-orig_0001'))).dx));
@@ -74,13 +74,13 @@ void main() {
     final app = await openOnPhone(tester, wideBoard(columns: 5, allowed: const []));
     expect(find.textContaining('Ваш ход'), findsNothing);
     expect(find.byKey(const Key('status-bar')), findsOneWidget);
-    expect(find.text('Почтовый ящик · 1 из 3'), findsOneWidget, reason: 'видно, сколько игроков уже походили');
+    expect(find.text('Письма · 1 из 3'), findsOneWidget, reason: 'видно, сколько игроков уже походили');
     haptics.clear();
 
     app.realtime.viewsCtl.add((view: wideBoard(columns: 5).view.copyForTest(version: 43), deadline: null));
     await tester.pumpAndSettle();
 
-    expect(find.text('Ваш ход · Почтовый ящик'), findsOneWidget);
+    expect(find.text('Ваш ход · Письма'), findsOneWidget);
     expect(find.text('ВАШ ХОД'), findsOneWidget);
     expect(find.byKey(const Key('cta')), findsOneWidget);
     expect(haptics, isNotEmpty, reason: 'телефон вибрирует, когда ход переходит к игроку');
@@ -109,7 +109,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('board-0-0')));
     await tester.pumpAndSettle();
-    await tester.tap(find.descendant(of: find.byKey(const Key('mark-crosses')), matching: find.text('+')));
+    await tester.tap(find.descendant(of: find.byKey(const Key('mark-crosses')), matching: find.byIcon(Icons.add)));
     await tester.pump();
     await tester.tap(find.byKey(const Key('mark-believed')));
     await tester.pump();

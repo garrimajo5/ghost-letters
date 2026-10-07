@@ -389,7 +389,7 @@ class ActionPanel extends StatelessWidget {
               ]),
             ),
             if (o.correct != null)
-              CountBadge(text: o.correct! ? '✓' : '✕', color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
+              CountBadge(icon: o.correct! ? Icons.check : Icons.close, color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
           ]),
         ),
     ];
@@ -773,10 +773,16 @@ class _StageChips extends StatelessWidget {
                 color: i == current ? AppColors.amber : AppColors.surface2,
                 borderRadius: BorderRadius.circular(99),
               ),
-              child: Text(
-                '${labels[i]}${finale.outcomes.any((o) => o.stage == i) ? ' ✓' : ''}',
-                style: TextStyle(fontSize: 12, color: i == current ? AppColors.onAmber : AppColors.muted, fontWeight: i == current ? FontWeight.w600 : null),
-              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  labels[i],
+                  style: TextStyle(fontSize: 12, color: i == current ? AppColors.onAmber : AppColors.muted, fontWeight: i == current ? FontWeight.w600 : null),
+                ),
+                if (finale.outcomes.any((o) => o.stage == i)) ...[
+                  const SizedBox(width: 4),
+                  const Icon(Icons.check, size: 14, color: AppColors.believed),
+                ],
+              ]),
             ),
           ),
       ]),
@@ -830,7 +836,7 @@ class _TruthRow extends StatelessWidget {
               Positioned(
                 right: -4,
                 top: -4,
-                child: CountBadge(text: o.correct! ? '✓' : '✕', color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
+                child: CountBadge(icon: o.correct! ? Icons.check : Icons.close, color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
               ),
           ]),
           const SizedBox(height: 3),

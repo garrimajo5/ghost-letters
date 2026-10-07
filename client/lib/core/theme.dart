@@ -130,7 +130,10 @@ class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: AppColors.amber, textStyle: const TextStyle(fontWeight: FontWeight.w600)),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.amber,
+          textStyle: const TextStyle(fontFamily: AppFonts.body, fontSize: 14, fontWeight: FontWeight.w600),
+        ),
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: AppColors.surface2,
@@ -166,7 +169,10 @@ class AppTheme {
       listTileTheme: const ListTileThemeData(iconColor: AppColors.muted),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.onAmber : AppColors.muted),
-        trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? AppColors.amber : AppColors.surface2),
+        trackColor: WidgetStateProperty.resolveWith((s) {
+          final on = s.contains(WidgetState.selected) ? AppColors.amber : AppColors.surface2;
+          return s.contains(WidgetState.disabled) ? on.withValues(alpha: 0.35) : on;
+        }),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
         style: SegmentedButton.styleFrom(

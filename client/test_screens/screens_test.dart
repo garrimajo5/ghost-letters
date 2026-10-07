@@ -74,7 +74,20 @@ Json _base(String phase, List<String> allowed, {String role = 'Detective'}) {
 }
 
 void main() {
-  setUpAll(_loadFonts);
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    // Плагины звука в тестах не нужны: глушим их каналы.
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    for (final name in [
+      'com.llfbandit.record/messages',
+      'xyz.luan/audioplayers',
+      'xyz.luan/audioplayers.global',
+      'xyz.luan/audioplayers.global/events',
+    ]) {
+      messenger.setMockMethodCallHandler(MethodChannel(name), (_) async => null);
+    }
+    await _loadFonts();
+  });
 
   Future<TestApp> start(WidgetTester tester, {User? user = watson}) async {
     tester.view.physicalSize = const Size(1080, 2400);

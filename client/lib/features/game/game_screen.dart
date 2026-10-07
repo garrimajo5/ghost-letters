@@ -330,6 +330,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
     final v = snap.view;
     final night = v.phase == 'Night' && v.can('ChooseTruth');
+    final finale = isFinale(v);
+    final panelFirst = v.can('RevealHints') || const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
     return Scaffold(
       backgroundColor: night ? AppColors.night : AppColors.bg,
       body: SafeArea(
@@ -344,16 +346,23 @@ class GameScreenState extends ConsumerState<GameScreen> {
               controller: _scroll,
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
               children: [
+                // Когда главное действие — в панели (письма Призрака, выбор игрока, итоги), панель идёт первой.
+                if (panelFirst) ...[
+                  KeyedSubtree(key: _panelKey, child: ActionPanel(screen: this)),
+                  const SizedBox(height: 10),
+                ],
                 if (night) const _NightBanner(),
                 _Board(screen: this),
                 const SizedBox(height: 10),
                 _Hints(view: v),
-                if (v.me != null && v.me!.letters.isNotEmpty) ...[
+                if (v.me != null && v.me!.letters.isNotEmpty && !finale) ...[
                   const SizedBox(height: 10),
                   _MyLetters(me: v.me!),
                 ],
-                const SizedBox(height: 10),
-                KeyedSubtree(key: _panelKey, child: ActionPanel(screen: this)),
+                if (!panelFirst) ...[
+                  const SizedBox(height: 10),
+                  KeyedSubtree(key: _panelKey, child: ActionPanel(screen: this)),
+                ],
               ],
             ),
           ),
@@ -485,8 +494,8 @@ class _Header extends StatelessWidget {
               decoration: BoxDecoration(color: pillColor, borderRadius: BorderRadius.circular(99)),
               child: Text(
                 mine
-                    ? 'Ваш ход · ${T.phase(v.phase)}'
-                    : '${T.phase(v.phase)}${counted && v.players.isNotEmpty ? ' · $acted из ${v.players.length}' : ''}',
+                    ? 'Ваш ход · ${T.shortPhase(v.phase)}'
+                    : '${T.shortPhase(v.phase)}${counted && v.players.isNotEmpty ? ' · $acted из ${v.players.length}' : ''}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 13, color: pillText, fontWeight: mine ? FontWeight.w600 : FontWeight.w400),
@@ -792,9 +801,9 @@ class BoardCard extends StatelessWidget {
         child: Stack(children: [
           CardImage(cardId: cardId, size: size, radius: radius),
           if (m != null && m.crosses > 0)
-            Positioned(left: 2, top: 2, child: CountBadge(key: Key('x-$cardId'), text: '✕${m.crosses}', color: AppColors.red, fontSize: badge)),
+            Positioned(left: 2, top: 2, child: CountBadge(key: Key('x-$cardId'), icon: Icons.close, text: '${m.crosses}', color: AppColors.red, fontSize: badge)),
           if (m != null && m.checks > 0)
-            Positioned(right: 2, top: 2, child: CountBadge(key: Key('v-$cardId'), text: '✓${m.checks}', color: AppColors.green, fontSize: badge)),
+            Positioned(right: 2, top: 2, child: CountBadge(key: Key('v-$cardId'), icon: Icons.check, text: '${m.checks}', color: AppColors.green, fontSize: badge)),
           if (voted)
             Positioned(
               left: 2,
@@ -897,7 +906,7 @@ class _Dock extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (me != null && me.hand.isNotEmpty && v.phase != 'RoleReveal') ...[
+        if (me != null && me.hand.isNotEmpty && v.phase != 'RoleReveal' && !isFinale(v)) ...[
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text('ВАША РУКА', style: sectionLabel(size: 12)),
             const SizedBox(width: 8),
@@ -1116,7 +1125,7 @@ class _MyLetters extends StatelessWidget {
     return Panel(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Мои письма', style: sectionLabel()),
+        Text('МОИ ПИСЬМА', style: sectionLabel()),
         const SizedBox(height: 6),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
