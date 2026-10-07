@@ -121,6 +121,10 @@ void main() {
 
   group('партия', () {
     Future<TestApp> openGame(WidgetTester tester, GameSnapshot snap) async {
+      // Высокий экран, чтобы панель действий под полем попала в ленивый список.
+      tester.view.physicalSize = const Size(1200, 3000);
+      tester.view.devicePixelRatio = 1.5;
+      addTearDown(tester.view.reset);
       final app = await _start(tester, user: watson);
       app.realtime.game = snap;
       app.api.snapshotResult = snap;
