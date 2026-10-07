@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace GhostLetters.Infrastructure;
 
@@ -35,6 +36,8 @@ public static class DependencyInjection
         services.AddScoped<GameService>();
         services.AddScoped<GameRecorder>();
         services.AddScoped<BotService>();
+        services.AddSingleton(sp => CardTags.FromConfiguration(
+            sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<CardTags>()));
         services.AddScoped<ChatService>();
         services.AddScoped<NotesService>();
         services.AddScoped<ProfileService>();

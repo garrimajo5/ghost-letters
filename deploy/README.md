@@ -21,7 +21,7 @@ Workflow **Release server image** собирает образ при каждо�
 curl -fsSL https://get.docker.com | sh
 mkdir -p ~/ghost-letters && cd ~/ghost-letters
 # скопируйте сюда из репозитория: deploy/docker-compose.prod.yml, deploy/Caddyfile, deploy/.env.example
-# и client/assets/cards/cards.json (например, scp с вашего компьютера)
+# и client/assets/cards/cards.json + tags.json (теги картинок для ботов; например, scp с вашего компьютера)
 cp .env.example .env && nano .env          # домен, пароль базы, ключ JWT
 echo <токен> | docker login ghcr.io -u garrimajo5 --password-stdin
 docker compose -f docker-compose.prod.yml up -d

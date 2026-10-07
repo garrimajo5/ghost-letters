@@ -29,6 +29,7 @@ services:
       - "8080:8080"
     volumes:
       - ./client/assets/cards/cards.json:/app/cards/cards.json:ro
+      - ./client/assets/cards/tags.json:/app/cards/tags.json:ro
       - media:/app/data/media
     depends_on:
       postgres:
