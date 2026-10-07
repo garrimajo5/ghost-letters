@@ -181,20 +181,43 @@ class _Stepper extends StatelessWidget {
   Widget build(BuildContext context) {
     final change = onChanged;
     return ListTile(
-      title: Text(label),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        IconButton(
-          onPressed: change == null || value <= min ? null : () => change((value - step).clamp(min, max)),
-          icon: const Icon(Icons.remove),
-        ),
-        Text('$value'),
-        IconButton(
-          onPressed: change == null || value >= max ? null : () => change((value + step).clamp(min, max)),
-          icon: const Icon(Icons.add),
-        ),
-      ]),
+      title: Text(label, style: TextStyle(color: change == null ? AppColors.dim : null)),
+      trailing: StepperControl(
+        value: value,
+        onMinus: change == null || value <= min ? null : () => change((value - step).clamp(min, max)),
+        onPlus: change == null || value >= max ? null : () => change((value + step).clamp(min, max)),
+        enabled: change != null,
+      ),
     );
   }
+}
+
+/// −  значение  + — одинаковый вид у всех числовых настроек.
+class StepperControl extends StatelessWidget {
+  const StepperControl({super.key, required this.value, required this.onMinus, required this.onPlus, this.enabled = true, this.valueKey, this.minusKey, this.plusKey});
+
+  final int value;
+  final VoidCallback? onMinus;
+  final VoidCallback? onPlus;
+  final bool enabled;
+  final Key? valueKey;
+  final Key? minusKey;
+  final Key? plusKey;
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        IconButton(key: minusKey, onPressed: onMinus, icon: const Icon(Icons.remove)),
+        SizedBox(
+          width: 48,
+          child: Text(
+            '$value',
+            key: valueKey,
+            textAlign: TextAlign.center,
+            style: heading(18, spacing: 0, color: enabled ? AppColors.text : AppColors.dim),
+          ),
+        ),
+        IconButton(key: plusKey, onPressed: onPlus, icon: const Icon(Icons.add)),
+      ]);
 }
 
 /// Раунды: число по правилам (по количеству игроков) или своё — от 1 до 5, можно и уменьшать, и вернуть «по правилам».
@@ -224,16 +247,13 @@ class _RoundsTile extends StatelessWidget {
             onPressed: () => onChanged(null),
             icon: const Icon(Icons.restart_alt),
           ),
-        IconButton(
-          key: const Key('rounds-minus'),
-          onPressed: value <= 1 ? null : () => onChanged(value - 1),
-          icon: const Icon(Icons.remove),
-        ),
-        SizedBox(width: 22, child: Text('$value', key: const Key('rounds-value'), textAlign: TextAlign.center, style: heading(18, spacing: 0))),
-        IconButton(
-          key: const Key('rounds-plus'),
-          onPressed: value >= 5 ? null : () => onChanged(value + 1),
-          icon: const Icon(Icons.add),
+        StepperControl(
+          value: value,
+          valueKey: const Key('rounds-value'),
+          minusKey: const Key('rounds-minus'),
+          plusKey: const Key('rounds-plus'),
+          onMinus: value <= 1 ? null : () => onChanged(value - 1),
+          onPlus: value >= 5 ? null : () => onChanged(value + 1),
         ),
       ]),
     );
