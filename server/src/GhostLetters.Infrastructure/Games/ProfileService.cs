@@ -68,7 +68,7 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         var rows = await (
                 from s in db.Stats.AsNoTracking()
                 join u in db.Users.AsNoTracking() on s.UserId equals u.Id
-                where s.Games > 0
+                where s.Games > 0 && !u.IsBot
                 orderby s.Rating descending, s.Wins descending, u.Nickname
                 select new { u, s.Rating, s.Games, s.Wins })
             .Take(Math.Clamp(limit, 1, 100))

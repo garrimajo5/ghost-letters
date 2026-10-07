@@ -104,7 +104,7 @@ public sealed class GameDriver(GameHarness game)
             case "BlackmailerPick":
                 return new { target = others[0] };
             case "Nominate":
-                return p == game.Players[0]
+                return p == game.Players[0] && game.Players.Count > 1
                     ? new { code = (string?)AwardCode, nominee = (Guid?)game.Players[1].Id }
                     : new { code = (string?)null, nominee = (Guid?)null };
             case "AwardVote":

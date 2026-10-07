@@ -27,6 +27,10 @@ public sealed class GameHarness
 
     public Guid GameId { get; }
 
+    /// <summary>Партия, запущенная тестом самостоятельно (например, с ботами).</summary>
+    public static GameHarness Existing(DbApiFactory factory, List<TestPlayer> humans, Guid lobbyId, string code, Guid gameId) =>
+        new(factory, humans, lobbyId, code, gameId);
+
     public static async Task<GameHarness> StartAsync(DbApiFactory factory, int players, object? settings = null)
     {
         var list = new List<TestPlayer>();

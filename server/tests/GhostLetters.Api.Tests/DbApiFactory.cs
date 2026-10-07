@@ -17,6 +17,7 @@ public sealed class DbApiFactory(PostgresFixture postgres, Action<IWebHostBuilde
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", postgres.ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseSetting("Bots:Enabled", "false");
         builder.UseSetting("Jwt:SigningKey", ApiFactory.TestSigningKey);
         builder.UseSetting("Cards:SeedOriginalCount", "300");
         builder.UseSetting("Games:TimersEnabled", "false");
