@@ -164,4 +164,28 @@ public sealed class BotBrainTests
 
         BotPlayer.Say(ghost, new Random(8), Tags).Should().BeNull();
     }
+
+    [Fact]
+    public void Awards_BotNeverNominatesOrVotesForItself()
+    {
+        var nominate = View(Phase.AwardNomination, [nameof(Nominate)], Role.Detective);
+        var votes = Finale(null) with
+        {
+            Awards =
+            [
+                new AwardEntryView(0, "sherlock", Me, 1, false, null, false),
+                new AwardEntryView(1, "best_liar", Ann, 1, true, null, false),
+                new AwardEntryView(2, "steel_balls", Bob, 1, false, null, false),
+            ],
+        };
+        var vote = View(Phase.AwardVoting, [nameof(AwardVote)], Role.Detective, finale: votes);
+
+        for (var seed = 0; seed < 30; seed++)
+        {
+            var n = (Nominate)BotPlayer.Decide(nominate, new Random(seed), Tags)!;
+            n.Nominee.Should().NotBe(Me);
+            var v = (AwardVote)BotPlayer.Decide(vote, new Random(seed), Tags)!;
+            v.Entry.Should().Be(2, "своё выдвижение и выдвижение себя не в счёт");
+        }
+    }
 }

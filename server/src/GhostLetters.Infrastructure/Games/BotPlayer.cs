@@ -48,8 +48,8 @@ public static class BotPlayer
             nameof(CastVote) => new CastVote(null, null),
             nameof(HuntPick) => brain.HuntTarget() is { } t ? new HuntPick(t, brain.HuntGuess(t)) : null,
             nameof(BlackmailerPick) => brain.RandomOther() is { } b ? new BlackmailerPick(b) : null,
-            nameof(Nominate) => new Nominate(null, null),
-            nameof(AwardVote) => new AwardVote(null),
+            nameof(Nominate) => brain.Nomination(),
+            nameof(AwardVote) => new AwardVote(brain.AwardChoice()),
             _ => null,
         };
     }
@@ -330,6 +330,29 @@ public static class BotPlayer
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
             return (lines[rng.Next(lines.Length)], [card]);
+        }
+
+        private static readonly string[] Awards = ["sherlock", "best_liar", "steel_balls", "ghost_whisperer"];
+
+        /// <summary>Выдвижение: в половине случаев — случайная ачивка случайному игроку (не себе), иначе пропуск.</summary>
+        public Nominate Nomination()
+        {
+            var others = view.Players.Where(p => p.Id != me.Id).ToList();
+            if (others.Count == 0 || rng.Next(2) == 0)
+            {
+                return new Nominate(null, null);
+            }
+
+            var nominee = others[rng.Next(others.Count)];
+            var code = nominee.IsGhost ? "ghost_whisperer" : Awards[rng.Next(Awards.Length - 1)];
+            return new Nominate(code, nominee.Id);
+        }
+
+        /// <summary>Голос за чужое выдвижение не себя; нечего выбрать — пропуск.</summary>
+        public int? AwardChoice()
+        {
+            var entries = (view.Finale?.Awards ?? []).Where(a => !a.MineNomination && a.Nominee != me.Id).ToList();
+            return entries.Count == 0 ? null : entries[rng.Next(entries.Count)].Index;
         }
 
         /// <summary>Карта поля, больше всего похожая на данную.</summary>
