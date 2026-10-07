@@ -29,3 +29,4 @@ __pycache__/
 client/analyze.txt
 client/test-results.json
 client/.metadata
+client/pubspec.lock
