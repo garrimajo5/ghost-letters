@@ -1,3 +1,4 @@
+using GhostLetters.Api.Endpoints;
 using GhostLetters.Application;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
@@ -9,10 +10,13 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -53,7 +57,10 @@ api.MapGet("/rules/roles", (int players, bool? killer, bool? witness, bool? expe
     })
     .WithName("PreviewRoles");
 
-app.Run();
+api.MapAuth();
+
+await app.Services.MigrateDatabaseAsync(app.Configuration);
+await app.RunAsync();
 
 /// <summary>Нужен для WebApplicationFactory в интеграционных тестах.</summary>
 public partial class Program

@@ -57,3 +57,25 @@ server/src/GhostLetters.Infrastructure  PostgreSQL, файлы, пуши
 server/src/GhostLetters.Api             REST + SignalR
 server/tests/...                        unit- и интеграционные тесты
 ```
+
+## Миграции БД
+
+Миграции EF Core генерируются в GitHub Actions: запишите имя миграции в `server/ef-migration.request`
+и запушьте ветку — workflow «EF migration» создаст миграцию и закоммитит её в ту же ветку.
+Локально с установленным .NET SDK можно и напрямую:
+
+```bash
+cd server
+dotnet ef migrations add <Name> --project src/GhostLetters.Infrastructure --startup-project src/GhostLetters.Api --output-dir Persistence/Migrations
+```
+
+При запуске в окружении Development (и в docker compose) миграции применяются автоматически.
+
+## Вход
+
+- `POST /api/v1/auth/guest` `{deviceId, nickname, avatarColor?}` → `{accessToken, accessTokenExpiresAt, refreshToken, user}`
+- `POST /api/v1/auth/refresh` `{refreshToken}` — новая пара токенов, старый refresh отзывается
+- `POST /api/v1/auth/logout` `{refreshToken}`
+- `GET /api/v1/me`, `PATCH /api/v1/me` `{nickname?, avatarColor?}` — с `Authorization: Bearer <accessToken>`
+
+Ключ подписи — `Jwt:SigningKey` (не короче 32 символов). В Development задан тестовый ключ, в продакшене — только через секреты.
