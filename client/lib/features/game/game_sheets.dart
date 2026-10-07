@@ -22,6 +22,7 @@ class MarkSheet extends StatefulWidget {
 
   static Future<void> show(BuildContext context, GameScreenState screen, String cardId) => showModalBottomSheet<void>(
         context: context,
+        isScrollControlled: true,
         builder: (_) => MarkSheet(screen: screen, cardId: cardId),
       );
 
@@ -39,22 +40,99 @@ class _MarkSheetState extends State<MarkSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final v = widget.screen.view;
+    String? label;
+    if (v != null) {
+      for (var r = 0; r < v.board.length; r++) {
+        final c = v.board[r].cards.indexOf(widget.cardId);
+        if (c >= 0) label = '${T.category(v.board[r].category)}, карта ${c + 1}';
+      }
+    }
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          CardImage(cardId: widget.cardId, size: 160),
-          const SizedBox(height: 12),
-          _Counter(label: '✕ против', value: mark.crosses, onChanged: (v) => _set(mark.copyWith(crosses: v))),
-          _Counter(label: '✓ за', value: mark.checks, onChanged: (v) => _set(mark.copyWith(checks: v))),
-          SwitchListTile(
-            title: const Text('Считаю истинной'),
-            activeThumbColor: AppTheme.believed,
-            value: mark.believed,
-            onChanged: (v) => _set(mark.copyWith(believed: v)),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: mark.believed ? AppColors.believed : AppColors.border, width: mark.believed ? 4 : 2),
+            ),
+            child: CardImage(cardId: widget.cardId, size: 200, radius: 20),
           ),
-          const Text('Пометки видите только вы. Удержание карты на поле — быстрое «считаю истинной».',
-              style: TextStyle(fontSize: 12, color: Colors.white60)),
+          const SizedBox(height: 10),
+          Text('${label ?? 'Карта'} · пометки видите только вы', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          const SizedBox(height: 14),
+          Container(
+            decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+            child: Column(children: [
+              _Counter(
+                key: const Key('mark-crosses'),
+                badge: Icons.close,
+                color: AppColors.red,
+                label: 'Проверяли — подсказки не было',
+                value: mark.crosses,
+                onChanged: (v) => _set(mark.copyWith(crosses: v)),
+              ),
+              const Divider(height: 1, color: AppColors.surface2),
+              _Counter(
+                key: const Key('mark-checks'),
+                badge: Icons.check,
+                color: AppColors.green,
+                label: 'Подсказки указывают сюда',
+                value: mark.checks,
+                onChanged: (v) => _set(mark.copyWith(checks: v)),
+              ),
+              Material(
+                color: mark.believed ? AppColors.green : Colors.transparent,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                child: InkWell(
+                  key: const Key('mark-believed'),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  onTap: () => _set(mark.copyWith(believed: !mark.believed)),
+                  child: SizedBox(
+                    height: 52,
+                    child: Center(
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(
+                          mark.believed ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          size: 18,
+                          color: mark.believed ? Colors.white : AppColors.greenSoft,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Считаю истинной',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: mark.believed ? Colors.white : AppColors.greenSoft,
+                          ),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'На поле подсветка включается удержанием карты',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.ice,
+              foregroundColor: AppColors.bg,
+              minimumSize: const Size(140, 48),
+              shape: const StadiumBorder(),
+              textStyle: const TextStyle(fontFamily: AppFonts.body, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Готово'),
+          ),
         ]),
       ),
     );
@@ -62,21 +140,49 @@ class _MarkSheetState extends State<MarkSheet> {
 }
 
 class _Counter extends StatelessWidget {
-  const _Counter({required this.label, required this.value, required this.onChanged});
+  const _Counter({super.key, required this.badge, required this.color, required this.label, required this.value, required this.onChanged});
 
+  final IconData badge;
+  final Color color;
   final String label;
   final int value;
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-        title: Text(label),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          IconButton(onPressed: value > 0 ? () => onChanged(value - 1) : null, icon: const Icon(Icons.remove)),
-          Text('$value'),
-          IconButton(onPressed: () => onChanged(value + 1), icon: const Icon(Icons.add)),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    Widget button(IconData icon, VoidCallback? onTap, String tooltip) => SizedBox(
+          width: 40,
+          height: 40,
+          child: OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(40, 40),
+              backgroundColor: AppColors.bg,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: const TextStyle(fontSize: 18),
+            ),
+            onPressed: onTap,
+            child: Tooltip(message: tooltip, child: Icon(icon, size: 18)),
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          alignment: Alignment.center,
+          child: Icon(badge, size: 16, color: Colors.white),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: const TextStyle(fontSize: 14, height: 1.3))),
+        button(Icons.remove, value > 0 ? () => onChanged(value - 1) : null, 'Меньше'),
+        SizedBox(width: 30, child: Text('$value', textAlign: TextAlign.center, style: heading(20, spacing: 0))),
+        button(Icons.add, () => onChanged(value + 1), 'Больше'),
+      ]),
+    );
+  }
 }
 
 /// Личная заметка об игроке: степень подозрения и текст.
@@ -157,6 +263,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
               context,
               () => ref.read(apiProvider).saveNote(widget.screen.widget.gameId, widget.userId, _suspicion.round(), _body.text),
             );
+            widget.screen.setSuspicion(widget.userId, _suspicion.round());
             if (context.mounted) Navigator.pop(context);
           },
           child: const Text('Сохранить заметку'),
@@ -348,18 +455,64 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                     final m = messages[messages.length - 1 - i];
                     final author = screen.rosterOf(m.authorId);
                     final quotable = m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
-                    return ListTile(
+                    final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
+                    if (m.authorId == null) {
+                      return Center(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99)),
+                          child: Text(m.text ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                        ),
+                      );
+                    }
+                    final bubble = GestureDetector(
                       onLongPress: quotable ? () => _quoteToNote(m) : null,
-                      leading: Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#5C7C99', size: 32),
-                      title: Text(author?.nickname ?? 'Система', style: Theme.of(context).textTheme.labelMedium),
-                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (m.isVoice)
-                          _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
-                        else if ((m.text ?? '').isNotEmpty)
-                          Text(m.text!),
-                        if (m.cardIds.isNotEmpty)
-                          Wrap(spacing: 4, children: [for (final c in m.cardIds) CardImage(cardId: c, size: 36)]),
-                      ]),
+                      child: Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+                        decoration: BoxDecoration(
+                          color: mine ? AppColors.border : AppColors.surface,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(14),
+                            topRight: const Radius.circular(14),
+                            bottomLeft: Radius.circular(mine ? 14 : 4),
+                            bottomRight: Radius.circular(mine ? 4 : 14),
+                          ),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          if (!mine)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(author?.nickname ?? '?', style: const TextStyle(fontSize: 12, color: AppColors.ice)),
+                            ),
+                          if (m.isVoice)
+                            _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
+                          else if ((m.text ?? '').isNotEmpty)
+                            Text(m.text!, style: const TextStyle(fontSize: 14, height: 1.4)),
+                          if (m.cardIds.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Wrap(spacing: 4, runSpacing: 4, children: [
+                                for (final c in m.cardIds) CardImage(cardId: c, size: 44, radius: 8),
+                              ]),
+                            ),
+                        ]),
+                      ),
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Row(
+                        mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (!mine) ...[
+                            Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#3D6A99', size: 28),
+                            const SizedBox(width: 8),
+                          ],
+                          Flexible(child: bubble),
+                        ],
+                      ),
                     );
                   },
                 );
@@ -393,26 +546,61 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                       ),
                     ])
                   : Row(children: [
-                      IconButton(tooltip: 'Упомянуть карту', onPressed: _pickCards, icon: const Icon(Icons.style_outlined)),
                       Expanded(
                         child: TextField(
                           controller: _text,
                           maxLength: 1000,
-                          decoration: const InputDecoration(hintText: 'Сообщение', counterText: ''),
+                          minLines: 1,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: _channel == 'public' ? 'Сообщение всем' : 'Сообщение команде',
+                            counterText: '',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),
+                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.amber)),
+                          ),
                           onSubmitted: (_) => _send(),
                         ),
                       ),
+                      const SizedBox(width: 6),
+                      _RoundButton(tooltip: 'Упомянуть карту', icon: Icons.style_outlined, onPressed: _pickCards),
+                      const SizedBox(width: 6),
                       if (_sending)
-                        const Padding(padding: EdgeInsets.all(12), child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)))
+                        const SizedBox(width: 44, child: Center(child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))))
                       else
-                        IconButton(tooltip: 'Голосовое', onPressed: _startRecording, icon: const Icon(Icons.mic_none)),
-                      IconButton(onPressed: _send, icon: const Icon(Icons.send)),
+                        _RoundButton(tooltip: 'Голосовое', icon: Icons.mic_none, onPressed: _startRecording, filled: true),
+                      const SizedBox(width: 6),
+                      _RoundButton(tooltip: 'Отправить', icon: Icons.send, onPressed: _send),
                     ]),
             ),
         ]),
       ),
     );
   }
+}
+
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({required this.tooltip, required this.icon, required this.onPressed, this.filled = false});
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool filled;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: tooltip,
+        child: Material(
+          color: filled ? AppColors.amber : AppColors.surface,
+          shape: CircleBorder(side: filled ? BorderSide.none : const BorderSide(color: AppColors.border)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: SizedBox.square(dimension: 44, child: Icon(icon, size: 20, color: filled ? AppColors.onAmber : AppColors.ice)),
+          ),
+        ),
+      );
 }
 
 /// Голосовое в ленте: кнопка воспроизведения и длительность.

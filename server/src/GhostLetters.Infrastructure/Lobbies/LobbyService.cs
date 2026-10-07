@@ -6,6 +6,8 @@ using GhostLetters.Infrastructure.Games;
 using GhostLetters.Infrastructure.Persistence;
 using GhostLetters.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using GhostLetters.Domain.Rules;
 
 namespace GhostLetters.Infrastructure.Lobbies;
 
@@ -14,7 +16,8 @@ public sealed class LobbyService(
     GhostLettersDbContext db,
     CardCatalog cards,
     IRealtimeNotifier notifier,
-    TimeProvider time)
+    TimeProvider time,
+    IServiceProvider services)
 {
     public const int MaxTableScreens = 4;
     public const int MaxTitleLength = 64;
@@ -213,11 +216,22 @@ public sealed class LobbyService(
         if (lobby.Status == LobbyStatuses.InGame && lobby.CurrentGameId is { } gameId)
         {
             var current = GameJson.Deserialize<LobbySettings>(lobby.Settings);
-            var rulesOnly = settings with { Tempo = current.Tempo, TurnHours = current.TurnHours, Timers = current.Timers };
+            var rulesOnly = settings with
+            {
+                Tempo = current.Tempo, TurnHours = current.TurnHours, Timers = current.Timers, Rounds = current.Rounds,
+            };
             if (GameJson.Serialize(rulesOnly) != GameJson.Serialize(current))
             {
                 throw AppException.Conflict(AppException.Codes.GameInProgress,
-                    "Во время партии можно менять только темп и таймеры.");
+                    "Во время партии можно менять только раунды, темп и таймеры.");
+            }
+
+            if (settings.Rounds != current.Rounds)
+            {
+                // «По правилам» — по таблице для числа игроков в партии.
+                var players = await db.GamePlayers.CountAsync(p => p.GameId == gameId, ct);
+                var rounds = settings.Rounds ?? GameDefaults.Rounds(players);
+                await services.GetRequiredService<GameService>().ChangeRoundsAsync(gameId, rounds, ct);
             }
 
             var game = await db.Games.FirstAsync(g => g.Id == gameId, ct);

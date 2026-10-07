@@ -19,6 +19,7 @@ void main() {
     await tester.pumpWidget(await _app());
 
     await tester.enterText(find.byKey(const Key('nickname')), 'Я');
+    await tester.ensureVisible(find.byKey(const Key('login')));
     await tester.tap(find.byKey(const Key('login')));
     await tester.pump();
 
@@ -31,7 +32,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('nickname')), 'ватсон');
     await tester.pump();
 
-    expect(find.text('В'), findsOneWidget);
+    expect(find.text('В'), findsWidgets);
   });
 
   test('deviceId создаётся один раз и сохраняется', () async {

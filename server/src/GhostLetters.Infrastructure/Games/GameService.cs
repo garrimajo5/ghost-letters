@@ -133,6 +133,14 @@ public sealed class GameService(
         });
     }
 
+    /// <summary>Хост меняет число раундов во время партии.</summary>
+    public Task ChangeRoundsAsync(Guid gameId, int rounds, CancellationToken ct) =>
+        WithGameAsync<bool>(gameId, ct, (game, state) =>
+        {
+            var events = GameEngine.ChangeRounds(state, rounds);
+            return Task.FromResult((true, events.Count == 0 ? null : (Applied?)new Applied(events, null, null, "RoundsChanged")));
+        });
+
     /// <summary>Сделать ходы по таймауту во всех партиях, где время вышло. Возвращает, сколько партий сдвинулось.</summary>
     public async Task<int> TimeoutDueAsync(CancellationToken ct)
     {

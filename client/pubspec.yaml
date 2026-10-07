@@ -28,3 +28,25 @@ flutter:
   uses-material-design: true
   assets:
     - assets/cards/
+    - assets/images/
+
+  # Шрифты дизайна (SIL Open Font License): скачаны workflow «Fetch fonts».
+  fonts:
+    - family: Oswald
+      fonts:
+        - asset: assets/fonts/Oswald-400.ttf
+        - asset: assets/fonts/Oswald-500.ttf
+          weight: 500
+        - asset: assets/fonts/Oswald-600.ttf
+          weight: 600
+        - asset: assets/fonts/Oswald-700.ttf
+          weight: 700
+    - family: GolosText
+      fonts:
+        - asset: assets/fonts/GolosText-400.ttf
+        - asset: assets/fonts/GolosText-500.ttf
+          weight: 500
+        - asset: assets/fonts/GolosText-600.ttf
+          weight: 600
+        - asset: assets/fonts/GolosText-700.ttf
+          weight: 700

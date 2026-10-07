@@ -61,7 +61,8 @@ public sealed partial class GameState
 
     public GameSettings Settings { get; init; } = new();
 
-    public int TotalRounds { get; init; }
+    /// <summary>Сколько раундов в партии. Хост может поменять во время игры (не меньше текущего).</summary>
+    public int TotalRounds { get; set; }
 
     public List<PlayerState> Players { get; init; } = [];
 

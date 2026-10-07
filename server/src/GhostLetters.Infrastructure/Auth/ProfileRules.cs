@@ -10,8 +10,8 @@ public static partial class ProfileRules
     public const int MinDeviceIdLength = 8;
     public const int MaxDeviceIdLength = 128;
 
-    /// <summary>Палитра заглушек-аватаров по умолчанию.</summary>
-    public static readonly string[] Palette = ["#7C6CF2", "#E5647A", "#3FB68B", "#F2A541", "#4AA3DF", "#B370D9", "#E57F4F", "#5C7C99"];
+    /// <summary>Палитра заглушек-аватаров по умолчанию (приглушённые цвета из дизайна).</summary>
+    public static readonly string[] Palette = ["#3E7C6E", "#6A5A9E", "#8A5A44", "#3D6A99", "#7A6A3A", "#9A4F6E", "#4F7F3F", "#5A6E82"];
 
     public static string Nickname(string? value)
     {

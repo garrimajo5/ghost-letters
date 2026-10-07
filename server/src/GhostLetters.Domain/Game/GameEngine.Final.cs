@@ -111,6 +111,36 @@ public static partial class GameEngine
         }
     }
 
+    // ---------- Настройки по ходу партии ----------
+
+    /// <summary>Изменить число раундов до финала: не меньше текущего раунда и не после начала голосования.</summary>
+    public static IReadOnlyList<GameEvent> ChangeRounds(GameState state, int rounds)
+    {
+        if (rounds is < 1 or > 5)
+        {
+            throw GameRuleException.Validation("Раундов должно быть от 1 до 5.");
+        }
+
+        if (state.Phase >= Phase.Voting)
+        {
+            throw GameRuleException.NotAllowed("Раунды закончились — идёт финал.");
+        }
+
+        if (rounds < Math.Max(1, state.Round))
+        {
+            throw GameRuleException.Validation($"Сейчас уже раунд {state.Round} — меньше нельзя.");
+        }
+
+        if (rounds == state.TotalRounds)
+        {
+            return [];
+        }
+
+        state.TotalRounds = rounds;
+        state.Version++;
+        return [new GameEvent("RoundsChanged", Detail: rounds.ToString())];
+    }
+
     // ---------- Голосование ----------
 
     private static void StartVoting(GameState state, List<GameEvent> events)

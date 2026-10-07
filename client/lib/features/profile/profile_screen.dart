@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 
@@ -17,26 +18,42 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider(userId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Профиль')),
+      appBar: AppBar(title: const Text('ПРОФИЛЬ')),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(ApiError.from(e).message)),
         data: (p) => ListView(padding: const EdgeInsets.all(16), children: [
-          Center(child: Avatar(nickname: p.user.nickname, color: p.user.avatarColor, size: 88)),
-          const SizedBox(height: 8),
-          Center(child: Text(p.user.nickname, style: Theme.of(context).textTheme.headlineSmall)),
-          const SizedBox(height: 16),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-            _Stat('Рейтинг', '${p.rating}'),
-            _Stat('Партии', '${p.games}'),
-            _Stat('Победы', '${p.wins}'),
-            _Stat('Лайки', '${p.likes}'),
-          ]),
+          Center(child: Avatar(nickname: p.user.nickname, color: p.user.avatarColor, size: 88, highlight: true)),
+          const SizedBox(height: 10),
+          Center(child: Text(p.user.nickname.toUpperCase(), style: heading(26, spacing: 1.5))),
+          const SizedBox(height: 18),
+          Panel(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+              _Stat('Рейтинг', '${p.rating}', color: AppColors.ice),
+              _Stat('Партии', '${p.games}'),
+              _Stat('Победы', '${p.wins}'),
+              _Stat('Лайки', '${p.likes}', color: AppColors.redSoft),
+            ]),
+          ),
           const SizedBox(height: 24),
-          Text('Ачивки', style: Theme.of(context).textTheme.titleMedium),
-          if (p.achievements.isEmpty) const Padding(padding: EdgeInsets.all(8), child: Text('Пока нет — всё впереди')),
+          Text('АЧИВКИ', style: heading(18, color: AppColors.ice, spacing: 2)),
+          const SizedBox(height: 8),
+          if (p.achievements.isEmpty)
+            const Padding(padding: EdgeInsets.all(8), child: Text('Пока нет — всё впереди', style: TextStyle(color: AppColors.muted))),
           for (final a in p.achievements)
-            ListTile(leading: const Icon(Icons.emoji_events, color: Colors.amber), title: Text(a.title), trailing: Text('×${a.count}')),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  const Icon(Icons.emoji_events, color: AppColors.amber),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(a.title, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Text('×${a.count}', style: heading(18, color: AppColors.amber, spacing: 0)),
+                ]),
+              ),
+            ),
         ]),
       ),
     );
@@ -44,14 +61,16 @@ class ProfileScreen extends ConsumerWidget {
 }
 
 class _Stat extends StatelessWidget {
-  const _Stat(this.label, this.value);
+  const _Stat(this.label, this.value, {this.color = AppColors.text});
 
   final String label;
   final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        Text(value, style: Theme.of(context).textTheme.titleLarge),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Text(value, style: heading(22, color: color, spacing: 0.5)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
       ]);
 }

@@ -6,6 +6,7 @@ import '../../core/api.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
 import '../../core/texts.dart';
+import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 
@@ -47,86 +48,172 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 12) return 'Доброе утро,';
+    if (h >= 12 && h < 18) return 'Добрый день,';
+    if (h >= 18 && h < 23) return 'Добрый вечер,';
+    return 'Доброй ночи,';
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider).user;
     if (user == null) return const SizedBox.shrink();
     final games = ref.watch(myGamesProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Письма призрака'),
-        actions: [
-          IconButton(
-            tooltip: 'Профиль',
-            onPressed: () => context.push('/profile/${user.id}'),
-            icon: Avatar(nickname: user.nickname, color: user.avatarColor, size: 32),
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.invalidate(myGamesProvider),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            children: [
+              Row(children: [
+                GestureDetector(
+                  onTap: () => context.push('/profile/${user.id}'),
+                  child: Tooltip(
+                    message: 'Профиль',
+                    child: Avatar(nickname: user.nickname, color: user.avatarColor, size: 48, highlight: true),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(_greeting, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                    Text(user.nickname.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: heading(24, spacing: 1)),
+                  ]),
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_horiz, color: AppColors.muted),
+                  onSelected: (v) async {
+                    if (v == 'profile') {
+                      context.push('/profile/${user.id}');
+                    } else if (v == 'logout') {
+                      await ref.read(realtimeProvider).disconnect();
+                      ref.read(sessionProvider.notifier).signOut();
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
+                    PopupMenuItem(value: 'logout', child: Text('Выйти')),
+                  ],
+                ),
+              ]),
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                key: const Key('create-lobby'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(64),
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+                  textStyle: heading(20, spacing: 2),
+                ),
+                onPressed: _create,
+                icon: const Icon(Icons.add, size: 26),
+                label: const Text('СОЗДАТЬ ИГРУ'),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    key: const Key('lobby-code'),
+                    controller: _code,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 6,
+                    style: heading(18, spacing: 3),
+                    decoration: const InputDecoration(hintText: 'Код: ABC234', counterText: ''),
+                    onSubmitted: (_) => _join(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                OutlinedButton(
+                  key: const Key('join'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 56),
+                    foregroundColor: AppColors.amber,
+                    side: const BorderSide(color: AppColors.amber),
+                  ),
+                  onPressed: _join,
+                  child: const Text('ВОЙТИ'),
+                ),
+              ]),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _asTable,
+                onChanged: (v) => setState(() => _asTable = v ?? false),
+                title: const Text('Как экран стола'),
+                subtitle: const Text('Общий экран для игры за одним столом — без тайной информации'),
+              ),
+              const SizedBox(height: 12),
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(child: Text('МОИ ПАРТИИ', style: heading(18, color: AppColors.ice, spacing: 2))),
+                if (games.valueOrNull case final list? when list.isNotEmpty)
+                  Text('${list.length} активн${list.length == 1 ? 'ая' : 'ые'}', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+              ]),
+              const SizedBox(height: 10),
+              games.when(
+                data: (list) => list.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text('Пока нет идущих партий', style: TextStyle(color: AppColors.muted)),
+                      )
+                    : Column(children: [for (final g in list) _GameCard(game: g)]),
+                loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
+                error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiError.from(e).message)),
+              ),
+            ],
           ),
-          PopupMenuButton<String>(
-            onSelected: (v) async {
-              if (v == 'logout') {
-                await ref.read(realtimeProvider).disconnect();
-                ref.read(sessionProvider.notifier).signOut();
-              }
-            },
-            itemBuilder: (_) => const [PopupMenuItem(value: 'logout', child: Text('Выйти'))],
-          ),
-        ],
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(myGamesProvider),
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            FilledButton.icon(
-              key: const Key('create-lobby'),
-              onPressed: _create,
-              icon: const Icon(Icons.add),
-              label: const Padding(padding: EdgeInsets.all(12), child: Text('Создать лобби')),
-            ),
-            const SizedBox(height: 24),
-            Text('Войти по коду', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Row(children: [
+    );
+  }
+}
+
+/// Карточка идущей партии; если ждут вашего хода — янтарная рамка и плашка «Ваш ход».
+class _GameCard extends StatelessWidget {
+  const _GameCard({required this.game});
+
+  final MyGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = game;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: g.yourTurn ? AppColors.amber : AppColors.border),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.go('/game/${g.gameId}'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(children: [
               Expanded(
-                child: TextField(
-                  key: const Key('lobby-code'),
-                  controller: _code,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 6,
-                  decoration: const InputDecoration(hintText: 'ABC234', counterText: ''),
-                  onSubmitted: (_) => _join(),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(T.phase(g.phase), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(g.yourTurn ? 'Ваш ход' : 'Ждём других игроков', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                ]),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: g.yourTurn ? AppColors.amber : null,
+                  border: g.yourTurn ? null : Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  g.yourTurn ? 'Ваш ход' : 'Ждём',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: g.yourTurn ? AppColors.onAmber : AppColors.muted),
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton.tonal(onPressed: _join, child: const Text('Войти')),
             ]),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _asTable,
-              onChanged: (v) => setState(() => _asTable = v ?? false),
-              title: const Text('Как экран стола'),
-              subtitle: const Text('Общий экран для игры за одним столом — без тайной информации'),
-            ),
-            const SizedBox(height: 16),
-            Text('Мои партии', style: Theme.of(context).textTheme.titleMedium),
-            games.when(
-              data: (list) => list.isEmpty
-                  ? const Padding(padding: EdgeInsets.all(16), child: Text('Пока нет идущих партий'))
-                  : Column(children: [
-                      for (final g in list)
-                        ListTile(
-                          leading: Icon(g.yourTurn ? Icons.notifications_active : Icons.hourglass_empty,
-                              color: g.yourTurn ? Theme.of(context).colorScheme.primary : null),
-                          title: Text(T.phase(g.phase)),
-                          subtitle: Text(g.yourTurn ? 'Ваш ход' : 'Ждём других игроков'),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.go('/game/${g.gameId}'),
-                        ),
-                    ]),
-              loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-              error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiError.from(e).message)),
-            ),
-          ],
+          ),
         ),
       ),
     );

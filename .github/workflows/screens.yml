@@ -1,0 +1,43 @@
+name: Screens preview
+
+# Снимки экранов клиента с настоящими шрифтами и картинками (Pixel 8) — чтобы проверить дизайн без эмулятора.
+# Запуск: запушьте client/screens.request. PNG попадут в ветку preview/screens (перезаписывается).
+on:
+  push:
+    paths:
+      - client/screens.request
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Render
+        continue-on-error: true
+        run: |
+          export FLUTTER_ROOT="$(dirname "$(dirname "$(which flutter)")")"
+          flutter test --update-goldens test_screens 2>&1 | tee screens.log
+      - name: Publish to preview/screens
+        if: always()
+        run: |
+          mkdir -p /tmp/out
+          cp -r test_screens/goldens/. /tmp/out/ 2>/dev/null || true
+          cp screens.log /tmp/out/ 2>/dev/null || true
+          cd /tmp/out
+          git init -q -b preview
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Снимки экранов для ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" HEAD:preview/screens

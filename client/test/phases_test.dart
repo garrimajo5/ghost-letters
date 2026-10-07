@@ -61,10 +61,15 @@ Future<void> tapText(WidgetTester tester, String text) async {
 
 List<Object?> lastCommand(TestApp app) => app.api.named('command').last.$2;
 
+Future<void> tapCta(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('cta')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   // Каждая фаза отрисовывается без ошибок и показывает понятную подсказку.
   final cases = <String, (GameSnapshot, String)>{
-    'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'Посмотрите свою роль'),
+    'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'ВАША РОЛЬ'),
     'ночь, Убийца': (phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'), 'Выберите по одной истинной улике в каждом ряду'),
     'ночь, детектив': (phaseSnapshot('Night', const []), 'Ждём других игроков'),
     'первая зацепка': (phaseSnapshot('FirstClue', const ['GiveFirstClue'], role: 'Ghost'), 'Можно выложить первую зацепку'),
@@ -157,7 +162,8 @@ void main() {
   testWidgets('ночь: по карте в каждом ряду — и улики уходят на сервер', (tester) async {
     final app = await openGame(tester, phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'));
 
-    FilledButton button() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Это истина'));
+    FilledButton button() => tester.widget<FilledButton>(find.byKey(const Key('cta')));
+    expect(find.text('ЭТО ИСТИНА'), findsOneWidget);
     expect(button().onPressed, isNull);
 
     await tester.tap(find.byKey(const Key('board-0-3')));
@@ -166,7 +172,7 @@ void main() {
     await tester.pump();
     expect(button().onPressed, isNotNull);
 
-    await tapText(tester, 'Это истина');
+    await tapCta(tester);
     expect(lastCommand(app)[0], 'ChooseTruth');
     expect(lastCommand(app)[1], {'columns': [3, 1]});
   });
@@ -176,12 +182,12 @@ void main() {
 
     await tester.tap(find.byKey(const Key('board-1-1')));
     await tester.pump();
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Голосовать')).onPressed, isNull,
+    expect(tester.widget<FilledButton>(find.byKey(const Key('cta'))).onPressed, isNull,
         reason: 'столбец 1 не среди кандидатов переголосования');
 
     await tester.tap(find.byKey(const Key('board-1-3')));
     await tester.pump();
-    await tapText(tester, 'Голосовать');
+    await tapCta(tester);
     expect(lastCommand(app)[1], {'column': 3});
   });
 
@@ -209,7 +215,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('player-u3')));
     await tester.pump();
-    await tapText(tester, 'Голосовать');
+    await tapCta(tester);
     expect(lastCommand(app)[1], {'suspect': 'u3'});
   });
 
@@ -232,10 +238,11 @@ void main() {
       }),
     );
 
-    expect(find.text('Ничего не открывать'), findsOneWidget);
+    expect(find.text('НИЧЕГО НЕ ОТКРЫВАТЬ'), findsOneWidget);
     await tester.tap(find.byKey(const Key('mailbox-orig_0401')));
     await tester.pump();
-    await tapText(tester, 'Открыть: 1');
+    expect(find.text('ОТКРЫТЬ: 1'), findsOneWidget);
+    await tapCta(tester);
     expect(lastCommand(app)[1], {'cardIds': ['orig_0401']});
   });
 
@@ -244,7 +251,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('player-u3')));
     await tester.pump();
-    await tapText(tester, 'Дать слово Марпл');
+    await tapText(tester, 'Дать слово: Марпл');
     expect(lastCommand(app), ['GiveFloor', {'to': 'u3'}, 42]);
   });
 
@@ -256,9 +263,11 @@ void main() {
 
     expect(find.text('Дело раскрыто — победа детективов'), findsOneWidget);
     expect(find.text('Вы победили'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('player-u3')));
-    await tester.pump();
-    await tapText(tester, 'Шерлок');
+    await tester.ensureVisible(find.byKey(const Key('nominate-sherlock')));
+    await tester.tap(find.byKey(const Key('nominate-sherlock')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('nominee-u3')));
+    await tester.pumpAndSettle();
     expect(lastCommand(app)[1], {'code': 'sherlock', 'nominee': 'u3'});
   });
 }

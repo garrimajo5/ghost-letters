@@ -53,5 +53,21 @@ class T {
 
   static String phase(String p) => phases[p] ?? p;
 
+  /// Короткие названия фаз для плашки в шапке.
+  static const shortPhases = {
+    'RoleReveal': 'Роли',
+    'FirstClue': 'Зацепка',
+    'Mailbox': 'Письма',
+    'GhostPick': 'Призрак',
+    'Refill': 'Добор',
+    'BlackmailerHunt': 'Охота',
+    'BlackmailerClaim': 'Шантажист',
+    'AwardNomination': 'Ачивки',
+    'AwardVoting': 'Ачивки',
+    'Finished': 'Итоги',
+  };
+
+  static String shortPhase(String p) => shortPhases[p] ?? phase(p);
+
   static String category(String c) => categories[c] ?? c;
 }
