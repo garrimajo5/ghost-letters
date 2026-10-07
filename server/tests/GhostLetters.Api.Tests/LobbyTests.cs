@@ -164,5 +164,10 @@ public sealed class LobbyTests(PostgresFixture postgres) : IAsyncLifetime
 
         (await game.Host.PutAsync($"/api/v1/lobbies/{game.LobbyId}/settings", settings with { Rounds = 9 }, HttpStatusCode.BadRequest))
             .Code().Should().Be("VALIDATION");
+
+        // Режим обсуждения — тоже (партия ещё не дошла до обсуждения).
+        await game.Host.PutAsync($"/api/v1/lobbies/{game.LobbyId}/settings",
+            settings with { Rounds = 2, Discussion = DiscussionMode.FreeChat });
+        (await game.Host.ViewAsync(game.GameId)).Str("discussion").Should().Be("FreeChat");
     }
 }

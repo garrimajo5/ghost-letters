@@ -113,6 +113,29 @@ public static partial class GameEngine
 
     // ---------- Настройки по ходу партии ----------
 
+    /// <summary>Сменить режим обсуждения (рация / свободно). Во время обсуждения нельзя — подействует со следующего.</summary>
+    public static IReadOnlyList<GameEvent> ChangeDiscussion(GameState state, DiscussionMode mode)
+    {
+        if (mode == state.Settings.Discussion)
+        {
+            return [];
+        }
+
+        if (state.Phase == Phase.Discussion)
+        {
+            throw GameRuleException.NotAllowed("Идёт обсуждение — режим можно сменить, когда оно закончится.");
+        }
+
+        if (state.Phase >= Phase.Voting)
+        {
+            throw GameRuleException.NotAllowed("Обсуждения закончились — идёт финал.");
+        }
+
+        state.Settings = state.Settings with { Discussion = mode };
+        state.Version++;
+        return [new GameEvent("DiscussionChanged", Detail: mode.ToString())];
+    }
+
     /// <summary>Изменить число раундов до финала: не меньше текущего раунда и не после начала голосования.</summary>
     public static IReadOnlyList<GameEvent> ChangeRounds(GameState state, int rounds)
     {
