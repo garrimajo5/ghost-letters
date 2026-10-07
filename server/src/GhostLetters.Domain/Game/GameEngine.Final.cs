@@ -35,7 +35,7 @@ public static partial class GameEngine
             case HuntPick hunt:
                 RequirePhase(state, Phase.Hunt);
                 RequireKiller(actor);
-                ApplyHunt(state, RequireTarget(state, actor, hunt.Target), events);
+                ApplyHunt(state, RequireTarget(state, actor, hunt.Target), hunt.Guess, events);
                 return true;
             case BlackmailerPick pick:
                 RequirePhase(state, Phase.BlackmailerHunt);
@@ -347,10 +347,23 @@ public static partial class GameEngine
         }
     }
 
-    private static void ApplyHunt(GameState state, PlayerState target, List<GameEvent> events)
+    private static void ApplyHunt(GameState state, PlayerState target, Role? guess, List<GameEvent> events)
     {
-        var success = target.Role is Role.Witness or Role.Expert;
-        state.Hunt = new HuntResult { Target = target.Id, Success = success };
+        var hunted = state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).Distinct().ToList();
+        if (guess is not null && !hunted.Contains(guess.Value))
+        {
+            throw GameRuleException.Validation("Можно назвать только роль Свидетеля или Эксперта, которая есть в игре.");
+        }
+
+        // Только одна из ролей в игре — роль очевидна; обе — Убийца должен угадать и роль.
+        if (hunted.Count > 1 && guess is null)
+        {
+            throw GameRuleException.Validation("В игре и Свидетель, и Эксперт — назовите роль.");
+        }
+
+        var role = guess ?? hunted[0];
+        var success = target.Role == role;
+        state.Hunt = new HuntResult { Target = target.Id, Guess = role, Success = success };
         events.Add(new GameEvent(success ? "HuntSucceeded" : "HuntMissed", Detail: target.Id.ToString()));
         NextFinaleStep(state, events);
     }
@@ -381,6 +394,7 @@ public static partial class GameEngine
                              state.BlackmailerClaim is { } claim && claim.SequenceEqual(state.Truth!);
 
         var side = solved && !huntWon ? WinningSide.Detectives
+            : blackmailerWon ? WinningSide.Blackmailer
             : state.HasKiller ? WinningSide.Killer
             : WinningSide.Nobody;
 
@@ -392,7 +406,7 @@ public static partial class GameEngine
         };
 
         var winners = state.Players.Where(p =>
-            SideWins(p) || (imitatorWon && p.Role == Role.Imitator) || (blackmailerWon && p.Role == Role.Blackmailer));
+            SideWins(p) || (imitatorWon && p.Role == Role.Imitator) || (side == WinningSide.Blackmailer && p.Role == Role.Blackmailer));
 
         state.Result = new GameResult
         {

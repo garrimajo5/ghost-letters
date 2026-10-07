@@ -1,3 +1,5 @@
+using GhostLetters.Domain.Roles;
+
 namespace GhostLetters.Domain.Game;
 
 /// <summary>Намерение игрока. Сервер проверяет его правилами и применяет к состоянию.</summary>
@@ -41,8 +43,11 @@ public sealed record CastVote(int? Column, Guid? Suspect) : GameCommand;
 /// <summary>Ничья обсуждена, игрок готов переголосовать.</summary>
 public sealed record ReadyRevote : GameCommand;
 
-/// <summary>Убийца указывает, кого считает Свидетелем или Экспертом.</summary>
-public sealed record HuntPick(Guid Target) : GameCommand;
+/// <summary>
+/// Убийца указывает, кого считает Свидетелем или Экспертом.
+/// Если в игре обе роли, нужно назвать и роль (Guess) — засчитывается только точное попадание.
+/// </summary>
+public sealed record HuntPick(Guid Target, Role? Guess = null) : GameCommand;
 
 /// <summary>Убийца указывает, кого считает Шантажистом.</summary>
 public sealed record BlackmailerPick(Guid Target) : GameCommand;

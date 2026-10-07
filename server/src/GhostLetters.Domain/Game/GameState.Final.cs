@@ -59,6 +59,8 @@ public sealed class HuntResult
 {
     public Guid? Target { get; init; }
 
+    public Role? Guess { get; init; }
+
     public bool Success { get; init; }
 }
 
@@ -67,6 +69,9 @@ public enum WinningSide
     Nobody,
     Detectives,
     Killer,
+
+    /// <summary>Шантажист назвал истину и не был найден — Убийца и Сообщники проигрывают.</summary>
+    Blackmailer,
 }
 
 public sealed class GameResult

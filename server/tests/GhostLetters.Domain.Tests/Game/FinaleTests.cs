@@ -251,8 +251,75 @@ public class FinaleTests
         state.Run(blackmailer, new NameTruth([0, 0, 0, 0]));
 
         state.Result!.BlackmailerWon.Should().BeTrue();
-        state.Result.Side.Should().Be(WinningSide.Killer);
-        state.Result.Winners.Should().Contain(new[] { blackmailer.Id, killer.Id });
+        state.Result.Side.Should().Be(WinningSide.Blackmailer);
+        state.Result.Winners.Should().Equal(blackmailer.Id);
+    }
+
+    [Fact]
+    public void Blackmailer_WrongClaim_KillerTeamWins()
+    {
+        var state = FinaleGame.ToVoting(players: 8, FinaleGame.WithBlackmailer);
+        var killer = state.WithRole(Role.Killer);
+        state.VoteAllRows(Wrong);
+        state.VoteKiller(state.WithRole(Role.Detective));
+        state.Run(killer, new HuntPick(state.WithRole(Role.Detective).Id));
+        state.Run(killer, new BlackmailerPick(state.WithRole(Role.Witness).Id));
+
+        state.Run(state.WithRole(Role.Blackmailer), new NameTruth([0, 0, 0, 1]));
+
+        state.Result!.Side.Should().Be(WinningSide.Killer);
+        state.Result.Winners.Should().BeEquivalentTo(new[] { killer.Id, state.WithRole(Role.Accomplice).Id });
+    }
+
+    [Fact]
+    public void Hunt_WithWitnessAndExpert_KillerMustNameExactRole()
+    {
+        var state = FinaleGame.ToVoting(players: 10);
+        var killer = state.WithRole(Role.Killer);
+        var witness = state.WithRole(Role.Witness);
+        state.VoteAllRows(Right);
+        state.VoteKiller(state.WithRole(Role.Detective));
+        state.Phase.Should().Be(Phase.Hunt);
+
+        var noRole = () => state.Run(killer, new HuntPick(witness.Id));
+        noRole.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
+        var notHuntedRole = () => state.Run(killer, new HuntPick(witness.Id, Role.Detective));
+        notHuntedRole.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
+
+        state.Run(killer, new HuntPick(witness.Id, Role.Expert));
+
+        state.Hunt!.Success.Should().BeFalse("Свидетель найден, но роль названа неверно");
+        state.Result!.Side.Should().Be(WinningSide.Detectives);
+    }
+
+    [Fact]
+    public void Hunt_WithWitnessAndExpert_ExactRole_KillerWins()
+    {
+        var state = FinaleGame.ToVoting(players: 10);
+        state.VoteAllRows(Right);
+        state.VoteKiller(state.WithRole(Role.Detective));
+
+        state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Expert).Id, Role.Expert));
+
+        state.Hunt!.Success.Should().BeTrue();
+        state.Hunt.Guess.Should().Be(Role.Expert);
+        state.Result!.Side.Should().Be(WinningSide.Killer);
+    }
+
+    [Fact]
+    public void Hunt_OnlyWitness_RoleIsImplied()
+    {
+        var state = FinaleGame.ToVoting(players: 7);
+        state.VoteAllRows(Right);
+        state.VoteKiller(state.WithRole(Role.Detective));
+
+        var expertGuess = () => state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Witness).Id, Role.Expert));
+        expertGuess.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
+
+        state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Witness).Id));
+
+        state.Hunt!.Guess.Should().Be(Role.Witness);
+        state.Hunt.Success.Should().BeTrue();
     }
 
     [Fact]

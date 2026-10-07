@@ -25,7 +25,7 @@ public sealed record VoteOutcomeView(
 
 public sealed record MyVoteView(int? Column, Guid? Suspect);
 
-public sealed record HuntView(Guid? Target, bool Success);
+public sealed record HuntView(Guid? Target, Role? Guess, bool Success);
 
 public sealed record ResultView(
     bool Solved,
@@ -115,7 +115,7 @@ public static class FinaleProjection
             state.VoteRecords.Select(v => new VoteRecordView(v.Stage, v.Attempt, v.Voter, v.Column, v.Suspect)).ToList(),
             outcomes,
             state.Arrested.ToList(),
-            state.Hunt is { } h ? new HuntView(h.Target, h.Success) : null,
+            state.Hunt is { } h ? new HuntView(h.Target, h.Guess, h.Success) : null,
             state.BlackmailerFound,
             result,
             awards,
