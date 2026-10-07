@@ -10,6 +10,7 @@ import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import '../lobby/settings_sheet.dart';
 import 'action_panel.dart';
 import 'game_sheets.dart';
 import 'game_state.dart';
@@ -29,6 +30,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
   String? _error;
   final _subs = <StreamSubscription<Object?>>[];
   late final Realtime _realtime;
+  late final AppLifecycleListener _lifecycle;
+
+  /// Лобби партии — чтобы хост мог менять темп и таймеры прямо в игре.
+  Lobby? lobby;
 
   /// Выбор игрока на текущем шаге: карты руки, улики ночи, письма в ящике, голос, цель.
   final selectedHand = <String>{};
@@ -71,31 +76,63 @@ class GameScreenState extends ConsumerState<GameScreen> {
       });
     }));
     _subs.add(_realtime.chat.listen((m) {
-      if (!mounted) return;
+      if (!mounted || chat.any((c) => c.id == m.id)) return;
       setState(() {
         chat.add(m);
         unread++;
       });
     }));
+    _subs.add(_realtime.lobbyUpdates.listen((l) {
+      if (mounted && l.id == lobbyId) setState(() => lobby = l);
+    }));
+    // Вернулись из фона: связь могла прерваться — подписываемся заново и перечитываем партию.
+    _lifecycle = AppLifecycleListener(onResume: _resync);
     _load();
+  }
+
+  Future<void> _resync() async {
+    try {
+      await _realtime.resync();
+      final fresh = await ref.read(apiProvider).snapshot(widget.gameId);
+      if (mounted && fresh.view.version >= (view?.version ?? 0)) setState(() => _snap = fresh);
+    } catch (_) {
+      // Не вышло — обновление придёт, когда хаб переподключится.
+    }
   }
 
   Future<void> _load() async {
     try {
       final snap = await _realtime.subscribeGame(widget.gameId);
+      if (!mounted) return;
+      // Снимок — сразу, чтобы обновления по хабу, пришедшие во время загрузки чата, не терялись.
+      final current = _snap;
+      setState(() => _snap = current != null && current.view.version > snap.view.version ? current : snap);
+
       final api = ref.read(apiProvider);
       final history = await api.chat(widget.gameId);
       final savedMarks = snap.view.me == null ? const <Json>[] : await api.marks(widget.gameId);
       if (!mounted) return;
       setState(() {
-        _snap = snap;
+        final known = {for (final m in history) m.id};
+        final live = chat.where((m) => !known.contains(m.id)).toList();
         chat
           ..clear()
-          ..addAll(history);
+          ..addAll(history)
+          ..addAll(live);
         marks
           ..clear()
           ..addEntries(savedMarks.map((m) => MapEntry(m['cardId'] as String, CardMark.fromJson(m))));
       });
+
+      final lobbyId = snap.lobbyId;
+      if (lobbyId != null && snap.view.me != null) {
+        try {
+          final l = await _realtime.subscribeLobby(lobbyId);
+          if (mounted) setState(() => lobby = l);
+        } catch (_) {
+          // Лобби нужно только для настроек хоста.
+        }
+      }
     } catch (e) {
       if (mounted) setState(() => _error = ApiError.from(e).message);
     }
@@ -114,20 +151,58 @@ class GameScreenState extends ConsumerState<GameScreen> {
     for (final s in _subs) {
       s.cancel();
     }
+    _lifecycle.dispose();
     _realtime.forgetGame(widget.gameId);
+    final l = lobby;
+    if (l != null) _realtime.unsubscribeLobby(l.id);
     super.dispose();
   }
 
   /// Отправить команду. Новое состояние придёт по SignalR; если нет — перечитаем снимок.
+  /// Если партия успела измениться (VERSION_CONFLICT), перечитываем её и, если ход ещё нужен, повторяем.
   Future<void> send(String type, [Json payload = const {}]) async {
     final v = view;
     if (v == null) return;
-    final ok = await runAction(context, () => ref.read(apiProvider).command(widget.gameId, type, payload, v.version));
-    if (ok != null && mounted) {
-      setState(_resetSelection);
-      final fresh = await runAction(context, () => ref.read(apiProvider).snapshot(widget.gameId));
-      if (fresh != null && mounted && fresh.view.version >= (view?.version ?? 0)) setState(() => _snap = fresh);
+    final api = ref.read(apiProvider);
+    try {
+      await api.command(widget.gameId, type, payload, v.version);
+    } on ApiError catch (e) {
+      if (e.code != 'VERSION_CONFLICT') {
+        _snack(e.message);
+        return;
+      }
+
+      final fresh = await runAction(context, () => api.snapshot(widget.gameId));
+      if (fresh == null || !mounted) return;
+      setState(() => _snap = fresh);
+      if (!fresh.view.can(type)) return;
+      try {
+        await api.command(widget.gameId, type, payload, fresh.view.version);
+      } on ApiError catch (e2) {
+        _snack(e2.message);
+        return;
+      }
     }
+
+    if (!mounted) return;
+    setState(_resetSelection);
+    final fresh = await runAction(context, () => api.snapshot(widget.gameId));
+    if (fresh != null && mounted && fresh.view.version >= (view?.version ?? 0)) setState(() => _snap = fresh);
+  }
+
+  void _snack(String text) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  bool get isHost => lobby != null && lobby!.hostUserId == view?.me?.id;
+
+  Future<void> editSettings() async {
+    final l = lobby;
+    if (l == null) return;
+    final s = await SettingsSheet.show(context, l.settings, inGame: true);
+    if (s == null || !mounted) return;
+    final updated = await runAction(context, () => ref.read(apiProvider).saveSettings(l.id, s));
+    if (updated != null && mounted) setState(() => lobby = updated);
   }
 
   void refresh() => setState(() {});
@@ -204,6 +279,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
         ]),
         actions: [
           Countdown(deadline: snap.deadline),
+          if (isHost)
+            IconButton(tooltip: 'Темп и таймеры', icon: const Icon(Icons.tune), onPressed: editSettings),
           IconButton(
             tooltip: 'Чат',
             onPressed: () {

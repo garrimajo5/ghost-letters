@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +27,9 @@ class ApiError implements Exception {
       }
       return ApiError('HTTP_${e.response?.statusCode}', 'Ошибка сервера (${e.response?.statusCode}).', e.response?.statusCode);
     }
+    // Ошибки хаба приходят текстом «… КОД: сообщение».
+    final hub = RegExp(r'([A-Z][A-Z_]{3,}):\s*(.+)$', multiLine: true).firstMatch(e.toString());
+    if (hub != null) return ApiError(hub.group(1)!, hub.group(2)!.trim());
     return ApiError('ERROR', e.toString());
   }
 
@@ -47,7 +52,10 @@ class Api {
       },
       onError: (error, handler) async {
         final retried = error.requestOptions.extra['retried'] == true;
-        if (error.response?.statusCode == 401 && !retried && await _refresh()) {
+        final used = (error.requestOptions.headers['Authorization'] as String?)?.replaceFirst('Bearer ', '');
+        // Токен уже обновил параллельный запрос — просто повторяем с новым.
+        final alreadyFresh = used != null && used != _ref.read(sessionProvider).accessToken;
+        if (error.response?.statusCode == 401 && !retried && (alreadyFresh || await refreshTokens())) {
           final options = error.requestOptions
             ..extra['retried'] = true
             ..headers['Authorization'] = 'Bearer ${_ref.read(sessionProvider).accessToken}';
@@ -71,17 +79,35 @@ class Api {
     contentType: 'application/json',
   ));
 
-  Future<bool> _refresh() async {
+  Future<bool>? _refreshing;
+
+  /// Обновить пару токенов. Одновременные вызовы ждут один запрос: повторное использование
+  /// старого refresh-токена сервер считает кражей и отзывает все сессии.
+  Future<bool> refreshTokens() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  Future<bool> _doRefresh() async {
     final refresh = _ref.read(sessionProvider).refreshToken;
     if (refresh == null) return false;
     try {
       final r = await Dio(BaseOptions(baseUrl: AppConfig.api)).post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refresh});
       _ref.read(sessionProvider.notifier).signIn(AuthTokens.fromJson(r.data!));
       return true;
-    } catch (_) {
-      _ref.read(sessionProvider.notifier).signOut();
+    } on DioException catch (e) {
+      // Выходим, только если сервер отверг сессию; при обрыве сети остаёмся в аккаунте.
+      if (e.response?.statusCode == 401) _ref.read(sessionProvider.notifier).signOut();
       return false;
     }
+  }
+
+  /// Токен для хаба: если истекает в ближайшую минуту — сначала обновляем.
+  Future<String> freshAccessToken() async {
+    final token = _ref.read(sessionProvider).accessToken;
+    if (token == null) return '';
+    final exp = jwtExpiry(token);
+    if (exp != null && exp.difference(DateTime.now()) < const Duration(minutes: 1)) {
+      await refreshTokens();
+    }
+    return _ref.read(sessionProvider).accessToken ?? '';
   }
 
   Future<dynamic> _call(Future<Response<dynamic>> Function() request) async {
@@ -214,3 +240,16 @@ class RolesPreview {
 final rolesPreviewProvider = FutureProvider.autoDispose.family<RolesPreview, ({int players, RoleOptions roles})>(
   (ref, key) => ref.read(apiProvider).previewRoles(key.players, key.roles),
 );
+
+/// Время истечения JWT из поля exp (без проверки подписи — только чтобы обновить заранее).
+DateTime? jwtExpiry(String token) {
+  final parts = token.split('.');
+  if (parts.length != 3) return null;
+  try {
+    final payload = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1])))) as Map<String, dynamic>;
+    final exp = payload['exp'];
+    return exp is num ? DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000) : null;
+  } catch (_) {
+    return null;
+  }
+}

@@ -307,16 +307,14 @@ public class FinaleTests
     }
 
     [Fact]
-    public void Hunt_OnlyWitness_RoleIsImplied()
+    public void Hunt_OnlyWitness_RoleIsImplied_GuessIgnored()
     {
         var state = FinaleGame.ToVoting(players: 7);
         state.VoteAllRows(Right);
         state.VoteKiller(state.WithRole(Role.Detective));
 
-        var expertGuess = () => state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Witness).Id, Role.Expert));
-        expertGuess.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
-
-        state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Witness).Id));
+        // Убийца не знает, есть ли в партии Эксперт, и назвал его — роль всё равно одна, засчитывается Свидетель.
+        state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Witness).Id, Role.Expert));
 
         state.Hunt!.Guess.Should().Be(Role.Witness);
         state.Hunt.Success.Should().BeTrue();

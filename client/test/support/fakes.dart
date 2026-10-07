@@ -60,9 +60,17 @@ class FakeApi extends Api {
   @override
   Future<GameSnapshot> snapshot(String gameId) async => _record('snapshot', [gameId], () => snapshotResult!);
 
+  /// Ошибка только для следующей команды (например, VERSION_CONFLICT).
+  ApiError? failNextCommand;
+
   @override
   Future<int> command(String gameId, String type, [Json payload = const {}, int? expectedVersion]) async =>
-      _record('command', [type, payload, expectedVersion], () => (expectedVersion ?? 0) + 1);
+      _record('command', [type, payload, expectedVersion], () {
+        final once = failNextCommand;
+        failNextCommand = null;
+        if (once != null) throw once;
+        return (expectedVersion ?? 0) + 1;
+      });
 
   @override
   Future<List<ChatMessage>> chat(String gameId) async => const [];

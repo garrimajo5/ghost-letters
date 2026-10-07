@@ -227,6 +227,7 @@ class _RolesPreview extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (players < 2) return const SizedBox.shrink();
     final preview = ref.watch(rolesPreviewProvider((players: players, roles: lobby.settings.roles)));
     return preview.when(
       loading: () => const SizedBox(height: 24),
