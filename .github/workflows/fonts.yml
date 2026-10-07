@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: pip install fonttools
       - name: Download
         run: python3 .github/scripts/fetch_fonts.py client/assets/fonts
       - name: Commit
