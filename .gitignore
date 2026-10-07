@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# Flutter / Dart
+client/.dart_tool/
+client/build/
+client/.flutter-plugins
+client/.flutter-plugins-dependencies
+client/.packages
+
+# Python
+__pycache__/
+*.pyc
+
+# Local data
+.env
+/data/
+*.log
