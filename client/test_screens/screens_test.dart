@@ -304,4 +304,48 @@ void main() {
     await tester.pumpAndSettle();
     await shot(tester, '16_settings');
   });
+
+  testWidgets('17 рация: говорю я', (tester) async {
+    final j = _base('Discussion', const ['EndTurn', 'GiveFloor']);
+    final v = j['view'] as Json;
+    v['currentSpeaker'] = 'u2';
+    v['raisedHands'] = ['u4', 'u6'];
+    await game(tester, j);
+    await shot(tester, '17_radio_speaker');
+  });
+
+  testWidgets('18 конец партии', (tester) async {
+    final j = _base('Finished', const ['Like']);
+    final v = j['view'] as Json;
+    v['truth'] = [1, 3, 0, 2];
+    v['players'] = [
+      for (final p in v['players'] as List)
+        {...(p as Json), 'knownRole': {'u1': 'Ghost', 'u2': 'Detective', 'u3': 'Detective', 'u4': 'Killer', 'u5': 'Witness', 'u6': 'Accomplice', 'u7': 'Detective'}[p['id']]},
+    ];
+    v['finale'] = {
+      ...(v['finale'] as Json),
+      'currentStage': null,
+      'outcomes': [
+        {'stage': 0, 'kind': 'Row', 'row': 0, 'column': 1, 'suspect': null, 'correct': true, 'byLot': false, 'revealedRole': null},
+        {'stage': 1, 'kind': 'Row', 'row': 1, 'column': 3, 'suspect': null, 'correct': true, 'byLot': false, 'revealedRole': null},
+        {'stage': 2, 'kind': 'Row', 'row': 2, 'column': 4, 'suspect': null, 'correct': false, 'byLot': true, 'revealedRole': null},
+        {'stage': 4, 'kind': 'Killer', 'row': -1, 'column': null, 'suspect': 'u4', 'correct': true, 'byLot': false, 'revealedRole': 'Killer'},
+      ],
+      'result': {
+        'solved': true,
+        'correctRows': 3,
+        'killerCaught': true,
+        'side': 'Detectives',
+        'imitatorWon': false,
+        'blackmailerWon': false,
+        'winners': ['u1', 'u2', 'u3', 'u5', 'u7'],
+      },
+      'awards': [
+        {'index': 0, 'code': 'sherlock', 'nominee': 'u3', 'nominatedByCount': 2, 'mineNomination': false, 'votes': 4, 'won': true},
+        {'index': 1, 'code': 'best_liar', 'nominee': 'u4', 'nominatedByCount': 1, 'mineNomination': true, 'votes': 3, 'won': true},
+      ],
+    };
+    await game(tester, j);
+    await shot(tester, '18_finished');
+  });
 }

@@ -15,8 +15,9 @@ class Voice {
   static const maxDuration = Duration(seconds: 60);
 
   final Api _api;
-  final AudioRecorder _recorder = AudioRecorder();
-  final AudioPlayer _player = AudioPlayer();
+  // Плагины создаются при первом использовании — открыть чат можно и без звука.
+  late final AudioRecorder _recorder = AudioRecorder();
+  late final AudioPlayer _player = AudioPlayer();
   final Stopwatch _clock = Stopwatch();
   final Map<String, String> _cache = {};
   String? _path;
