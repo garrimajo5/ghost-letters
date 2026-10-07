@@ -17,10 +17,10 @@ public sealed class DbApiFactory(PostgresFixture postgres) : WebApplicationFacto
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", postgres.ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseSetting("Bots:Enabled", "false");
         builder.UseSetting("Jwt:SigningKey", ApiFactory.TestSigningKey);
         builder.UseSetting("Cards:SeedOriginalCount", "300");
         builder.UseSetting("Games:TimersEnabled", "false");
-        builder.UseSetting("Bots:Enabled", "false");
         builder.UseSetting("Media:StoragePath", Path.Combine(Path.GetTempPath(), "ghost-letters-media", Guid.NewGuid().ToString("N")));
         builder.ConfigureServices(services =>
         {
