@@ -129,6 +129,8 @@ class Api {
 
   Future<Lobby> saveSettings(String id, LobbySettings s) async => Lobby.fromJson(await put('/lobbies/$id/settings', s.toJson()) as Json);
 
+  Future<Lobby> addBot(String id) async => Lobby.fromJson(await post('/lobbies/$id/bots') as Json);
+
   Future<void> kick(String id, String userId) => post('/lobbies/$id/kick', {'userId': userId});
 
   Future<String> startGame(String id) async => ((await post('/lobbies/$id/start')) as Json)['gameId'] as String;
