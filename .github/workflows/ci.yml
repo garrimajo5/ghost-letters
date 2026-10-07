@@ -98,7 +98,6 @@ jobs:
     name: Client — Android debug build
     runs-on: ubuntu-latest
     needs: client
-    if: hashFiles('client/android/app/build.gradle', 'client/android/app/build.gradle.kts') != ''
     defaults:
       run:
         working-directory: client
