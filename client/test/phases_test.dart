@@ -16,7 +16,7 @@ GameSnapshot phaseSnapshot(
 }) {
   final j = snapshotJson(phase: phase, allowed: allowed);
   final v = j['view'] as Map<String, dynamic>;
-  ((v['me'] as Map<String, dynamic>)['role']) = role;
+  (v['me'] as Map<String, dynamic>)['role'] = role;
   v.addAll(view);
   (v['finale'] as Map<String, dynamic>).addAll(finale);
   if (table) {
