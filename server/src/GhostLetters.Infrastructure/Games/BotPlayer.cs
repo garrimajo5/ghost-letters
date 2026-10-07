@@ -148,6 +148,9 @@ public static class BotPlayer
                 {
                     candidates = unknown;
                 }
+
+                // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
+                return candidates.OrderByDescending(c => Contrarian(c) + rng.NextDouble() * 0.5).First();
             }
             else
             {
@@ -259,6 +262,20 @@ public static class BotPlayer
                 .Where(p => !p.IsGhost && p.Id != me.Id && !(p.KnownRole is { } r && r.IsKillerTeam()))
                 .Select(p => p.Id).ToList();
             return others.Count == 0 ? null : others[rng.Next(others.Count)];
+        }
+
+        /// <summary>Сколько раз игрок голосовал в рядах не за ту карту, которую считаю лучшей я.</summary>
+        private double Contrarian(Guid player)
+        {
+            if (view.Finale is not { } finale)
+            {
+                return 0;
+            }
+
+            var rows = finale.Outcomes.Where(o => o.Kind == VoteStageKind.Row).ToDictionary(o => o.Stage, o => o.Row);
+            return finale.Votes
+                .Where(v => v.Voter == player && v.Column is not null && rows.ContainsKey(v.Stage))
+                .Count(v => v.Column != BestColumn(rows[v.Stage], null));
         }
 
         private double RowAccuracy(Guid player)

@@ -188,4 +188,23 @@ public sealed class BotBrainTests
             v.Entry.Should().Be(2, "своё выдвижение и выдвижение себя не в счёт");
         }
     }
+
+    [Fact]
+    public void Detective_SuspectsWhoVotedAgainstTheHints()
+    {
+        // Ряд 0 уже решён; подсказка-тюльпан указывает на розу (столбец 1). Аня голосовала за нож, Боб — за розу.
+        var votes = new List<VoteRecordView>
+        {
+            new(0, 1, Ann, 0, null),
+            new(0, 1, Bob, 1, null),
+        };
+        var outcomes = new List<VoteOutcomeView> { new(0, VoteStageKind.Row, 0, 1, null, null, false, null) };
+        var stage = new VoteStageView(2, VoteStageKind.Killer, -1, 1, [], [Ann, Bob]);
+        var view = View(Phase.Voting, [nameof(CastVote)], Role.Detective,
+            hints: [new HintGroupView(1, ["tulip"])], finale: Finale(stage, votes, outcomes));
+
+        var suspects = Enumerable.Range(0, 20).Select(seed => ((CastVote)BotPlayer.Decide(view, new Random(seed), Tags)!).Suspect).ToList();
+
+        suspects.Should().OnlyContain(s => s == Ann, "Аня голосовала против подсказок");
+    }
 }
