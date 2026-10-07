@@ -48,7 +48,7 @@ void main() {
       app.realtime.game = snapshot();
 
       await tester.enterText(find.byKey(const Key('lobby-code')), 'abc234');
-      await tester.tap(find.text('Войти'));
+      await tester.tap(find.byKey(const Key('join')));
       await tester.pumpAndSettle();
 
       expect(app.api.named('joinLobby').single.$2, ['ABC234', false]);

@@ -164,7 +164,6 @@ class _Stepper extends StatelessWidget {
     required this.max,
     required this.onChanged,
     this.step = 1,
-    this.zeroLabel,
   });
 
   final String label;
@@ -172,7 +171,6 @@ class _Stepper extends StatelessWidget {
   final int min;
   final int max;
   final int step;
-  final String? zeroLabel;
   final ValueChanged<int>? onChanged;
 
   @override
@@ -185,7 +183,7 @@ class _Stepper extends StatelessWidget {
           onPressed: change == null || value <= min ? null : () => change((value - step).clamp(min, max)),
           icon: const Icon(Icons.remove),
         ),
-        Text(value == 0 && zeroLabel != null ? zeroLabel! : '$value'),
+        Text('$value'),
         IconButton(
           onPressed: change == null || value >= max ? null : () => change((value + step).clamp(min, max)),
           icon: const Icon(Icons.add),

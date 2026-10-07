@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
 import '../../core/session.dart';
+import '../../core/theme.dart';
 import '../../widgets/common.dart';
 
-/// Палитра заглушек-аватаров — та же, что на сервере.
-const avatarPalette = ['#7C6CF2', '#E5647A', '#3FB68B', '#F2A541', '#4AA3DF', '#B370D9', '#E57F4F', '#5C7C99'];
+/// Палитра заглушек-аватаров — та же, что на сервере (приглушённые цвета из дизайна).
+const avatarPalette = ['#3E7C6E', '#6A5A9E', '#8A5A44', '#3D6A99', '#7A6A3A', '#9A4F6E', '#4F7F3F', '#5A6E82'];
 
-/// Вход гостем: ник и цвет аватара. С того же устройства вернётся тот же игрок.
+/// Вход гостем: имя и цвет аватара. С того же устройства вернётся тот же игрок.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -46,55 +47,90 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final nick = _nick.text.trim();
+    const label = TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 1);
     return Scaffold(
-      body: SafeArea(
+      body: SingleChildScrollView(
         child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Письма призрака', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              SizedBox(
+                height: 300,
+                child: Stack(fit: StackFit.expand, children: [
+                  const AppImage('mailbox', fit: BoxFit.cover),
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        stops: [0.45, 1],
+                        colors: [Colors.transparent, AppColors.bg],
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      FittedBox(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('ПИСЬМА ПРИЗРАКА', style: heading(46, color: AppColors.ice, spacing: 3, weight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text('Детективная игра на 2–12 человек', style: TextStyle(fontSize: 14, color: AppColors.muted)),
+                    ]),
+                  ),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const Text('ВАШЕ ИМЯ', style: label),
                   const SizedBox(height: 8),
-                  const Text('Детективная игра для компании', textAlign: TextAlign.center),
-                  const SizedBox(height: 32),
-                  Center(child: Avatar(nickname: nick, color: _color, size: 80)),
-                  const SizedBox(height: 24),
                   TextField(
                     key: const Key('nickname'),
                     controller: _nick,
                     maxLength: 20,
-                    decoration: const InputDecoration(labelText: 'Ваш ник'),
+                    style: const TextStyle(fontSize: 17),
+                    decoration: const InputDecoration(hintText: 'Как вас называть', counterText: ''),
                     onChanged: (_) => setState(() {}),
                     onSubmitted: (_) => _submit(),
                   ),
+                  const SizedBox(height: 20),
+                  const Text('ЦВЕТ АВАТАРА', style: label),
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 10, runSpacing: 10, children: [
+                    for (final c in avatarPalette)
+                      GestureDetector(
+                        key: Key('color-$c'),
+                        onTap: () => setState(() => _color = c),
+                        child: Avatar(nickname: nick, color: c, size: 44, highlight: c == _color),
+                      ),
+                  ]),
                   const SizedBox(height: 8),
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      for (final c in avatarPalette)
-                        GestureDetector(
-                          onTap: () => setState(() => _color = c),
-                          child: Avatar(nickname: '', color: c, size: 36, highlight: c == _color),
-                        ),
-                    ],
+                  const Text(
+                    'Портреты персонажей не используем — их легко спутать с картами персонажей в игре.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted),
                   ),
                   const SizedBox(height: 32),
                   FilledButton(
                     key: const Key('login'),
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), textStyle: heading(20, spacing: 2)),
                     onPressed: _busy ? null : _submit,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: _busy ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Войти'),
-                    ),
+                    child: _busy
+                        ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('ВОЙТИ'),
                   ),
-                ],
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Вы играете как гость на этом устройстве.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
+                  ),
+                ]),
               ),
-            ),
+            ]),
           ),
         ),
       ),
