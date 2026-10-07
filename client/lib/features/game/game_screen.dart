@@ -443,7 +443,7 @@ class _PlayersStrip extends StatelessWidget {
     final v = screen.view!;
     final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
     return SizedBox(
-      height: 74,
+      height: 84,
       child: LayoutBuilder(builder: (context, box) {
         // Помещаются все — раскладываем по ширине, иначе листаем.
         final itemWidth = (box.maxWidth - 16) / players.length >= 50 ? (box.maxWidth - 16) / players.length : 54.0;
