@@ -533,10 +533,13 @@ class _Header extends StatelessWidget {
                 context.go('/');
               case 'settings':
                 screen.editSettings();
+              case 'rules':
+                context.push('/rules');
             }
           },
           itemBuilder: (_) => [
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
+            const PopupMenuItem(value: 'rules', child: Text('Правила')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),
           ],
         ),
