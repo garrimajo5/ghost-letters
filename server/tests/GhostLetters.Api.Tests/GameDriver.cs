@@ -105,7 +105,7 @@ public sealed class GameDriver(GameHarness game)
                 return new { target = others[0] };
             case "Nominate":
                 return p == game.Players[0]
-                    ? new { code = AwardCode, nominee = (Guid?)game.Players[1].Id }
+                    ? new { code = (string?)AwardCode, nominee = (Guid?)game.Players[1].Id }
                     : new { code = (string?)null, nominee = (Guid?)null };
             case "AwardVote":
             {
