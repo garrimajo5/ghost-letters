@@ -20,11 +20,17 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=ghost_letters;Username=ghost;Password=ghost"
+      Cards__ManifestPath: /app/cards/cards.json
+      Media__StoragePath: /app/data/media
     ports:
       - "8080:8080"
+    volumes:
+      - ./client/assets/cards/cards.json:/app/cards/cards.json:ro
+      - media:/app/data/media
     depends_on:
       postgres:
         condition: service_healthy
 
 volumes:
   pgdata:
+  media:
