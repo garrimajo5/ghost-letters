@@ -107,22 +107,26 @@
   {
    "file": "httpssteamusercontentaakamaihdnetugc6370782197448948188AF7F65BAFECEFFE62F5D5D6CE19520C8EFDF9E.png",
    "cols": 10,
-   "rows": 5
+   "rows": 5,
+   "loose_dedupe": true
   },
   {
    "file": "httpssteamusercontentaakamaihdnetugc63707821974492400A6A7DC50A782FC8088BD4E81F4613F8010FD15B9.png",
    "cols": 10,
-   "rows": 5
+   "rows": 5,
+   "loose_dedupe": true
   },
   {
    "file": "httpssteamusercontentaakamaihdnetugc63707821974493431BD322DC81A53978CD73A231E2A2868097A253173.png",
    "cols": 10,
-   "rows": 5
+   "rows": 5,
+   "loose_dedupe": true
   },
   {
    "file": "httpssteamusercontentaakamaihdnetugc6370782197449392708835481BEC3D8482DF85AACBDB948DA62C15CD5.png",
    "cols": 10,
-   "rows": 5
+   "rows": 5,
+   "loose_dedupe": true
   }
  ]
 }

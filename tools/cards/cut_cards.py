@@ -8,7 +8,8 @@
   * режет каждый лист из sheets.json по сетке cols x rows;
   * пропускает пустые (почти чёрные/однотонные) ячейки;
   * пропускает рубашки — ячейки, похожие на эталоны из back_refs;
-  * убирает дубликаты (одна и та же карта на разных листах);
+  * убирает дубликаты (одна и та же карта на разных листах); листы-копии
+    с другим фоном помечаются "loose_dedupe": true — для них порог мягче;
   * сохраняет WebP size x size и cards.json (все карты — в наборе "original").
 Нужен только Pillow.
 """
@@ -20,19 +21,30 @@ import os
 import sys
 from dataclasses import dataclass
 
-from PIL import Image, ImageStat
+from PIL import Image, ImageOps, ImageStat
 
 Image.MAX_IMAGE_PIXELS = None
 
 EMPTY_MEAN = 14      # средняя яркость ниже — пустая ячейка
 EMPTY_STDDEV = 10    # и почти без деталей
 BACK_DISTANCE = 30   # из 256 бит: ближе — считаем рубашкой
-DUP_DISTANCE = 18    # из 256 бит: ближе — дубликат
+DUP_DISTANCE = 40    # из 256 бит по центру карты: ближе — кандидат в дубликаты
+DUP_COLOR = 28.0     # и средняя разница цвета центра (0–255) меньше — дубликат
+# Для листов с "loose_dedupe": копии других листов с другим фоном и сжатием.
+LOOSE_DUP_DISTANCE = 80
+LOOSE_DUP_COLOR = 22.0
 
 
-def dhash(img: Image.Image, size: int = 16) -> int:
-    """Разностный хеш 256 бит, устойчив к масштабу и сжатию."""
-    g = img.convert("L").resize((size + 1, size), Image.LANCZOS)
+def center(img: Image.Image) -> Image.Image:
+    """Центр карты без фона-«облака», который отличается на разных листах."""
+    w, h = img.size
+    return img.crop((int(w * 0.18), int(h * 0.18), int(w * 0.82), int(h * 0.82)))
+
+
+def dhash(img: Image.Image, size: int = 16, crop: bool = False) -> int:
+    """Разностный хеш 256 бит, устойчив к масштабу, сжатию и яркости."""
+    src = center(img) if crop else img
+    g = ImageOps.equalize(src.convert("L")).resize((size + 1, size), Image.LANCZOS)
     px = g.tobytes()  # одно значение яркости на пиксель
     bits = 0
     for y in range(size):
@@ -46,6 +58,14 @@ def hamming(a: int, b: int) -> int:
     return bin(a ^ b).count("1")
 
 
+def color_thumb(img: Image.Image) -> bytes:
+    return center(img).convert("RGB").resize((8, 8), Image.BOX).tobytes()
+
+
+def color_diff(a: bytes, b: bytes) -> float:
+    return sum(abs(x - y) for x, y in zip(a, b)) / len(a)
+
+
 def is_empty(img: Image.Image) -> bool:
     st = ImageStat.Stat(img.convert("L"))
     return st.mean[0] < EMPTY_MEAN and st.stddev[0] < EMPTY_STDDEV
@@ -54,6 +74,7 @@ def is_empty(img: Image.Image) -> bool:
 @dataclass
 class Card:
     hash: int
+    thumb: bytes
     image: Image.Image
     sheet: str
     col: int
@@ -101,22 +122,26 @@ def main(argv: list[str] | None = None) -> int:
         if not os.path.exists(path):
             print(f"! нет листа: {sheet['file']}", file=sys.stderr)
             continue
+        loose = bool(sheet.get("loose_dedupe"))
+        max_dist = LOOSE_DUP_DISTANCE if loose else DUP_DISTANCE
+        max_color = LOOSE_DUP_COLOR if loose else DUP_COLOR
         for c, r, cell, cell_px in cut_sheet(path, sheet["cols"], sheet["rows"]):
             stats["cells"] += 1
             if is_empty(cell):
                 stats["empty"] += 1
                 continue
-            hsh = dhash(cell)
-            if any(hamming(hsh, b) <= BACK_DISTANCE for b in backs):
+            if any(hamming(dhash(cell), b) <= BACK_DISTANCE for b in backs):
                 stats["backs"] += 1
                 continue
-            dup = next((k for k in kept if hamming(hsh, k.hash) <= DUP_DISTANCE), None)
+            hsh, thumb = dhash(cell, crop=True), color_thumb(cell)
+            dup = next((k for k in kept if hamming(hsh, k.hash) <= max_dist
+                        and color_diff(thumb, k.thumb) <= max_color), None)
             if dup is not None:
                 stats["duplicates"] += 1
                 if cell_px > dup.cell_px:  # оставляем копию в лучшем разрешении
                     dup.image, dup.sheet, dup.col, dup.row, dup.cell_px = cell, sheet["file"], c, r, cell_px
                 continue
-            kept.append(Card(hsh, cell, sheet["file"], c, r, cell_px))
+            kept.append(Card(hsh, thumb, cell, sheet["file"], c, r, cell_px))
 
     os.makedirs(args.out, exist_ok=True)
     cards = []
