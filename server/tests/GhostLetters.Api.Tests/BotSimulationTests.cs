@@ -78,4 +78,12 @@ public sealed class BotSimulationTests
 
         smart.Should().BeGreaterThan(blind + 0.1, $"с тегами {smart:P0}, вслепую {blind:P0}");
     }
+
+    [Fact]
+    public void Report_Numbers()
+    {
+        var smart = RowAccuracy(RealTags(), 25);
+        var blind = RowAccuracy(CardTags.Empty, 25);
+        true.Should().BeFalse($"ОТЧЁТ: с тегами {smart:P1}, вслепую {blind:P1}");
+    }
 }
