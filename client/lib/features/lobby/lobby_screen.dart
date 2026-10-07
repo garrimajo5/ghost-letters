@@ -128,7 +128,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           Text('Игроки (${players.length}/12)', style: Theme.of(context).textTheme.titleMedium),
           for (final p in players)
             ListTile(
-              leading: Avatar(nickname: p.nickname, color: p.avatarColor),
+              leading: p.isBot
+                  ? CircleAvatar(backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined))
+                  : Avatar(nickname: p.nickname, color: p.avatarColor),
               title: Text(p.nickname + (p.userId == me.id ? ' (вы)' : '')),
               subtitle: Text(p.userId == lobby.hostUserId ? 'Хост' : (p.isReady ? 'Готов' : 'Не готов')),
               trailing: isHost && p.userId != me.id
@@ -138,6 +140,16 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       onPressed: () => runAction(context, () => ref.read(apiProvider).kick(lobby.id, p.userId)),
                     )
                   : (p.isReady || p.userId == lobby.hostUserId ? const Icon(Icons.check_circle, color: Colors.green) : null),
+            ),
+          if (isHost && players.length < 12 && lobby.status == 'open')
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('add-bot'),
+                onPressed: () => _apply((api) => api.addBot(lobby.id)),
+                icon: const Icon(Icons.smart_toy_outlined),
+                label: const Text('Добавить бота'),
+              ),
             ),
           if (tables.isNotEmpty) ...[
             const SizedBox(height: 8),

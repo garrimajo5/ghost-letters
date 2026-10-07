@@ -76,7 +76,8 @@ Map<String, dynamic> snapshotJson({String phase = 'Voting', List<String> allowed
 const host = User(id: 'u1', nickname: 'Призрачный', avatarColor: '#7C6CF2');
 const watson = User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B');
 
-Json member(User u, {int seat = 0, bool ready = false, String mode = 'player'}) => {
+Json member(User u, {int seat = 0, bool ready = false, String mode = 'player', bool bot = false}) => {
+      'isBot': bot,
       'userId': u.id,
       'nickname': u.nickname,
       'avatarColor': u.avatarColor,
