@@ -154,6 +154,11 @@ public static class BotPlayer
                 return null;
             }
 
+            if (tags.Count == 0)
+            {
+                return rng.Next(2) == 0 ? null : me.Hand[rng.Next(me.Hand.Count)];
+            }
+
             var (card, score) = me.Hand.Select(h => (h, Best(h, TruthCards(truth)))).MaxBy(x => x.Item2 + Noise());
             return score >= Hint ? card : null;
         }
@@ -161,7 +166,8 @@ public static class BotPlayer
         public IReadOnlyList<string> HintsToReveal()
         {
             var mailbox = view.MailboxForGhost ?? [];
-            if (Truth is not { } truth || mailbox.Count == 0)
+            // Без тегов похожесть не оценить — открываем наугад одно-два письма.
+            if (Truth is not { } truth || mailbox.Count == 0 || tags.Count == 0)
             {
                 return mailbox.OrderBy(_ => rng.Next()).Take(rng.Next(1, 3)).ToList();
             }

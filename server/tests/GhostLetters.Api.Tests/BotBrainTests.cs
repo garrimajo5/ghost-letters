@@ -135,6 +135,6 @@ public sealed class BotBrainTests
 
         var command = (RevealHints)BotPlayer.Decide(view, new Random(6), CardTags.Empty)!;
 
-        command.CardIds.Should().OnlyContain(c => c == "sword" || c == "tulip");
+        command.CardIds.Should().NotBeEmpty().And.OnlyContain(c => c == "sword" || c == "tulip");
     }
 }
