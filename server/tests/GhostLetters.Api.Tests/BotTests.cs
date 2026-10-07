@@ -61,6 +61,9 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
         }
 
         (await game.StateAsync()).Status.Should().Be("finished");
+        var reopened = await host.GetAsync($"/api/v1/lobbies/{lobby.Str("code")}");
+        reopened.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("isBot").GetBoolean())
+            .Should().OnlyContain(m => m.GetProperty("isReady").GetBoolean(), "боты готовы к реваншу");
         botMoves.Should().BeGreaterThan(30);
 
         // Партия с ботами рейтинг не меняет, но статистика человека учтена.

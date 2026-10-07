@@ -284,8 +284,8 @@ public sealed class LobbyService(
         lobby.Status = LobbyStatuses.InGame;
         lobby.CurrentGameId = gameId;
         // К реваншу люди снова отмечают готовность, боты всегда готовы.
-        var botIds = await db.Users.Where(u => u.IsBot).Select(u => u.Id)
-            .Where(uid => players.Select(p => p.UserId).Contains(uid)).ToListAsync(ct);
+        var playerIds = players.Select(p => p.UserId).ToList();
+        var botIds = await db.Users.Where(u => u.IsBot && playerIds.Contains(u.Id)).Select(u => u.Id).ToListAsync(ct);
         foreach (var p in players.Where(p => !botIds.Contains(p.UserId)))
         {
             p.IsReady = false;
