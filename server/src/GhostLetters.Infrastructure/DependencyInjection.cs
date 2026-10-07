@@ -1,19 +1,25 @@
+using GhostLetters.Infrastructure.Auth;
+using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Lobbies;
 using GhostLetters.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GhostLetters.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>БД и прочая инфраструктура. Строка подключения — ConnectionStrings:Default.</summary>
+    /// <summary>БД, авторизация и прочая инфраструктура. Строка подключения — ConnectionStrings:Default.</summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton(TimeProvider.System);
+
         var connectionString = configuration.GetConnectionString("Default");
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            services.AddDbContext<GhostLettersDbContext>(o => o.UseNpgsql(connectionString));
+            services.AddDbContext<GhostLettersDbContext>(o => ConfigureDb(o, connectionString));
             services.AddHealthChecks().AddDbContextCheck<GhostLettersDbContext>("postgres");
         }
         else
@@ -21,6 +27,38 @@ public static class DependencyInjection
             services.AddHealthChecks();
         }
 
+        services.AddJwtAuth(configuration);
+        services.AddScoped<AuthService>();
+        services.AddScoped<UserService>();
+        services.AddScoped<CardCatalog>();
+        services.AddScoped<LobbyService>();
+        services.AddScoped<GameService>();
+        services.TryAddSingleton<IRealtimeNotifier, NullRealtimeNotifier>();
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddHostedService<GameTimerService>();
+        }
+
         return services;
+    }
+
+    public static void ConfigureDb(DbContextOptionsBuilder options, string connectionString) =>
+        options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
+
+    /// <summary>Применить миграции, если включено Database:MigrateOnStartup.</summary>
+    public static async Task MigrateDatabaseAsync(this IServiceProvider services, IConfiguration configuration)
+    {
+        if (!configuration.GetValue<bool>("Database:MigrateOnStartup"))
+        {
+            return;
+        }
+
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetService<GhostLettersDbContext>();
+        if (db is not null)
+        {
+            await db.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<CardCatalog>().EnsureSeededAsync(CancellationToken.None);
+        }
     }
 }

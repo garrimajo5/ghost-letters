@@ -33,10 +33,34 @@ public enum Phase
     /// <summary>Обсуждение по рации или свободное.</summary>
     Discussion,
 
-    /// <summary>Финальное голосование (следующий PR).</summary>
+    /// <summary>Финальное голосование: ряды по очереди, затем Убийца.</summary>
     Voting,
 
+    /// <summary>Ничья: обсуждение перед переголосованием.</summary>
+    VoteTie,
+
+    /// <summary>Убийца ищет Свидетеля или Эксперта.</summary>
+    Hunt,
+
+    /// <summary>Дело не раскрыто: Убийца ищет Шантажиста.</summary>
+    BlackmailerHunt,
+
+    /// <summary>Шантажист не найден и называет истинные улики.</summary>
+    BlackmailerClaim,
+
+    /// <summary>Лайки и выдвижение на ачивки.</summary>
+    AwardNomination,
+
+    /// <summary>Голосование за выдвижения.</summary>
+    AwardVoting,
+
     Finished,
+}
+
+public enum VoteStageKind
+{
+    Row,
+    Killer,
 }
 
 public enum DiscussionMode

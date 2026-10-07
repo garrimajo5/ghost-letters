@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
 
@@ -21,6 +22,7 @@ public sealed record GameSettings
 
     public DiscussionMode Discussion { get; init; } = DiscussionMode.Radio;
 
+    [JsonIgnore]
     public IReadOnlyList<Category> Categories => UseSecretRow
         ? [Category.Motive, Category.Place, Category.Method, Category.Secret]
         : [Category.Motive, Category.Place, Category.Method];

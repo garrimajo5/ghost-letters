@@ -28,6 +28,11 @@ jobs:
       - name: Test
         run: dotnet test GhostLetters.sln -c Release --no-build --logger "trx;LogFileName=results.trx" --logger "console;verbosity=normal"
 
+      - name: Annotate failed tests
+        if: failure()
+        working-directory: .
+        run: python3 .github/scripts/trx_annotations.py
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4

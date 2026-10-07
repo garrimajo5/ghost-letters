@@ -1,18 +1,32 @@
+using System.Text.Json.Serialization;
+using GhostLetters.Api.Endpoints;
+using GhostLetters.Api.Realtime;
 using GhostLetters.Application;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
 using GhostLetters.Infrastructure;
+using GhostLetters.Infrastructure.Games;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Реалтайм регистрируется до инфраструктуры: она подставляет заглушку, только если уведомителя нет.
+builder.Services.AddSingleton<IRealtimeNotifier, HubNotifier>();
+builder.Services.AddSingleton<IUserIdProvider, SubUserIdProvider>();
+builder.Services.AddSignalR(o => o.EnableDetailedErrors = builder.Environment.IsDevelopment())
+    .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseAuthentication();
+app.UseAuthorization();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -53,7 +67,13 @@ api.MapGet("/rules/roles", (int players, bool? killer, bool? witness, bool? expe
     })
     .WithName("PreviewRoles");
 
-app.Run();
+api.MapAuth();
+api.MapLobbies();
+api.MapGames();
+app.MapHub<PlayHub>(PlayHub.Path);
+
+await app.Services.MigrateDatabaseAsync(app.Configuration);
+await app.RunAsync();
 
 /// <summary>Нужен для WebApplicationFactory в интеграционных тестах.</summary>
 public partial class Program
