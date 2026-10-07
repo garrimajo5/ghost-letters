@@ -1,6 +1,8 @@
 services:
   postgres:
     image: postgres:16-alpine
+    # Поднимается сам после перезагрузки компьютера, когда стартует Docker Desktop.
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ghost_letters
       POSTGRES_USER: ghost
@@ -17,6 +19,7 @@ services:
 
   api:
     build: ./server
+    restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=ghost_letters;Username=ghost;Password=ghost"
