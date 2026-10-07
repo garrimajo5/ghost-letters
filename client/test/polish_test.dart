@@ -30,6 +30,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Мои письма'), findsOneWidget);
-    expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+    // Письмо первого раунда исчезло: маленький перечёркнутый глаз под картой.
+    expect(find.byWidgetPredicate((w) => w is Icon && w.icon == Icons.visibility_off && w.size == 14), findsOneWidget);
   });
 }
