@@ -120,6 +120,7 @@ class ActionPanel extends StatelessWidget {
       Wrap(spacing: 6, runSpacing: 6, children: [
         for (final c in mailbox)
           GestureDetector(
+            key: Key('mailbox-$c'),
             onTap: () {
               if (!screen.selectedMailbox.remove(c)) screen.selectedMailbox.add(c);
               screen.refresh();
