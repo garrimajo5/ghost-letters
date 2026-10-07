@@ -8,7 +8,7 @@ using Microsoft.Extensions.Time.Testing;
 namespace GhostLetters.Api.Tests;
 
 /// <summary>API с настоящей базой в контейнере; миграции применяются при старте. Время управляемое.</summary>
-public sealed class DbApiFactory(PostgresFixture postgres) : WebApplicationFactory<Program>
+public sealed class DbApiFactory(PostgresFixture postgres, Action<IWebHostBuilder>? configure = null) : WebApplicationFactory<Program>
 {
     public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
 
@@ -20,12 +20,14 @@ public sealed class DbApiFactory(PostgresFixture postgres) : WebApplicationFacto
         builder.UseSetting("Jwt:SigningKey", ApiFactory.TestSigningKey);
         builder.UseSetting("Cards:SeedOriginalCount", "300");
         builder.UseSetting("Games:TimersEnabled", "false");
+        builder.UseSetting("RateLimit:AuthPerMinute", "100000");
         builder.UseSetting("Media:StoragePath", Path.Combine(Path.GetTempPath(), "ghost-letters-media", Guid.NewGuid().ToString("N")));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
         });
+        configure?.Invoke(builder);
     }
 
     /// <summary>Сервис из новой области — как в запросе.</summary>

@@ -1,0 +1,56 @@
+# Продакшен: Caddy (HTTPS от Let's Encrypt) → API → PostgreSQL.
+# Настройки — в файле .env рядом (образец — .env.example).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ghost_letters
+      POSTGRES_USER: ghost
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?задайте POSTGRES_PASSWORD в .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ghost -d ghost_letters"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: ${API_IMAGE:-ghcr.io/garrimajo5/ghost-letters-api:latest}
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=ghost_letters;Username=ghost;Password=${POSTGRES_PASSWORD}"
+      Database__MigrateOnStartup: "true"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?задайте JWT_SIGNING_KEY в .env (не короче 32 символов)}
+      Cards__ManifestPath: /app/cards/cards.json
+      Media__StoragePath: /app/data/media
+      RateLimit__AuthPerMinute: ${AUTH_PER_MINUTE:-30}
+    volumes:
+      - ./cards.json:/app/cards/cards.json:ro
+      - media:/app/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?задайте DOMAIN в .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  media:
+  caddy_data:
+  caddy_config:

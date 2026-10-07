@@ -6,7 +6,7 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuth(this RouteGroupBuilder api)
     {
-        var auth = api.MapGroup("/auth").WithTags("Auth");
+        var auth = api.MapGroup("/auth").WithTags("Auth").RequireRateLimiting(Hosting.Hardening.AuthPolicy);
 
         auth.MapPost("/guest", (GuestLoginRequest request, AuthService service, CancellationToken ct) =>
                 service.GuestAsync(request, ct))

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using GhostLetters.Api.Endpoints;
+using GhostLetters.Api.Hosting;
 using GhostLetters.Api.Realtime;
 using GhostLetters.Application;
 using GhostLetters.Domain.Roles;
@@ -17,6 +18,7 @@ builder.Services.AddSignalR(o => o.EnableDetailedErrors = builder.Environment.Is
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHardening(builder.Configuration, builder.Environment);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
@@ -34,6 +36,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHealthChecks("/health");
+app.UseRateLimiter();
 
 var api = app.MapGroup("/api/v1");
 
