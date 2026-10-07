@@ -54,6 +54,20 @@ public static class BotPlayer
         };
     }
 
+    /// <summary>
+    /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты.
+    /// Команда Убийцы так же уверенно указывает на ложную карту. Призрак молчит.
+    /// </summary>
+    public static (string Text, IReadOnlyList<string> Cards)? Say(PlayerView view, Random rng, CardTags? tags = null)
+    {
+        if (view.Me is not { } me || me.Role == Role.Ghost || view.Board.Count == 0)
+        {
+            return null;
+        }
+
+        return new Brain(view, me, rng, tags ?? CardTags.Empty).Say();
+    }
+
     private sealed class Brain(PlayerView view, MeView me, Random rng, CardTags tags)
     {
         private bool KillerTeam => me.Role.IsKillerTeam();
@@ -270,6 +284,59 @@ public static class BotPlayer
             var scores = view.Board[row].Cards.Select(Evidence).OrderByDescending(s => s).ToList();
             return scores.Count < 2 ? 0 : scores[0] - scores[1];
         }
+
+        public (string Text, IReadOnlyList<string> Cards) Say()
+        {
+            static string Name(Category c) => c switch
+            {
+                Category.Motive => "Мотив",
+                Category.Place => "Место",
+                Category.Method => "Способ",
+                _ => "Тайна",
+            };
+
+            var letter = me.Letters.LastOrDefault();
+            if (letter is { Revealed: false } && rng.Next(2) == 0)
+            {
+                var (row, col) = Closest(letter.CardId);
+                return ($"Моё письмо исчезло — значит, {Name(view.Board[row].Category)}: карта {col + 1} вряд ли.", [Card(row, col)]);
+            }
+
+            int target;
+            int column;
+            if (KillerTeam && Truth is { } truth)
+            {
+                target = rng.Next(view.Board.Count);
+                var fakes = Enumerable.Range(0, view.Board[target].Cards.Count).Where(c => c != truth[target]).ToList();
+                column = fakes.OrderByDescending(c => Evidence(Card(target, c)) + Noise()).First();
+            }
+            else
+            {
+                target = Enumerable.Range(0, view.Board.Count).OrderByDescending(r => Certainty(r) + Noise()).First();
+                column = Truth is { } t && me.Role == Role.Expert && rng.Next(3) > 0 ? t[target] : BestColumn(target, null);
+            }
+
+            var card = Card(target, column);
+            var lines = Evidence(card) > 0
+                ? new[]
+                {
+                    $"Подсказки похожи на эту: {Name(view.Board[target].Category)} — карта {column + 1}.",
+                    $"Ставлю на {Name(view.Board[target].Category).ToLowerInvariant()}, карта {column + 1}.",
+                    $"По-моему, {Name(view.Board[target].Category)}: {column + 1}. Кто против?",
+                }
+                : new[]
+                {
+                    $"Пока не ясно. Проверял бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
+                    $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
+                };
+            return (lines[rng.Next(lines.Length)], [card]);
+        }
+
+        /// <summary>Карта поля, больше всего похожая на данную.</summary>
+        private (int Row, int Column) Closest(string card) =>
+            Enumerable.Range(0, view.Board.Count)
+                .SelectMany(r => Enumerable.Range(0, view.Board[r].Cards.Count).Select(c => (r, c)))
+                .MaxBy(x => tags.Similarity(card, Card(x.r, x.c)) + Noise());
 
         private List<string> TruthCards(IReadOnlyList<int> truth) => truth.Select((c, r) => Card(r, c)).ToList();
 

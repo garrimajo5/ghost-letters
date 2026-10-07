@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
-public sealed class BotService(GhostLettersDbContext db, GameService games, CardTags tags, ILogger<BotService> logger)
+public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags tags, ILogger<BotService> logger)
 {
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>
     public async Task<int> TickAsync(CancellationToken ct)
@@ -47,7 +47,13 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Card
 
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
     {
-        var command = BotPlayer.Decide(GameProjection.For(state, botId), rng, tags);
+        var view = GameProjection.For(state, botId);
+        if (await TrySpeakAsync(state, view, botId, rng, ct))
+        {
+            return true;
+        }
+
+        var command = BotPlayer.Decide(view, rng, tags);
         if (command is null)
         {
             return false;
@@ -68,6 +74,33 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Card
         catch (AppException e)
         {
             logger.LogDebug("Бот {Bot} не сходил {Command}: {Error}", botId, command.GetType().Name, e.Message);
+            return false;
+        }
+    }
+
+    /// <summary>Раз за раунд обсуждения бот говорит, что думает (в рации — когда у него слово).</summary>
+    private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
+    {
+        if (state.Phase != Phase.Discussion ||
+            (view.Discussion == DiscussionMode.Radio && view.CurrentSpeaker != botId && view.FloorGrantedTo != botId))
+        {
+            return false;
+        }
+
+        var said = await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.AuthorId == botId && m.Round == state.Round, ct);
+        if (said || BotPlayer.Say(view, rng, tags) is not { } line)
+        {
+            return false;
+        }
+
+        try
+        {
+            await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, line.Text, null, line.Cards), ct);
+            return true;
+        }
+        catch (AppException e)
+        {
+            logger.LogDebug("Бот {Bot} не смог написать: {Error}", botId, e.Message);
             return false;
         }
     }

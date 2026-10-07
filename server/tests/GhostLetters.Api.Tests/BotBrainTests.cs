@@ -137,4 +137,30 @@ public sealed class BotBrainTests
 
         command.CardIds.Should().NotBeEmpty().And.OnlyContain(c => c == "sword" || c == "tulip");
     }
+
+    [Fact]
+    public void Detective_SaysWhichCardTheHintsPointTo()
+    {
+        var view = View(Phase.Discussion, [nameof(ReadyNextRound)], Role.Detective, hints: [new HintGroupView(1, ["tulip"])]);
+
+        var line = BotPlayer.Say(view, new Random(7), Tags)!.Value;
+
+        line.Cards.Should().Equal("rose");
+        line.Text.Should().Contain("2");
+    }
+
+    [Fact]
+    public void Killer_TalksUpAFakeCard_GhostKeepsSilent()
+    {
+        var killer = View(Phase.Discussion, [nameof(ReadyNextRound)], Role.Killer, truth: [0, 1]);
+        var ghost = View(Phase.Discussion, [], Role.Ghost, truth: [0, 1]);
+
+        for (var seed = 0; seed < 20; seed++)
+        {
+            var line = BotPlayer.Say(killer, new Random(seed), Tags)!.Value;
+            line.Cards.Should().ContainSingle().Which.Should().NotBeOneOf("knife", "cat");
+        }
+
+        BotPlayer.Say(ghost, new Random(8), Tags).Should().BeNull();
+    }
 }
