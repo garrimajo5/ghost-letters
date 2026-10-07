@@ -53,6 +53,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   String nick(String? id) => rosterOf(id)?.nickname ?? '?';
 
+  String? get lobbyId => _snap?.lobbyId;
+
+  void openLobby(String id) => context.go('/lobby/$id');
+
   @override
   void initState() {
     super.initState();

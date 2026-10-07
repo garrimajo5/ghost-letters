@@ -45,6 +45,9 @@ class FakeApi extends Api {
   Future<Lobby> setReady(String id, bool ready) async => _record('setReady', [id, ready], () => lobbyResult!);
 
   @override
+  Future<Lobby> addBot(String id) async => _record('addBot', [id], () => lobbyResult!);
+
+  @override
   Future<String> startGame(String id) async => _record('startGame', [id], () => 'g1');
 
   @override

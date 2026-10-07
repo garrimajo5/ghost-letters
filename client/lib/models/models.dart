@@ -183,6 +183,7 @@ class LobbyMember {
     required this.seat,
     required this.mode,
     required this.isReady,
+    this.isBot = false,
   });
 
   factory LobbyMember.fromJson(Json j) => LobbyMember(
@@ -192,6 +193,7 @@ class LobbyMember {
         seat: (j['seat'] as num).toInt(),
         mode: j['mode'] as String,
         isReady: j['isReady'] as bool? ?? false,
+        isBot: j['isBot'] as bool? ?? false,
       );
 
   final String userId;
@@ -200,6 +202,7 @@ class LobbyMember {
   final int seat;
   final String mode;
   final bool isReady;
+  final bool isBot;
 
   bool get isTable => mode == 'table';
 }

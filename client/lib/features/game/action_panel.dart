@@ -369,6 +369,20 @@ class ActionPanel extends StatelessWidget {
     }
 
     widgets.addAll(_outcomes(context));
+
+    final lobbyId = screen.lobbyId;
+    if (v.phase == 'Finished' && lobbyId != null && v.me != null) {
+      widgets.addAll([
+        const SizedBox(height: 8),
+        FilledButton.tonalIcon(
+          key: const Key('back-to-lobby'),
+          onPressed: () => screen.openLobby(lobbyId),
+          icon: const Icon(Icons.replay),
+          label: const Text('В лобби — сыграть ещё'),
+        ),
+      ]);
+    }
+
     return widgets;
   }
 
