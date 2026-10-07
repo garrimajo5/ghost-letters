@@ -465,6 +465,7 @@ class _Hand extends StatelessWidget {
           child: ListView(scrollDirection: Axis.horizontal, children: [
             for (final c in me.hand)
               GestureDetector(
+                key: Key('hand-$c'),
                 onTap: selectable
                     ? () {
                         if (screen.selectedHand.contains(c)) {
