@@ -9,8 +9,10 @@ import '../../core/api.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
 import '../../core/texts.dart';
+import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import '../game/game_state.dart';
 import 'settings_sheet.dart';
 
 /// Лобби: код для друзей, участники, готовность, настройки и старт (хост).
@@ -97,9 +99,40 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final tables = lobby.members.where((m) => m.isTable).toList();
     final allReady = players.every((p) => p.userId == lobby.hostUserId || p.isReady);
 
+    final readyCount = players.where((p) => p.userId == lobby.hostUserId || p.isReady).length;
+    Widget? bottom;
+    if (isHost) {
+      bottom = FilledButton(
+        key: const Key('start-game'),
+        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), textStyle: heading(18, spacing: 2)),
+        onPressed: players.length >= 2 && allReady
+            ? () => runAction(context, () async {
+                  final gameId = await ref.read(apiProvider).startGame(lobby.id);
+                  if (context.mounted) context.go('/game/$gameId');
+                })
+            : null,
+        child: Text(allReady ? 'НАЧАТЬ ПАРТИЮ' : 'Ждём готовности игроков'),
+      );
+    } else if (mine != null && !mine.isTable) {
+      bottom = mine.isReady
+          ? OutlinedButton(
+              key: const Key('ready'),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(56)),
+              onPressed: () => _apply((api) => api.setReady(lobby.id, false)),
+              child: const Text('Не готов'),
+            )
+          : FilledButton(
+              key: const Key('ready'),
+              style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), textStyle: heading(18, spacing: 2)),
+              onPressed: () => _apply((api) => api.setReady(lobby.id, true)),
+              child: const Text('Готов'),
+            );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(lobby.title),
+        leading: IconButton(tooltip: 'На главную', icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/')),
+        title: Text(lobby.title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           if (isHost)
             IconButton(
@@ -120,41 +153,83 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: ListTile(
-              title: const Text('Код для друзей'),
-              subtitle: Text(lobby.code, style: Theme.of(context).textTheme.headlineMedium?.copyWith(letterSpacing: 6)),
-              trailing: IconButton(
-                icon: const Icon(Icons.copy),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: lobby.code));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Код скопирован')));
-                },
+      bottomNavigationBar: bottom == null
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _RolesPreview(lobby: lobby, players: players.length),
+                  const SizedBox(height: 8),
+                  bottom,
+                ]),
               ),
             ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        children: [
+          Panel(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              const AppImage('letter', width: 72, height: 72, radius: 12),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Код лобби', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                  FittedBox(child: Text(lobby.code, style: heading(34, color: AppColors.amber, spacing: 6))),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: 12)),
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Скопировать код', style: TextStyle(fontFamily: AppFonts.body, fontSize: 13, letterSpacing: 0)),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: lobby.code));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Код скопирован')));
+                    },
+                  ),
+                ]),
+              ),
+            ]),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _SettingsSummary(settings: lobby.settings, players: players.length),
-          _RolesPreview(lobby: lobby, players: players.length),
-          const SizedBox(height: 16),
-          Text('Игроки (${players.length}/12)', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 20),
+          Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Expanded(child: Text('ИГРОКИ', style: heading(18, color: AppColors.ice, spacing: 2))),
+            Text('${players.length} из 12 · готовы $readyCount', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          ]),
+          const SizedBox(height: 8),
           for (final p in players)
-            ListTile(
-              leading: p.isBot
-                  ? CircleAvatar(backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined))
-                  : Avatar(nickname: p.nickname, color: p.avatarColor),
-              title: Text(p.nickname + (p.userId == me.id ? ' (вы)' : '')),
-              subtitle: Text(p.userId == lobby.hostUserId ? 'Хост' : (p.isReady ? 'Готов' : 'Не готов')),
-              trailing: isHost && p.userId != me.id
-                  ? IconButton(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Panel(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(children: [
+                  p.isBot
+                      ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
+                      : Avatar(nickname: p.nickname, color: p.avatarColor, highlight: p.userId == me.id),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(text: p.nickname),
+                      if (p.userId == me.id) const TextSpan(text: ' · вы', style: TextStyle(color: AppColors.amber, fontSize: 13)),
+                      if (p.userId == lobby.hostUserId) const TextSpan(text: ' · хост', style: TextStyle(color: AppColors.ice, fontSize: 13)),
+                    ])),
+                  ),
+                  if (p.userId != lobby.hostUserId)
+                    Text(p.isReady ? 'готов' : 'ждём', style: TextStyle(fontSize: 13, color: p.isReady ? AppColors.believed : AppColors.dim)),
+                  if (p.isReady || p.userId == lobby.hostUserId) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.check_circle, color: AppColors.believed, size: 20),
+                  ],
+                  if (isHost && p.userId != me.id)
+                    IconButton(
                       tooltip: 'Исключить',
-                      icon: const Icon(Icons.person_remove_outlined),
+                      icon: const Icon(Icons.person_remove_outlined, size: 20),
                       onPressed: () => runAction(context, () => ref.read(apiProvider).kick(lobby.id, p.userId)),
-                    )
-                  : (p.isReady || p.userId == lobby.hostUserId ? const Icon(Icons.check_circle, color: Colors.green) : null),
+                    ),
+                ]),
+              ),
             ),
           if (isHost && players.length < 12 && lobby.status == 'open')
             Align(
@@ -166,31 +241,25 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 label: const Text('Добавить бота'),
               ),
             ),
-          if (tables.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text('Экраны стола: ${tables.map((t) => t.nickname).join(', ')}'),
-          ],
-          const SizedBox(height: 24),
-          if (isHost)
-            FilledButton(
-              key: const Key('start-game'),
-              onPressed: players.length >= 2 && allReady
-                  ? () => runAction(context, () async {
-                        final gameId = await ref.read(apiProvider).startGame(lobby.id);
-                        if (context.mounted) context.go('/game/$gameId');
-                      })
-                  : null,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(allReady ? 'Начать партию' : 'Ждём готовности игроков'),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
+            child: Row(children: [
+              const Icon(Icons.tv, color: AppColors.muted, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  tables.isEmpty ? 'Экран стола: не подключён' : 'Экраны стола: ${tables.map((t) => t.nickname).join(', ')}',
+                  style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
               ),
-            )
-          else if (mine != null && !mine.isTable)
-            FilledButton.tonal(
-              key: const Key('ready'),
-              onPressed: () => _apply((api) => api.setReady(lobby.id, !mine.isReady)),
-              child: Padding(padding: const EdgeInsets.all(12), child: Text(mine.isReady ? 'Не готов' : 'Готов')),
-            ),
+            ]),
+          ),
+          if (bottom == null) ...[
+            const SizedBox(height: 12),
+            _RolesPreview(lobby: lobby, players: players.length),
+          ],
         ],
       ),
     );
@@ -209,12 +278,19 @@ class _SettingsSummary extends StatelessWidget {
     final parts = [
       settings.useSecretRow ? '4 ряда (с «Тайной»)' : '3 ряда',
       '${settings.columns} карт в ряду',
-      settings.rounds == null ? 'раунды по правилам' : 'раундов: ${settings.rounds}',
+      'раундов: ${settings.rounds ?? (players >= 2 ? defaultRounds(players) : 'по правилам')}',
       r.killerEnabled ? 'с Убийцей' : 'кооператив',
       settings.discussion == 'Radio' ? 'рация' : 'свободное обсуждение',
       settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)',
     ];
-    return Text(parts.join(' · '), style: Theme.of(context).textTheme.bodySmall);
+    return Wrap(spacing: 6, runSpacing: 6, children: [
+      for (final p in parts)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
+          child: Text(p, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        ),
+    ]);
   }
 }
 
@@ -233,13 +309,14 @@ class _RolesPreview extends ConsumerWidget {
       loading: () => const SizedBox(height: 24),
       error: (e, _) => Padding(
         padding: const EdgeInsets.only(top: 6),
-        child: Text(ApiError.from(e).message, style: const TextStyle(color: Colors.amber)),
+        child: Text(ApiError.from(e).message, style: const TextStyle(color: AppColors.amber)),
       ),
       data: (p) => Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Text(
           '${p.cooperative ? 'Кооператив' : 'С Убийцей'} · раундов: ${lobby.settings.rounds ?? p.rounds} · ${_describe(p.roles)}',
-          style: Theme.of(context).textTheme.bodySmall,
+          style: const TextStyle(fontSize: 12, color: AppColors.muted),
+          textAlign: TextAlign.center,
         ),
       ),
     );

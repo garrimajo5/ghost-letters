@@ -39,7 +39,7 @@ void main() {
 
       expect(app.api.named('createLobby'), hasLength(1));
       expect(find.text('ABC234'), findsOneWidget);
-      expect(find.text('Игроки (2/12)'), findsOneWidget);
+      expect(find.textContaining('2 из 12'), findsOneWidget);
     });
 
     testWidgets('вход по коду в идущую партию открывает партию', (tester) async {
