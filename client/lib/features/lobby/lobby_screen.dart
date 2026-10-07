@@ -12,6 +12,7 @@ import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import '../../widgets/connection_banner.dart';
 import '../game/game_state.dart';
 import 'settings_sheet.dart';
 
@@ -165,7 +166,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 ]),
               ),
             ),
-      body: ListView(
+      body: Column(children: [
+        const ConnectionBanner(),
+        Expanded(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: [
           Panel(
@@ -261,7 +264,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             _RolesPreview(lobby: lobby, players: players.length),
           ],
         ],
-      ),
+      )),
+      ]),
     );
   }
 }

@@ -175,6 +175,26 @@ void main() {
         lessThan(tester.getRect(find.text('Экран стола').first).left));
   });
 
+  testWidgets('связь пропала — плашка с повтором, вернулась — плашка ушла', (tester) async {
+    final app = await openOnPhone(tester, wideBoard(columns: 5));
+    expect(find.byKey(const Key('offline-banner')), findsNothing);
+
+    app.realtime.connectedCtl.add(false);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('offline-banner')), findsNothing, reason: 'короткий обрыв не показываем');
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('offline-banner')), findsOneWidget);
+
+    await tester.tap(find.text('Повторить'));
+    await tester.pumpAndSettle();
+    expect(app.realtime.resyncs, 1);
+
+    app.realtime.connectedCtl.add(true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('offline-banner')), findsNothing);
+  });
+
   group('раунды в настройках', () {
     Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps) async {
       tester.view.physicalSize = const Size(1200, 4000);
