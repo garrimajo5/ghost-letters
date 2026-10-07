@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<LobbyService>();
         services.AddScoped<GameService>();
         services.AddScoped<GameRecorder>();
+        services.AddScoped<BotService>();
         services.AddScoped<ChatService>();
         services.AddScoped<NotesService>();
         services.AddScoped<ProfileService>();
@@ -42,6 +43,7 @@ public static class DependencyInjection
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             services.AddHostedService<GameTimerService>();
+            services.AddHostedService<BotHostedService>();
         }
 
         return services;

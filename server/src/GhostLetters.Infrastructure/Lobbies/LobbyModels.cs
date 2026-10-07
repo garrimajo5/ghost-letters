@@ -2,7 +2,7 @@ using GhostLetters.Infrastructure.Games;
 
 namespace GhostLetters.Infrastructure.Lobbies;
 
-public sealed record LobbyMemberDto(Guid UserId, string Nickname, string AvatarColor, int Seat, string Mode, bool IsReady);
+public sealed record LobbyMemberDto(Guid UserId, string Nickname, string AvatarColor, int Seat, string Mode, bool IsReady, bool IsBot);
 
 public sealed record LobbyDto(
     Guid Id,

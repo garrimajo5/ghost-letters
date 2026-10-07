@@ -129,6 +129,50 @@ public sealed class LobbyService(
         await PublishAsync(lobby.Id, ct);
     }
 
+    /// <summary>Добавить бота-игрока (только хост, пока лобби открыто). Бот сразу готов.</summary>
+    public async Task<LobbyDto> AddBotAsync(Guid lobbyId, Guid hostId, CancellationToken ct)
+    {
+        var lobby = await RequireHostAsync(lobbyId, hostId, ct);
+        if (lobby.Status != LobbyStatuses.Open)
+        {
+            throw AppException.Conflict(AppException.Codes.GameInProgress, "Ботов добавляют до начала партии.");
+        }
+
+        var players = await db.LobbyMembers.CountAsync(m => m.LobbyId == lobbyId && m.JoinMode == JoinModes.Player, ct);
+        if (players >= RoleTable.MaxPlayers)
+        {
+            throw AppException.Conflict(AppException.Codes.LobbyFull, $"В лобби уже {RoleTable.MaxPlayers} игроков.");
+        }
+
+        var bots = await (from m in db.LobbyMembers
+                          join u in db.Users on m.UserId equals u.Id
+                          where m.LobbyId == lobbyId && u.IsBot
+                          select u.Nickname).ToListAsync(ct);
+        var name = BotNames.FirstOrDefault(n => !bots.Contains(n)) ?? $"Бот {bots.Count + 1}";
+        var now = time.GetUtcNow();
+        var bot = new User
+        {
+            Id = Guid.NewGuid(),
+            Nickname = name,
+            AvatarColor = BotColors[bots.Count % BotColors.Length],
+            CreatedAt = now,
+            LastSeenAt = now,
+            IsBot = true,
+        };
+        db.Users.Add(bot);
+        db.LobbyMembers.Add(new LobbyMember
+        {
+            LobbyId = lobbyId, UserId = bot.Id, Seat = players, JoinMode = JoinModes.Player, IsReady = true, JoinedAt = now,
+        });
+        await db.SaveChangesAsync(ct);
+        return await PublishAsync(lobbyId, ct);
+    }
+
+    private static readonly string[] BotNames =
+        ["Бот Пуаро", "Бот Марпл", "Бот Ватсон", "Бот Лестрейд", "Бот Мегрэ", "Бот Коломбо", "Бот Фандорин", "Бот Знаменский", "Бот Каменская", "Бот Шарапов", "Бот Жеглов"];
+
+    private static readonly string[] BotColors = ["#5C7C99", "#B370D9", "#E57F4F", "#4AA3DF", "#F2A541"];
+
     public async Task KickAsync(Guid lobbyId, Guid hostId, Guid userId, CancellationToken ct)
     {
         var lobby = await RequireHostAsync(lobbyId, hostId, ct);
@@ -239,7 +283,10 @@ public sealed class LobbyService(
         }));
         lobby.Status = LobbyStatuses.InGame;
         lobby.CurrentGameId = gameId;
-        foreach (var p in players)
+        // К реваншу люди снова отмечают готовность, боты всегда готовы.
+        var playerIds = players.Select(p => p.UserId).ToList();
+        var botIds = await db.Users.Where(u => u.IsBot && playerIds.Contains(u.Id)).Select(u => u.Id).ToListAsync(ct);
+        foreach (var p in players.Where(p => !botIds.Contains(p.UserId)))
         {
             p.IsReady = false;
         }
@@ -364,7 +411,7 @@ public sealed class LobbyService(
             lobby.CurrentGameId,
             members
                 .OrderBy(x => x.m.JoinMode == JoinModes.Table ? 1 : 0).ThenBy(x => x.m.Seat)
-                .Select(x => new LobbyMemberDto(x.u.Id, x.u.Nickname, x.u.AvatarColor, x.m.Seat, x.m.JoinMode, x.m.IsReady))
+                .Select(x => new LobbyMemberDto(x.u.Id, x.u.Nickname, x.u.AvatarColor, x.m.Seat, x.m.JoinMode, x.m.IsReady, x.u.IsBot))
                 .ToList());
     }
 }
