@@ -851,9 +851,13 @@ class _Illustration extends StatelessWidget {
 
 /// Знакомство с ролью: карта рубашкой вверх, по нажатию переворачивается.
 class RoleReveal extends StatefulWidget {
-  const RoleReveal({super.key, required this.role});
+  const RoleReveal({super.key, required this.role, this.width = 170, this.footer});
 
   final String role;
+  final double width;
+
+  /// Что показать под открытой картой: кто Призрак, кто в команде.
+  final Widget? footer;
 
   @override
   State<RoleReveal> createState() => _RoleRevealState();
@@ -865,7 +869,8 @@ class _RoleRevealState extends State<RoleReveal> {
   @override
   Widget build(BuildContext context) {
     final killer = isKillerTeam(widget.role);
-    return Column(children: [
+    final w = widget.width;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
       GestureDetector(
         key: const Key('role-card'),
         onTap: () => setState(() => _open = !_open),
@@ -875,22 +880,30 @@ class _RoleRevealState extends State<RoleReveal> {
             scale: Tween<double>(begin: 0.85, end: 1).animate(animation),
             child: FadeTransition(opacity: animation, child: child),
           ),
-          child: AppImage(
-            _open ? roleImage(widget.role) : 'role_back',
+          child: Container(
             key: ValueKey(_open),
-            width: 170,
-            height: 241,
-            radius: 14,
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: _open ? Border.all(color: killer ? AppColors.redBright : AppColors.ice, width: 2) : null,
+            ),
+            child: AppImage(_open ? roleImage(widget.role) : 'role_back', width: w, height: w * 1.42, radius: 18),
           ),
         ),
       ),
-      const SizedBox(height: 10),
-      if (!_open)
-        const Text('Нажмите на карту, чтобы узнать роль', style: TextStyle(color: AppColors.muted))
-      else ...[
-        Text(T.role(widget.role).toUpperCase(), style: heading(26, color: killer ? AppColors.redSoft : AppColors.amber)),
-        const SizedBox(height: 4),
-        Text(T.roleHints[widget.role] ?? '', textAlign: TextAlign.center),
+      const SizedBox(height: 16),
+      if (!_open) ...[
+        Text('ВАША РОЛЬ', style: heading(24, color: AppColors.ice, spacing: 2)),
+        const SizedBox(height: 6),
+        const Text(
+          'Убедитесь, что никто не смотрит в ваш экран, и нажмите на карту',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 15, color: AppColors.muted, height: 1.5),
+        ),
+      ] else ...[
+        Text(T.role(widget.role).toUpperCase(), style: heading(32, color: killer ? AppColors.redSoft : AppColors.ice, spacing: 3)),
+        const SizedBox(height: 6),
+        Text(T.roleHints[widget.role] ?? '', textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, height: 1.5)),
+        if (widget.footer != null) ...[const SizedBox(height: 14), widget.footer!],
       ],
     ]);
   }

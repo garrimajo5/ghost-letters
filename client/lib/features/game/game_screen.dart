@@ -336,11 +336,15 @@ class GameScreenState extends ConsumerState<GameScreen> {
         child: Column(children: [
           _Header(screen: this, deadline: snap.deadline),
           _PlayersStrip(screen: this),
+          if (v.phase == 'RoleReveal' && v.me != null)
+            Expanded(child: _RoleScreen(screen: this))
+          else
           Expanded(
             child: ListView(
               controller: _scroll,
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
               children: [
+                if (night) const _NightBanner(),
                 _Board(screen: this),
                 const SizedBox(height: 10),
                 _Hints(view: v),
@@ -358,6 +362,86 @@ class GameScreenState extends ConsumerState<GameScreen> {
       ),
     );
   }
+}
+
+/// Раздача ролей: большая карта рубашкой вверх, по нажатию — роль, подсказка и кто Призрак.
+class _RoleScreen extends StatelessWidget {
+  const _RoleScreen({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final me = v.me!;
+    final ghost = v.players.where((p) => p.isGhost && p.id != me.id).firstOrNull;
+    final team = v.players.where((p) => p.id != me.id && isKillerTeam(p.knownRole)).toList();
+    Widget pill(String id, String text) => Container(
+          padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 32),
+            const SizedBox(width: 10),
+            Flexible(child: Text(text, style: const TextStyle(fontSize: 14))),
+          ]),
+        );
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+        child: Column(children: [
+          const Text('РАЗДАЧА РОЛЕЙ', style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 2)),
+          const SizedBox(height: 16),
+          RoleReveal(
+            role: me.role,
+            width: (box.maxHeight * 0.5 / 1.42).clamp(140.0, 260.0),
+            footer: Column(children: [
+              if (ghost != null) pill(ghost.id, 'Призрак — ${screen.nick(ghost.id)}. Видит истинные улики.'),
+              for (final p in team) ...[
+                const SizedBox(height: 8),
+                pill(p.id, '${T.role(p.knownRole)} — ${screen.nick(p.id)}'),
+              ],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Ночь для Убийцы: тёмная иллюстрация и красный заголовок.
+class _NightBanner extends StatelessWidget {
+  const _NightBanner();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 120,
+            child: Stack(fit: StackFit.expand, children: [
+              const Opacity(opacity: 0.55, child: AppImage('night', fit: BoxFit.cover)),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, AppColors.night],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('НОЧЬ · ВЫ — УБИЙЦА', style: TextStyle(fontSize: 12, color: AppColors.redSoft, letterSpacing: 2)),
+                  const SizedBox(height: 4),
+                  Text('ВЫБЕРИТЕ ИСТИННЫЕ УЛИКИ', style: heading(22, spacing: 1)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      );
 }
 
 /// Шапка: «РАУНД 2 / 4», фаза (или «ВАШ ХОД»), таймер и меню.
@@ -813,7 +897,7 @@ class _Dock extends StatelessWidget {
       ),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        if (me != null && me.hand.isNotEmpty) ...[
+        if (me != null && me.hand.isNotEmpty && v.phase != 'RoleReveal') ...[
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Text('ВАША РУКА', style: sectionLabel(size: 12)),
             const SizedBox(width: 8),

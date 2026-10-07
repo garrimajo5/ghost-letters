@@ -69,7 +69,7 @@ Future<void> tapCta(WidgetTester tester) async {
 void main() {
   // Каждая фаза отрисовывается без ошибок и показывает понятную подсказку.
   final cases = <String, (GameSnapshot, String)>{
-    'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'Посмотрите свою роль'),
+    'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'ВАША РОЛЬ'),
     'ночь, Убийца': (phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'), 'Выберите по одной истинной улике в каждом ряду'),
     'ночь, детектив': (phaseSnapshot('Night', const []), 'Ждём других игроков'),
     'первая зацепка': (phaseSnapshot('FirstClue', const ['GiveFirstClue'], role: 'Ghost'), 'Можно выложить первую зацепку'),
