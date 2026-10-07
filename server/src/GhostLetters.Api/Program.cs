@@ -22,9 +22,21 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
+// Веб-версия клиента при отладке (flutter run -d chrome) открывается с другого порта — разрешаем любой origin в Development.
+builder.Services.AddCors(o => o.AddPolicy("dev", p => p
+    .SetIsOriginAllowed(_ => true)
+    .AllowAnyHeader()
+    .AllowAnyMethod()
+    .AllowCredentials()));
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("dev");
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 if (app.Environment.IsDevelopment())
