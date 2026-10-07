@@ -34,7 +34,8 @@ public sealed record PlayerView(
     Guid? CurrentSpeaker,
     Guid? FloorGrantedTo,
     IReadOnlyList<Guid> RaisedHands,
-    IReadOnlyList<string> AllowedCommands);
+    IReadOnlyList<string> AllowedCommands,
+    FinaleView? Finale);
 
 /// <summary>Строит проекцию состояния для игрока по матрице «кто что знает».</summary>
 public static class GameProjection
@@ -77,14 +78,15 @@ public static class GameProjection
             state.Vanished.Count,
             players,
             me,
-            viewer is not null && KnowsTruth(state, viewer) ? state.Truth?.ToList() : null,
+            KnowsTruth(state, viewer) ? state.Truth?.ToList() : null,
             state.Mailbox.Count,
             isGhost && state.Phase == Phase.GhostPick ? state.Mailbox.Select(l => l.CardId).ToList() : null,
             state.RadioHolder,
             state.CurrentSpeaker,
             state.FloorGrantedTo,
             state.RaisedHands.ToList(),
-            viewer is null ? Array.Empty<string>() : AllowedCommands(state, viewer));
+            viewer is null ? Array.Empty<string>() : AllowedCommands(state, viewer),
+            FinaleProjection.For(state, viewer));
     }
 
     /// <summary>Знает ли смотрящий роль игрока target.</summary>
@@ -93,6 +95,12 @@ public static class GameProjection
         if (target.Role == Role.Ghost)
         {
             return Role.Ghost;
+        }
+
+        // После итогов роли открыты всем, включая экран стола.
+        if (state.Result is not null)
+        {
+            return target.Role;
         }
 
         if (viewer is null)
@@ -117,9 +125,9 @@ public static class GameProjection
         };
     }
 
-    public static bool KnowsTruth(GameState state, PlayerState viewer) =>
+    public static bool KnowsTruth(GameState state, PlayerState? viewer) =>
         state.Truth is not null &&
-        viewer.Role is Role.Ghost or Role.Killer or Role.Accomplice or Role.Expert;
+        (state.Result is not null || viewer?.Role is Role.Ghost or Role.Killer or Role.Accomplice or Role.Expert);
 
     public static IReadOnlyList<string> AllowedCommands(GameState state, PlayerState viewer)
     {
@@ -176,6 +184,7 @@ public static class GameProjection
 
                 break;
             default:
+                FinaleProjection.AddAllowedCommands(state, viewer, done, list);
                 break;
         }
 

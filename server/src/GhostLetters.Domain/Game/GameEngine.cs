@@ -7,7 +7,7 @@ namespace GhostLetters.Domain.Game;
 /// Правила партии: создание, команды игроков и таймауты фаз.
 /// Чистая логика без БД и часов; вся случайность — от сида партии и её версии.
 /// </summary>
-public static class GameEngine
+public static partial class GameEngine
 {
     public static GameState Create(Guid gameId, IReadOnlyList<Guid> playerIds, GameSettings settings,
         IReadOnlyList<string> deck, int seed)
@@ -143,7 +143,12 @@ public static class GameEngine
 
                 break;
             default:
-                throw GameRuleException.Validation($"Неизвестная команда {command.GetType().Name}.");
+                if (!ExecuteFinale(state, actor, command, events))
+                {
+                    throw GameRuleException.Validation($"Неизвестная команда {command.GetType().Name}.");
+                }
+
+                break;
         }
 
         state.Version++;
@@ -203,6 +208,7 @@ public static class GameEngine
 
                 break;
             default:
+                TimeoutFinale(state, rng, events);
                 break;
         }
 
@@ -430,7 +436,7 @@ public static class GameEngine
     {
         if (state.Round >= state.TotalRounds)
         {
-            SetPhase(state, Phase.Voting, events);
+            StartVoting(state, events);
         }
         else
         {

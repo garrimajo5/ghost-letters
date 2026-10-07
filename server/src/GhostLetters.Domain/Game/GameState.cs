@@ -50,7 +50,7 @@ public sealed class LetterRecord
 }
 
 /// <summary>Полное состояние партии. Хранится на сервере целиком, клиентам уходят только проекции.</summary>
-public sealed class GameState
+public sealed partial class GameState
 {
     public Guid Id { get; init; }
 
