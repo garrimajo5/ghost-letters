@@ -104,6 +104,42 @@ void main() {
     expect(app.api.named('command').last.$2[1], {'target': 'u3', 'guess': 'Witness'});
   });
 
+  testWidgets('пометка карты: ✕ в листе карты появляется красным бейджем на поле', (tester) async {
+    final app = await openOnPhone(tester, wideBoard(columns: 5, allowed: const []));
+
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: find.byKey(const Key('mark-crosses')), matching: find.text('+')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('mark-believed')));
+    await tester.pump();
+    await tester.tap(find.text('Готово'));
+    await tester.pumpAndSettle();
+
+    final saved = app.api.named('saveMarks').last.$2[0] as List;
+    expect(saved.single, {'cardId': 'orig_0001', 'crosses': 1, 'checks': 0, 'believed': true});
+    expect(find.byKey(const Key('x-orig_0001')), findsOneWidget);
+  });
+
+  testWidgets('подозрение из заметки видно над игроком', (tester) async {
+    final app = await TestApp.create(user: watson);
+    app.api.notesResult = [
+      {'targetUserId': 'u3', 'suspicion': 1, 'body': ''},
+    ];
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    app.realtime.game = wideBoard(columns: 5);
+    app.go('/game/g1');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('suspect-u3')), findsOneWidget);
+    expect(find.text('У?'), findsOneWidget);
+  });
+
   group('раунды в настройках', () {
     Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps) async {
       tester.view.physicalSize = const Size(1200, 4000);

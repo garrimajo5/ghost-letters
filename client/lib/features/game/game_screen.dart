@@ -45,6 +45,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
   int? voteColumn;
   String? target;
   final marks = <String, CardMark>{};
+
+  /// Мои подозрения из заметок: id игрока → от −2 (точно чист) до 2 (это он!).
+  final suspicion = <String, int>{};
   final chat = <ChatMessage>[];
   int unread = 0;
 
@@ -145,6 +148,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
       final api = ref.read(apiProvider);
       final history = await api.chat(widget.gameId);
       final savedMarks = snap.view.me == null ? const <Json>[] : await api.marks(widget.gameId);
+      final notes = snap.view.me == null ? const <Json>[] : await api.notes(widget.gameId).catchError((_) => const <Json>[]);
       if (!mounted) return;
       setState(() {
         final known = {for (final m in history) m.id};
@@ -156,6 +160,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
         marks
           ..clear()
           ..addEntries(savedMarks.map((m) => MapEntry(m['cardId'] as String, CardMark.fromJson(m))));
+        suspicion
+          ..clear()
+          ..addEntries(notes.map((n) => MapEntry(n['targetUserId'] as String, ((n['suspicion'] as num?) ?? 0).toInt())));
       });
 
       final lobbyId = snap.lobbyId;
@@ -241,6 +248,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void refresh() => setState(() {});
+
+  void setSuspicion(String userId, int value) {
+    if (mounted) setState(() => suspicion[userId] = value);
+  }
 
   void openChat() {
     setState(() => unread = 0);
@@ -513,7 +524,13 @@ class _PlayerChip extends StatelessWidget {
               ),
             ),
           if (suspicionRole)
-            Positioned(top: -4, left: -6, child: CountBadge(text: p.knownRole == 'Killer' ? 'У' : 'С', color: AppColors.red)),
+            Positioned(top: -4, left: -6, child: CountBadge(text: p.knownRole == 'Killer' ? 'У' : 'С', color: AppColors.red))
+          else if (!isMe && (screen.suspicion[p.id] ?? 0) > 0)
+            Positioned(
+              top: -4,
+              left: -6,
+              child: CountBadge(key: Key('suspect-${p.id}'), text: screen.suspicion[p.id]! >= 2 ? 'У!' : 'У?', color: AppColors.red),
+            ),
           if (v.raisedHands.contains(p.id))
             const Positioned(left: -6, bottom: -2, child: Icon(Icons.pan_tool, size: 15, color: AppColors.amber)),
           if (arrested)
