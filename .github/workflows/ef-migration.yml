@@ -1,0 +1,49 @@
+name: EF migration
+
+# Создание миграции EF Core без локального .NET SDK:
+# положите имя миграции в server/ef-migration.request и запушьте ветку —
+# workflow сгенерирует миграцию, удалит файл-запрос и закоммитит результат в ту же ветку.
+on:
+  push:
+    paths:
+      - server/ef-migration.request
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 8.0.8
+
+      - name: Generate migration
+        run: |
+          name=$(head -n1 ef-migration.request | tr -cd 'A-Za-z0-9_')
+          test -n "$name"
+          dotnet ef migrations add "$name" \
+            --project src/GhostLetters.Infrastructure \
+            --startup-project src/GhostLetters.Api \
+            --output-dir Persistence/Migrations
+          git rm -q ef-migration.request
+
+      - name: Build
+        run: dotnet build GhostLetters.sln -c Release
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A src/GhostLetters.Infrastructure/Persistence/Migrations
+          git commit -m "EF migration: $(git log -1 --format=%s -- ef-migration.request 2>/dev/null || echo generated)"
+          git push
