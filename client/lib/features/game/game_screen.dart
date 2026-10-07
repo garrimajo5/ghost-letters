@@ -340,6 +340,25 @@ class GameScreenState extends ConsumerState<GameScreen> {
           _PlayersStrip(screen: this),
           if (v.phase == 'RoleReveal' && v.me != null)
             Expanded(child: _RoleScreen(screen: this))
+          else if (v.me == null && MediaQuery.sizeOf(context).width >= 720)
+            // Экран стола на планшете или ТВ: поле слева, ход партии и подсказки справа.
+            Expanded(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(
+                  child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 8, 16), children: [
+                    _Board(screen: this, maxCard: 150),
+                  ]),
+                ),
+                SizedBox(
+                  width: 360,
+                  child: ListView(padding: const EdgeInsets.fromLTRB(8, 4, 16, 16), children: [
+                    ActionPanel(screen: this),
+                    const SizedBox(height: 10),
+                    _Hints(view: v),
+                  ]),
+                ),
+              ]),
+            )
           else
           Expanded(
             child: ListView(
@@ -657,9 +676,10 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen});
+  const _Board({required this.screen, this.maxCard = 96});
 
   final GameScreenState screen;
+  final double maxCard;
 
   static const gap = 5.0;
   static const labelWidth = 46.0;
@@ -674,7 +694,7 @@ class _Board extends StatelessWidget {
 
     return LayoutBuilder(builder: (context, box) {
       // Карта = (ширина − колонка жетонов − промежутки) / столбцы, но не больше 96.
-      final size = ((box.maxWidth - labelWidth - gap * columns) / columns).clamp(24.0, 96.0).floorToDouble();
+      final size = ((box.maxWidth - labelWidth - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const SizedBox(width: labelWidth),

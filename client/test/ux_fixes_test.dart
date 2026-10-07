@@ -156,6 +156,25 @@ void main() {
     expect(find.text('ГОТОВ ПЕРЕГОЛОСОВАТЬ'), findsOneWidget);
   });
 
+  testWidgets('экран стола на планшете: поле слева, панель справа', (tester) async {
+    tester.view.physicalSize = const Size(2560, 1600);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    final j = snapshotJson(phase: 'Mailbox', allowed: const []);
+    (j['view'] as Json)['me'] = null;
+    app.realtime.game = GameSnapshot.fromJson(j);
+    app.go('/game/g1');
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.getRect(find.byKey(const Key('board-0-4'))).right,
+        lessThan(tester.getRect(find.text('Экран стола').first).left));
+  });
+
   group('раунды в настройках', () {
     Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps) async {
       tester.view.physicalSize = const Size(1200, 4000);
