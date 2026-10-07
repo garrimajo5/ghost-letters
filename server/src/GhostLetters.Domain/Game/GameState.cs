@@ -59,7 +59,8 @@ public sealed partial class GameState
 
     public int Version { get; set; }
 
-    public GameSettings Settings { get; init; } = new();
+    /// <summary>Настройки партии; режим обсуждения хост может сменить между обсуждениями.</summary>
+    public GameSettings Settings { get; set; } = new();
 
     /// <summary>Сколько раундов в партии. Хост может поменять во время игры (не меньше текущего).</summary>
     public int TotalRounds { get; set; }

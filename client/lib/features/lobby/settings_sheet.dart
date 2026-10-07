@@ -4,7 +4,7 @@ import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../game/game_state.dart';
 
-/// Редактор настроек лобби. Во время партии меняются только раунды, темп и таймеры.
+/// Редактор настроек лобби. Во время партии меняются только раунды, режим обсуждения, темп и таймеры.
 class SettingsSheet extends StatefulWidget {
   const SettingsSheet({super.key, required this.initial, required this.inGame, this.players});
 
@@ -49,7 +49,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           if (_rulesLocked)
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text('Партия идёт: можно менять раунды, темп и таймеры.', style: TextStyle(color: AppColors.muted)),
+              child: Text('Партия идёт: можно менять раунды, режим обсуждения (подействует со следующего обсуждения), темп и таймеры.', style: TextStyle(color: AppColors.muted)),
             ),
           const SizedBox(height: 8),
           SwitchListTile(
@@ -114,7 +114,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ButtonSegment(value: 'FreeChat', label: Text('Свободно')),
             ],
             selected: {s.discussion},
-            onSelectionChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(discussion: v.first)),
+            onSelectionChanged: (v) => setState(() => s = s.copyWith(discussion: v.first)),
           ),
           const SizedBox(height: 8),
           SegmentedButton<String>(

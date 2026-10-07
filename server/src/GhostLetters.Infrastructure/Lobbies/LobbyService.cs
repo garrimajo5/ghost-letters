@@ -205,7 +205,7 @@ public sealed class LobbyService(
     }
 
     /// <summary>
-    /// Новые настройки (целиком). Во время партии меняются только темп и таймеры —
+    /// Новые настройки (целиком). Во время партии меняются раунды, режим обсуждения (не во время него), темп и таймеры —
     /// они действуют со следующей фазы.
     /// </summary>
     public async Task<LobbyDto> UpdateSettingsAsync(Guid lobbyId, Guid hostId, LobbySettings settings, CancellationToken ct)
@@ -219,11 +219,12 @@ public sealed class LobbyService(
             var rulesOnly = settings with
             {
                 Tempo = current.Tempo, TurnHours = current.TurnHours, Timers = current.Timers, Rounds = current.Rounds,
+                Discussion = current.Discussion,
             };
             if (GameJson.Serialize(rulesOnly) != GameJson.Serialize(current))
             {
                 throw AppException.Conflict(AppException.Codes.GameInProgress,
-                    "Во время партии можно менять только раунды, темп и таймеры.");
+                    "Во время партии можно менять только раунды, режим обсуждения, темп и таймеры.");
             }
 
             if (settings.Rounds != current.Rounds)
@@ -232,6 +233,11 @@ public sealed class LobbyService(
                 var players = await db.GamePlayers.CountAsync(p => p.GameId == gameId, ct);
                 var rounds = settings.Rounds ?? GameDefaults.Rounds(players);
                 await services.GetRequiredService<GameService>().ChangeRoundsAsync(gameId, rounds, ct);
+            }
+
+            if (settings.Discussion != current.Discussion)
+            {
+                await services.GetRequiredService<GameService>().ChangeDiscussionAsync(gameId, settings.Discussion, ct);
             }
 
             var game = await db.Games.FirstAsync(g => g.Id == gameId, ct);
