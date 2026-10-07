@@ -244,6 +244,7 @@ class _PlayersStrip extends StatelessWidget {
         children: [
           for (final p in [...v.players]..sort((a, b) => a.seat.compareTo(b.seat)))
             GestureDetector(
+              key: Key('player-${p.id}'),
               onTap: () => onTap(p.id),
               child: Container(
                 width: 72,
@@ -316,6 +317,7 @@ class _Board extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(3),
                 child: GestureDetector(
+                  key: Key('board-$r-$c'),
                   onTap: () => onTap(r, c, v.board[r].cards[c]),
                   onLongPress: v.me == null
                       ? null
