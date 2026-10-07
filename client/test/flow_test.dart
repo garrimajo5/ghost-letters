@@ -52,7 +52,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(app.api.named('joinLobby').single.$2, ['ABC234', false]);
-      expect(find.text('Раунд 4 из 4'), findsOneWidget);
+      expect(find.text('РАУНД 4 / 4'), findsOneWidget);
     });
 
     testWidgets('ошибка сервера показывается игроку', (tester) async {
@@ -87,7 +87,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(app.api.named('startGame').single.$2, ['l1']);
-      expect(find.text('Раунд 4 из 4'), findsOneWidget);
+      expect(find.text('РАУНД 4 / 4'), findsOneWidget);
     });
 
     testWidgets('игрок отмечает готовность', (tester) async {
@@ -115,7 +115,7 @@ void main() {
       app.realtime.startedCtl.add((lobbyId: 'l1', gameId: 'g1'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Раунд 4 из 4'), findsOneWidget);
+      expect(find.text('РАУНД 4 / 4'), findsOneWidget);
     });
   });
 
@@ -137,15 +137,15 @@ void main() {
       final app = await openGame(tester, snapshot(phase: 'Mailbox', allowed: const ['SendLetter']));
 
       expect(find.text('Отправьте в ящик одну карту'), findsOneWidget);
-      FilledButton send() => tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Отправить письмо'));
+      FilledButton send() => tester.widget<FilledButton>(find.byKey(const Key('cta')));
+      expect(find.text('ОТПРАВИТЬ ПИСЬМО'), findsOneWidget);
       expect(send().onPressed, isNull);
 
       await tester.tap(find.byKey(const Key('hand-orig_0200')));
       await tester.pump();
       expect(send().onPressed, isNotNull);
 
-      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Отправить письмо'));
-      await tester.tap(find.widgetWithText(FilledButton, 'Отправить письмо'));
+      await tester.tap(find.byKey(const Key('cta')));
       await tester.pumpAndSettle();
 
       final cmd = app.api.named('command').single.$2;
@@ -169,8 +169,9 @@ void main() {
     testWidgets('без доступных команд игрок ждёт', (tester) async {
       await openGame(tester, snapshot(phase: 'Mailbox', allowed: const []));
 
-      expect(find.text('Ждём других игроков'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Отправить письмо'), findsNothing);
+      expect(find.text('Ждём других игроков'), findsWidgets);
+      expect(find.byKey(const Key('cta')), findsNothing);
+      expect(find.byKey(const Key('status-bar')), findsOneWidget);
     });
   });
 }

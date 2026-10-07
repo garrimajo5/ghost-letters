@@ -268,4 +268,26 @@ public class RoundTests
         state.Players.Should().OnlyContain(p => p.Hand.Count == 5);
         state.Vanished.Should().HaveCount(6 * state.TotalRounds);
     }
+
+    [Fact]
+    public void ChangeRounds_NotBelowCurrent_NotInFinale()
+    {
+        var state = TestGame.Create(players: 7, settings: new GameSettings { Rounds = 4 });
+        state.ToRound1();
+        state.PlayRound();
+        state.Round.Should().Be(2);
+
+        var tooFew = () => GameEngine.ChangeRounds(state, 1);
+        tooFew.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
+
+        var version = state.Version;
+        GameEngine.ChangeRounds(state, 2).Should().ContainSingle(e => e.Type == "RoundsChanged");
+        state.TotalRounds.Should().Be(2);
+        state.Version.Should().Be(version + 1);
+
+        state.PlayRound();
+        state.Phase.Should().Be(Phase.Voting, "раунд 2 стал последним");
+        var inFinale = () => GameEngine.ChangeRounds(state, 3);
+        inFinale.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.NotAllowed);
+    }
 }

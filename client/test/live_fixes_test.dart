@@ -43,9 +43,7 @@ void main() {
     app.api.failNextCommand = const ApiError('VERSION_CONFLICT', 'Состояние изменилось', 409);
     await tester.tap(find.byKey(const Key('hand-orig_0200')));
     await tester.pump();
-    final send = find.widgetWithText(FilledButton, 'Отправить письмо');
-    await tester.ensureVisible(send);
-    await tester.tap(send);
+    await tester.tap(find.byKey(const Key('cta')));
     await tester.pumpAndSettle();
 
     final commands = app.api.named('command').toList();

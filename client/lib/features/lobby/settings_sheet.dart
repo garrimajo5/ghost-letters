@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme.dart';
 import '../../models/models.dart';
+import '../game/game_state.dart';
 
-/// Редактор настроек лобби. Во время партии меняются только темп и таймеры.
+/// Редактор настроек лобби. Во время партии меняются только раунды, темп и таймеры.
 class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({super.key, required this.initial, required this.inGame});
+  const SettingsSheet({super.key, required this.initial, required this.inGame, this.players});
 
   final LobbySettings initial;
   final bool inGame;
 
-  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial, {bool inGame = false}) =>
+  /// Сколько игроков — чтобы показать число раундов по правилам.
+  final int? players;
+
+  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial, {bool inGame = false, int? players}) =>
       showModalBottomSheet<LobbySettings>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => SettingsSheet(initial: initial, inGame: inGame),
+        builder: (_) => SettingsSheet(initial: initial, inGame: inGame, players: players),
       );
 
   @override
@@ -44,7 +49,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           if (_rulesLocked)
             const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text('Партия идёт: можно менять только темп и таймеры.'),
+              child: Text('Партия идёт: можно менять раунды, темп и таймеры.', style: TextStyle(color: AppColors.muted)),
             ),
           const SizedBox(height: 8),
           SwitchListTile(
@@ -60,15 +65,10 @@ class _SettingsSheetState extends State<SettingsSheet> {
             max: 7,
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(columns: v)),
           ),
-          _Stepper(
-            label: 'Раунды',
-            value: s.rounds ?? 0,
-            min: 0,
-            max: 5,
-            zeroLabel: 'по правилам',
-            onChanged: _rulesLocked
-                ? null
-                : (v) => setState(() => s = v == 0 ? s.copyWith(clearRounds: true) : s.copyWith(rounds: v)),
+          _RoundsTile(
+            rounds: s.rounds,
+            players: widget.players,
+            onChanged: (v) => setState(() => s = v == null ? s.copyWith(clearRounds: true) : s.copyWith(rounds: v)),
           ),
           const Divider(),
           Text('Роли', style: Theme.of(context).textTheme.titleMedium),
@@ -188,6 +188,49 @@ class _Stepper extends StatelessWidget {
         Text(value == 0 && zeroLabel != null ? zeroLabel! : '$value'),
         IconButton(
           onPressed: change == null || value >= max ? null : () => change((value + step).clamp(min, max)),
+          icon: const Icon(Icons.add),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Раунды: число по правилам (по количеству игроков) или своё — от 1 до 5, можно и уменьшать, и вернуть «по правилам».
+class _RoundsTile extends StatelessWidget {
+  const _RoundsTile({required this.rounds, required this.players, required this.onChanged});
+
+  final int? rounds;
+  final int? players;
+  final ValueChanged<int?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final byRules = players == null || players! < 2 ? null : defaultRounds(players!);
+    final value = rounds ?? byRules ?? 4;
+    return ListTile(
+      key: const Key('rounds'),
+      title: const Text('Раунды'),
+      subtitle: Text(
+        rounds == null ? 'по правилам${byRules == null ? '' : ': $byRules'}' : 'своё число${byRules == null ? '' : ' · по правилам $byRules'}',
+        style: const TextStyle(color: AppColors.muted),
+      ),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (rounds != null)
+          IconButton(
+            key: const Key('rounds-reset'),
+            tooltip: 'По правилам',
+            onPressed: () => onChanged(null),
+            icon: const Icon(Icons.restart_alt),
+          ),
+        IconButton(
+          key: const Key('rounds-minus'),
+          onPressed: value <= 1 ? null : () => onChanged(value - 1),
+          icon: const Icon(Icons.remove),
+        ),
+        SizedBox(width: 22, child: Text('$value', key: const Key('rounds-value'), textAlign: TextAlign.center, style: heading(18, spacing: 0))),
+        IconButton(
+          key: const Key('rounds-plus'),
+          onPressed: value >= 5 ? null : () => onChanged(value + 1),
           icon: const Icon(Icons.add),
         ),
       ]),

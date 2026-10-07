@@ -106,7 +106,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               tooltip: 'Настройки',
               icon: const Icon(Icons.tune),
               onPressed: () async {
-                final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game');
+                final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players.length);
                 if (s != null) await _apply((api) => api.saveSettings(lobby.id, s));
               },
             ),

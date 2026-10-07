@@ -58,3 +58,18 @@ String actionHint(GameView v) {
     _ => '',
   };
 }
+
+/// Команды, которые ничего не ждут от игрока: лайк и «поднять руку» — по желанию.
+const _optionalCommands = {'Like', 'RaiseHand'};
+
+/// От игрока сейчас ждут действие — экран подсвечивает это: «ВАШ ХОД», вибрация, кнопка внизу.
+bool needsMe(GameView v) => v.me != null && v.allowedCommands.any((c) => !_optionalCommands.contains(c));
+
+/// Раунды по правилам: 2–4 игрока → 5, 5–7 → 4, 8–10 → 3, 11–12 → 2.
+int defaultRounds(int players) => players <= 4
+    ? 5
+    : players <= 7
+        ? 4
+        : players <= 10
+            ? 3
+            : 2;

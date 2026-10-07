@@ -157,5 +157,12 @@ public sealed class LobbyTests(PostgresFixture postgres) : IAsyncLifetime
 
         var stored = await _factory.WithDbAsync(db => Task.FromResult(db.Games.Single(g => g.Id == game.GameId).Settings));
         GameJson.Deserialize<LobbySettings>(stored).Timers.Mailbox.Should().Be(120);
+
+        // Раунды тоже можно менять: игра на 4 игроков — 5 раундов по правилам, уменьшаем до 2.
+        await game.Host.PutAsync($"/api/v1/lobbies/{game.LobbyId}/settings", settings with { Rounds = 2 });
+        (await game.Host.ViewAsync(game.GameId)).GetProperty("totalRounds").GetInt32().Should().Be(2);
+
+        (await game.Host.PutAsync($"/api/v1/lobbies/{game.LobbyId}/settings", settings with { Rounds = 9 }, HttpStatusCode.BadRequest))
+            .Code().Should().Be("VALIDATION");
     }
 }

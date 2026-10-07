@@ -75,8 +75,10 @@ class FakeApi extends Api {
   @override
   Future<List<ChatMessage>> chat(String gameId) async => const [];
 
+  List<Json> marksResult = const [];
+
   @override
-  Future<List<Json>> marks(String gameId) async => const [];
+  Future<List<Json>> marks(String gameId) async => marksResult;
 
   List<Json> notesResult = const [];
 

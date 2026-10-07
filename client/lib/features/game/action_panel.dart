@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/texts.dart';
 import '../../core/theme.dart';
@@ -7,7 +8,40 @@ import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
 
-/// Панель действий текущей фазы: что можно сделать и кнопки команд.
+/// Главная кнопка хода в нижней панели экрана.
+class Cta {
+  const Cta(this.label, this.onPressed, {this.icon, this.danger = false});
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool danger;
+}
+
+/// Ачивки, на которые выдвигают в конце партии.
+const awardTitles = {
+  'steel_balls': 'Стальные яйца',
+  'sherlock': 'Шерлок',
+  'best_liar': 'Лучший лжец',
+  'ghost_whisperer': 'Голос Призрака',
+};
+
+const _awardHints = {
+  'steel_balls': 'Самый смелый ход',
+  'sherlock': 'Лучшая дедукция',
+  'best_liar': 'Убедительнее всех врал',
+  'ghost_whisperer': 'Лучше всех понимал Призрака',
+};
+
+const _awardIcons = {
+  'steel_balls': Icons.shield_outlined,
+  'sherlock': Icons.search,
+  'best_liar': Icons.theater_comedy_outlined,
+  'ghost_whisperer': Icons.blur_on,
+};
+
+/// Панель действий текущей фазы: что нужно сделать, выбор целей и второстепенные кнопки.
+/// Главная кнопка хода живёт внизу экрана — её даёт [ActionPanel.cta].
 class ActionPanel extends StatelessWidget {
   const ActionPanel({super.key, required this.screen});
 
@@ -15,14 +49,109 @@ class ActionPanel extends StatelessWidget {
 
   GameView get v => screen.view!;
 
+  /// Главное действие фазы для нижней кнопки; null — действие в панели (или ждать нечего нажимать).
+  static Cta? cta(GameScreenState screen) {
+    final v = screen.view!;
+    final rows = v.board.length;
+    if (v.can('AckRole')) return Cta('Понятно', () => screen.send('AckRole'), icon: Icons.check);
+    if (v.can('ChooseTruth')) {
+      return Cta(
+        'Это истина',
+        screen.truth.length == rows
+            ? () => screen.send('ChooseTruth', {'columns': [for (var r = 0; r < rows; r++) screen.truth[r]]})
+            : null,
+        icon: Icons.nights_stay_outlined,
+        danger: true,
+      );
+    }
+    if (v.can('NameTruth')) {
+      return Cta(
+        'Назвать улики',
+        screen.truth.length == rows
+            ? () => screen.send('NameTruth', {'columns': [for (var r = 0; r < rows; r++) screen.truth[r]]})
+            : null,
+        icon: Icons.record_voice_over_outlined,
+      );
+    }
+    if (v.can('GiveFirstClue')) {
+      return Cta(
+        'Выложить зацепку',
+        screen.selectedHand.length == 1 ? () => screen.send('GiveFirstClue', {'cardId': screen.selectedHand.first}) : null,
+        icon: Icons.style_outlined,
+      );
+    }
+    if (v.can('SendLetter')) {
+      final need = lettersPerPlayer(v);
+      return Cta(
+        'Отправить письмо',
+        screen.selectedHand.length == need ? () => screen.send('SendLetter', {'cardIds': screen.selectedHand.toList()}) : null,
+        icon: Icons.mail_outline,
+      );
+    }
+    if (v.can('RevealHints')) {
+      final n = screen.selectedMailbox.length;
+      return Cta(
+        n == 0 ? 'Ничего не открывать' : 'Открыть: $n',
+        () => screen.send('RevealHints', {'cardIds': screen.selectedMailbox.toList()}),
+        icon: Icons.visibility_outlined,
+      );
+    }
+    if (v.can('Discard')) {
+      return screen.selectedHand.length == 1
+          ? Cta('Сбросить и добрать', () => screen.send('Discard', {'cardId': screen.selectedHand.first}), icon: Icons.autorenew)
+          : Cta('Оставить руку', () => screen.send('Discard', {'cardId': null}), icon: Icons.pan_tool_alt_outlined);
+    }
+    if (v.can('EndTurn')) return Cta('Закончить слово', () => screen.send('EndTurn'), icon: Icons.mic_off_outlined);
+    if (v.can('ReadyNextRound')) return Cta('Готов', () => screen.send('ReadyNextRound'), icon: Icons.check);
+    if (v.can('CastVote')) {
+      final stage = v.finale?.currentStage;
+      if (stage == null) return null;
+      final ready = stage.isRow ? screen.voteColumn != null : screen.target != null;
+      return Cta(
+        'Голосовать',
+        ready ? () => screen.send('CastVote', stage.isRow ? {'column': screen.voteColumn} : {'suspect': screen.target}) : null,
+        icon: Icons.how_to_vote_outlined,
+      );
+    }
+    if (v.can('ReadyRevote')) return Cta('Готов переголосовать', () => screen.send('ReadyRevote'), icon: Icons.replay);
+    if (v.can('BlackmailerPick')) {
+      return Cta(
+        'Это Шантажист',
+        screen.target == null ? null : () => screen.send('BlackmailerPick', {'target': screen.target}),
+        icon: Icons.gps_fixed,
+        danger: true,
+      );
+    }
+    final lobbyId = screen.lobbyId;
+    if (v.phase == 'Finished' && lobbyId != null && v.me != null) {
+      return Cta('Реванш', () => screen.openLobby(lobbyId), icon: Icons.replay);
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[
-      Text(actionHint(v), style: Theme.of(context).textTheme.titleMedium),
-      const SizedBox(height: 8),
-      ..._body(context),
-    ];
-    return Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children)));
+    final body = _body(context);
+    final mine = needsMe(v);
+    return Panel(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      border: mine ? AppColors.amber.withValues(alpha: 0.6) : null,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          if (mine) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(99)),
+              child: Text('ВАШ ХОД', style: heading(11, color: AppColors.onAmber, spacing: 1.2)),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Expanded(child: Text(actionHint(v), style: Theme.of(context).textTheme.titleMedium)),
+        ]),
+        if (body.isNotEmpty) const SizedBox(height: 10),
+        ...body,
+      ]),
+    );
   }
 
   List<Widget> _body(BuildContext context) {
@@ -30,59 +159,62 @@ class ActionPanel extends StatelessWidget {
     switch (v.phase) {
       case 'RoleReveal':
         if (me == null) return const [];
-        return [
-          Text(T.role(me.role), style: Theme.of(context).textTheme.headlineSmall),
-          Text(T.roleHints[me.role] ?? ''),
-          const SizedBox(height: 8),
-          if (v.can('AckRole')) FilledButton(onPressed: () => screen.send('AckRole'), child: const Text('Понятно')),
-        ];
+        return [RoleReveal(role: me.role)];
       case 'Night':
-        if (!v.can('ChooseTruth')) return [const Text('Убийца выбирает истинные улики…')];
+        if (!v.can('ChooseTruth')) {
+          return [
+            const _Illustration('night'),
+            const SizedBox(height: 8),
+            const Text('Город спит. Убийца выбирает истинные улики…', style: TextStyle(color: AppColors.muted)),
+          ];
+        }
         return [
-          Text('Выбрано ${screen.truth.length} из ${v.board.length}. Нажимайте на карты поля.'),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: screen.truth.length == v.board.length
-                ? () => screen.send('ChooseTruth', {'columns': [for (var r = 0; r < v.board.length; r++) screen.truth[r]]})
-                : null,
-            child: const Text('Это истина'),
+          Text(
+            'Нажимайте на карты поля — по одной в каждом ряду. Выбрано ${screen.truth.length} из ${v.board.length}.',
+            style: const TextStyle(color: AppColors.redSoft),
           ),
         ];
       case 'FirstClue':
-        if (!v.can('GiveFirstClue')) return [const Text('Призрак думает о первой зацепке…')];
+        if (!v.can('GiveFirstClue')) return [const Text('Призрак думает о первой зацепке…', style: TextStyle(color: AppColors.muted))];
         return [
-          const Text('Выберите карту на руке или начните без зацепки.'),
+          const Text('Выберите карту на руке — она станет первой зацепкой. Или начните без неё.'),
           const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: FilledButton(
-                onPressed: screen.selectedHand.length == 1
-                    ? () => screen.send('GiveFirstClue', {'cardId': screen.selectedHand.first})
-                    : null,
-                child: const Text('Выложить'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: OutlinedButton(onPressed: () => screen.send('GiveFirstClue', {'cardId': null}), child: const Text('Без зацепки'))),
-          ]),
+          OutlinedButton(onPressed: () => screen.send('GiveFirstClue', {'cardId': null}), child: const Text('Без зацепки')),
         ];
       case 'Mailbox':
-        if (!v.can('SendLetter')) return [Text('В ящике писем: ${v.mailboxCount}')];
+        if (!v.can('SendLetter')) {
+          return [
+            Row(children: [
+              const AppImage('mailbox', width: 56, height: 56, radius: 12),
+              const SizedBox(width: 12),
+              Expanded(child: Text('В ящике писем: ${v.mailboxCount}', style: const TextStyle(color: AppColors.muted))),
+            ]),
+          ];
+        }
         final need = lettersPerPlayer(v);
         return [
-          Text('Выберите на руке карт: $need. Можно сказать в чат, что проверяете.'),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: screen.selectedHand.length == need ? () => screen.send('SendLetter', {'cardIds': screen.selectedHand.toList()}) : null,
-            child: const Text('Отправить письмо'),
-          ),
+          Row(children: [
+            const AppImage('mailbox', width: 56, height: 56, radius: 12),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Выберите на руке ${need == 2 ? 'две карты' : 'карту'} и нажмите «Отправить письмо». '
+                'Можно сказать в чат, какую улику проверяете.',
+              ),
+            ),
+          ]),
         ];
       case 'GhostPick':
       case 'Refill':
         return [
           if (v.can('RevealHints')) ..._ghostPick(context),
-          if (v.can('Discard')) ..._discard(),
-          if (!v.can('RevealHints') && !v.can('Discard')) const Text('Ждём остальных…'),
+          if (v.can('Discard'))
+            const Text('Выберите карту на руке, чтобы сбросить её и добрать новую, или оставьте руку как есть.'),
+          if (!v.can('RevealHints') && !v.can('Discard'))
+            Text(
+              v.phase == 'GhostPick' ? 'Призрак читает письма…' : 'Ждём остальных…',
+              style: const TextStyle(color: AppColors.muted),
+            ),
         ];
       case 'Discussion':
         return _discussion();
@@ -93,16 +225,8 @@ class ActionPanel extends StatelessWidget {
       case 'BlackmailerHunt':
         return _hunt(context);
       case 'BlackmailerClaim':
-        if (!v.can('NameTruth')) return [const Text('Шантажист называет улики…')];
-        return [
-          Text('Выбрано ${screen.truth.length} из ${v.board.length}. Нажимайте на карты поля.'),
-          FilledButton(
-            onPressed: screen.truth.length == v.board.length
-                ? () => screen.send('NameTruth', {'columns': [for (var r = 0; r < v.board.length; r++) screen.truth[r]]})
-                : null,
-            child: const Text('Назвать'),
-          ),
-        ];
+        if (!v.can('NameTruth')) return [const Text('Шантажист называет улики…', style: TextStyle(color: AppColors.muted))];
+        return [Text('Нажимайте на карты поля — по одной в ряду. Выбрано ${screen.truth.length} из ${v.board.length}.')];
       case 'AwardNomination':
       case 'AwardVoting':
       case 'Finished':
@@ -116,79 +240,80 @@ class ActionPanel extends StatelessWidget {
     final mailbox = v.mailboxForGhost ?? const <String>[];
     return [
       const Text('Нажмите на письма, которые станут подсказками. Остальные исчезнут.'),
-      const SizedBox(height: 8),
-      Wrap(spacing: 6, runSpacing: 6, children: [
+      const SizedBox(height: 10),
+      Wrap(spacing: 8, runSpacing: 8, children: [
         for (final c in mailbox)
           GestureDetector(
             key: Key('mailbox-$c'),
             onTap: () {
+              HapticFeedback.selectionClick();
               if (!screen.selectedMailbox.remove(c)) screen.selectedMailbox.add(c);
               screen.refresh();
             },
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: screen.selectedMailbox.contains(c) ? AppTheme.accent : Colors.transparent, width: 3),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: screen.selectedMailbox.contains(c) ? AppColors.ice : AppColors.border,
+                  width: screen.selectedMailbox.contains(c) ? 3 : 1,
+                ),
               ),
-              child: CardImage(cardId: c, size: 64),
+              child: Opacity(
+                opacity: screen.selectedMailbox.isEmpty || screen.selectedMailbox.contains(c) ? 1 : 0.6,
+                child: CardImage(cardId: c, size: 68, radius: 10),
+              ),
             ),
           ),
       ]),
-      const SizedBox(height: 8),
-      FilledButton(
-        onPressed: () => screen.send('RevealHints', {'cardIds': screen.selectedMailbox.toList()}),
-        child: Text(screen.selectedMailbox.isEmpty ? 'Ничего не открывать' : 'Открыть: ${screen.selectedMailbox.length}'),
-      ),
-      const SizedBox(height: 12),
     ];
   }
-
-  List<Widget> _discard() => [
-        const Text('Можно сбросить одну карту с руки и добрать новую.'),
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: screen.selectedHand.length == 1 ? () => screen.send('Discard', {'cardId': screen.selectedHand.first}) : null,
-              child: const Text('Сбросить выбранную'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(child: FilledButton(onPressed: () => screen.send('Discard', {'cardId': null}), child: const Text('Оставить руку'))),
-        ]),
-      ];
 
   List<Widget> _discussion() {
     if (v.isRadio) {
       final speaker = v.currentSpeaker;
       return [
-        Text(speaker == null ? 'Обсуждение' : 'Говорит: ${screen.nick(speaker)}'
-            '${v.floorGrantedTo != null ? ' · слово у ${screen.nick(v.floorGrantedTo)}' : ''}'),
-        const SizedBox(height: 8),
-        if (v.can('EndTurn'))
-          Row(children: [
-            Expanded(child: FilledButton(onPressed: () => screen.send('EndTurn'), child: const Text('Закончить слово'))),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: screen.target == null ? null : () => screen.send('GiveFloor', {'to': screen.target}),
-                child: Text(screen.target == null ? 'Дать слово (выберите игрока)' : 'Дать слово ${screen.nick(screen.target)}'),
-              ),
+        Row(children: [
+          const AppImage('radio', width: 40, height: 40, circle: true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              speaker == null
+                  ? 'Обсуждение по рации'
+                  : '${speaker == v.me?.id ? 'Говорите вы' : 'Говорит ${screen.nick(speaker)}'}'
+                      '${v.floorGrantedTo != null ? ' · слово у ${screen.nick(v.floorGrantedTo)}' : ''}',
             ),
-          ]),
-        if (v.can('RaiseHand'))
+          ),
+        ]),
+        if (v.can('GiveFloor')) ...[
+          const SizedBox(height: 10),
+          Text('Передать слово:', style: sectionLabel()),
+          const SizedBox(height: 6),
+          PlayerPicker(
+            screen: screen,
+            candidates: [for (final p in v.players) if (p.id != v.me?.id && !p.isGhost) p.id],
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: screen.target == null ? null : () => screen.send('GiveFloor', {'to': screen.target}),
+            child: Text(screen.target == null ? 'Дать слово' : 'Дать слово: ${screen.nick(screen.target)}'),
+          ),
+        ],
+        if (v.can('RaiseHand')) ...[
+          const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () => screen.send('RaiseHand', {'raised': !v.raisedHands.contains(v.me?.id)}),
             icon: const Icon(Icons.pan_tool_outlined),
             label: Text(v.raisedHands.contains(v.me?.id) ? 'Опустить руку' : 'Поднять руку'),
           ),
+        ],
       ];
     }
 
     return [
-      const Text('Обсуждайте в чате. Когда все будут готовы, начнётся следующий раунд.'),
+      const Text('Обсуждайте в чате — текстом или голосом. Когда все нажмут «Готов», начнётся следующий раунд.'),
       const SizedBox(height: 8),
-      if (v.can('ReadyNextRound')) FilledButton(onPressed: () => screen.send('ReadyNextRound'), child: const Text('Готов')),
+      OutlinedButton.icon(onPressed: screen.openChat, icon: const Icon(Icons.chat_bubble_outline), label: const Text('Открыть чат')),
     ];
   }
 
@@ -196,38 +321,39 @@ class ActionPanel extends StatelessWidget {
     final finale = v.finale;
     final stage = finale?.currentStage;
     final widgets = <Widget>[];
+    if (finale != null && finale.stagesTotal > 0) widgets.add(_StageChips(screen: screen));
+
     if (stage != null) {
+      widgets.add(const SizedBox(height: 10));
       widgets.add(Text(
         stage.isRow
-            ? 'Этап ${stage.index + 1} из ${finale!.stagesTotal}: ${T.category(v.board[stage.row].category)} — нажмите на карту ряда'
-            : 'Этап ${stage.index + 1} из ${finale!.stagesTotal}: кто Убийца? Выберите игрока вверху',
+            ? 'Этап ${stage.index + 1} из ${finale!.stagesTotal}: ${T.category(v.board[stage.row].category)} — какая карта истинная?'
+            : 'Этап ${stage.index + 1} из ${finale!.stagesTotal}: кто Убийца?',
+        style: const TextStyle(fontWeight: FontWeight.w600),
       ));
-      if (stage.attempt > 1) widgets.add(Text('Переголосование №${stage.attempt - 1}', style: const TextStyle(color: Colors.amber)));
-    }
+      if (stage.attempt > 1) {
+        widgets.add(Text('Переголосование №${stage.attempt - 1}', style: const TextStyle(color: AppColors.amber)));
+      }
 
-    if (v.can('CastVote') && stage != null) {
-      final ready = stage.isRow ? screen.voteColumn != null : screen.target != null;
-      widgets.addAll([
-        const SizedBox(height: 8),
-        Row(children: [
-          Expanded(
-            child: FilledButton(
-              onPressed: ready
-                  ? () => screen.send('CastVote', stage.isRow ? {'column': screen.voteColumn} : {'suspect': screen.target})
-                  : null,
-              child: const Text('Голосовать'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(onPressed: () => screen.send('CastVote', {'column': null, 'suspect': null}), child: const Text('Воздержаться')),
-        ]),
-      ]);
-    } else if (finale?.hasMyVote == true) {
-      widgets.add(const Text('Ваш голос принят. Ждём остальных — голоса откроются, когда проголосуют все.'));
-    }
-
-    if (v.can('ReadyRevote')) {
-      widgets.add(FilledButton(onPressed: () => screen.send('ReadyRevote'), child: const Text('Готов переголосовать')));
+      if (v.can('CastVote')) {
+        widgets.add(const SizedBox(height: 10));
+        if (stage.isRow) {
+          widgets.add(_ColumnPicker(screen: screen, stage: stage));
+        } else {
+          widgets.add(PlayerPicker(screen: screen, candidates: stage.candidateSuspects));
+        }
+        widgets.addAll([
+          const SizedBox(height: 8),
+          TextButton(onPressed: () => screen.send('CastVote', {'column': null, 'suspect': null}), child: const Text('Воздержаться')),
+        ]);
+      } else if (finale.hasMyVote) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text('Ваш голос принят. Выбор откроется, когда проголосуют все.', style: TextStyle(color: AppColors.muted)),
+        ));
+      }
+      widgets.add(const SizedBox(height: 10));
+      widgets.add(_VotersProgress(screen: screen));
     }
 
     widgets.addAll(_outcomes(context));
@@ -239,19 +365,32 @@ class ActionPanel extends StatelessWidget {
     if (finale == null || finale.outcomes.isEmpty) return const [];
     return [
       const Divider(),
-      Text('Решения', style: Theme.of(context).textTheme.titleSmall),
+      Text('РЕШЕНИЯ', style: sectionLabel()),
+      const SizedBox(height: 4),
       for (final o in finale.outcomes)
-        ListTile(
-          dense: true,
-          leading: Icon(o.correct == null ? Icons.help_outline : (o.correct! ? Icons.check : Icons.close),
-              color: o.correct == null ? null : (o.correct! ? AppTheme.ok : AppTheme.danger)),
-          title: Text(o.kind == 'Row'
-              ? '${T.category(v.board[o.row].category)}: карта ${(o.column ?? 0) + 1}'
-              : 'Арестован(а) ${screen.nick(o.suspect)}${o.revealedRole != null ? ' — ${T.role(o.revealedRole)}' : ''}'),
-          subtitle: Text([
-            if (o.byLot) 'жребий',
-            _votersFor(o),
-          ].where((x) => x.isNotEmpty).join(' · ')),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            if (o.kind == 'Row' && o.column != null)
+              CardImage(cardId: v.board[o.row].cards[o.column!], size: 40, radius: 8)
+            else
+              Avatar(nickname: screen.nick(o.suspect), color: screen.colorOf(o.suspect), size: 40),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(o.kind == 'Row'
+                    ? (o.column == null ? '${T.category(v.board[o.row].category)}: никто' : '${T.category(v.board[o.row].category)}: карта ${o.column! + 1}')
+                    : 'Арестован(а) ${screen.nick(o.suspect)}${o.revealedRole != null ? ' — ${T.role(o.revealedRole)}' : ''}'),
+                if (o.byLot || _votersFor(o).isNotEmpty)
+                  Text(
+                    [if (o.byLot) 'жребий', _votersFor(o)].where((x) => x.isNotEmpty).join(' · '),
+                    style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                  ),
+              ]),
+            ),
+            if (o.correct != null)
+              CountBadge(text: o.correct! ? '✓' : '✕', color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
+          ]),
         ),
     ];
   }
@@ -269,17 +408,37 @@ class ActionPanel extends StatelessWidget {
   List<Widget> _hunt(BuildContext context) {
     final command = v.can('HuntPick') ? 'HuntPick' : (v.can('BlackmailerPick') ? 'BlackmailerPick' : null);
     if (command == null) {
-      return [Text(v.phase == 'Hunt' ? 'Убийца ищет Свидетеля или Эксперта…' : 'Убийца ищет Шантажиста…'), ..._outcomes(context)];
+      return [
+        Row(children: [
+          const AppImage('hunt', width: 56, height: 56, radius: 12),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              v.phase == 'Hunt' ? 'Убийца ищет Свидетеля или Эксперта…' : 'Убийца ищет Шантажиста…',
+              style: const TextStyle(color: AppColors.muted),
+            ),
+          ),
+        ]),
+        ..._outcomes(context),
+      ];
     }
 
-    final needGuess = command == 'HuntPick';
+    final me = v.me?.id;
+    final candidates = [
+      for (final p in v.players)
+        if (p.id != me && !p.isGhost && !isKillerTeam(p.knownRole) && v.finale?.arrested.contains(p.id) != true) p.id,
+    ];
     return [
-      const Text('Выберите игрока вверху. Сообщники могут подсказать в канале команды.'),
-      const SizedBox(height: 8),
-      if (needGuess)
+      const Text('Выберите игрока. Сообщники могут подсказать в канале команды.', style: TextStyle(color: AppColors.redSoft)),
+      const SizedBox(height: 10),
+      PlayerPicker(screen: screen, candidates: candidates, color: AppColors.redBright),
+      if (command == 'HuntPick') ...[
+        const SizedBox(height: 10),
         Row(children: [
           Expanded(
             child: FilledButton(
+              key: const Key('hunt-witness'),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
               onPressed: screen.target == null ? null : () => screen.send(command, {'target': screen.target, 'guess': 'Witness'}),
               child: const Text('Это Свидетель'),
             ),
@@ -287,18 +446,13 @@ class ActionPanel extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: OutlinedButton(
-              onPressed: screen.target == null
-                  ? null
-                  : () => screen.send(command, {'target': screen.target, 'guess': 'Expert'}),
+              key: const Key('hunt-expert'),
+              onPressed: screen.target == null ? null : () => screen.send(command, {'target': screen.target, 'guess': 'Expert'}),
               child: const Text('Это Эксперт'),
             ),
           ),
-        ])
-      else
-        FilledButton(
-          onPressed: screen.target == null ? null : () => screen.send(command, {'target': screen.target}),
-          child: const Text('Это Шантажист'),
-        ),
+        ]),
+      ],
     ];
   }
 
@@ -310,25 +464,66 @@ class ActionPanel extends StatelessWidget {
     if (result != null) {
       final won = me != null && result.winners.contains(me.id);
       widgets.addAll([
-        Text(T.sides[result.side] ?? result.side, style: Theme.of(context).textTheme.titleLarge),
-        Text('Угадано рядов: ${result.correctRows} из ${v.board.length}${result.killerCaught ? ', Убийца арестован' : ''}'),
-        if (result.imitatorWon) const Text('Подражатель добился ареста и тоже победил!'),
-        if (me != null) Text(won ? 'Вы победили' : 'Вы проиграли', style: TextStyle(color: won ? AppTheme.ok : AppTheme.danger)),
-        const SizedBox(height: 8),
-        Text('Победители: ${result.winners.map(screen.nick).join(', ')}'),
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: result.side == 'Detectives' ? const Color(0xFF13301F) : const Color(0xFF341714),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(T.sides[result.side] ?? result.side, style: heading(20)),
+            const SizedBox(height: 4),
+            Text(
+              'Угадано рядов: ${result.correctRows} из ${v.board.length}${result.killerCaught ? ' · Убийца арестован' : ''}',
+              style: const TextStyle(color: AppColors.muted),
+            ),
+            if (result.imitatorWon) const Text('Подражатель добился ареста и тоже победил!'),
+            if (me != null) ...[
+              const SizedBox(height: 6),
+              Text(won ? 'Вы победили' : 'Вы проиграли',
+                  style: heading(16, color: won ? AppColors.believed : AppColors.redSoft)),
+            ],
+          ]),
+        ),
+        if (v.truth != null) ...[
+          const SizedBox(height: 12),
+          Text('ИСТИННЫЕ УЛИКИ', style: sectionLabel()),
+          const SizedBox(height: 6),
+          _TruthRow(screen: screen),
+        ],
+        const SizedBox(height: 12),
+        Text('ИГРОКИ', style: sectionLabel()),
+        for (final p in [...v.players]..sort((a, b) => a.seat.compareTo(b.seat)))
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 34, highlight: p.id == me?.id),
+              const SizedBox(width: 10),
+              Expanded(child: Text(screen.nick(p.id))),
+              Text(T.role(p.knownRole), style: TextStyle(fontSize: 13, color: isKillerTeam(p.knownRole) ? AppColors.redSoft : AppColors.muted)),
+              const SizedBox(width: 8),
+              Icon(
+                result.winners.contains(p.id) ? Icons.emoji_events : Icons.close,
+                size: 18,
+                color: result.winners.contains(p.id) ? AppColors.amber : AppColors.dim,
+              ),
+            ]),
+          ),
       ]);
     }
 
     if (finale != null && finale.likes.isNotEmpty && me != null) {
       widgets.addAll([
         const Divider(),
-        Text('Лайки', style: Theme.of(context).textTheme.titleSmall),
-        Wrap(spacing: 6, children: [
+        Text('ЛАЙКИ ЗА ИГРУ', style: sectionLabel()),
+        const SizedBox(height: 6),
+        Wrap(spacing: 6, runSpacing: 6, children: [
           for (final l in finale.likes.where((l) => l.player != me.id))
             FilterChip(
+              showCheckmark: false,
+              avatar: Icon(l.likedByMe ? Icons.favorite : Icons.favorite_border, size: 16, color: AppColors.redBright),
               label: Text('${screen.nick(l.player)} · ${l.count}'),
               selected: l.likedByMe,
-              avatar: const Icon(Icons.favorite, size: 16),
               onSelected: v.can('Like') ? (on) => screen.send('Like', {'to': l.player, 'on': on}) : null,
             ),
         ]),
@@ -338,14 +533,21 @@ class ActionPanel extends StatelessWidget {
     if (v.can('Nominate')) {
       widgets.addAll([
         const Divider(),
-        const Text('Выберите игрока вверху и номинацию. Одно выдвижение на игрока.'),
-        Wrap(spacing: 6, children: [
-          for (final n in const {'steel_balls': 'Стальные яйца', 'sherlock': 'Шерлок', 'best_liar': 'Лучший лжец', 'ghost_whisperer': 'Голос Призрака'}.entries)
-            ActionChip(
-              label: Text(n.value),
-              onPressed: screen.target == null ? null : () => screen.send('Nominate', {'code': n.key, 'nominee': screen.target}),
+        Text('ВЫДВИЖЕНИЕ НА АЧИВКУ', style: sectionLabel()),
+        const SizedBox(height: 4),
+        const Text('Выберите ачивку, затем игрока. Одно выдвижение на игрока.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+        const SizedBox(height: 8),
+        for (final n in awardTitles.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _AwardTile(
+              key: Key('nominate-${n.key}'),
+              icon: _awardIcons[n.key]!,
+              title: n.value,
+              subtitle: _awardHints[n.key]!,
+              onTap: () => _nominate(context, n.key),
             ),
-        ]),
+          ),
         TextButton(onPressed: () => screen.send('Nominate', {'code': null, 'nominee': null}), child: const Text('Пропустить')),
       ]);
     }
@@ -353,16 +555,39 @@ class ActionPanel extends StatelessWidget {
     if (finale != null && finale.awards.isNotEmpty) {
       widgets.addAll([
         const Divider(),
-        Text('Выдвижения', style: Theme.of(context).textTheme.titleSmall),
+        Text(v.phase == 'AwardVoting' ? 'ГОЛОСОВАНИЕ ЗА АЧИВКИ' : 'АЧИВКИ', style: sectionLabel()),
+        const SizedBox(height: 6),
         for (final a in finale.awards)
-          ListTile(
-            dense: true,
-            leading: Icon(a.won ? Icons.emoji_events : Icons.star_border, color: a.won ? Colors.amber : null),
-            title: Text('${_awardTitle(a.code)} — ${screen.nick(a.nominee)}'),
-            subtitle: a.votes == null ? null : Text('Голосов: ${a.votes}'),
-            trailing: v.can('AwardVote') && !a.mine && a.nominee != me?.id
-                ? TextButton(onPressed: () => screen.send('AwardVote', {'entry': a.index}), child: const Text('Голос'))
-                : null,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(10, 8, 6, 8),
+              decoration: BoxDecoration(
+                color: a.won ? const Color(0xFF3A2B12) : AppColors.surface2,
+                borderRadius: BorderRadius.circular(12),
+                border: a.won ? Border.all(color: AppColors.amber) : null,
+              ),
+              child: Row(children: [
+                Avatar(nickname: screen.nick(a.nominee), color: screen.colorOf(a.nominee), size: 34),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(awardTitles[a.code] ?? a.code, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    Text(
+                      '${screen.nick(a.nominee)}${a.votes == null ? '' : ' · голосов: ${a.votes}'}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                  ]),
+                ),
+                if (a.won) const Icon(Icons.emoji_events, color: AppColors.amber),
+                if (v.can('AwardVote') && !a.mine && a.nominee != me?.id)
+                  TextButton(
+                    key: Key('award-vote-${a.index}'),
+                    onPressed: () => screen.send('AwardVote', {'entry': a.index}),
+                    child: const Text('Голос'),
+                  ),
+              ]),
+            ),
           ),
         if (v.can('AwardVote')) TextButton(onPressed: () => screen.send('AwardVote', {'entry': null}), child: const Text('Пропустить')),
       ]);
@@ -374,7 +599,7 @@ class ActionPanel extends StatelessWidget {
     if (v.phase == 'Finished' && lobbyId != null && v.me != null) {
       widgets.addAll([
         const SizedBox(height: 8),
-        FilledButton.tonalIcon(
+        OutlinedButton.icon(
           key: const Key('back-to-lobby'),
           onPressed: () => screen.openLobby(lobbyId),
           icon: const Icon(Icons.replay),
@@ -386,11 +611,287 @@ class ActionPanel extends StatelessWidget {
     return widgets;
   }
 
-  static String _awardTitle(String code) => const {
-        'steel_balls': 'Стальные яйца',
-        'sherlock': 'Шерлок',
-        'best_liar': 'Лучший лжец',
-        'ghost_whisperer': 'Голос Призрака',
-      }[code] ??
-      code;
+  /// Выдвинуть на ачивку: сначала ачивка, затем игрок в нижнем листе.
+  Future<void> _nominate(BuildContext context, String code) async {
+    final me = v.me?.id;
+    final candidates = [for (final p in [...v.players]..sort((a, b) => a.seat.compareTo(b.seat))) if (p.id != me) p.id];
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+          Text(awardTitles[code]!.toUpperCase(), style: heading(20)),
+          const SizedBox(height: 4),
+          Text('Кого выдвигаете?', style: TextStyle(color: AppColors.muted.withValues(alpha: 0.9))),
+          const SizedBox(height: 8),
+          for (final id in candidates)
+            ListTile(
+              key: Key('nominee-$id'),
+              contentPadding: EdgeInsets.zero,
+              leading: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 40),
+              title: Text(screen.nick(id)),
+              onTap: () => Navigator.pop(context, id),
+            ),
+        ]),
+      ),
+    );
+    if (picked != null) await screen.send('Nominate', {'code': code, 'nominee': picked});
+  }
+
+  static String awardTitle(String code) => awardTitles[code] ?? code;
+}
+
+class _AwardTile extends StatelessWidget {
+  const _AwardTile({super.key, required this.icon, required this.title, required this.subtitle, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(children: [
+              Icon(icon, color: AppColors.amber),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ]),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.dim),
+            ]),
+          ),
+        ),
+      );
+}
+
+/// Выбор игрока прямо в панели: аватары кандидатов, выбранный — с янтарной (красной для охоты) обводкой.
+class PlayerPicker extends StatelessWidget {
+  const PlayerPicker({super.key, required this.screen, required this.candidates, this.color = AppColors.amber});
+
+  final GameScreenState screen;
+  final List<String> candidates;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    if (candidates.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 10, runSpacing: 10, children: [
+      for (final id in candidates)
+        GestureDetector(
+          key: Key('pick-$id'),
+          onTap: () {
+            HapticFeedback.selectionClick();
+            screen.tapPlayer(id);
+          },
+          child: SizedBox(
+            width: 58,
+            child: Column(children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: screen.target == id ? color : Colors.transparent, width: 2.5),
+                ),
+                child: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 44),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                id == screen.view?.me?.id ? 'Вы' : screen.nick(id),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: screen.target == id ? color : AppColors.muted),
+              ),
+            ]),
+          ),
+        ),
+    ]);
+  }
+}
+
+/// Голосование по ряду: карты-кандидаты с номерами — не нужно искать ряд на поле.
+class _ColumnPicker extends StatelessWidget {
+  const _ColumnPicker({required this.screen, required this.stage});
+
+  final GameScreenState screen;
+  final VoteStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final row = v.board[stage.row];
+    final selected = screen.voteColumn ?? v.finale?.myVoteColumn;
+    return LayoutBuilder(builder: (context, box) {
+      final n = stage.candidateColumns.length;
+      final size = ((box.maxWidth - 8 * (n - 1)) / n).clamp(36.0, 72.0).floorToDouble();
+      return Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final c in stage.candidateColumns)
+          GestureDetector(
+            key: Key('vote-col-$c'),
+            onTap: () => screen.tapCard(stage.row, c, row.cards[c]),
+            child: Column(children: [
+              BoardCard(cardId: row.cards[c], size: size, mark: screen.marks[row.cards[c]], chosen: selected == c),
+              const SizedBox(height: 2),
+              Text('${c + 1}', style: heading(12, color: selected == c ? AppColors.amber : AppColors.dim, spacing: 0)),
+            ]),
+          ),
+      ]);
+    });
+  }
+}
+
+/// Этапы финала: ряды и «Убийца», пройденные — с итогом.
+class _StageChips extends StatelessWidget {
+  const _StageChips({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final finale = v.finale!;
+    final current = finale.currentStage?.index;
+    final labels = [for (final r in v.board) T.category(r.category), if (finale.stagesTotal > v.board.length) 'Убийца'];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        for (var i = 0; i < labels.length && i < finale.stagesTotal; i++)
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: i == current ? AppColors.amber : AppColors.surface2,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                '${labels[i]}${finale.outcomes.any((o) => o.stage == i) ? ' ✓' : ''}',
+                style: TextStyle(fontSize: 12, color: i == current ? AppColors.onAmber : AppColors.muted, fontWeight: i == current ? FontWeight.w600 : null),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// Кто уже проголосовал: аватары по кругу, проголосовавшие — с галочкой.
+class _VotersProgress extends StatelessWidget {
+  const _VotersProgress({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final voters = v.players.where((p) => !p.isGhost).toList()..sort((a, b) => a.seat.compareTo(b.seat));
+    if (voters.isEmpty) return const SizedBox.shrink();
+    final done = voters.where((p) => p.hasActed).length;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Проголосовали $done из ${voters.length}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+      const SizedBox(height: 6),
+      Wrap(spacing: 4, runSpacing: 4, children: [
+        for (final p in voters)
+          Opacity(
+            opacity: p.hasActed ? 1 : 0.35,
+            child: Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 26),
+          ),
+      ]),
+    ]);
+  }
+}
+
+/// Итог по рядам: истинная карта каждого ряда и угадали ли её.
+class _TruthRow extends StatelessWidget {
+  const _TruthRow({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final truth = v.truth!;
+    final outcomes = v.finale?.outcomes ?? const <VoteOutcome>[];
+    return Wrap(spacing: 10, runSpacing: 10, children: [
+      for (var r = 0; r < v.board.length && r < truth.length; r++)
+        Column(children: [
+          Stack(clipBehavior: Clip.none, children: [
+            CardImage(cardId: v.board[r].cards[truth[r]], size: 64, radius: 10),
+            for (final o in outcomes.where((o) => o.kind == 'Row' && o.row == r && o.correct != null))
+              Positioned(
+                right: -4,
+                top: -4,
+                child: CountBadge(text: o.correct! ? '✓' : '✕', color: o.correct! ? AppColors.green : AppColors.red, fontSize: 12),
+              ),
+          ]),
+          const SizedBox(height: 3),
+          Text(T.category(v.board[r].category), style: const TextStyle(fontSize: 11, color: AppColors.ice)),
+        ]),
+    ]);
+  }
+}
+
+class _Illustration extends StatelessWidget {
+  const _Illustration(this.name);
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) => AppImage(name, height: 140, width: double.infinity, radius: 12);
+}
+
+/// Знакомство с ролью: карта рубашкой вверх, по нажатию переворачивается.
+class RoleReveal extends StatefulWidget {
+  const RoleReveal({super.key, required this.role});
+
+  final String role;
+
+  @override
+  State<RoleReveal> createState() => _RoleRevealState();
+}
+
+class _RoleRevealState extends State<RoleReveal> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final killer = isKillerTeam(widget.role);
+    return Column(children: [
+      GestureDetector(
+        key: const Key('role-card'),
+        onTap: () => setState(() => _open = !_open),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (child, animation) => ScaleTransition(
+            scale: Tween<double>(begin: 0.85, end: 1).animate(animation),
+            child: FadeTransition(opacity: animation, child: child),
+          ),
+          child: AppImage(
+            _open ? roleImage(widget.role) : 'role_back',
+            key: ValueKey(_open),
+            width: 170,
+            height: 241,
+            radius: 14,
+          ),
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (!_open)
+        const Text('Нажмите на карту, чтобы узнать роль', style: TextStyle(color: AppColors.muted))
+      else ...[
+        Text(T.role(widget.role).toUpperCase(), style: heading(26, color: killer ? AppColors.redSoft : AppColors.amber)),
+        const SizedBox(height: 4),
+        Text(T.roleHints[widget.role] ?? '', textAlign: TextAlign.center),
+      ],
+    ]);
+  }
 }
