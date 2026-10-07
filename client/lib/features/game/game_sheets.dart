@@ -204,7 +204,7 @@ class NoteSheet extends ConsumerStatefulWidget {
 
 class _NoteSheetState extends ConsumerState<NoteSheet> {
   final _body = TextEditingController();
-  double _suspicion = 0;
+  int _suspicion = 0;
   bool _loaded = false;
 
   static const _labels = {-2: 'Точно чист', -1: 'Скорее чист', 0: 'Не знаю', 1: 'Подозреваю', 2: 'Это он!'};
@@ -222,7 +222,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     setState(() {
       _loaded = true;
       if (mine != null) {
-        _suspicion = ((mine['suspicion'] as num?) ?? 0).toDouble();
+        _suspicion = ((mine['suspicion'] as num?) ?? 0).toInt();
         _body.text = mine['body'] as String? ?? '';
       }
     });
@@ -234,41 +234,132 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     super.dispose();
   }
 
+  Future<void> _save() async {
+    await runAction(
+      context,
+      () => ref.read(apiProvider).saveNote(widget.screen.widget.gameId, widget.userId, _suspicion, _body.text),
+    );
+    widget.screen.setSuspicion(widget.userId, _suspicion);
+    if (mounted) Navigator.pop(context);
+  }
+
+  /// Что известно о игроке без заметок: роль (если видна), письма, голоса в финале.
+  List<String> _facts() {
+    final screen = widget.screen;
+    final v = screen.view;
+    if (v == null) return const [];
+    final info = v.player(widget.userId);
+    final facts = <String>[
+      if (info?.knownRole != null) 'Роль: ${T.role(info!.knownRole)}',
+      if (info != null && info.hasActed && v.phase == 'Mailbox') 'Уже отправил письмо в этом раунде',
+      if (v.currentSpeaker == widget.userId) 'Сейчас говорит по рации',
+      if (v.raisedHands.contains(widget.userId)) 'Поднял руку',
+    ];
+    final finale = v.finale;
+    if (finale != null) {
+      for (final r in finale.votes.where((r) => r.voter == widget.userId)) {
+        if (r.column != null && finale.outcomes.any((o) => o.stage == r.stage && o.kind == 'Row')) {
+          final o = finale.outcomes.firstWhere((o) => o.stage == r.stage);
+          facts.add('Голосовал: ${T.category(v.board[o.row].category)} — карта ${r.column! + 1}');
+        } else if (r.suspect != null) {
+          facts.add('Голосовал за арест: ${screen.nick(r.suspect)}');
+        }
+      }
+    }
+    if (facts.isEmpty) facts.add('Пока ничего примечательного');
+    return facts;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final r = widget.screen.rosterOf(widget.userId);
-    final info = widget.screen.view?.player(widget.userId);
+    final screen = widget.screen;
+    final r = screen.rosterOf(widget.userId);
+    final said = screen.chat.where((m) => m.authorId == widget.userId && (m.text ?? '').isNotEmpty).toList().reversed.take(3).toList();
+    const label = TextStyle(fontSize: 12, color: AppColors.muted, letterSpacing: 1);
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Avatar(nickname: r?.nickname ?? '?', color: r?.avatarColor ?? '#5C7C99'),
-          const SizedBox(width: 12),
-          Expanded(child: Text(r?.nickname ?? '?', style: Theme.of(context).textTheme.titleMedium)),
-          if (info?.knownRole != null) Chip(label: Text(T.role(info!.knownRole))),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Avatar(nickname: r?.nickname ?? '?', color: r?.avatarColor ?? '#3D6A99', size: 52),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text((r?.nickname ?? '?').toUpperCase(), style: heading(24, spacing: 1)),
+                const Text('Заметки видите только вы', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              ]),
+            ),
+          ]),
+          if (!_loaded) const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator()),
+          const SizedBox(height: 16),
+          const Text('ПОДОЗРЕВАЮ, ЧТО ОН', style: label),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final e in _labels.entries)
+              ChoiceChip(
+                key: Key('suspicion-${e.key}'),
+                label: Text(e.value),
+                selected: _suspicion == e.key,
+                showCheckmark: false,
+                selectedColor: e.key > 0 ? AppColors.red : (e.key < 0 ? AppColors.green : AppColors.border),
+                labelStyle: TextStyle(color: _suspicion == e.key ? Colors.white : AppColors.text, fontFamily: AppFonts.body),
+                onSelected: (_) => setState(() => _suspicion = e.key),
+              ),
+          ]),
+          const SizedBox(height: 18),
+          const Text('ФАКТЫ ПАРТИИ · АВТОМАТИЧЕСКИ', style: label),
+          const SizedBox(height: 6),
+          for (final f in _facts())
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('•  ', style: TextStyle(color: AppColors.ice)),
+                Expanded(child: Text(f, style: const TextStyle(fontSize: 13))),
+              ]),
+            ),
+          if (said.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Text('ИЗ ЧАТА', style: label),
+            const SizedBox(height: 6),
+            for (final m in said)
+              Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.panel,
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(10)),
+                  border: Border(left: BorderSide(color: colorFromHex(r?.avatarColor ?? '#3D6A99'), width: 3)),
+                ),
+                child: Row(children: [
+                  Expanded(child: Text('«${m.text}»', style: const TextStyle(fontSize: 13, height: 1.4))),
+                  for (final c in m.cardIds.take(2))
+                    Padding(padding: const EdgeInsets.only(left: 6), child: CardImage(cardId: c, size: 36, radius: 6)),
+                ]),
+              ),
+          ],
+          const SizedBox(height: 14),
+          const Text('МОЯ ЗАМЕТКА', style: label),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _body,
+            minLines: 3,
+            maxLines: 6,
+            maxLength: 2000,
+            decoration: const InputDecoration(hintText: 'Что говорил, что отправлял, в чём путался…'),
+          ),
+          FilledButton(
+            key: const Key('save-note'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.ice,
+              foregroundColor: AppColors.bg,
+              textStyle: const TextStyle(fontFamily: AppFonts.body, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            onPressed: _save,
+            child: const Text('Готово'),
+          ),
         ]),
-        const SizedBox(height: 12),
-        if (!_loaded) const LinearProgressIndicator(),
-        Text('Подозрение: ${_labels[_suspicion.round()]}'),
-        Slider(value: _suspicion, min: -2, max: 2, divisions: 4, onChanged: (v) => setState(() => _suspicion = v)),
-        TextField(
-          controller: _body,
-          maxLines: 4,
-          maxLength: 2000,
-          decoration: const InputDecoration(hintText: 'Что говорил, что отправлял, в чём путался…'),
-        ),
-        FilledButton(
-          onPressed: () async {
-            await runAction(
-              context,
-              () => ref.read(apiProvider).saveNote(widget.screen.widget.gameId, widget.userId, _suspicion.round(), _body.text),
-            );
-            widget.screen.setSuspicion(widget.userId, _suspicion.round());
-            if (context.mounted) Navigator.pop(context);
-          },
-          child: const Text('Сохранить заметку'),
-        ),
-      ]),
+      ),
     );
   }
 }
@@ -494,7 +585,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Wrap(spacing: 4, runSpacing: 4, children: [
-                                for (final c in m.cardIds) CardImage(cardId: c, size: 44, radius: 8),
+                                for (final c in m.cardIds)
+                                  GestureDetector(onTap: () => showCardZoom(context, c), child: CardImage(cardId: c, size: 44, radius: 8)),
                               ]),
                             ),
                         ]),
