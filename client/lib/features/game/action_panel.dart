@@ -342,6 +342,11 @@ class ActionPanel extends StatelessWidget {
         widgets.add(Text('Переголосование №${stage.attempt - 1}', style: const TextStyle(color: AppColors.amber)));
       }
 
+      if (v.phase == 'VoteTie') {
+        widgets.add(const SizedBox(height: 10));
+        widgets.add(TieBreakdown(screen: screen, stage: stage));
+      }
+
       if (v.can('CastVote')) {
         widgets.add(const SizedBox(height: 10));
         if (stage.isRow) {
@@ -918,6 +923,75 @@ class _RoleRevealState extends State<RoleReveal> {
         Text(T.roleHints[widget.role] ?? '', textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, height: 1.5)),
         if (widget.footer != null) ...[const SizedBox(height: 14), widget.footer!],
       ],
+    ]);
+  }
+}
+
+/// Ничья: голоса открыты — у каждого варианта видно, кто за него голосовал.
+class TieBreakdown extends StatelessWidget {
+  const TieBreakdown({super.key, required this.screen, required this.stage});
+
+  final GameScreenState screen;
+  final VoteStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final votes = v.finale!.votes.where((r) => r.stage == stage.index).toList();
+    if (votes.isEmpty) return const SizedBox.shrink();
+    final last = votes.map((r) => r.attempt).reduce((a, b) => a > b ? a : b);
+    final current = votes.where((r) => r.attempt == last).toList();
+    final groups = <Object?, List<String>>{};
+    for (final r in current) {
+      groups.putIfAbsent(stage.isRow ? r.column : r.suspect, () => []).add(r.voter);
+    }
+    final entries = groups.entries.toList()..sort((a, b) => b.value.length.compareTo(a.value.length));
+    final top = entries.isEmpty ? 0 : entries.first.value.length;
+    final tied = entries.where((e) => e.value.length == top && e.key != null).length;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('НИЧЬЯ ${List.filled(tied < 2 ? 2 : tied, top).join(' : ')}', style: heading(26, color: AppColors.amber, spacing: 2)),
+      const Text('Голоса открыты: всем видно, кто за что голосовал', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+      const SizedBox(height: 8),
+      for (final e in entries)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(12),
+              border: e.value.length == top && e.key != null ? Border.all(color: AppColors.amber) : null,
+            ),
+            child: Row(children: [
+              if (e.key == null)
+                const SizedBox(width: 44, child: Icon(Icons.block, color: AppColors.dim))
+              else if (stage.isRow)
+                CardImage(cardId: v.board[stage.row].cards[e.key! as int], size: 44, radius: 8)
+              else
+                Avatar(nickname: screen.nick(e.key! as String), color: screen.colorOf(e.key! as String), size: 44),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(
+                    e.key == null ? 'Воздержались' : (stage.isRow ? '№${(e.key! as int) + 1}' : screen.nick(e.key! as String)),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(e.value.map(screen.nick).join(', '), style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ]),
+              ),
+              Text('${e.value.length}', style: heading(22, spacing: 0)),
+            ]),
+          ),
+        ),
+      if (stage.attempt > 1)
+        Text(
+          stage.isRow
+              ? 'Голосуем снова только между ${stage.candidateColumns.map((c) => '№${c + 1}').join(' и ')}. '
+                  'Переголосование ${stage.attempt - 1} из 3 — если ничья повторится, решит жребий.'
+              : 'Переголосование ${stage.attempt - 1} из 3 — если ничья повторится, решит жребий.',
+          style: const TextStyle(fontSize: 13, color: AppColors.muted),
+        ),
     ]);
   }
 }

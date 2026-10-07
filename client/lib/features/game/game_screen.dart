@@ -331,7 +331,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final v = snap.view;
     final night = v.phase == 'Night' && v.can('ChooseTruth');
     final finale = isFinale(v);
-    final panelFirst = v.can('RevealHints') || const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+    final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
     return Scaffold(
       backgroundColor: night ? AppColors.night : AppColors.bg,
       body: SafeArea(

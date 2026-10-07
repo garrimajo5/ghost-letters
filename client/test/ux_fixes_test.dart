@@ -140,6 +140,22 @@ void main() {
     expect(find.text('У?'), findsOneWidget);
   });
 
+  testWidgets('ничья: видно, кто за какую карту голосовал', (tester) async {
+    final j = snapshotJson(phase: 'VoteTie', allowed: const ['ReadyRevote']);
+    final f = (j['view'] as Json)['finale'] as Json;
+    f['votes'] = [
+      {'stage': 1, 'attempt': 1, 'voter': 'u2', 'column': 0, 'suspect': null},
+      {'stage': 1, 'attempt': 1, 'voter': 'u3', 'column': 3, 'suspect': null},
+    ];
+    await openOnPhone(tester, GameSnapshot.fromJson(j));
+
+    expect(find.text('НИЧЬЯ 1 : 1'), findsOneWidget);
+    expect(find.text('№1'), findsOneWidget);
+    expect(find.text('№4'), findsOneWidget);
+    expect(find.textContaining('Переголосование 1 из 3'), findsOneWidget);
+    expect(find.text('ГОТОВ ПЕРЕГОЛОСОВАТЬ'), findsOneWidget);
+  });
+
   group('раунды в настройках', () {
     Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps) async {
       tester.view.physicalSize = const Size(1200, 4000);
