@@ -245,6 +245,7 @@ class ActionPanel extends StatelessWidget {
         for (final c in mailbox)
           GestureDetector(
             key: Key('mailbox-$c'),
+            onLongPress: () => showCardZoom(context, c, caption: 'Письмо в ящике'),
             onTap: () {
               HapticFeedback.selectionClick();
               if (!screen.selectedMailbox.remove(c)) screen.selectedMailbox.add(c);

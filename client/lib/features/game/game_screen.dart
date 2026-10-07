@@ -885,7 +885,14 @@ class _Hints extends StatelessWidget {
                           )
                         else
                           for (final c in h.cards)
-                            Padding(padding: const EdgeInsets.only(bottom: 4), child: CardImage(cardId: c, size: size, radius: 8)),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: GestureDetector(
+                                key: Key('hint-$c'),
+                                onTap: () => showCardZoom(context, c, caption: h.round == 0 ? 'Первая зацепка' : 'Подсказка раунда ${h.round}'),
+                                child: CardImage(cardId: c, size: size, radius: 8),
+                              ),
+                            ),
                       ]),
                     ),
                 ]),
@@ -1106,6 +1113,7 @@ class _Hand extends StatelessWidget {
             for (final c in me.hand)
               GestureDetector(
                 key: Key('hand-$c'),
+                onLongPress: () => showCardZoom(context, c, caption: 'Карта на руке'),
                 onTap: selectable
                     ? () {
                         HapticFeedback.selectionClick();
@@ -1161,7 +1169,10 @@ class _MyLetters extends StatelessWidget {
                 child: Column(children: [
                   Text('р. ${l.round}', style: const TextStyle(fontSize: 10, color: AppColors.muted)),
                   const SizedBox(height: 4),
-                  Opacity(opacity: l.revealed == false ? 0.4 : 1, child: CardImage(cardId: l.cardId, size: 40, radius: 8)),
+                  GestureDetector(
+                    onTap: () => showCardZoom(context, l.cardId, caption: 'Моё письмо, раунд ${l.round}'),
+                    child: Opacity(opacity: l.revealed == false ? 0.4 : 1, child: CardImage(cardId: l.cardId, size: 40, radius: 8)),
+                  ),
                   const SizedBox(height: 2),
                   Icon(
                     l.revealed == null ? Icons.hourglass_empty : (l.revealed! ? Icons.visibility : Icons.visibility_off),

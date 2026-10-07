@@ -219,3 +219,26 @@ Future<T?> runAction<T>(BuildContext context, Future<T> Function() action) async
     return null;
   }
 }
+
+/// Карта крупно поверх экрана: нажмите в любом месте, чтобы закрыть.
+Future<void> showCardZoom(BuildContext context, String cardId, {String? caption}) => showDialog<void>(
+      context: context,
+      barrierColor: const Color(0xEB050A10),
+      builder: (context) {
+        final size = (MediaQuery.sizeOf(context).shortestSide - 48).clamp(160.0, 420.0);
+        return GestureDetector(
+          key: const Key('card-zoom'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.pop(context),
+          child: Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CardImage(cardId: cardId, size: size, radius: 20),
+              const SizedBox(height: 12),
+              if (caption != null) Text(caption, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+              const SizedBox(height: 4),
+              const Text('Нажмите, чтобы закрыть', style: TextStyle(fontSize: 12, color: AppColors.dim)),
+            ]),
+          ),
+        );
+      },
+    );
