@@ -26,3 +26,7 @@ __pycache__/
 .env
 /data/
 *.log
+client/analyze.txt
+client/test-results.json
+client/.metadata
+client/pubspec.lock

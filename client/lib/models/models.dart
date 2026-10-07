@@ -1,0 +1,711 @@
+// Модели ответов сервера. JSON — camelCase, перечисления строками (как на сервере).
+
+typedef Json = Map<String, dynamic>;
+
+List<T> _list<T>(dynamic v, T Function(Json) f) =>
+    v is List ? v.whereType<Map>().map((e) => f(Map<String, dynamic>.from(e))).toList() : <T>[];
+
+List<String> _strings(dynamic v) => v is List ? v.map((e) => e.toString()).toList() : <String>[];
+
+List<int> _ints(dynamic v) => v is List ? v.map((e) => (e as num).toInt()).toList() : <int>[];
+
+DateTime? _date(dynamic v) => v is String ? DateTime.tryParse(v) : null;
+
+class User {
+  const User({required this.id, required this.nickname, required this.avatarColor});
+
+  factory User.fromJson(Json j) =>
+      User(id: j['id'] as String, nickname: j['nickname'] as String, avatarColor: j['avatarColor'] as String);
+
+  final String id;
+  final String nickname;
+  final String avatarColor;
+
+  Json toJson() => {'id': id, 'nickname': nickname, 'avatarColor': avatarColor};
+}
+
+class AuthTokens {
+  const AuthTokens({required this.accessToken, required this.refreshToken, required this.user});
+
+  factory AuthTokens.fromJson(Json j) => AuthTokens(
+        accessToken: j['accessToken'] as String,
+        refreshToken: j['refreshToken'] as String,
+        user: User.fromJson(Map<String, dynamic>.from(j['user'] as Map)),
+      );
+
+  final String accessToken;
+  final String refreshToken;
+  final User user;
+}
+
+// ---------- Роли и настройки ----------
+
+enum ImitatorMode { none, replaceDetective, replaceAccomplice }
+
+const _imitatorWire = {
+  ImitatorMode.none: 'None',
+  ImitatorMode.replaceDetective: 'ReplaceDetective',
+  ImitatorMode.replaceAccomplice: 'ReplaceAccomplice',
+};
+
+class RoleOptions {
+  const RoleOptions({
+    this.killerEnabled = true,
+    this.useWitness = true,
+    this.useExpert = true,
+    this.useBlackmailer = false,
+    this.imitator = ImitatorMode.none,
+  });
+
+  factory RoleOptions.fromJson(Json j) => RoleOptions(
+        killerEnabled: j['killerEnabled'] as bool? ?? true,
+        useWitness: j['useWitness'] as bool? ?? true,
+        useExpert: j['useExpert'] as bool? ?? true,
+        useBlackmailer: j['useBlackmailer'] as bool? ?? false,
+        imitator: _imitatorWire.entries
+            .firstWhere((e) => e.value == j['imitator'], orElse: () => const MapEntry(ImitatorMode.none, 'None'))
+            .key,
+      );
+
+  final bool killerEnabled;
+  final bool useWitness;
+  final bool useExpert;
+  final bool useBlackmailer;
+  final ImitatorMode imitator;
+
+  RoleOptions copyWith({bool? killerEnabled, bool? useWitness, bool? useExpert, bool? useBlackmailer, ImitatorMode? imitator}) =>
+      RoleOptions(
+        killerEnabled: killerEnabled ?? this.killerEnabled,
+        useWitness: useWitness ?? this.useWitness,
+        useExpert: useExpert ?? this.useExpert,
+        useBlackmailer: useBlackmailer ?? this.useBlackmailer,
+        imitator: imitator ?? this.imitator,
+      );
+
+  Json toJson() => {
+        'killerEnabled': killerEnabled,
+        'useWitness': useWitness,
+        'useExpert': useExpert,
+        'useBlackmailer': useBlackmailer,
+        'imitator': _imitatorWire[imitator],
+      };
+}
+
+/// Настройки лобби. Таймеры храним как есть (секунды по фазам) и правим нужные.
+class LobbySettings {
+  const LobbySettings({
+    this.useSecretRow = true,
+    this.columns = 5,
+    this.rounds,
+    this.handSize = 5,
+    this.roles = const RoleOptions(),
+    this.discussion = 'Radio',
+    this.tempo = 'live',
+    this.turnHours = 24,
+    this.timers = const {},
+    this.cardSets = const ['original'],
+  });
+
+  factory LobbySettings.fromJson(Json j) => LobbySettings(
+        useSecretRow: j['useSecretRow'] as bool? ?? true,
+        columns: (j['columns'] as num?)?.toInt() ?? 5,
+        rounds: (j['rounds'] as num?)?.toInt(),
+        handSize: (j['handSize'] as num?)?.toInt() ?? 5,
+        roles: j['roles'] is Map ? RoleOptions.fromJson(Map<String, dynamic>.from(j['roles'] as Map)) : const RoleOptions(),
+        discussion: j['discussion'] as String? ?? 'Radio',
+        tempo: j['tempo'] as String? ?? 'live',
+        turnHours: (j['turnHours'] as num?)?.toInt() ?? 24,
+        timers: j['timers'] is Map
+            ? Map<String, dynamic>.from(j['timers'] as Map).map((k, v) => MapEntry(k, (v as num).toInt()))
+            : const {},
+        cardSets: _strings(j['cardSets']).isEmpty ? const ['original'] : _strings(j['cardSets']),
+      );
+
+  final bool useSecretRow;
+  final int columns;
+  final int? rounds;
+  final int handSize;
+  final RoleOptions roles;
+  final String discussion;
+  final String tempo;
+  final int turnHours;
+  final Map<String, int> timers;
+  final List<String> cardSets;
+
+  int timer(String key, int fallback) => timers[key] ?? fallback;
+
+  LobbySettings copyWith({
+    bool? useSecretRow,
+    int? columns,
+    int? rounds,
+    bool clearRounds = false,
+    RoleOptions? roles,
+    String? discussion,
+    String? tempo,
+    int? turnHours,
+    Map<String, int>? timers,
+    List<String>? cardSets,
+  }) =>
+      LobbySettings(
+        useSecretRow: useSecretRow ?? this.useSecretRow,
+        columns: columns ?? this.columns,
+        rounds: clearRounds ? null : rounds ?? this.rounds,
+        handSize: handSize,
+        roles: roles ?? this.roles,
+        discussion: discussion ?? this.discussion,
+        tempo: tempo ?? this.tempo,
+        turnHours: turnHours ?? this.turnHours,
+        timers: timers ?? this.timers,
+        cardSets: cardSets ?? this.cardSets,
+      );
+
+  Json toJson() => {
+        'useSecretRow': useSecretRow,
+        'columns': columns,
+        'rounds': rounds,
+        'handSize': handSize,
+        'roles': roles.toJson(),
+        'discussion': discussion,
+        'tempo': tempo,
+        'turnHours': turnHours,
+        if (timers.isNotEmpty) 'timers': timers,
+        'cardSets': cardSets,
+      };
+}
+
+// ---------- Лобби ----------
+
+class LobbyMember {
+  const LobbyMember({
+    required this.userId,
+    required this.nickname,
+    required this.avatarColor,
+    required this.seat,
+    required this.mode,
+    required this.isReady,
+  });
+
+  factory LobbyMember.fromJson(Json j) => LobbyMember(
+        userId: j['userId'] as String,
+        nickname: j['nickname'] as String,
+        avatarColor: j['avatarColor'] as String,
+        seat: (j['seat'] as num).toInt(),
+        mode: j['mode'] as String,
+        isReady: j['isReady'] as bool? ?? false,
+      );
+
+  final String userId;
+  final String nickname;
+  final String avatarColor;
+  final int seat;
+  final String mode;
+  final bool isReady;
+
+  bool get isTable => mode == 'table';
+}
+
+class Lobby {
+  const Lobby({
+    required this.id,
+    required this.code,
+    required this.title,
+    required this.hostUserId,
+    required this.status,
+    required this.settings,
+    required this.currentGameId,
+    required this.members,
+  });
+
+  factory Lobby.fromJson(Json j) => Lobby(
+        id: j['id'] as String,
+        code: j['code'] as String,
+        title: j['title'] as String? ?? '',
+        hostUserId: j['hostUserId'] as String,
+        status: j['status'] as String,
+        settings: LobbySettings.fromJson(Map<String, dynamic>.from(j['settings'] as Map)),
+        currentGameId: j['currentGameId'] as String?,
+        members: _list(j['members'], LobbyMember.fromJson),
+      );
+
+  final String id;
+  final String code;
+  final String title;
+  final String hostUserId;
+  final String status;
+  final LobbySettings settings;
+  final String? currentGameId;
+  final List<LobbyMember> members;
+
+  List<LobbyMember> get players => members.where((m) => !m.isTable).toList();
+}
+
+// ---------- Партия ----------
+
+class BoardRow {
+  const BoardRow(this.category, this.cards);
+
+  factory BoardRow.fromJson(Json j) => BoardRow(j['category'] as String, _strings(j['cards']));
+
+  final String category;
+  final List<String> cards;
+}
+
+class HintGroup {
+  const HintGroup(this.round, this.cards);
+
+  factory HintGroup.fromJson(Json j) => HintGroup((j['round'] as num).toInt(), _strings(j['cards']));
+
+  final int round;
+  final List<String> cards;
+}
+
+class PlayerInfo {
+  const PlayerInfo({
+    required this.id,
+    required this.seat,
+    required this.isGhost,
+    required this.knownRole,
+    required this.hasActed,
+    required this.handCount,
+  });
+
+  factory PlayerInfo.fromJson(Json j) => PlayerInfo(
+        id: j['id'] as String,
+        seat: (j['seat'] as num).toInt(),
+        isGhost: j['isGhost'] as bool? ?? false,
+        knownRole: j['knownRole'] as String?,
+        hasActed: j['hasActed'] as bool? ?? false,
+        handCount: (j['handCount'] as num?)?.toInt() ?? 0,
+      );
+
+  final String id;
+  final int seat;
+  final bool isGhost;
+  final String? knownRole;
+  final bool hasActed;
+  final int handCount;
+}
+
+class MyLetter {
+  const MyLetter(this.round, this.cardId, this.revealed);
+
+  factory MyLetter.fromJson(Json j) => MyLetter((j['round'] as num).toInt(), j['cardId'] as String, j['revealed'] as bool?);
+
+  final int round;
+  final String cardId;
+  final bool? revealed;
+}
+
+class Me {
+  const Me({required this.id, required this.role, required this.hand, required this.letters});
+
+  factory Me.fromJson(Json j) => Me(
+        id: j['id'] as String,
+        role: j['role'] as String,
+        hand: _strings(j['hand']),
+        letters: _list(j['letters'], MyLetter.fromJson),
+      );
+
+  final String id;
+  final String role;
+  final List<String> hand;
+  final List<MyLetter> letters;
+}
+
+class VoteStage {
+  const VoteStage({
+    required this.index,
+    required this.kind,
+    required this.row,
+    required this.attempt,
+    required this.candidateColumns,
+    required this.candidateSuspects,
+  });
+
+  factory VoteStage.fromJson(Json j) => VoteStage(
+        index: (j['index'] as num).toInt(),
+        kind: j['kind'] as String,
+        row: (j['row'] as num).toInt(),
+        attempt: (j['attempt'] as num).toInt(),
+        candidateColumns: _ints(j['candidateColumns']),
+        candidateSuspects: _strings(j['candidateSuspects']),
+      );
+
+  final int index;
+  final String kind;
+  final int row;
+  final int attempt;
+  final List<int> candidateColumns;
+  final List<String> candidateSuspects;
+
+  bool get isRow => kind == 'Row';
+}
+
+class VoteRecord {
+  const VoteRecord(this.stage, this.attempt, this.voter, this.column, this.suspect);
+
+  factory VoteRecord.fromJson(Json j) => VoteRecord(
+        (j['stage'] as num).toInt(),
+        (j['attempt'] as num).toInt(),
+        j['voter'] as String,
+        (j['column'] as num?)?.toInt(),
+        j['suspect'] as String?,
+      );
+
+  final int stage;
+  final int attempt;
+  final String voter;
+  final int? column;
+  final String? suspect;
+}
+
+class VoteOutcome {
+  const VoteOutcome({
+    required this.stage,
+    required this.kind,
+    required this.row,
+    required this.column,
+    required this.suspect,
+    required this.correct,
+    required this.byLot,
+    required this.revealedRole,
+  });
+
+  factory VoteOutcome.fromJson(Json j) => VoteOutcome(
+        stage: (j['stage'] as num).toInt(),
+        kind: j['kind'] as String,
+        row: (j['row'] as num).toInt(),
+        column: (j['column'] as num?)?.toInt(),
+        suspect: j['suspect'] as String?,
+        correct: j['correct'] as bool?,
+        byLot: j['byLot'] as bool? ?? false,
+        revealedRole: j['revealedRole'] as String?,
+      );
+
+  final int stage;
+  final String kind;
+  final int row;
+  final int? column;
+  final String? suspect;
+  final bool? correct;
+  final bool byLot;
+  final String? revealedRole;
+}
+
+class GameResult {
+  const GameResult({
+    required this.solved,
+    required this.correctRows,
+    required this.killerCaught,
+    required this.side,
+    required this.imitatorWon,
+    required this.blackmailerWon,
+    required this.winners,
+  });
+
+  factory GameResult.fromJson(Json j) => GameResult(
+        solved: j['solved'] as bool? ?? false,
+        correctRows: (j['correctRows'] as num?)?.toInt() ?? 0,
+        killerCaught: j['killerCaught'] as bool? ?? false,
+        side: j['side'] as String? ?? 'Nobody',
+        imitatorWon: j['imitatorWon'] as bool? ?? false,
+        blackmailerWon: j['blackmailerWon'] as bool? ?? false,
+        winners: _strings(j['winners']),
+      );
+
+  final bool solved;
+  final int correctRows;
+  final bool killerCaught;
+  final String side;
+  final bool imitatorWon;
+  final bool blackmailerWon;
+  final List<String> winners;
+}
+
+class AwardEntry {
+  const AwardEntry({
+    required this.index,
+    required this.code,
+    required this.nominee,
+    required this.nominatedByCount,
+    required this.mine,
+    required this.votes,
+    required this.won,
+  });
+
+  factory AwardEntry.fromJson(Json j) => AwardEntry(
+        index: (j['index'] as num).toInt(),
+        code: j['code'] as String,
+        nominee: j['nominee'] as String,
+        nominatedByCount: (j['nominatedByCount'] as num?)?.toInt() ?? 1,
+        mine: j['mineNomination'] as bool? ?? false,
+        votes: (j['votes'] as num?)?.toInt(),
+        won: j['won'] as bool? ?? false,
+      );
+
+  final int index;
+  final String code;
+  final String nominee;
+  final int nominatedByCount;
+  final bool mine;
+  final int? votes;
+  final bool won;
+}
+
+class LikeCount {
+  const LikeCount(this.player, this.count, this.likedByMe);
+
+  factory LikeCount.fromJson(Json j) =>
+      LikeCount(j['player'] as String, (j['count'] as num).toInt(), j['likedByMe'] as bool? ?? false);
+
+  final String player;
+  final int count;
+  final bool likedByMe;
+}
+
+class Finale {
+  const Finale({
+    required this.currentStage,
+    required this.stagesTotal,
+    required this.myVoteColumn,
+    required this.myVoteSuspect,
+    required this.hasMyVote,
+    required this.votes,
+    required this.outcomes,
+    required this.arrested,
+    required this.huntTarget,
+    required this.huntSuccess,
+    required this.result,
+    required this.awards,
+    required this.likes,
+  });
+
+  factory Finale.fromJson(Json j) {
+    final myVote = j['myVote'] is Map ? Map<String, dynamic>.from(j['myVote'] as Map) : null;
+    final hunt = j['hunt'] is Map ? Map<String, dynamic>.from(j['hunt'] as Map) : null;
+    return Finale(
+      currentStage: j['currentStage'] is Map ? VoteStage.fromJson(Map<String, dynamic>.from(j['currentStage'] as Map)) : null,
+      stagesTotal: (j['stagesTotal'] as num?)?.toInt() ?? 0,
+      hasMyVote: myVote != null,
+      myVoteColumn: (myVote?['column'] as num?)?.toInt(),
+      myVoteSuspect: myVote?['suspect'] as String?,
+      votes: _list(j['votes'], VoteRecord.fromJson),
+      outcomes: _list(j['outcomes'], VoteOutcome.fromJson),
+      arrested: _strings(j['arrested']),
+      huntTarget: hunt?['target'] as String?,
+      huntSuccess: hunt?['success'] as bool?,
+      result: j['result'] is Map ? GameResult.fromJson(Map<String, dynamic>.from(j['result'] as Map)) : null,
+      awards: _list(j['awards'], AwardEntry.fromJson),
+      likes: _list(j['likes'], LikeCount.fromJson),
+    );
+  }
+
+  final VoteStage? currentStage;
+  final int stagesTotal;
+  final bool hasMyVote;
+  final int? myVoteColumn;
+  final String? myVoteSuspect;
+  final List<VoteRecord> votes;
+  final List<VoteOutcome> outcomes;
+  final List<String> arrested;
+  final String? huntTarget;
+  final bool? huntSuccess;
+  final GameResult? result;
+  final List<AwardEntry> awards;
+  final List<LikeCount> likes;
+}
+
+/// Проекция партии для одного игрока (или экрана стола — тогда me == null).
+class GameView {
+  const GameView({
+    required this.gameId,
+    required this.version,
+    required this.phase,
+    required this.round,
+    required this.totalRounds,
+    required this.discussion,
+    required this.board,
+    required this.hints,
+    required this.vanishedCount,
+    required this.players,
+    required this.me,
+    required this.truth,
+    required this.mailboxCount,
+    required this.mailboxForGhost,
+    required this.radioHolder,
+    required this.currentSpeaker,
+    required this.floorGrantedTo,
+    required this.raisedHands,
+    required this.allowedCommands,
+    required this.finale,
+  });
+
+  factory GameView.fromJson(Json j) => GameView(
+        gameId: j['gameId'] as String,
+        version: (j['version'] as num).toInt(),
+        phase: j['phase'] as String,
+        round: (j['round'] as num).toInt(),
+        totalRounds: (j['totalRounds'] as num).toInt(),
+        discussion: j['discussion'] as String? ?? 'Radio',
+        board: _list(j['board'], BoardRow.fromJson),
+        hints: _list(j['hints'], HintGroup.fromJson),
+        vanishedCount: (j['vanishedCount'] as num?)?.toInt() ?? 0,
+        players: _list(j['players'], PlayerInfo.fromJson),
+        me: j['me'] is Map ? Me.fromJson(Map<String, dynamic>.from(j['me'] as Map)) : null,
+        truth: j['truth'] is List ? _ints(j['truth']) : null,
+        mailboxCount: (j['mailboxCount'] as num?)?.toInt() ?? 0,
+        mailboxForGhost: j['mailboxForGhost'] is List ? _strings(j['mailboxForGhost']) : null,
+        radioHolder: j['radioHolder'] as String?,
+        currentSpeaker: j['currentSpeaker'] as String?,
+        floorGrantedTo: j['floorGrantedTo'] as String?,
+        raisedHands: _strings(j['raisedHands']),
+        allowedCommands: _strings(j['allowedCommands']),
+        finale: j['finale'] is Map ? Finale.fromJson(Map<String, dynamic>.from(j['finale'] as Map)) : null,
+      );
+
+  final String gameId;
+  final int version;
+  final String phase;
+  final int round;
+  final int totalRounds;
+  final String discussion;
+  final List<BoardRow> board;
+  final List<HintGroup> hints;
+  final int vanishedCount;
+  final List<PlayerInfo> players;
+  final Me? me;
+  final List<int>? truth;
+  final int mailboxCount;
+  final List<String>? mailboxForGhost;
+  final String? radioHolder;
+  final String? currentSpeaker;
+  final String? floorGrantedTo;
+  final List<String> raisedHands;
+  final List<String> allowedCommands;
+  final Finale? finale;
+
+  bool can(String command) => allowedCommands.contains(command);
+
+  bool get isGhost => me?.role == 'Ghost';
+
+  bool get isRadio => discussion == 'Radio';
+
+  PlayerInfo? player(String id) {
+    for (final p in players) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
+}
+
+class RosterEntry {
+  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat);
+
+  factory RosterEntry.fromJson(Json j) =>
+      RosterEntry(j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt());
+
+  final String id;
+  final String nickname;
+  final String avatarColor;
+  final int seat;
+}
+
+class GameSnapshot {
+  const GameSnapshot({required this.view, required this.deadline, required this.roster, required this.lobbyId});
+
+  factory GameSnapshot.fromJson(Json j) => GameSnapshot(
+        view: GameView.fromJson(Map<String, dynamic>.from(j['view'] as Map)),
+        deadline: _date(j['deadline']),
+        roster: _list(j['roster'], RosterEntry.fromJson),
+        lobbyId: j['lobbyId'] as String?,
+      );
+
+  final GameView view;
+  final DateTime? deadline;
+  final List<RosterEntry> roster;
+  final String? lobbyId;
+
+  GameSnapshot withView(GameView view, DateTime? deadline) =>
+      GameSnapshot(view: view, deadline: deadline, roster: roster, lobbyId: lobbyId);
+}
+
+class ChatMessage {
+  const ChatMessage({
+    required this.id,
+    required this.channel,
+    required this.authorId,
+    required this.kind,
+    required this.text,
+    required this.cardIds,
+    required this.createdAt,
+    required this.round,
+  });
+
+  factory ChatMessage.fromJson(Json j) => ChatMessage(
+        id: j['id'] as String,
+        channel: j['channel'] as String,
+        authorId: j['authorId'] as String?,
+        kind: j['kind'] as String,
+        text: j['text'] as String?,
+        cardIds: _strings(j['cardIds']),
+        createdAt: _date(j['createdAt']) ?? DateTime.now(),
+        round: (j['round'] as num?)?.toInt() ?? 0,
+      );
+
+  final String id;
+  final String channel;
+  final String? authorId;
+  final String kind;
+  final String? text;
+  final List<String> cardIds;
+  final DateTime createdAt;
+  final int round;
+}
+
+class MyGame {
+  const MyGame({required this.gameId, required this.status, required this.phase, required this.yourTurn, required this.deadline});
+
+  factory MyGame.fromJson(Json j) => MyGame(
+        gameId: j['gameId'] as String,
+        status: j['status'] as String,
+        phase: j['phase'] as String,
+        yourTurn: j['yourTurn'] as bool? ?? false,
+        deadline: _date(j['deadline']),
+      );
+
+  final String gameId;
+  final String status;
+  final String phase;
+  final bool yourTurn;
+  final DateTime? deadline;
+}
+
+class Profile {
+  const Profile({
+    required this.user,
+    required this.games,
+    required this.wins,
+    required this.rating,
+    required this.likes,
+    required this.achievements,
+  });
+
+  factory Profile.fromJson(Json j) {
+    final stats = Map<String, dynamic>.from(j['stats'] as Map);
+    return Profile(
+      user: User.fromJson(Map<String, dynamic>.from(j['user'] as Map)),
+      games: (stats['games'] as num).toInt(),
+      wins: (stats['wins'] as num).toInt(),
+      rating: (stats['rating'] as num).toInt(),
+      likes: (stats['likesReceived'] as num).toInt(),
+      achievements: _list(j['achievements'], (a) => (title: a['title'] as String, count: (a['count'] as num).toInt())),
+    );
+  }
+
+  final User user;
+  final int games;
+  final int wins;
+  final int rating;
+  final int likes;
+  final List<({String title, int count})> achievements;
+}

@@ -694,6 +694,30 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                             Description = "За самый дерзкий ход партии.",
                             IsActive = true,
                             Title = "Стальные яйца"
+                        },
+                        new
+                        {
+                            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000002"),
+                            Code = "sherlock",
+                            Description = "Раньше всех понял, что произошло.",
+                            IsActive = true,
+                            Title = "Шерлок"
+                        },
+                        new
+                        {
+                            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000003"),
+                            Code = "best_liar",
+                            Description = "Убедительнее всех водил следствие за нос.",
+                            IsActive = true,
+                            Title = "Лучший лжец"
+                        },
+                        new
+                        {
+                            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000004"),
+                            Code = "ghost_whisperer",
+                            Description = "Лучше всех понимал подсказки Призрака.",
+                            IsActive = true,
+                            Title = "Голос Призрака"
                         });
                 });
 

@@ -24,5 +24,26 @@ public static class CatalogSeed
             Title = "Стальные яйца",
             Description = "За самый дерзкий ход партии.",
         },
+        new()
+        {
+            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000002"),
+            Code = "sherlock",
+            Title = "Шерлок",
+            Description = "Раньше всех понял, что произошло.",
+        },
+        new()
+        {
+            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000003"),
+            Code = "best_liar",
+            Title = "Лучший лжец",
+            Description = "Убедительнее всех водил следствие за нос.",
+        },
+        new()
+        {
+            Id = new Guid("6f1d0c2e-0002-4a11-9a00-000000000004"),
+            Code = "ghost_whisperer",
+            Title = "Голос Призрака",
+            Description = "Лучше всех понимал подсказки Призрака.",
+        },
     ];
 }

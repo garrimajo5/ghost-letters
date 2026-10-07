@@ -14,12 +14,13 @@ public sealed class HubNotifier(IHubContext<PlayHub> hub) : IRealtimeNotifier
     public Task GameStartedAsync(Guid lobbyId, Guid gameId, CancellationToken ct) =>
         hub.Clients.Group(PlayHub.LobbyGroup(lobbyId)).SendAsync("GameStarted", new { lobbyId, gameId }, ct);
 
-    public async Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, CancellationToken ct)
+    /// <summary>GameView — {view, deadline}: личная проекция и дедлайн текущей фазы.</summary>
+    public async Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, DateTimeOffset? deadline, CancellationToken ct)
     {
         foreach (var player in state.Players)
         {
             var client = hub.Clients.User(player.Id.ToString());
-            await client.SendAsync("GameView", GameProjection.For(state, player.Id), ct);
+            await client.SendAsync("GameView", new { view = GameProjection.For(state, player.Id), deadline }, ct);
             var visible = events.Where(e => e.OnlyFor is null || e.OnlyFor == player.Id).ToList();
             if (visible.Count > 0)
             {
@@ -28,7 +29,7 @@ public sealed class HubNotifier(IHubContext<PlayHub> hub) : IRealtimeNotifier
         }
 
         var table = hub.Clients.Group(PlayHub.TableGroup(state.Id));
-        await table.SendAsync("GameView", GameProjection.For(state, null), ct);
+        await table.SendAsync("GameView", new { view = GameProjection.For(state, null), deadline }, ct);
         await table.SendAsync("GameEvents",
             new { gameId = state.Id, version = state.Version, events = events.Where(e => e.OnlyFor is null).ToList() }, ct);
     }

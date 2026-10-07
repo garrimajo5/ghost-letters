@@ -40,8 +40,7 @@ public sealed class PlayHub(LobbyService lobbies, GameService games, ChatService
             await Groups.AddToGroupAsync(Context.ConnectionId, TableGroup(gameId));
         }
 
-        var view = await games.GetViewAsync(gameId, UserId, Context.ConnectionAborted);
-        return new GameSnapshot(view, await games.GetDeadlineAsync(gameId, Context.ConnectionAborted));
+        return await games.SnapshotAsync(gameId, UserId, Context.ConnectionAborted);
     });
 
     public Task<CommandResult> Command(Guid gameId, string type, JsonElement? payload, int? expectedVersion, string? clientCommandId) =>
@@ -70,8 +69,6 @@ public sealed class PlayHub(LobbyService lobbies, GameService games, ChatService
         }
     }
 }
-
-public sealed record GameSnapshot(PlayerView View, DateTimeOffset? Deadline);
 
 /// <summary>Пользователь SignalR — sub из токена.</summary>
 public sealed class SubUserIdProvider : IUserIdProvider

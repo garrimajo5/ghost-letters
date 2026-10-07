@@ -1,0 +1,49 @@
+name: Flutter scaffold
+
+# Платформенные папки клиента (android/, ios/) создаёт `flutter create`.
+# Без локального Flutter: запушьте client/scaffold.request — workflow создаст недостающие файлы,
+# разрешит интернет и http к локальному серверу на Android и закоммитит результат в ту же ветку.
+on:
+  push:
+    paths:
+      - client/scaffold.request
+
+permissions:
+  contents: write
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: flutter create
+        run: |
+          flutter create --org com.ghostletters --project-name ghost_letters --platforms android,ios --no-pub .
+          rm -f test/widget_test.dart
+          git rm -q scaffold.request
+
+      - name: Android network access
+        run: |
+          manifest=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' $manifest || \
+            sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' $manifest
+          grep -q 'usesCleartextTraffic' $manifest || \
+            sed -i 's|<application|<application\n        android:usesCleartextTraffic="true"|' $manifest
+          sed -i 's|android:label="ghost_letters"|android:label="Письма призрака"|' $manifest
+          cat $manifest
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .
+          git commit -m "Flutter scaffold: android и ios"
+          git push
