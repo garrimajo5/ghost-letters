@@ -103,6 +103,17 @@ class FakeRealtime extends Realtime {
   final startedCtl = StreamController<({String lobbyId, String gameId})>.broadcast();
   final viewsCtl = StreamController<({GameView view, DateTime? deadline})>.broadcast();
   final chatCtl = StreamController<ChatMessage>.broadcast();
+  final connectedCtl = StreamController<bool>.broadcast();
+
+  @override
+  Stream<bool> get connected => connectedCtl.stream;
+
+  int resyncs = 0;
+
+  @override
+  Future<void> resync() async {
+    resyncs++;
+  }
 
   @override
   Stream<Lobby> get lobbyUpdates => lobbyCtl.stream;
