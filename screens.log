@@ -1,0 +1,61 @@
+
+::group::✅ Passing tests
+✅ 01 вход
+✅ 02 главная
+✅ 03 лобби
+✅ 04 роль
+✅ 06 ночь Убийцы
+✅ 07 письмо: ваш ход
+✅ 08 ждём других
+✅ 09 пометка карты
+✅ 10 выбор Призрака
+✅ 11 голосование по ряду
+✅ 12 голосование: кто Убийца
+✅ 13 охота
+✅ 14 итоги и ачивки
+✅ 15 чат
+::endgroup::
+══╡ EXCEPTION CAUGHT BY SERVICES LIBRARY ╞══════════════════════════════════════════════════════════
+The following MissingPluginException was thrown while activating platform stream on channel
+xyz.luan/audioplayers/events/9e7e130b-dd0a-45a0-afa8-d5ebaeb9998d:
+MissingPluginException(No implementation found for method listen on channel
+xyz.luan/audioplayers/events/9e7e130b-dd0a-45a0-afa8-d5ebaeb9998d)
+
+When the exception was thrown, this was the stack:
+#0      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)
+<asynchronous suspension>
+#1      EventChannel.receiveBroadcastStream.<anonymous closure> (package:flutter/src/services/platform_channel.dart:711:11)
+<asynchronous suspension>
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY SERVICES LIBRARY ╞══════════════════════════════════════════════════════════
+The following MissingPluginException was thrown while de-activating platform stream on channel
+xyz.luan/audioplayers/events/9e7e130b-dd0a-45a0-afa8-d5ebaeb9998d:
+MissingPluginException(No implementation found for method cancel on channel
+xyz.luan/audioplayers/events/9e7e130b-dd0a-45a0-afa8-d5ebaeb9998d)
+
+When the exception was thrown, this was the stack:
+#0      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)
+<asynchronous suspension>
+#1      EventChannel.receiveBroadcastStream.<anonymous closure> (package:flutter/src/services/platform_channel.dart:726:11)
+<asynchronous suspension>
+════════════════════════════════════════════════════════════════════════════════════════════════════
+::group::❌ 16 настройки в партии (failed)
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (2) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+Test failed. See exception logs above.
+The test description was: 16 настройки в партии
+
+::endgroup::
+::group::✅ Passing tests
+✅ 17 рация: говорю я
+✅ 18 конец партии
+✅ 19 заметка об игроке
+✅ 20 правила
+✅ 21 карта крупно
+✅ 22 нет связи
+::endgroup::
+
+::error::20 tests passed, 1 failed.
