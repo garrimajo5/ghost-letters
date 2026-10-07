@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>GhostLetters.Application</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GhostLetters.Domain\GhostLetters.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
