@@ -195,6 +195,9 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             e.Property(x => x.Type).HasMaxLength(32);
             e.Property(x => x.Visibility).HasMaxLength(8);
             e.Property(x => x.Payload).HasColumnType("jsonb");
+            e.Property(x => x.ClientCommandId).HasMaxLength(64);
+            e.HasIndex(x => new { x.GameId, x.ActorUserId, x.ClientCommandId })
+                .HasFilter("client_command_id IS NOT NULL");
             GameFk(e, x => x.GameId);
         });
 

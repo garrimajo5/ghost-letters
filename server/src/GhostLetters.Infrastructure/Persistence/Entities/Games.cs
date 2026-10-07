@@ -79,6 +79,9 @@ public sealed class GameEventRecord
     /// <summary>Получатель личного события.</summary>
     public Guid? VisibleTo { get; set; }
 
+    /// <summary>Id команды от клиента — повтор той же команды не применяется дважды.</summary>
+    public string? ClientCommandId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 }
 

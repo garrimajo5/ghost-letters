@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GhostLetters.Domain.Roles;
 
 namespace GhostLetters.Domain.Game;
@@ -145,6 +146,7 @@ public sealed partial class GameState
     /// <summary>Индексы выдвижений, получивших ачивки (не больше двух).</summary>
     public List<int> AwardWinners { get; init; } = [];
 
+    [JsonIgnore]
     public VoteStage? CurrentVoteStage =>
         Phase is Phase.Voting or Phase.VoteTie && VoteStageIndex < VoteStages.Count ? VoteStages[VoteStageIndex] : null;
 }

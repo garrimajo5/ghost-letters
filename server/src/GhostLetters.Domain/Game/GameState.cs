@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using GhostLetters.Domain.Roles;
 
 namespace GhostLetters.Domain.Game;
@@ -99,10 +100,13 @@ public sealed partial class GameState
 
     public HashSet<Guid> RaisedHands { get; init; } = [];
 
+    [JsonIgnore]
     public PlayerState Ghost => Players.Single(p => p.Role == Role.Ghost);
 
+    [JsonIgnore]
     public bool HasKiller => Players.Any(p => p.Role == Role.Killer);
 
+    [JsonIgnore]
     public Guid? CurrentSpeaker =>
         Phase == Phase.Discussion && SpeakerIndex < SpeakingOrder.Count ? SpeakingOrder[SpeakerIndex] : null;
 
@@ -111,5 +115,6 @@ public sealed partial class GameState
         ?? throw new GameRuleException(GameRuleException.Codes.UnknownPlayer, "Игрок не участвует в партии.");
 
     /// <summary>Игроки, кроме Призрака, по местам.</summary>
+    [JsonIgnore]
     public IEnumerable<PlayerState> Investigators => Players.Where(p => p.Role != Role.Ghost).OrderBy(p => p.Seat);
 }
