@@ -11,6 +11,7 @@ import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import '../../widgets/connection_banner.dart';
 import '../lobby/settings_sheet.dart';
 import 'action_panel.dart';
 import 'game_sheets.dart';
@@ -336,6 +337,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
       backgroundColor: night ? AppColors.night : AppColors.bg,
       body: SafeArea(
         child: Column(children: [
+          const ConnectionBanner(),
           _Header(screen: this, deadline: snap.deadline),
           _PlayersStrip(screen: this),
           if (v.phase == 'RoleReveal' && v.me != null)
