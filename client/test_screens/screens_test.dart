@@ -348,4 +348,46 @@ void main() {
     await game(tester, j);
     await shot(tester, '18_finished');
   });
+
+  testWidgets('19 заметка об игроке', (tester) async {
+    final app = await game(tester, _base('Discussion', const ['ReadyNextRound']));
+    app.realtime.chatCtl.add(ChatMessage(
+      id: 'n1',
+      channel: 'public',
+      authorId: 'u4',
+      kind: 'text',
+      text: 'Катя, что ты отправляла? Подозрительно молчишь про второй ряд',
+      cardIds: const ['orig_0302'],
+      createdAt: DateTime(2026, 10, 7, 20),
+      round: 2,
+    ));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('player-u4')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('suspicion-1')));
+    await tester.pump();
+    await shot(tester, '19_notes');
+  });
+
+  testWidgets('20 правила', (tester) async {
+    final app = await start(tester);
+    app.go('/rules');
+    await tester.pumpAndSettle();
+    await shot(tester, '20_rules');
+  });
+
+  testWidgets('21 карта крупно', (tester) async {
+    await game(tester, _base('Mailbox', const []));
+    await tester.tap(find.byKey(const Key('hint-orig_0302')));
+    await tester.pumpAndSettle();
+    await shot(tester, '21_zoom');
+  });
+
+  testWidgets('22 нет связи', (tester) async {
+    final app = await game(tester, _base('Mailbox', const ['SendLetter']));
+    app.realtime.connectedCtl.add(false);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    await shot(tester, '22_offline');
+  });
 }
