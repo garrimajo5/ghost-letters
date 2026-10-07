@@ -5,6 +5,7 @@ using System.Threading.Channels;
 using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Games;
 using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
