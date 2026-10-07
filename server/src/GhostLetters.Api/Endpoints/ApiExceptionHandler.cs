@@ -1,5 +1,6 @@
 using GhostLetters.Application;
 using GhostLetters.Domain.Game;
+using GhostLetters.Infrastructure.Games;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace GhostLetters.Api.Endpoints;
@@ -12,7 +13,7 @@ public sealed class ApiExceptionHandler(IProblemDetailsService problems) : IExce
         (int status, string code)? mapped = exception switch
         {
             AppException app => (app.Status, app.Code),
-            GameRuleException rule => (rule.Code == GameRuleException.Codes.UnknownPlayer ? 403 : 409, rule.Code),
+            GameRuleException rule => (GameService.RuleStatus(rule.Code), rule.Code),
             BadHttpRequestException => (400, AppException.Codes.Validation),
             _ => null,
         };

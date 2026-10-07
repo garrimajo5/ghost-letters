@@ -1,8 +1,11 @@
 using GhostLetters.Infrastructure.Auth;
+using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Lobbies;
 using GhostLetters.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace GhostLetters.Infrastructure;
 
@@ -27,6 +30,15 @@ public static class DependencyInjection
         services.AddJwtAuth(configuration);
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();
+        services.AddScoped<CardCatalog>();
+        services.AddScoped<LobbyService>();
+        services.AddScoped<GameService>();
+        services.TryAddSingleton<IRealtimeNotifier, NullRealtimeNotifier>();
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddHostedService<GameTimerService>();
+        }
+
         return services;
     }
 
@@ -46,6 +58,7 @@ public static class DependencyInjection
         if (db is not null)
         {
             await db.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<CardCatalog>().EnsureSeededAsync(CancellationToken.None);
         }
     }
 }

@@ -18,11 +18,21 @@ public sealed class DbApiFactory(PostgresFixture postgres) : WebApplicationFacto
         builder.UseSetting("ConnectionStrings:Default", postgres.ConnectionString);
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("Jwt:SigningKey", ApiFactory.TestSigningKey);
+        builder.UseSetting("Cards:SeedOriginalCount", "300");
+        builder.UseSetting("Games:TimersEnabled", "false");
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Time);
         });
+    }
+
+    /// <summary>Сервис из новой области — как в запросе.</summary>
+    public async Task<T> WithServiceAsync<TService, T>(Func<TService, Task<T>> action)
+        where TService : notnull
+    {
+        await using var scope = Services.CreateAsyncScope();
+        return await action(scope.ServiceProvider.GetRequiredService<TService>());
     }
 
     public async Task<T> WithDbAsync<T>(Func<GhostLettersDbContext, Task<T>> action)

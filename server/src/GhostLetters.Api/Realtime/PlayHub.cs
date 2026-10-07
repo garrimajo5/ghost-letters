@@ -1,0 +1,76 @@
+using System.Text.Json;
+using GhostLetters.Application;
+using GhostLetters.Domain.Game;
+using GhostLetters.Infrastructure.Auth;
+using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Lobbies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+
+namespace GhostLetters.Api.Realtime;
+
+/// <summary>
+/// Хаб /hubs/play. Клиент подписывается на лобби и партию; сервер шлёт LobbyUpdated, GameStarted,
+/// GameView (личная проекция) и GameEvents. Ошибки — HubException с текстом «КОД: сообщение».
+/// </summary>
+[Authorize]
+public sealed class PlayHub(LobbyService lobbies, GameService games) : Hub
+{
+    public const string Path = "/hubs/play";
+
+    public static string LobbyGroup(Guid lobbyId) => $"lobby:{lobbyId}";
+
+    public static string TableGroup(Guid gameId) => $"table:{gameId}";
+
+    public Task<LobbyDto> SubscribeLobby(Guid lobbyId) => Guard(async () =>
+    {
+        var lobby = await lobbies.GetAsync(lobbyId, UserId, Context.ConnectionAborted);
+        await Groups.AddToGroupAsync(Context.ConnectionId, LobbyGroup(lobbyId));
+        return lobby;
+    });
+
+    public Task UnsubscribeLobby(Guid lobbyId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, LobbyGroup(lobbyId));
+
+    /// <summary>Подписка на партию. Игрок получает свою проекцию через Clients.User, экран стола — через группу.</summary>
+    public Task<GameSnapshot> SubscribeGame(Guid gameId) => Guard(async () =>
+    {
+        var viewer = await games.RequireViewerAsync(gameId, UserId, Context.ConnectionAborted);
+        if (viewer.IsTable)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, TableGroup(gameId));
+        }
+
+        var view = await games.GetViewAsync(gameId, UserId, Context.ConnectionAborted);
+        return new GameSnapshot(view, await games.GetDeadlineAsync(gameId, Context.ConnectionAborted));
+    });
+
+    public Task<CommandResult> Command(Guid gameId, string type, JsonElement? payload, int? expectedVersion, string? clientCommandId) =>
+        Guard(() => games.ExecuteAsync(gameId, UserId, new CommandRequest(type, payload, expectedVersion, clientCommandId),
+            Context.ConnectionAborted));
+
+    private Guid UserId => Context.User!.UserId();
+
+    private static async Task<T> Guard<T>(Func<Task<T>> action)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (AppException e)
+        {
+            throw new HubException($"{e.Code}: {e.Message}");
+        }
+        catch (GameRuleException e)
+        {
+            throw new HubException($"{e.Code}: {e.Message}");
+        }
+    }
+}
+
+public sealed record GameSnapshot(PlayerView View, DateTimeOffset? Deadline);
+
+/// <summary>Пользователь SignalR — sub из токена.</summary>
+public sealed class SubUserIdProvider : IUserIdProvider
+{
+    public string? GetUserId(HubConnectionContext connection) => connection.User?.FindFirst("sub")?.Value;
+}
