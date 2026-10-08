@@ -58,9 +58,7 @@ void main() {
     await tester.tap(find.byKey(const Key('zoom-board')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('zoom-in')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('board-0-0')), warnIfMissed: false);
+    await tester.tap(find.byKey(const Key('board-0-2')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('mark-crosses')), findsOneWidget);

@@ -1142,7 +1142,7 @@ class _ZoomedTableState extends State<_ZoomedTable> {
     final k = next / scale;
     final c = _viewport.center(Offset.zero);
     _controller.value = Matrix4.translationValues(c.dx * (1 - k), c.dy * (1 - k), 0)
-      ..multiply(Matrix4.diagonal3Values(k, k, 1))
+      ..multiply(Matrix4.diagonal3Values(k, k, k))
       ..multiply(_controller.value);
   }
 
@@ -1178,7 +1178,7 @@ class _ZoomedTableState extends State<_ZoomedTable> {
               if (_fit != fit) {
                 final first = _fit == null;
                 _fit = fit;
-                final initial = Matrix4.diagonal3Values(fit, fit, 1);
+                final initial = Matrix4.diagonal3Values(fit, fit, fit);
                 if (first) {
                   _controller.value = initial;
                 } else {
