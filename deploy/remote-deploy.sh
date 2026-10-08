@@ -27,9 +27,16 @@ else
   sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|" .env
 fi
 
+# Веб-версия и APK (их выкладывают workflow «Deploy web» и «Release Android»).
+mkdir -p www/web www/download
+[ -f www/web/index.html ] || echo '<!doctype html><meta charset="utf-8"><title>Письма призрака</title><p>Веб-версия ещё не выложена.</p>' > www/web/index.html
+
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin >/dev/null
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d --remove-orphans
+# Caddyfile смонтирован файлом: после его изменения достаточно перечитать конфиг.
+docker compose -f docker-compose.prod.yml exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 || \
+  docker compose -f docker-compose.prod.yml restart caddy
 docker logout ghcr.io >/dev/null
 docker image prune -f >/dev/null
 

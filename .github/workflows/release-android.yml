@@ -10,9 +10,15 @@ name: Release Android
 #   ANDROID_KEY_PASSWORD      — пароль ключа
 # Переменная репозитория API_URL — адрес сервера, например https://ghost.example.com.
 # Без секретов сборка всё равно пройдёт, но с отладочной подписью (для проверки, не для магазина).
+#
+# Раздача друзьям: подписанный APK выкладывается на сервер — https://<домен>/download/ghost-letters.apk
+# (нужны секреты подписи и DEPLOY_SSH_KEY, переменная DEPLOY_HOST). Это происходит при каждом
+# изменении клиента в main, по тегу и при ручном запуске.
 on:
   push:
     tags: ['v*']
+    branches: [main]
+    paths: ['client/**', '.github/workflows/release-android.yml']
   # Проверка самого workflow в PR, где он меняется (собирается без секретов).
   pull_request:
     paths: ['.github/workflows/release-android.yml']
@@ -47,6 +53,7 @@ jobs:
       - run: flutter pub get
 
       - name: Signing key
+        id: signing
         env:
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -55,8 +62,10 @@ jobs:
         run: |
           if [ -z "$KEYSTORE" ]; then
             echo "::warning::Секретов подписи нет — релиз подписан отладочным ключом"
+            echo "signed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "signed=true" >> "$GITHUB_OUTPUT"
           echo "$KEYSTORE" | base64 -d > android/app/upload.jks
           cat > android/key.properties <<PROPS
           storeFile=upload.jks
@@ -75,7 +84,7 @@ jobs:
 
       - name: Build
         env:
-          API_URL: ${{ github.event.inputs.api_url || vars.API_URL }}
+          API_URL: ${{ github.event.inputs.api_url || vars.API_URL || (vars.DEPLOY_HOST && format('https://{0}.sslip.io', vars.DEPLOY_HOST)) }}
         run: |
           args="--release --build-name=${{ steps.version.outputs.name }} --build-number=${{ steps.version.outputs.code }}"
           if [ -n "$API_URL" ]; then
@@ -100,3 +109,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         working-directory: .
         run: gh release create "$GITHUB_REF_NAME" dist/* --title "Письма призрака $GITHUB_REF_NAME" --generate-notes
+
+      - name: Publish APK to the server
+        if: github.event_name != 'pull_request' && steps.signing.outputs.signed == 'true'
+        working-directory: .
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+            echo "::warning::DEPLOY_HOST/DEPLOY_SSH_KEY не заданы — APK не выложен на сервер"
+            exit 0
+          fi
+          mkdir -p ~/.ssh && printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
+          apk=$(ls dist/*.apk | head -1)
+          printf '%s (%s)\n' "${{ steps.version.outputs.name }}" "${{ steps.version.outputs.code }}" > dist/version.txt
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p /opt/ghost-letters/www/download"
+          scp -i ~/.ssh/deploy "$apk" "$SSH_USER@$HOST:/opt/ghost-letters/www/download/ghost-letters.apk.new"
+          scp -i ~/.ssh/deploy dist/version.txt "$SSH_USER@$HOST:/opt/ghost-letters/www/download/version.txt"
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mv /opt/ghost-letters/www/download/ghost-letters.apk.new /opt/ghost-letters/www/download/ghost-letters.apk"
+          echo "APK выложен: /download/ghost-letters.apk"

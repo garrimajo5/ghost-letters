@@ -34,7 +34,8 @@ def tests(path: str) -> None:
             prints.setdefault(event["testID"], []).append(event.get("message", ""))
         elif event.get("type") == "error":
             errors.setdefault(event["testID"], []).append(event.get("error", "") + "\n" + event.get("stackTrace", "")[:800])
-        elif event.get("type") == "testDone" and event.get("result") != "success" and not event.get("hidden"):
+        elif event.get("type") == "testDone" and event.get("result") != "success":
+            # Скрытые «тесты» — загрузка файла тестов: их падение = ошибка компиляции или сбой вне теста.
             printed = "\n".join(prints.get(event["testID"], []))
             start = printed.find("EXCEPTION CAUGHT")
             body = (printed[start:start + 2500] + "\n" if start >= 0 else "") + "\n".join(errors.get(event["testID"], ["failed"]))

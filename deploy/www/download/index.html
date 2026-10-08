@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0D1724">
+<title>Письма призрака — установка</title>
+<style>
+  :root { --bg: #0D1724; --panel: #152335; --line: #2B4260; --text: #E8EEF4; --muted: #9FB2C6; --ice: #A9D4EA; --amber: #E3A94B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 30px; letter-spacing: 2px; color: var(--ice); margin: 0 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 28px; }
+  section { background: var(--panel); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 20px; margin: 0 0 12px; }
+  ol { margin: 12px 0 0; padding-left: 22px; }
+  li { margin: 6px 0; }
+  .btn { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 14px; background: var(--amber);
+    color: #1A1206; font-weight: 700; letter-spacing: 1px; text-decoration: none; }
+  .btn.alt { background: transparent; border: 1px solid var(--amber); color: var(--amber); }
+  .small { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  code { background: #0B1420; border-radius: 6px; padding: 2px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ПИСЬМА ПРИЗРАКА</h1>
+  <p class="lead">Детективная игра для своей компании. Выберите свой телефон.</p>
+
+  <section>
+    <h2>Android</h2>
+    <a class="btn" href="ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
+    <p class="small" id="version">Версия: —</p>
+    <ol>
+      <li>Нажмите «Скачать приложение» и откройте скачанный файл.</li>
+      <li>Если телефон спросит — разрешите установку из этого источника (браузера или файлового менеджера).</li>
+      <li>Нажмите «Установить». Обновления ставятся так же, поверх старой версии.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>iPhone</h2>
+    <a class="btn alt" href="/">ОТКРЫТЬ ИГРУ</a>
+    <ol>
+      <li>Откройте эту страницу в <b>Safari</b> и нажмите «Открыть игру».</li>
+      <li>Нажмите «Поделиться» (квадрат со стрелкой) → <b>«На экран „Домой“»</b> → «Добавить».</li>
+      <li>Запускайте игру с иконки на экране «Домой» — она откроется во весь экран, как приложение.</li>
+    </ol>
+    <p class="small">Голосовые сообщения: при первой записи разрешите доступ к микрофону.</p>
+  </section>
+</main>
+<script>
+  fetch('version.txt', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (t) { if (t) document.getElementById('version').textContent = 'Версия: ' + t.trim(); });
+</script>
+</body>
+</html>

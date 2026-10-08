@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -243,18 +244,19 @@ class Api {
         if (mediaId != null) 'mediaId': mediaId,
       }) as Json);
 
-  /// Загрузить голосовое (AAC) и получить его id для сообщения.
-  Future<String> uploadVoice(String filePath, int durationMs) async {
+  /// Загрузить голосовое и получить его id для сообщения.
+  Future<String> uploadVoice(MultipartFile file, int durationMs) async {
     final form = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath, filename: 'voice.m4a', contentType: DioMediaType('audio', 'mp4')),
+      'file': file,
       'durationMs': durationMs.toString(),
     });
     final r = await _call(() => _dio.post<dynamic>('/media', data: form, options: Options(contentType: 'multipart/form-data'))) as Json;
     return r['mediaId'] as String;
   }
 
-  /// Скачать голосовое во временный файл (запрос с токеном — файлы доступны только участникам).
-  Future<void> downloadVoice(String mediaId, String toPath) => _call(() => _dio.download('/media/$mediaId', toPath));
+  /// Скачать голосовое (запрос с токеном — файлы доступны только участникам).
+  Future<Uint8List> downloadVoice(String mediaId) async => Uint8List.fromList(
+      (await _call(() => _dio.get<List<int>>('/media/$mediaId', options: Options(responseType: ResponseType.bytes)))) as List<int>);
 
   Future<void> saveNote(String gameId, String userId, int suspicion, String body) =>
       put('/games/$gameId/notes/$userId', {'suspicion': suspicion, 'body': body});

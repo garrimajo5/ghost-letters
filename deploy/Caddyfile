@@ -1,5 +1,27 @@
 # HTTPS-сертификат Caddy получает сам. SignalR (WebSocket) проксируется без доп. настроек.
+#   /api, /hubs, /health  → сервер игры
+#   /download/            → страница загрузки и APK для Android
+#   всё остальное         → веб-версия (для iPhone и браузеров)
 {$DOMAIN} {
 	encode gzip
-	reverse_proxy api:8080
+
+	@api path /api/* /hubs/* /health
+	handle @api {
+		reverse_proxy api:8080
+	}
+
+	handle /download* {
+		root * /srv
+		header Cache-Control "no-cache"
+		header /download/ghost-letters.apk Content-Type "application/vnd.android.package-archive"
+		file_server
+	}
+
+	handle {
+		root * /srv/web
+		# Новая версия сразу: браузер каждый раз сверяется с сервером (304, если не менялось).
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
 }

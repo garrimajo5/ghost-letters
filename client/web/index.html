@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="description" content="Письма призрака — детективная игра для своей компании">
+  <meta name="theme-color" content="#0D1724">
+
+  <!-- iPhone: «На экран „Домой“» открывает игру во весь экран, как приложение. -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Письма призрака">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>Письма призрака</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0D1724; overscroll-behavior: none; }
+    /* Удержание на iPhone не должно выделять текст и открывать меню Safari. */
+    body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+    #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #A9D4EA;
+      font: 600 18px/1.4 -apple-system, system-ui, sans-serif; letter-spacing: 2px; }
+  </style>
+</head>
+<body>
+  <div id="loading">ПИСЬМА ПРИЗРАКА…</div>
+  <script>
+    window.addEventListener('flutter-first-frame', function () {
+      var el = document.getElementById('loading');
+      if (el) el.remove();
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
