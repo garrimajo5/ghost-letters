@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/app_version.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
@@ -138,6 +139,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     'Вы играете как гость на этом устройстве.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    AppVersion.current.label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: AppColors.dim),
                   ),
                 ]),
               ),

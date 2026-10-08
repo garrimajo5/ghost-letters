@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api.dart';
+import '../../core/app_version.dart';
+import '../../core/config.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
 import '../../core/texts.dart';
@@ -118,6 +121,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ],
                 ),
               ]),
+              const _UpdateBanner(),
               const SizedBox(height: 20),
               FilledButton.icon(
                 key: const Key('create-lobby'),
@@ -182,6 +186,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
                 error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiError.from(e).message)),
               ),
+              const SizedBox(height: 24),
+              Text(
+                AppVersion.current.label,
+                key: const Key('app-version'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppColors.dim),
+              ),
             ];
             // Компьютер: слева создание и вход, справа партии.
             if (box.maxWidth >= 1100) {
@@ -204,6 +215,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [...actions, const SizedBox(height: 12), ...gamesList],
             );
           }),
+        ),
+      ),
+    );
+  }
+}
+
+/// «Вышла новая версия» — в Android-сборке, если на сервере APK новее установленного.
+class _UpdateBanner extends ConsumerWidget {
+  const _UpdateBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final latest = ref.watch(latestAndroidVersionProvider).valueOrNull;
+    if (!shouldOfferUpdate(AppVersion.current, latest)) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Material(
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: AppColors.amber)),
+        child: InkWell(
+          key: const Key('update-banner'),
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => launchUrl(Uri.parse(AppConfig.downloadPage), mode: LaunchMode.externalApplication),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              const Icon(Icons.system_update, color: AppColors.amber),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Вышла новая версия', style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(latest!.label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                ]),
+              ),
+              const Text('ОБНОВИТЬ', style: TextStyle(color: AppColors.amber, fontWeight: FontWeight.w700)),
+            ]),
+          ),
         ),
       ),
     );
