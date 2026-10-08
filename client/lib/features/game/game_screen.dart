@@ -1290,8 +1290,16 @@ class _MyLetters extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Text('МОИ ПИСЬМА', style: sectionLabel()),
-          const Spacer(),
-          const Text('нажмите — что я говорю', style: TextStyle(fontSize: 10, color: AppColors.dim)),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'нажмите — что я говорю',
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 10, color: AppColors.dim),
+            ),
+          ),
         ]),
         const SizedBox(height: 6),
         SingleChildScrollView(
