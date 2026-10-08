@@ -40,12 +40,9 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
         var said = await speaker.PostAsync(Chat(game), new { text = "Думаю, это нож", cardIds = new[] { boardCard } });
         said.GetProperty("cardIds")[0].GetString().Should().Be(boardCard);
 
-        _factory.Time.Advance(TimeSpan.FromSeconds(1));
-        var noted = await speaker.PostAsync(Chat(game), new { text = "Проверял эту", cardIds = new[] { boardCard }, cardNotes = new[] { "проверял эту" } });
-        noted.GetProperty("cardNotes")[0].GetString().Should().Be("проверял эту");
+        said.GetProperty("round").GetInt32().Should().Be(1);
         (await speaker.PostAsync(Chat(game), new { text = "x", cardIds = new[] { boardCard }, cardNotes = new[] { "a", "b" } }, HttpStatusCode.BadRequest))
             .Code().Should().Be("VALIDATION");
-        said.GetProperty("round").GetInt32().Should().Be(1);
         (await speaker.PostAsync(Chat(game), new { text = "x", cardIds = new[] { "orig_9999" } }, HttpStatusCode.BadRequest))
             .Code().Should().Be("VALIDATION");
 
@@ -61,6 +58,22 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
         var forGhost = await ghost.GetAsync(Chat(game));
         forGhost.EnumerateArray().Select(m => m.Str("text")).Should().Contain("Валим на детектива");
         forGhost.EnumerateArray().Select(m => m.Str("text")).Should().Equal("Отправляю что-то про ключ", "Думаю, это нож", "Валим на детектива");
+    }
+
+    [Fact]
+    public async Task CardNotes_AreStoredUnderCards()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 4);
+        var detective = await game.WithRoleAsync("Detective");
+        await new GameDriver(game).RunUntilAsync(p => p == "Mailbox");
+        var view = await detective.ViewAsync(game.GameId);
+        var cards = view.GetProperty("board")[0].GetProperty("cards").EnumerateArray().Take(2).Select(c => c.GetString()!).ToArray();
+
+        var sent = await detective.PostAsync(Chat(game), new { text = "Проверял эти", cardIds = cards, cardNotes = new[] { "проверял эту", "проверял эту" } });
+
+        sent.GetProperty("cardNotes").EnumerateArray().Select(n => n.GetString()).Should().Equal("проверял эту", "проверял эту");
+        var history = await detective.GetAsync(Chat(game));
+        history[history.GetArrayLength() - 1].GetProperty("cardNotes")[1].GetString().Should().Be("проверял эту");
     }
 
     [Fact]
