@@ -291,6 +291,14 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 }
 
+String _setName(String code) => switch (code) {
+      'original' => 'Оригинальный',
+      'mailbox' => 'Почтовый ящик',
+      'ritual' => 'Тайный ритуал',
+      'mirror' => 'Зеркало истины',
+      _ => code,
+    };
+
 class _SettingsSummary extends StatelessWidget {
   const _SettingsSummary({required this.settings, required this.players, this.ghost});
 
@@ -311,6 +319,7 @@ class _SettingsSummary extends StatelessWidget {
       settings.discussion == 'Radio' ? 'рация' : 'свободное обсуждение',
       settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)',
       'Призрак: ${ghost ?? 'по жребию'}',
+      settings.cardSets.length >= 4 ? 'все наборы карт' : 'наборы: ${settings.cardSets.map(_setName).join(', ')}',
     ];
     return Wrap(spacing: 6, runSpacing: 6, children: [
       for (final p in parts)

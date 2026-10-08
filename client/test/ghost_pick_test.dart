@@ -33,6 +33,7 @@ void main() {
     app.api.lobbyResult = lobbyWithGhost(watson.id);
 
     expect(find.text('Призрак: по жребию'), findsOneWidget);
+    expect(find.text('все наборы карт'), findsOneWidget, reason: 'по умолчанию играем всеми наборами');
     await tester.tap(find.byKey(Key('ghost-${watson.id}')));
     await tester.pumpAndSettle();
 
@@ -50,5 +51,21 @@ void main() {
     await tester.pumpAndSettle();
 
     expect((app.api.named('saveSettings').single.$2[1] as LobbySettings).ghostUserId, isNull);
+  });
+
+  testWidgets('в сводке видно, какими наборами карт играем', (tester) async {
+    final lobby = Lobby.fromJson({
+      'id': 'l1',
+      'code': 'ABC234',
+      'title': 'Стол Призрачный',
+      'hostUserId': host.id,
+      'status': 'open',
+      'settings': const LobbySettings(cardSets: ['original', 'mirror']).toJson(),
+      'currentGameId': null,
+      'members': [member(host), member(watson, seat: 1, ready: true)],
+    });
+    await openLobby(tester, lobby);
+
+    expect(find.text('наборы: Оригинальный, Зеркало истины'), findsOneWidget);
   });
 }
