@@ -773,6 +773,8 @@ class _PlayerChip extends StatelessWidget {
             ),
           if (v.raisedHands.contains(p.id))
             const Positioned(left: -6, bottom: -2, child: Icon(Icons.pan_tool, size: 15, color: AppColors.amber)),
+          // Призрак — значок-призрак у аватара, как реакция в мессенджере.
+          if (ghost) Positioned(left: -6, bottom: -4, child: GhostBadge(key: Key('ghost-badge-${p.id}'))),
           if (arrested)
             const Positioned(left: -4, bottom: -2, child: Icon(Icons.lock, size: 15, color: AppColors.redBright)),
         ]),

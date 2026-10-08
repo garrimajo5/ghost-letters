@@ -301,3 +301,59 @@ EdgeInsets pageInsets(BuildContext context, {double max = 760, double side = 16,
   final h = width > max + side * 2 ? (width - max) / 2 : side;
   return EdgeInsets.fromLTRB(h, top, h, bottom);
 }
+
+/// Маленький значок-призрак в кружке — как реакция в мессенджере: метка Призрака у аватара.
+class GhostBadge extends StatelessWidget {
+  const GhostBadge({super.key, this.size = 18});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.bg, width: 1.5),
+          boxShadow: const [BoxShadow(color: Color(0x66A9D4EA), blurRadius: 4)],
+        ),
+        padding: EdgeInsets.all(size * 0.14),
+        child: CustomPaint(painter: const GhostPainter()),
+      );
+}
+
+/// Силуэт призрака (купол, волнистый низ, глаза) — тот же, что на иконке приложения.
+class GhostPainter extends CustomPainter {
+  const GhostPainter({this.color = AppColors.text, this.eyes = AppColors.bg});
+
+  final Color color;
+  final Color eyes;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final k = size.shortestSide / 24;
+    canvas.save();
+    canvas.translate((size.width - 24 * k) / 2, (size.height - 24 * k) / 2);
+    canvas.scale(k);
+    final body = Path()
+      ..moveTo(4.5, 11)
+      ..arcToPoint(const Offset(19.5, 11), radius: const Radius.circular(7.5))
+      ..lineTo(19.5, 21)
+      ..lineTo(17, 19.2)
+      ..lineTo(14.5, 21)
+      ..lineTo(12, 19.2)
+      ..lineTo(9.5, 21)
+      ..lineTo(7, 19.2)
+      ..lineTo(4.5, 21)
+      ..close();
+    canvas.drawPath(body, Paint()..color = color);
+    final eye = Paint()..color = eyes;
+    canvas.drawOval(Rect.fromCenter(center: const Offset(9.6, 10.5), width: 2.4, height: 3.4), eye);
+    canvas.drawOval(Rect.fromCenter(center: const Offset(14.4, 10.5), width: 2.4, height: 3.4), eye);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(GhostPainter old) => old.color != color || old.eyes != eyes;
+}

@@ -183,9 +183,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               child: Panel(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(children: [
-                  p.isBot
-                      ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
-                      : Avatar(nickname: p.nickname, color: p.avatarColor, highlight: p.userId == me.id),
+                  Stack(clipBehavior: Clip.none, children: [
+                    p.isBot
+                        ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
+                        : Avatar(nickname: p.nickname, color: p.avatarColor, highlight: p.userId == me.id),
+                    if (lobby.settings.ghostUserId == p.userId)
+                      Positioned(left: -6, bottom: -4, child: GhostBadge(key: Key('lobby-ghost-badge-${p.userId}'))),
+                  ]),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text.rich(TextSpan(children: [
