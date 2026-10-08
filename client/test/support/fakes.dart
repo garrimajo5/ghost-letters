@@ -96,7 +96,41 @@ class FakeApi extends Api {
   Future<Lobby> saveSettings(String id, LobbySettings s) async => _record('saveSettings', [id, s], () => lobbyResult!);
 
   @override
-  Future<Lobby> addBot(String id) async => _record('addBot', [id], () => lobbyResult!);
+  Future<Lobby> addBot(String id, {String? botId}) async => _record('addBot', [id, botId], () => lobbyResult!);
+
+  bool admin = false;
+  List<BotInfo> botList = [];
+
+  @override
+  Future<List<BotCard>> bots() async => _record('bots', const [], () => [
+        for (final b in botList.where((b) => b.enabled))
+          BotCard(id: b.id, nickname: b.nickname, avatarColor: b.avatarColor, about: b.about),
+      ]);
+
+  @override
+  Future<bool> isAdmin() async => _record('isAdmin', const [], () => admin);
+
+  @override
+  Future<List<BotInfo>> adminBots() async => _record('adminBots', const [], () => botList);
+
+  @override
+  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled}) async =>
+      _record('saveBot', [id, nickname, spectra, enabled], () {
+        final bot = BotInfo(
+            id: id ?? 'b${botList.length + 1}', nickname: 'Бот $nickname'.replaceFirst('Бот Бот ', 'Бот '), avatarColor: color, about: about, spectra: spectra, enabled: enabled);
+        botList = [for (final b in botList) if (b.id != bot.id) b, bot];
+        return bot;
+      });
+
+  @override
+  Future<List<BotInfo>> createPresetBots() async => _record('createPresetBots', const [], () {
+        botList = [
+          ...botList,
+          const BotInfo(id: 'p1', nickname: 'Бот Пуаро', avatarColor: '#5C7C99', about: 'Смысл прежде всего', spectra: BotSpectra(meaning: 0.8, shape: 0.1, color: 0.1), enabled: true),
+          const BotInfo(id: 'p2', nickname: 'Бот Коломбо', avatarColor: '#E57F4F', about: 'Рискует', spectra: BotSpectra(risk: 0.85), enabled: true),
+        ];
+        return botList;
+      });
 
   @override
   Future<String> startGame(String id) async => _record('startGame', [id], () => 'g1');

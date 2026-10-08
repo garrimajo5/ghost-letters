@@ -67,8 +67,8 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
-            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q\n' \
-              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR"
+            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q ADMIN_USER_IDS=%q\n' \
+              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR" "${{ vars.ADMIN_USER_IDS }}"
             cat deploy/remote-deploy.sh
           } | ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" 'bash -s'
 

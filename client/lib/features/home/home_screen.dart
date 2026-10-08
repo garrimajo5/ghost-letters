@@ -15,6 +15,7 @@ import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import '../bots/bots_admin_screen.dart';
 
 final myGamesProvider = FutureProvider.autoDispose<List<MyGame>>((ref) => ref.read(apiProvider).myGames(status: 'active'));
 
@@ -79,6 +80,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final user = ref.watch(sessionProvider).user;
     if (user == null) return const SizedBox.shrink();
     final games = ref.watch(myGamesProvider);
+    final isAdmin = ref.watch(isAdminProvider).valueOrNull == true;
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -108,6 +110,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       context.push('/rules');
                     } else if (v == 'history') {
                       context.push('/history');
+                    } else if (v == 'bots') {
+                      context.push('/admin/bots');
                     } else if (v == 'leaderboard') {
                       context.push('/leaderboard');
                     } else if (v == 'profile') {
@@ -117,12 +121,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ref.read(sessionProvider.notifier).signOut();
                     }
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'history', child: Text('История партий')),
-                    PopupMenuItem(value: 'leaderboard', child: Text('Рейтинг игроков')),
-                    PopupMenuItem(value: 'rules', child: Text('Правила')),
-                    PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
-                    PopupMenuItem(value: 'logout', child: Text('Выйти')),
+                  itemBuilder: (_) => [
+                    if (isAdmin) const PopupMenuItem(value: 'bots', child: Text('Боты (кабинет)')),
+                    const PopupMenuItem(value: 'history', child: Text('История партий')),
+                    const PopupMenuItem(value: 'leaderboard', child: Text('Рейтинг игроков')),
+                    const PopupMenuItem(value: 'rules', child: Text('Правила')),
+                    const PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
+                    const PopupMenuItem(value: 'logout', child: Text('Выйти')),
                   ],
                 ),
               ]),

@@ -37,8 +37,8 @@ public static class LobbyEndpoints
             return Results.NoContent();
         }).WithName("KickFromLobby");
 
-        lobbies.MapPost("/{id:guid}/bots", (Guid id, HttpContext http, LobbyService service, CancellationToken ct) =>
-            service.AddBotAsync(id, http.User.UserId(), ct)).WithName("AddBot");
+        lobbies.MapPost("/{id:guid}/bots", (Guid id, Guid? botId, HttpContext http, LobbyService service, CancellationToken ct) =>
+            service.AddBotAsync(id, http.User.UserId(), ct, botId)).WithName("AddBot");
 
         lobbies.MapPost("/{id:guid}/start", (Guid id, HttpContext http, LobbyService service, CancellationToken ct) =>
             service.StartAsync(id, http.User.UserId(), ct)).WithName("StartGame");

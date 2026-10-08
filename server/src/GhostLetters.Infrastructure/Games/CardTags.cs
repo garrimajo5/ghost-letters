@@ -46,6 +46,44 @@ public sealed class CardTags
         return common == 0 ? 0 : common / (x.Sum(Weight) + y.Sum(Weight) - common);
     }
 
+    /// <summary>
+    /// Похожесть глазами конкретного бота: сходство по смыслу, по форме и по цвету считается отдельно
+    /// (мера Жаккара внутри каждой группы тегов) и смешивается в долях его внимания.
+    /// Группы, которых нет ни у одной из двух карт, не участвуют — их доля делится между остальными.
+    /// </summary>
+    public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention)
+    {
+        if (a == b)
+        {
+            return 1;
+        }
+
+        if (!_tags.TryGetValue(a, out var x) || !_tags.TryGetValue(b, out var y) || x.Count == 0 || y.Count == 0)
+        {
+            return 0;
+        }
+
+        double total = 0, weight = 0;
+        foreach (var (group, w) in new[] { (0, attention.Meaning), (1, attention.Shape), (2, attention.Color) })
+        {
+            var gx = x.Where(t => Group(t) == group).ToHashSet();
+            var gy = y.Where(t => Group(t) == group).ToHashSet();
+            if (gx.Count == 0 && gy.Count == 0)
+            {
+                continue;
+            }
+
+            var common = gx.Count(gy.Contains);
+            total += w * common / (gx.Count + gy.Count - common);
+            weight += w;
+        }
+
+        return weight <= 0 ? 0 : total / weight;
+    }
+
+    /// <summary>0 — смысл, 1 — форма (shape-*), 2 — цвет.</summary>
+    public static int Group(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) ? 1 : Colors.Contains(tag) ? 2 : 0;
+
     public static CardTags Parse(string json)
     {
         var raw = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json) ?? [];

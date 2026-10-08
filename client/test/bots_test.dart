@@ -41,7 +41,7 @@ void main() {
     await tester.tap(find.byKey(const Key('add-bot')));
     await tester.pumpAndSettle();
 
-    expect(app.api.named('addBot').single.$2, ['l1']);
+    expect(app.api.named('addBot').single.$2, ['l1', null], reason: 'кабинет пуст — сразу случайный бот');
     expect(find.text('Бот Пуаро'), findsOneWidget);
     expect(find.byIcon(Icons.smart_toy_outlined), findsWidgets);
     expect(tester.widget<FilledButton>(find.byKey(const Key('start-game'))).onPressed, isNotNull);

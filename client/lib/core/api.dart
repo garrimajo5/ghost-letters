@@ -237,7 +237,27 @@ class Api {
 
   Future<Lobby> saveSettings(String id, LobbySettings s) async => Lobby.fromJson(await put('/lobbies/$id/settings', s.toJson()) as Json);
 
-  Future<Lobby> addBot(String id) async => Lobby.fromJson(await post('/lobbies/$id/bots') as Json);
+  /// Добавить бота в лобби: конкретного из кабинета ([botId]) или случайного.
+  Future<Lobby> addBot(String id, {String? botId}) async =>
+      Lobby.fromJson(await post(botId == null ? '/lobbies/$id/bots' : '/lobbies/$id/bots?botId=$botId') as Json);
+
+  /// Боты, которых можно позвать в лобби.
+  Future<List<BotCard>> bots() async =>
+      ((await get('/bots')) as List).map((e) => BotCard.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+
+  /// Админ ли я (кабинет ботов).
+  Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
+
+  Future<List<BotInfo>> adminBots() async =>
+      ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+
+  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled}) async {
+    final body = {'nickname': nickname, 'avatarColor': color, 'about': about, 'spectra': spectra.toJson(), 'enabled': enabled};
+    return BotInfo.fromJson((id == null ? await post('/admin/bots', body) : await put('/admin/bots/$id', body)) as Json);
+  }
+
+  Future<List<BotInfo>> createPresetBots() async =>
+      ((await post('/admin/bots/presets')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
   Future<void> kick(String id, String userId) => post('/lobbies/$id/kick', {'userId': userId});
 

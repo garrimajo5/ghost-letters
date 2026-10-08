@@ -1,0 +1,104 @@
+using System.Net;
+using System.Text.Json;
+using GhostLetters.Domain.Game;
+using GhostLetters.Infrastructure.Bots;
+using GhostLetters.Infrastructure.Games;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace GhostLetters.Api.Tests;
+
+/// <summary>Кабинет ботов: только админ создаёт и настраивает характеры; хост выбирает бота в лобби.</summary>
+[Collection(DbCollection.Name)]
+public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
+{
+    private readonly DbApiFactory _factory = new(postgres);
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public async Task DisposeAsync() => await _factory.DisposeAsync();
+
+    private void MakeAdmin(TestPlayer player) =>
+        _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = player.Id.ToString();
+
+    private static object Spectra(double risk = 0.5) => new
+    {
+        meaning = 0.6, shape = 0.2, color = 0.2, negative = 0.7, memory = 0.4, risk, compromise = 0.3, variability = 0.1,
+    };
+
+    [Fact]
+    public async Task NotAdmin_CannotOpenCabinet()
+    {
+        var player = await TestPlayer.LoginAsync(_factory, "Игрок");
+
+        (await player.GetAsync("/api/v1/admin/me")).GetProperty("isAdmin").GetBoolean().Should().BeFalse();
+        (await player.GetAsync("/api/v1/admin/bots", HttpStatusCode.Forbidden)).Code().Should().Be("FORBIDDEN");
+        (await player.PostAsync("/api/v1/admin/bots", new { nickname = "Хакер", spectra = Spectra() }, HttpStatusCode.Forbidden))
+            .Code().Should().Be("FORBIDDEN");
+    }
+
+    [Fact]
+    public async Task Admin_CreatesTunesAndDisablesBots_HostPicksThemInLobby()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        MakeAdmin(admin);
+        (await admin.GetAsync("/api/v1/admin/me")).GetProperty("isAdmin").GetBoolean().Should().BeTrue();
+
+        var created = await admin.PostAsync("/api/v1/admin/bots",
+            new { nickname = "Шерлок", avatarColor = "#3D6A99", about = "Холодная логика", spectra = Spectra(risk: 0.1) });
+        created.Str("nickname").Should().Be("Бот Шерлок", "боты всегда подписаны «Бот»");
+        var id = created.Id("id");
+        created.GetProperty("spectra").GetProperty("risk").GetDouble().Should().Be(0.1);
+
+        var updated = await admin.PutAsync($"/api/v1/admin/bots/{id}",
+            new { nickname = "Бот Шерлок", about = "Теперь рискует", spectra = Spectra(risk: 0.9), enabled = true });
+        updated.GetProperty("spectra").GetProperty("risk").GetDouble().Should().Be(0.9);
+        updated.Str("about").Should().Be("Теперь рискует");
+
+        var presets = await admin.PostAsync("/api/v1/admin/bots/presets", null);
+        presets.EnumerateArray().Select(b => b.Str("nickname")).Should().Contain(new[] { "Бот Пуаро", "Бот Марпл", "Бот Шерлок" });
+        var again = await admin.PostAsync("/api/v1/admin/bots/presets", null);
+        again.GetArrayLength().Should().Be(presets.GetArrayLength(), "готовые характеры не дублируются");
+
+        // Хост выбирает конкретного бота; второй раз того же — нельзя.
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings() });
+        var lobbyId = lobby.Id("id");
+        var publicList = await host.GetAsync("/api/v1/bots");
+        publicList.EnumerateArray().Should().Contain(b => b.Id("id") == id && b.Str("about") == "Теперь рискует");
+
+        var withBot = await host.PostAsync($"/api/v1/lobbies/{lobbyId}/bots?botId={id}", null);
+        withBot.GetProperty("members").EnumerateArray().Should().Contain(m => m.Id("userId") == id);
+        (await host.PostAsync($"/api/v1/lobbies/{lobbyId}/bots?botId={id}", null, HttpStatusCode.Conflict)).Code().Should().Be("CONFLICT");
+
+        // Случайный бот — из кабинета, а не безымянный.
+        var random = await host.PostAsync($"/api/v1/lobbies/{lobbyId}/bots", null);
+        var names = presets.EnumerateArray().Select(b => b.Str("nickname")).ToHashSet();
+        random.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("isBot").GetBoolean())
+            .Should().OnlyContain(m => names.Contains(m.Str("nickname")));
+
+        // Выключенного бота в лобби не предлагают.
+        await admin.PutAsync($"/api/v1/admin/bots/{id}",
+            new { nickname = "Шерлок", about = "На отдыхе", spectra = Spectra(), enabled = false });
+        (await host.GetAsync("/api/v1/bots")).EnumerateArray().Should().NotContain(b => b.Id("id") == id);
+    }
+
+    [Fact]
+    public async Task Mind_LoadsCharacterOnlyForCabinetBots()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        MakeAdmin(admin);
+        var bot = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Мегрэ", spectra = Spectra(risk: 0.8) });
+        var botId = bot.Id("id");
+        var ids = new List<Guid> { botId, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
+        var deck = Enumerable.Range(1, 300).Select(i => $"c{i:000}").ToList();
+        var state = GameEngine.Create(Guid.NewGuid(), ids, new GameSettings(), deck, 7);
+
+        var mind = await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None));
+        var none = await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, ids[1], CancellationToken.None));
+
+        mind.Should().NotBeNull();
+        mind!.Personality.Risk.Should().BeApproximately(0.8, 0.04, "изменчивость 0.1 сдвигает спектр не больше чем на 0.035");
+        none.Should().BeNull("бот без характера играет классически");
+    }
+}

@@ -53,6 +53,8 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
 
     public DbSet<RatingHistory> RatingHistoryRecords => Set<RatingHistory>();
 
+    public DbSet<BotProfile> BotProfiles => Set<BotProfile>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("public");
@@ -295,6 +297,14 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
         {
             e.ToTable("rating_history");
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            UserFk(e, x => x.UserId);
+        });
+
+        b.Entity<BotProfile>(e =>
+        {
+            e.ToTable("bot_profiles");
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.About).HasMaxLength(300);
             UserFk(e, x => x.UserId);
         });
     }
