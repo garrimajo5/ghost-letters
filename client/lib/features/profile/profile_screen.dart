@@ -127,7 +127,20 @@ class ProfileScreen extends ConsumerWidget {
             ]),
           ),
           if (mine) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            // ID нужен, например, чтобы назначить админа кабинета ботов (переменная ADMIN_USER_IDS).
+            Center(
+              child: TextButton.icon(
+                key: const Key('copy-user-id'),
+                icon: const Icon(Icons.copy, size: 14),
+                label: Text('ID игрока: ${p.user.id.substring(0, 8)}…', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: p.user.id));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID скопирован')));
+                },
+              ),
+            ),
+            const SizedBox(height: 4),
             OutlinedButton.icon(
               key: const Key('link-device'),
               icon: const Icon(Icons.devices_other),
