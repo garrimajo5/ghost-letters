@@ -742,10 +742,17 @@ class _Board extends StatelessWidget {
 
     return LayoutBuilder(builder: (context, box) {
       // Карта = (ширина − колонка жетонов − промежутки) / столбцы, но не больше 96.
-      final size = ((box.maxWidth - labelWidth - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
+      var label = labelWidth;
+      var size = ((box.maxWidth - label - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
+      // Крупные карты (планшет, компьютер) — жетоны рядов крупнее вместе с ними.
+      if (size > 96) {
+        label = (size * 0.55).clamp(labelWidth, 100.0).floorToDouble();
+        size = ((box.maxWidth - label - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
+      }
+      final token = label - 12;
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const SizedBox(width: labelWidth),
+          SizedBox(width: label),
           for (var c = 0; c < columns; c++)
             Container(
               width: size,
@@ -760,16 +767,16 @@ class _Board extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: gap),
             child: Row(children: [
               SizedBox(
-                width: labelWidth,
+                width: label,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  AppImage(categoryToken(v.board[r].category), width: 34, height: 34, circle: true),
+                  AppImage(categoryToken(v.board[r].category), key: Key('token-$r'), width: token, height: token, circle: true),
                   const SizedBox(height: 1),
                   Text(
                     T.category(v.board[r].category).toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.fade,
                     softWrap: false,
-                    style: heading(8.5, color: AppColors.ice, spacing: 0.5),
+                    style: heading((token * 0.25).clamp(8.5, 15.0), color: AppColors.ice, spacing: 0.5),
                   ),
                 ]),
               ),

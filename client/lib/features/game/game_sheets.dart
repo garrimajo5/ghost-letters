@@ -820,17 +820,14 @@ class SourceChips extends StatelessWidget {
     final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(children: [
-              for (final p in players.where((p) => !p.isGhost))
-                Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: GestureDetector(
+      // Все игроки видны сразу: чипы переносятся на следующую строку, а не уезжают за край.
+      child: Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        Padding(
+          padding: const EdgeInsets.only(right: 2),
+          child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        ),
+        for (final p in players.where((p) => !p.isGhost))
+                GestureDetector(
                     key: Key('src-${p.id}'),
                     onTap: () => onToggle(p.id),
                     child: AnimatedContainer(
@@ -850,10 +847,6 @@ class SourceChips extends StatelessWidget {
                       ]),
                     ),
                   ),
-                ),
-            ]),
-          ),
-        ),
       ]),
     );
   }
