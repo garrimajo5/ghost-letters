@@ -823,6 +823,15 @@ class _Board extends StatelessWidget {
     final stage = v.finale?.currentStage;
     final outcomes = v.finale?.outcomes ?? const <VoteOutcome>[];
     final killerNight = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
+    // Сообщник ночью не выделяет карты рамкой — ставит «большой палец»; Убийца видит пальцы на картах.
+    final suggesting = v.phase == 'Night' && v.can('TeamSuggest');
+    final me = v.me?.id;
+    List<String> thumbs(int r, int c) => [
+          if (v.phase == 'Night')
+            for (final s in v.teamSuggestions)
+              if (s.from != me && s.columns != null && s.columns!.length > r && s.columns![r] == c) s.from,
+          if (suggesting && screen.truth[r] == c && me != null) me,
+        ];
 
     return LayoutBuilder(builder: (context, box) {
       // Карта = (ширина − колонка жетонов − промежутки) / столбцы, но не больше 96.
@@ -886,7 +895,8 @@ class _Board extends StatelessWidget {
                       size: size,
                       mark: screen.marks[v.board[r].cards[c]],
                       isTruth: v.truth != null && v.truth!.length > r && v.truth![r] == c,
-                      chosen: screen.truth[r] == c ||
+                      thumbs: thumbs(r, c),
+                      chosen: (!suggesting && screen.truth[r] == c) ||
                           (stage != null && stage.isRow && stage.row == r && (screen.voteColumn ?? v.finale?.myVoteColumn) == c),
                       chosenColor: killerNight ? AppColors.redBright : AppColors.amber,
                       voted: outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c),
@@ -915,7 +925,11 @@ class BoardCard extends StatelessWidget {
     this.voted = false,
     this.dimmed = false,
     this.active = false,
+    this.thumbs = const [],
   });
+
+  /// Кто из команды Убийцы советует эту карту ночью (значок «большой палец»).
+  final List<String> thumbs;
 
   final String cardId;
   final double size;
@@ -966,6 +980,20 @@ class BoardCard extends StatelessWidget {
             Positioned(left: 2, top: 2, child: CountBadge(key: Key('x-$cardId'), icon: Icons.close, text: '${m.crosses}', color: AppColors.red, fontSize: badge)),
           if (m != null && m.checks > 0)
             Positioned(right: 2, top: 2, child: CountBadge(key: Key('v-$cardId'), icon: Icons.check, text: '${m.checks}', color: AppColors.green, fontSize: badge)),
+          if (thumbs.isNotEmpty)
+            Positioned(
+              right: 2,
+              bottom: 2,
+              child: Container(
+                key: Key('thumb-$cardId'),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(99)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.thumb_up, size: size * 0.2, color: AppColors.onAmber),
+                  if (thumbs.length > 1) Text(' ${thumbs.length}', style: TextStyle(fontSize: size * 0.16, color: AppColors.onAmber, fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ),
           if (voted)
             Positioned(
               left: 2,

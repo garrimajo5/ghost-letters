@@ -61,6 +61,9 @@ public class TeamSuggestTests
         var witness = state.WithRole(Role.Witness);
 
         GameProjection.For(state, accomplice.Id).AllowedCommands.Should().Contain(nameof(TeamSuggest));
+        GameProjection.For(state, accomplice.Id).HuntRoles.Should().Equal([Role.Witness], "Эксперта на 7 игроков нет — назвать его нельзя");
+        var expert = () => state.Run(accomplice, new TeamSuggest(Target: witness.Id, Guess: Role.Expert));
+        expert.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
         state.Run(accomplice, new TeamSuggest(Target: witness.Id, Guess: Role.Witness));
 
         GameProjection.For(state, state.WithRole(Role.Killer).Id).TeamSuggestions.Should().ContainSingle()

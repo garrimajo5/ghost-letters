@@ -36,7 +36,8 @@ public sealed record PlayerView(
     IReadOnlyList<Guid> RaisedHands,
     IReadOnlyList<string> AllowedCommands,
     FinaleView? Finale,
-    IReadOnlyList<TeamSuggestionView>? TeamSuggestions = null);
+    IReadOnlyList<TeamSuggestionView>? TeamSuggestions = null,
+    IReadOnlyList<Role>? HuntRoles = null);
 
 /// <summary>Подсказка Сообщника Убийце — видна только команде Убийцы.</summary>
 public sealed record TeamSuggestionView(Guid From, IReadOnlyList<int>? Columns, Guid? Target, Role? Guess);
@@ -93,6 +94,10 @@ public static class GameProjection
             FinaleProjection.For(state, viewer),
             viewer?.Role is Role.Killer or Role.Accomplice && GameEngine.TeamSuggestPhase(state)
                 ? state.TeamSuggestions.Select(kv => new TeamSuggestionView(kv.Key, kv.Value.Columns, kv.Value.Target, kv.Value.Guess)).ToList()
+                : null,
+            // На охоте — какие роли вообще есть в партии (состав по таблице известен всем): нельзя назвать Эксперта, если его нет.
+            state.Phase == Phase.Hunt
+                ? state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).Distinct().OrderBy(r => r).ToList()
                 : null);
     }
 

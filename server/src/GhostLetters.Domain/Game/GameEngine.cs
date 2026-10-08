@@ -267,7 +267,13 @@ public static partial class GameEngine
                 throw GameRuleException.Validation("Выберите игрока.");
             }
 
-            suggestion = new TeamSuggestion { Target = target.Id, Guess = suggest.Guess };
+            var hunted = state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).ToHashSet();
+            if (state.Phase == Phase.Hunt && suggest.Guess is { } guess && !hunted.Contains(guess))
+            {
+                throw GameRuleException.Validation(guess == Role.Expert ? "Эксперта в этой партии нет." : "Такой роли в этой партии нет.");
+            }
+
+            suggestion = new TeamSuggestion { Target = target.Id, Guess = state.Phase == Phase.Hunt ? suggest.Guess : null };
         }
 
         state.TeamSuggestions[actor.Id] = suggestion;

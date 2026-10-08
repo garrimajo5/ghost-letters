@@ -573,6 +573,7 @@ class GameView {
     required this.allowedCommands,
     required this.finale,
     this.teamSuggestions = const [],
+    this.huntRoles = const [],
   });
 
   factory GameView.fromJson(Json j) => GameView(
@@ -597,6 +598,7 @@ class GameView {
         allowedCommands: _strings(j['allowedCommands']),
         finale: j['finale'] is Map ? Finale.fromJson(Map<String, dynamic>.from(j['finale'] as Map)) : null,
         teamSuggestions: j['teamSuggestions'] is List ? _list(j['teamSuggestions'], TeamSuggestion.fromJson) : const [],
+        huntRoles: _strings(j['huntRoles']),
       );
 
   final String gameId;
@@ -622,6 +624,9 @@ class GameView {
 
   /// Подсказки Сообщников Убийце (ночь, охота) — приходят только команде Убийцы.
   final List<TeamSuggestion> teamSuggestions;
+
+  /// На охоте: какие из ролей Свидетель/Эксперт есть в партии (пусто — неизвестно).
+  final List<String> huntRoles;
 
   bool can(String command) => allowedCommands.contains(command);
 

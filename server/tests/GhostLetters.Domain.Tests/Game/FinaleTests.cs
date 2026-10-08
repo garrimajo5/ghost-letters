@@ -209,7 +209,8 @@ public class FinaleTests
         state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Detective).Id));
 
         state.Result!.Side.Should().Be(WinningSide.Killer);
-        state.Result.Winners.Should().Equal(state.WithRole(Role.Killer).Id);
+        state.Result.Winners.Should().BeEquivalentTo(new[] { state.WithRole(Role.Killer).Id, accomplice.Id },
+            "арестованный Сообщник побеждает вместе с командой Убийцы");
     }
 
     [Fact]

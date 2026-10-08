@@ -497,6 +497,44 @@ class ActionPanel extends StatelessWidget {
     ];
   }
 
+  /// Кнопки «Свидетель / Эксперт»: только для ролей, которые есть в партии (на 7 игроков Эксперта нет).
+  Widget _huntButtons({
+    required String witnessKey,
+    required String expertKey,
+    required String witness,
+    required String expert,
+    required void Function(String guess)? onPick,
+  }) {
+    final roles = v.huntRoles.isEmpty ? const ['Witness', 'Expert'] : v.huntRoles;
+    return Row(children: [
+      if (roles.contains('Witness'))
+        Expanded(
+          child: FilledButton(
+            key: Key(witnessKey),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+            onPressed: onPick == null ? null : () => onPick('Witness'),
+            child: Text(witness),
+          ),
+        ),
+      if (roles.length > 1) const SizedBox(width: 8),
+      if (roles.contains('Expert'))
+        Expanded(
+          child: roles.length == 1
+              ? FilledButton(
+                  key: Key(expertKey),
+                  style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+                  onPressed: onPick == null ? null : () => onPick('Expert'),
+                  child: Text(expert),
+                )
+              : OutlinedButton(
+                  key: Key(expertKey),
+                  onPressed: onPick == null ? null : () => onPick('Expert'),
+                  child: Text(expert),
+                ),
+        ),
+    ]);
+  }
+
   List<Widget> _hunt(BuildContext context) {
     final command = v.can('HuntPick') ? 'HuntPick' : (v.can('BlackmailerPick') ? 'BlackmailerPick' : null);
     if (command == null && v.can('TeamSuggest')) {
@@ -518,24 +556,13 @@ class ActionPanel extends StatelessWidget {
         PlayerPicker(screen: screen, candidates: candidates, color: AppColors.redBright),
         const SizedBox(height: 10),
         if (v.phase == 'Hunt')
-          Row(children: [
-            Expanded(
-              child: FilledButton(
-                key: const Key('suggest-witness'),
-                style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
-                onPressed: screen.target == null ? null : () => suggest('Witness'),
-                child: const Text('Подсказать: Свидетель'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton(
-                key: const Key('suggest-expert'),
-                onPressed: screen.target == null ? null : () => suggest('Expert'),
-                child: const Text('Подсказать: Эксперт'),
-              ),
-            ),
-          ])
+          _huntButtons(
+            witnessKey: 'suggest-witness',
+            expertKey: 'suggest-expert',
+            witness: 'Подсказать: Свидетель',
+            expert: 'Подсказать: Эксперт',
+            onPick: screen.target == null ? null : suggest,
+          )
         else
           FilledButton(
             key: const Key('suggest-target'),
@@ -573,24 +600,13 @@ class ActionPanel extends StatelessWidget {
       PlayerPicker(screen: screen, candidates: candidates, color: AppColors.redBright),
       if (command == 'HuntPick') ...[
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(
-            child: FilledButton(
-              key: const Key('hunt-witness'),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
-              onPressed: screen.target == null ? null : () => screen.send(command, {'target': screen.target, 'guess': 'Witness'}),
-              child: const Text('Это Свидетель'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: OutlinedButton(
-              key: const Key('hunt-expert'),
-              onPressed: screen.target == null ? null : () => screen.send(command, {'target': screen.target, 'guess': 'Expert'}),
-              child: const Text('Это Эксперт'),
-            ),
-          ),
-        ]),
+        _huntButtons(
+          witnessKey: 'hunt-witness',
+          expertKey: 'hunt-expert',
+          witness: 'Это Свидетель',
+          expert: 'Это Эксперт',
+          onPick: screen.target == null ? null : (guess) => screen.send(command, {'target': screen.target, 'guess': guess}),
+        ),
       ],
       ..._teamSuggestions(),
     ];
