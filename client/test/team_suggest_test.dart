@@ -42,9 +42,11 @@ void main() {
     final app = await _open(tester, _snap('Night', const ['TeamSuggest'], 'Accomplice'));
 
     expect(find.text('Подскажите Убийце истинные улики'), findsWidgets);
+    // У карт ночью есть двойное нажатие («рассмотреть»), поэтому одиночное засчитывается после паузы.
     await tester.tap(find.byKey(const Key('board-0-2')));
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('board-1-4')));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.byKey(const Key('cta')));
     await tester.pumpAndSettle();
 
