@@ -18,9 +18,12 @@ public sealed record ChatMessageDto(
     Guid? MediaId,
     int? DurationMs,
     IReadOnlyList<string> CardIds,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<string>? CardNotes = null);
 
-public sealed record SendChatRequest(string? Channel, string? Text, Guid? MediaId, IReadOnlyList<string>? CardIds);
+/// <param name="CardNotes">Необязательные подписи под картами, по порядку CardIds.</param>
+public sealed record SendChatRequest(string? Channel, string? Text, Guid? MediaId, IReadOnlyList<string>? CardIds,
+    IReadOnlyList<string>? CardNotes = null);
 
 public sealed record MediaDto(Guid MediaId, int DurationMs, string ContentType);
 
@@ -38,6 +41,7 @@ public sealed class ChatService(
 {
     public const int MaxTextLength = 1000;
     public const int MaxCards = 5;
+    public const int MaxNoteLength = 30;
     public const int MaxVoiceMs = 60_000;
     public const long MaxVoiceBytes = 2 * 1024 * 1024;
 
@@ -81,6 +85,12 @@ public sealed class ChatService(
         }
 
         var cards = (request.CardIds ?? []).Distinct().ToList();
+        var notes = (request.CardNotes ?? []).Select(n => (n ?? "").Trim()).ToList();
+        if (notes.Count > cards.Count || notes.Any(n => n.Length > MaxNoteLength))
+        {
+            throw AppException.Validation($"Подписи — по одной на карту, до {MaxNoteLength} символов.");
+        }
+
         // Свои письма тоже можно показать: «отправлял вот эту».
         var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand)
             .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId))
@@ -101,6 +111,7 @@ public sealed class ChatService(
             Text = string.IsNullOrEmpty(text) ? null : text,
             MediaId = media?.Id,
             CardIds = cards,
+            CardNotes = notes,
             CreatedAt = time.GetUtcNow(),
         };
         db.ChatMessages.Add(message);
@@ -256,5 +267,6 @@ public sealed class ChatService(
     }
 
     private static ChatMessageDto Dto(ChatMessage m, int? durationMs) => new(
-        m.Id, m.GameId, m.Round, m.Channel, m.AuthorId, m.Kind, m.Text, m.MediaId, durationMs, m.CardIds, m.CreatedAt);
+        m.Id, m.GameId, m.Round, m.Channel, m.AuthorId, m.Kind, m.Text, m.MediaId, durationMs, m.CardIds, m.CreatedAt,
+        m.CardNotes);
 }

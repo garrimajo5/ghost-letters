@@ -22,6 +22,9 @@ public sealed record GameSettings
 
     public DiscussionMode Discussion { get; init; } = DiscussionMode.Radio;
 
+    /// <summary>Кто будет Призраком (роль открытая, на баланс не влияет); null — по жребию.</summary>
+    public Guid? GhostPlayerId { get; init; }
+
     [JsonIgnore]
     public IReadOnlyList<Category> Categories => UseSecretRow
         ? [Category.Motive, Category.Place, Category.Method, Category.Secret]

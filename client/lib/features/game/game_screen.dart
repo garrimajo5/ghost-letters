@@ -292,18 +292,24 @@ class GameScreenState extends ConsumerState<GameScreen> {
     setState(() => truth[row] = column);
   }
 
+  /// Двойное нажатие ночью: карта крупно, выбрать можно и оттуда.
+  void zoomTruthCard(int row, int column, String cardId) {
+    final v = view!;
+    showCardZoom(
+      context,
+      cardId,
+      caption: '${T.category(v.board[row].category)}, карта ${column + 1}',
+      actionLabel: truth[row] == column ? null : 'Выбрать',
+      onAction: () => selectTruth(row, column),
+    );
+  }
+
   void tapCard(int row, int column, String cardId) {
     final v = view!;
     final stage = v.finale?.currentStage;
     if (choosingTruth) {
-      // Нажатие — рассмотреть карту (и выбрать оттуда), удержание — выбрать сразу.
-      showCardZoom(
-        context,
-        cardId,
-        caption: '${T.category(v.board[row].category)}, карта ${column + 1}',
-        actionLabel: truth[row] == column ? null : 'Выбрать истинной',
-        onAction: () => selectTruth(row, column),
-      );
+      // Нажатие или удержание — выбрать (можно перевыбирать в любом порядке), двойное нажатие — рассмотреть.
+      selectTruth(row, column);
     } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row) {
       // В ряду голосования выбираются только кандидаты; остальные карты не реагируют.
       if (stage.candidateColumns.contains(column)) setState(() => voteColumn = column);
@@ -760,6 +766,7 @@ class _Board extends StatelessWidget {
                   child: GestureDetector(
                     key: Key('board-$r-$c'),
                     onTap: () => screen.tapCard(r, c, v.board[r].cards[c]),
+                    onDoubleTap: screen.choosingTruth ? () => screen.zoomTruthCard(r, c, v.board[r].cards[c]) : null,
                     onLongPress: v.me == null
                         ? null
                         : screen.choosingTruth

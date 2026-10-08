@@ -170,7 +170,7 @@ class ActionPanel extends StatelessWidget {
         }
         return [
           Text(
-            'Удерживайте карту, чтобы выбрать её, — по одной в каждом ряду. Нажмите, чтобы рассмотреть. '
+            'Нажмите или удержите карту, чтобы выбрать её, — по одной в каждом ряду, в любом порядке; выбор можно менять. Двойное нажатие — рассмотреть. '
             'Выбрано ${screen.truth.length} из ${v.board.length}.',
             style: const TextStyle(color: AppColors.redSoft),
           ),
@@ -227,7 +227,7 @@ class ActionPanel extends StatelessWidget {
         return _hunt(context);
       case 'BlackmailerClaim':
         if (!v.can('NameTruth')) return [const Text('Шантажист называет улики…', style: TextStyle(color: AppColors.muted))];
-        return [Text('Удерживайте карту, чтобы выбрать, — по одной в ряду; нажмите, чтобы рассмотреть. Выбрано ${screen.truth.length} из ${v.board.length}.')];
+        return [Text('Нажмите или удержите карту, чтобы выбрать, — по одной в ряду; двойное нажатие — рассмотреть. Выбрано ${screen.truth.length} из ${v.board.length}.')];
       case 'AwardNomination':
       case 'AwardVoting':
       case 'Finished':

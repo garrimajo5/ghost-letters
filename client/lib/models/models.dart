@@ -104,6 +104,7 @@ class LobbySettings {
     this.turnHours = 24,
     this.timers = const {},
     this.cardSets = const ['original'],
+    this.ghostUserId,
   });
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
@@ -119,6 +120,7 @@ class LobbySettings {
             ? Map<String, dynamic>.from(j['timers'] as Map).map((k, v) => MapEntry(k, (v as num).toInt()))
             : const {},
         cardSets: _strings(j['cardSets']).isEmpty ? const ['original'] : _strings(j['cardSets']),
+        ghostUserId: j['ghostUserId'] as String?,
       );
 
   final bool useSecretRow;
@@ -131,6 +133,9 @@ class LobbySettings {
   final int turnHours;
   final Map<String, int> timers;
   final List<String> cardSets;
+
+  /// Призрак, назначенный хостом; null — по жребию.
+  final String? ghostUserId;
 
   int timer(String key, int fallback) => timers[key] ?? fallback;
 
@@ -145,6 +150,8 @@ class LobbySettings {
     int? turnHours,
     Map<String, int>? timers,
     List<String>? cardSets,
+    String? ghostUserId,
+    bool clearGhost = false,
   }) =>
       LobbySettings(
         useSecretRow: useSecretRow ?? this.useSecretRow,
@@ -157,6 +164,7 @@ class LobbySettings {
         turnHours: turnHours ?? this.turnHours,
         timers: timers ?? this.timers,
         cardSets: cardSets ?? this.cardSets,
+        ghostUserId: clearGhost ? null : ghostUserId ?? this.ghostUserId,
       );
 
   Json toJson() => {
@@ -170,6 +178,7 @@ class LobbySettings {
         'turnHours': turnHours,
         if (timers.isNotEmpty) 'timers': timers,
         'cardSets': cardSets,
+        'ghostUserId': ghostUserId,
       };
 }
 
@@ -644,6 +653,7 @@ class ChatMessage {
     required this.round,
     this.mediaId,
     this.durationMs,
+    this.cardNotes = const [],
   });
 
   factory ChatMessage.fromJson(Json j) => ChatMessage(
@@ -657,6 +667,7 @@ class ChatMessage {
         round: (j['round'] as num?)?.toInt() ?? 0,
         mediaId: j['mediaId'] as String?,
         durationMs: (j['durationMs'] as num?)?.toInt(),
+        cardNotes: _strings(j['cardNotes']),
       );
 
   final String id;
@@ -667,6 +678,11 @@ class ChatMessage {
   final List<String> cardIds;
   final DateTime createdAt;
   final int round;
+
+  /// Подписи под картами по порядку cardIds: «кидал эту», «проверял эту»…
+  final List<String> cardNotes;
+
+  String? noteFor(int index) => index < cardNotes.length && cardNotes[index].isNotEmpty ? cardNotes[index] : null;
 
   /// Голосовое: id файла на сервере и длительность.
   final String? mediaId;

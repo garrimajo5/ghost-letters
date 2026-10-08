@@ -119,6 +119,9 @@ public sealed class ChatMessage
     /// <summary>Карты, упомянутые в сообщении.</summary>
     public List<string> CardIds { get; set; } = [];
 
+    /// <summary>Подписи под картами (параллельно CardIds): «кидал эту», «проверял эту»…</summary>
+    public List<string> CardNotes { get; set; } = [];
+
     public DateTimeOffset CreatedAt { get; set; }
 }
 

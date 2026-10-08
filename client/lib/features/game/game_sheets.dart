@@ -631,9 +631,29 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           if (m.cardIds.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
-                              child: Wrap(spacing: 4, runSpacing: 4, children: [
-                                for (final c in m.cardIds)
-                                  GestureDetector(onTap: () => showCardZoom(context, c), child: CardImage(cardId: c, size: 44, radius: 8)),
+                              child: Wrap(spacing: 6, runSpacing: 6, children: [
+                                for (var i = 0; i < m.cardIds.length; i++)
+                                  GestureDetector(
+                                    key: Key('chat-card-${m.id}-$i'),
+                                    onTap: () => showCardZoom(context, m.cardIds[i], caption: m.noteFor(i)),
+                                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                      CardImage(cardId: m.cardIds[i], size: 44, radius: 8),
+                                      if (m.noteFor(i) case final note?)
+                                        SizedBox(
+                                          width: 56,
+                                          child: Text(
+                                            note,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 2,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              height: 1.15,
+                                              color: note == 'кидал эту' ? AppColors.amber : AppColors.muted,
+                                            ),
+                                          ),
+                                        ),
+                                    ]),
+                                  ),
                               ]),
                             ),
                         ]),

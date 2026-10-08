@@ -95,7 +95,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         try
         {
-            await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, line.Text, null, line.Cards), ct);
+            await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, line.Text, null, line.Cards, line.Notes), ct);
             return true;
         }
         catch (AppException e)

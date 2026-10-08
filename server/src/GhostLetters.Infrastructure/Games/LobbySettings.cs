@@ -81,6 +81,9 @@ public sealed record LobbySettings
 
     public IReadOnlyList<string> CardSets { get; init; } = ["original"];
 
+    /// <summary>Назначенный хостом Призрак (id игрока лобби); null — по жребию. Если игрок ушёл — тоже по жребию.</summary>
+    public Guid? GhostUserId { get; init; }
+
     public GameSettings ToGameSettings() => new()
     {
         UseSecretRow = UseSecretRow,
@@ -89,6 +92,7 @@ public sealed record LobbySettings
         HandSize = HandSize,
         Roles = Roles ?? RoleOptions.Default,
         Discussion = Discussion,
+        GhostPlayerId = GhostUserId,
     };
 
     /// <summary>Проверка без числа игроков: оно известно только при старте.</summary>

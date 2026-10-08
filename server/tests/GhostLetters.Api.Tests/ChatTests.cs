@@ -39,6 +39,12 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
         _factory.Time.Advance(TimeSpan.FromSeconds(1));
         var said = await speaker.PostAsync(Chat(game), new { text = "Думаю, это нож", cardIds = new[] { boardCard } });
         said.GetProperty("cardIds")[0].GetString().Should().Be(boardCard);
+
+        _factory.Time.Advance(TimeSpan.FromSeconds(1));
+        var noted = await speaker.PostAsync(Chat(game), new { text = "Проверял эту", cardIds = new[] { boardCard }, cardNotes = new[] { "проверял эту" } });
+        noted.GetProperty("cardNotes")[0].GetString().Should().Be("проверял эту");
+        (await speaker.PostAsync(Chat(game), new { text = "x", cardIds = new[] { boardCard }, cardNotes = new[] { "a", "b" } }, HttpStatusCode.BadRequest))
+            .Code().Should().Be("VALIDATION");
         said.GetProperty("round").GetInt32().Should().Be(1);
         (await speaker.PostAsync(Chat(game), new { text = "x", cardIds = new[] { "orig_9999" } }, HttpStatusCode.BadRequest))
             .Code().Should().Be("VALIDATION");
