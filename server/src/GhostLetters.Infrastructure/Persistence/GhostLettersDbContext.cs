@@ -246,6 +246,7 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             e.ToTable("card_marks");
             e.HasKey(x => new { x.GameId, x.OwnerId, x.CardId });
             e.Property(x => x.CardId).HasMaxLength(128);
+            e.Property(x => x.Sources).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             GameFk(e, x => x.GameId);
         });
 

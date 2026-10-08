@@ -62,4 +62,32 @@ public sealed class NotesTests(PostgresFixture postgres) : IAsyncLifetime
         (await me.PutAsync(url, new[] { new { cardId = "orig_9999", crosses = 0, checks = 0, believed = false } },
             HttpStatusCode.BadRequest)).Code().Should().Be("VALIDATION");
     }
+
+    [Fact]
+    public async Task Marks_KeepSources_WhoCheckedAndWhoseLetter()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 4);
+        var me = game.Players[0];
+        var other = game.Players[1];
+        var url = $"/api/v1/games/{game.GameId}/marks";
+        var board = (await me.ViewAsync(game.GameId)).GetProperty("board");
+        var a = board[0].GetProperty("cards")[0].GetString()!;
+
+        var saved = await me.PutAsync(url, new[]
+        {
+            new
+            {
+                cardId = a, crosses = 1, checks = 0, believed = false,
+                sources = new { crossBy = new[] { other.Id }, checkBy = Array.Empty<Guid>(), claimedBy = other.Id },
+            },
+        });
+        var sources = saved[0].GetProperty("sources");
+        sources.GetProperty("crossBy")[0].GetGuid().Should().Be(other.Id);
+        sources.GetProperty("claimedBy").GetGuid().Should().Be(other.Id);
+
+        (await me.PutAsync(url, new[]
+        {
+            new { cardId = a, crosses = 0, checks = 0, believed = false, sources = new { crossBy = new[] { Guid.NewGuid() } } },
+        }, HttpStatusCode.BadRequest)).Code().Should().Be("VALIDATION");
+    }
 }

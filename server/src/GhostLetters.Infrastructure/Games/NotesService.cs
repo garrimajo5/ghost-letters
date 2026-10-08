@@ -10,14 +10,24 @@ public sealed record NoteDto(Guid TargetUserId, int Suspicion, string Body, Json
 
 public sealed record SaveNoteRequest(int Suspicion, string? Body, JsonElement? Entries);
 
-public sealed record CardMarkDto(string CardId, int Crosses, int Checks, bool Believed);
+/// <summary>
+/// Источники пометки: по словам кого стоят ✕ и ✓, кто сказал, что это его письмо (для подсказок),
+/// и какую карту я называю своим письмом (для моих писем — Убийца и его команда могут врать).
+/// </summary>
+public sealed record MarkSources(
+    IReadOnlyList<Guid>? CrossBy = null,
+    IReadOnlyList<Guid>? CheckBy = null,
+    Guid? ClaimedBy = null,
+    string? Claim = null);
+
+public sealed record CardMarkDto(string CardId, int Crosses, int Checks, bool Believed, MarkSources? Sources = null);
 
 /// <summary>Личные заметки об игроках и пометки на картах. Видит только автор.</summary>
 public sealed class NotesService(GhostLettersDbContext db, GameService games, TimeProvider time)
 {
     public const int MaxBody = 2000;
     public const int MaxEntriesBytes = 20_000;
-    public const int MaxMarks = 60;
+    public const int MaxMarks = 120;
     public const int MaxCounter = 20;
 
     public async Task<IReadOnlyList<NoteDto>> GetNotesAsync(Guid gameId, Guid userId, CancellationToken ct)
@@ -77,14 +87,17 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
     public async Task<IReadOnlyList<CardMarkDto>> GetMarksAsync(Guid gameId, Guid userId, CancellationToken ct)
     {
         await RequirePlayerAsync(gameId, userId, ct);
-        return await db.CardMarks.AsNoTracking()
+        var rows = await db.CardMarks.AsNoTracking()
             .Where(m => m.GameId == gameId && m.OwnerId == userId)
             .OrderBy(m => m.CardId)
-            .Select(m => new CardMarkDto(m.CardId, m.Crosses, m.Checks, m.Believed))
             .ToListAsync(ct);
+        return rows.Select(m => new CardMarkDto(m.CardId, m.Crosses, m.Checks, m.Believed, ReadSources(m.Sources))).ToList();
     }
 
-    /// <summary>Пометки целиком: чего нет в списке — удаляется. Пометить можно только карты поля.</summary>
+    /// <summary>
+    /// Пометки целиком: чего нет в списке — удаляется. Пометить можно карты поля, подсказки и свои письма;
+    /// источники — только игроки партии, «что говорю» — карта поля, подсказка или своё письмо.
+    /// </summary>
     public async Task<IReadOnlyList<CardMarkDto>> SaveMarksAsync(Guid gameId, Guid userId, IReadOnlyList<CardMarkDto> marks,
         CancellationToken ct)
     {
@@ -95,10 +108,24 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
         }
 
         var game = await db.Games.AsNoTracking().FirstAsync(g => g.Id == gameId, ct);
-        var board = GameStore.Read(game).Board.SelectMany(r => r.Cards).ToHashSet();
-        if (marks.Any(m => !board.Contains(m.CardId) || m.Crosses is < 0 or > MaxCounter || m.Checks is < 0 or > MaxCounter))
+        var state = GameStore.Read(game);
+        var known = state.Board.SelectMany(r => r.Cards)
+            .Concat(state.Hints.SelectMany(h => h.Cards))
+            .Concat(state.Letters.Where(l => l.From == userId).Select(l => l.CardId))
+            .ToHashSet();
+        var players = state.Players.Select(p => p.Id).ToHashSet();
+        if (marks.Any(m => !known.Contains(m.CardId) || m.Crosses is < 0 or > MaxCounter || m.Checks is < 0 or > MaxCounter))
         {
-            throw AppException.Validation($"Пометки — только на картах поля, счётчики от 0 до {MaxCounter}.");
+            throw AppException.Validation($"Пометки — на картах поля, подсказках и своих письмах, счётчики от 0 до {MaxCounter}.");
+        }
+
+        foreach (var src in marks.Select(m => m.Sources).OfType<MarkSources>())
+        {
+            var ids = (src.CrossBy ?? []).Concat(src.CheckBy ?? []).Concat(src.ClaimedBy is { } c ? new[] { c } : Array.Empty<Guid>());
+            if (ids.Any(id => !players.Contains(id)) || (src.Claim is { } claim && !known.Contains(claim)))
+            {
+                throw AppException.Validation("Источник пометки — игрок этой партии, карта — с поля, из подсказок или ваших писем.");
+            }
         }
 
         var existing = await db.CardMarks.Where(m => m.GameId == gameId && m.OwnerId == userId).ToListAsync(ct);
@@ -115,10 +142,29 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
             row.Crosses = mark.Crosses;
             row.Checks = mark.Checks;
             row.Believed = mark.Believed;
+            row.Sources = JsonSerializer.Serialize(Normalize(mark.Sources), GameJson.Options);
         }
 
         await db.SaveChangesAsync(ct);
         return await GetMarksAsync(gameId, userId, ct);
+    }
+
+    private static MarkSources Normalize(MarkSources? s) => new(
+        s?.CrossBy?.Distinct().ToList() ?? [],
+        s?.CheckBy?.Distinct().ToList() ?? [],
+        s?.ClaimedBy,
+        string.IsNullOrWhiteSpace(s?.Claim) ? null : s.Claim);
+
+    private static MarkSources? ReadSources(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<MarkSources>(json, GameJson.Options);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task RequirePlayerAsync(Guid gameId, Guid userId, CancellationToken ct)
