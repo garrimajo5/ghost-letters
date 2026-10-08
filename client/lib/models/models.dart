@@ -850,3 +850,140 @@ class LeaderRow {
   final int wins;
   final bool isBot;
 }
+
+/// Характер бота: шесть спектров 0…1 (внимание к смыслу/форме/цвету — доли).
+class BotSpectra {
+  const BotSpectra({
+    this.meaning = 0.5,
+    this.shape = 0.25,
+    this.color = 0.25,
+    this.negative = 0.5,
+    this.memory = 0.3,
+    this.risk = 0.5,
+    this.compromise = 0.5,
+    this.variability = 0.2,
+  });
+
+  factory BotSpectra.fromJson(Json j) {
+    double v(String k, double d) => (j[k] as num?)?.toDouble() ?? d;
+    return BotSpectra(
+      meaning: v('meaning', 0.5),
+      shape: v('shape', 0.25),
+      color: v('color', 0.25),
+      negative: v('negative', 0.5),
+      memory: v('memory', 0.3),
+      risk: v('risk', 0.5),
+      compromise: v('compromise', 0.5),
+      variability: v('variability', 0.2),
+    );
+  }
+
+  final double meaning;
+  final double shape;
+  final double color;
+  final double negative;
+  final double memory;
+  final double risk;
+  final double compromise;
+  final double variability;
+
+  BotSpectra copyWith({
+    double? meaning,
+    double? shape,
+    double? color,
+    double? negative,
+    double? memory,
+    double? risk,
+    double? compromise,
+    double? variability,
+  }) =>
+      BotSpectra(
+        meaning: meaning ?? this.meaning,
+        shape: shape ?? this.shape,
+        color: color ?? this.color,
+        negative: negative ?? this.negative,
+        memory: memory ?? this.memory,
+        risk: risk ?? this.risk,
+        compromise: compromise ?? this.compromise,
+        variability: variability ?? this.variability,
+      );
+
+  /// Доли внимания в процентах (сумма 100).
+  (int, int, int) get attentionPercent {
+    final sum = meaning + shape + color;
+    if (sum <= 0) return (34, 33, 33);
+    final m = (meaning / sum * 100).round();
+    final s = (shape / sum * 100).round();
+    return (m, s, 100 - m - s);
+  }
+
+  Json toJson() => {
+        'meaning': meaning,
+        'shape': shape,
+        'color': color,
+        'negative': negative,
+        'memory': memory,
+        'risk': risk,
+        'compromise': compromise,
+        'variability': variability,
+      };
+}
+
+/// Бот в кабинете админа.
+class BotInfo {
+  const BotInfo({
+    required this.id,
+    required this.nickname,
+    required this.avatarColor,
+    this.avatarId,
+    required this.about,
+    required this.spectra,
+    required this.enabled,
+    this.games = 0,
+    this.wins = 0,
+    this.rating = 1000,
+  });
+
+  factory BotInfo.fromJson(Json j) => BotInfo(
+        id: j['id'] as String,
+        nickname: j['nickname'] as String,
+        avatarColor: j['avatarColor'] as String,
+        avatarId: j['avatarId'] as String?,
+        about: j['about'] as String? ?? '',
+        spectra: BotSpectra.fromJson(Map<String, dynamic>.from(j['spectra'] as Map)),
+        enabled: j['enabled'] as bool? ?? true,
+        games: (j['games'] as num?)?.toInt() ?? 0,
+        wins: (j['wins'] as num?)?.toInt() ?? 0,
+        rating: (j['rating'] as num?)?.toInt() ?? 1000,
+      );
+
+  final String id;
+  final String nickname;
+  final String avatarColor;
+  final String? avatarId;
+  final String about;
+  final BotSpectra spectra;
+  final bool enabled;
+  final int games;
+  final int wins;
+  final int rating;
+}
+
+/// Бот для выбора в лобби.
+class BotCard {
+  const BotCard({required this.id, required this.nickname, required this.avatarColor, this.avatarId, this.about = ''});
+
+  factory BotCard.fromJson(Json j) => BotCard(
+        id: j['id'] as String,
+        nickname: j['nickname'] as String,
+        avatarColor: j['avatarColor'] as String,
+        avatarId: j['avatarId'] as String?,
+        about: j['about'] as String? ?? '',
+      );
+
+  final String id;
+  final String nickname;
+  final String avatarColor;
+  final String? avatarId;
+  final String about;
+}

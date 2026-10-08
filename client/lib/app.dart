@@ -6,6 +6,7 @@ import 'core/session.dart';
 import 'core/sound_scope.dart';
 import 'core/theme.dart';
 import 'features/auth/login_screen.dart';
+import 'features/bots/bots_admin_screen.dart';
 import 'features/game/game_screen.dart';
 import 'features/history/history_screen.dart';
 import 'features/home/home_screen.dart';
@@ -36,6 +37,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
       GoRoute(path: '/rules', builder: (_, __) => const RulesScreen()),
       GoRoute(path: '/leaderboard', builder: (_, __) => const LeaderboardScreen()),
+      GoRoute(path: '/admin/bots', builder: (_, __) => const BotsAdminScreen()),
       GoRoute(path: '/profile/:id', builder: (_, s) => ProfileScreen(userId: s.pathParameters['id']!)),
     ],
   );

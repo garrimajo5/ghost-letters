@@ -70,6 +70,50 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     if (lobby != null && mounted) setState(() => _lobby = lobby);
   }
 
+  /// Выбор бота: из кабинета (с характером) или случайный. Если кабинет пуст — сразу случайный.
+  Future<void> _pickBot(Lobby lobby, List<LobbyMember> players) async {
+    final api = ref.read(apiProvider);
+    final all = await runAction(context, api.bots);
+    if (!mounted) return;
+    final inLobby = players.map((p) => p.userId).toSet();
+    final free = [for (final b in all ?? const <BotCard>[]) if (!inLobby.contains(b.id)) b];
+    if (free.isEmpty) {
+      await _apply((api) => api.addBot(lobby.id));
+      return;
+    }
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 8), children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Text('КОГО ПОЗВАТЬ', style: sectionLabel()),
+            ),
+            ListTile(
+              key: const Key('bot-random'),
+              leading: const CircleAvatar(child: Icon(Icons.casino_outlined)),
+              title: const Text('Случайный бот'),
+              onTap: () => Navigator.pop(context, ''),
+            ),
+            for (final b in free)
+              ListTile(
+                key: Key('bot-${b.id}'),
+                leading: Avatar(nickname: b.nickname.replaceFirst('Бот ', ''), color: b.avatarColor, photoId: b.avatarId),
+                title: Text(b.nickname),
+                subtitle: b.about.isEmpty ? null : Text(b.about, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                onTap: () => Navigator.pop(context, b.id),
+              ),
+          ]),
+        ),
+      ),
+    );
+    if (picked == null || !mounted) return;
+    await _apply((api) => api.addBot(lobby.id, botId: picked.isEmpty ? null : picked));
+  }
+
   Future<void> _openSettings(Lobby lobby, int players) async {
     final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players);
     if (s != null) await _apply((api) => api.saveSettings(lobby.id, s));
@@ -235,7 +279,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
                 key: const Key('add-bot'),
-                onPressed: () => _apply((api) => api.addBot(lobby.id)),
+                onPressed: () => _pickBot(lobby, players),
                 icon: const Icon(Icons.smart_toy_outlined),
                 label: const Text('Добавить бота'),
               ),
