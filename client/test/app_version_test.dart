@@ -33,12 +33,14 @@ void main() {
   });
 
   testWidgets('на главной видна версия приложения', (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final app = await TestApp.create(user: host);
     addTearDown(app.container.dispose);
     await tester.pumpWidget(app.widget);
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.byKey(const Key('app-version')), 200);
     expect(find.textContaining('Версия 0.1.0'), findsOneWidget);
   });
 }
