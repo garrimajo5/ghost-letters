@@ -34,9 +34,13 @@ docker logout ghcr.io >/dev/null
 docker image prune -f >/dev/null
 
 # Ежедневная копия базы (хранится 14 дней) — ставится один раз.
-if ! crontab -l 2>/dev/null | grep -q ghost-letters-backup; then
+if ! (crontab -l 2>/dev/null || true) | grep -q ghost-letters-backup; then
   mkdir -p "$APP_DIR/backups"
-  ( crontab -l 2>/dev/null; echo "30 3 * * * cd $APP_DIR && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U ghost ghost_letters | gzip > backups/ghost-\$(date +\%F).sql.gz && find backups -name '*.sql.gz' -mtime +14 -delete # ghost-letters-backup" ) | crontab -
+  # Пустой crontab — не ошибка (при set -e это валило скрипт на первом запуске).
+  { crontab -l 2>/dev/null || true
+    echo "30 3 * * * cd $APP_DIR && docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U ghost ghost_letters | gzip > backups/ghost-\$(date +\%F).sql.gz && find backups -name '*.sql.gz' -mtime +14 -delete # ghost-letters-backup"
+  } | crontab - || echo "Не удалось поставить ежедневную копию базы (нет cron?) — сервер при этом работает"
+
 fi
 
 docker compose -f docker-compose.prod.yml ps
