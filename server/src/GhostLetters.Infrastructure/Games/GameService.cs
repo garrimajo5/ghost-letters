@@ -141,6 +141,13 @@ public sealed class GameService(
             return Task.FromResult((true, events.Count == 0 ? null : (Applied?)new Applied(events, null, null, "RoundsChanged")));
         });
 
+    public Task ChangeDiscussionAsync(Guid gameId, DiscussionMode mode, CancellationToken ct) =>
+        WithGameAsync<bool>(gameId, ct, (game, state) =>
+        {
+            var events = GameEngine.ChangeDiscussion(state, mode);
+            return Task.FromResult((true, events.Count == 0 ? null : (Applied?)new Applied(events, null, null, "DiscussionChanged")));
+        });
+
     /// <summary>Сделать ходы по таймауту во всех партиях, где время вышло. Возвращает, сколько партий сдвинулось.</summary>
     public async Task<int> TimeoutDueAsync(CancellationToken ct)
     {

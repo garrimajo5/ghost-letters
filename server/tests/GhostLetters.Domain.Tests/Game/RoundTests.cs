@@ -290,4 +290,33 @@ public class RoundTests
         var inFinale = () => GameEngine.ChangeRounds(state, 3);
         inFinale.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.NotAllowed);
     }
+
+    [Fact]
+    public void ChangeDiscussion_BetweenDiscussions_TakesEffectNextTime()
+    {
+        var state = TestGame.Create(players: 5, settings: new GameSettings { Discussion = DiscussionMode.Radio });
+        state.ToRound1();
+
+        GameEngine.ChangeDiscussion(state, DiscussionMode.FreeChat).Should().ContainSingle(e => e.Type == "DiscussionChanged");
+        state.Settings.Discussion.Should().Be(DiscussionMode.FreeChat);
+        GameEngine.ChangeDiscussion(state, DiscussionMode.FreeChat).Should().BeEmpty("тот же режим — ничего не меняется");
+
+        state.SendAll();
+        state.Run(state.Ghost, new RevealHints([state.Mailbox[0].CardId]));
+        state.KeepAll();
+        state.Phase.Should().Be(Phase.Discussion);
+
+        // Свободное обсуждение: рации нет, раунд идёт дальше, когда все готовы.
+        var speak = () => state.Run(state.Players.First(p => p.Role != Role.Ghost), new EndTurn());
+        speak.Should().Throw<GameRuleException>();
+        var during = () => GameEngine.ChangeDiscussion(state, DiscussionMode.Radio);
+        during.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.NotAllowed);
+
+        foreach (var p in state.Players.Where(p => p.Role != Role.Ghost).ToList())
+        {
+            state.Run(p, new ReadyNextRound());
+        }
+
+        state.Round.Should().Be(2);
+    }
 }
