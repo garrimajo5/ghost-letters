@@ -335,6 +335,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Ряд, где сейчас выбирают карту: истина ночью, назвать улики, голосование по ряду.
+  /// Стол крупно: поле и подсказки во весь экран с приближением пальцами.
+  bool zoomed = false;
+
+  void setZoomed(bool value) => setState(() => zoomed = value);
+
   bool get choosingTruth => view != null && (view!.can('ChooseTruth') || view!.can('NameTruth'));
 
   void selectTruth(int row, int column) {
@@ -409,6 +414,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     }
 
     final v = snap.view;
+    if (zoomed) return _ZoomedTable(screen: this);
     final night = v.phase == 'Night' && v.can('ChooseTruth');
     final finale = isFinale(v);
     final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
@@ -611,6 +617,14 @@ class _Header extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Flexible(child: Countdown(deadline: deadline)),
+        if (v.board.isNotEmpty)
+          IconButton(
+            key: const Key('zoom-board'),
+            tooltip: 'Стол крупно',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.zoom_in, color: AppColors.muted),
+            onPressed: () => screen.setZoomed(true),
+          ),
         PopupMenuButton<String>(
           tooltip: 'Меню партии',
           icon: const Icon(Icons.more_horiz, color: AppColors.muted),
@@ -946,16 +960,16 @@ class BoardCard extends StatelessWidget {
 
 /// Подсказки Призрака по раундам и жетон «исчезло ×N».
 class _Hints extends StatelessWidget {
-  const _Hints({required this.screen});
+  const _Hints({required this.screen, this.size = 40});
 
   final GameScreenState screen;
+  final double size;
 
   GameView get view => screen.view!;
 
   @override
   Widget build(BuildContext context) {
     if (view.hints.isEmpty && view.vanishedCount == 0) return const SizedBox.shrink();
-    const size = 40.0;
     return Panel(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: IntrinsicHeight(
@@ -1091,6 +1105,109 @@ class _WideTable extends StatelessWidget {
           child: ChatSheet(screen: screen, embedded: true),
         ),
     ]);
+  }
+}
+
+/// Стол крупно: поле и подсказки, которые можно приближать и двигать пальцами или кнопками «+»/«−».
+/// Нажатия на карты работают как обычно: пометки, выбор истины, голос.
+class _ZoomedTable extends StatefulWidget {
+  const _ZoomedTable({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  State<_ZoomedTable> createState() => _ZoomedTableState();
+}
+
+class _ZoomedTableState extends State<_ZoomedTable> {
+  final _controller = TransformationController();
+  double? _fit;
+  Size _viewport = Size.zero;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Кнопки «+» и «−» (для мыши и тем, кому неудобно щипать): масштаб вокруг центра экрана.
+  void _zoomBy(double factor) {
+    final fit = _fit ?? 1;
+    final scale = _controller.value.getMaxScaleOnAxis();
+    final next = (scale * factor).clamp(fit, 5.0);
+    final k = next / scale;
+    final c = _viewport.center(Offset.zero);
+    _controller.value = Matrix4.translationValues(c.dx * (1 - k), c.dy * (1 - k), 0)
+      ..multiply(Matrix4.diagonal3Values(k, k, 1))
+      ..multiply(_controller.value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screen = widget.screen;
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+            child: Row(children: [
+              Expanded(
+                child: Text('СТОЛ КРУПНО', maxLines: 1, overflow: TextOverflow.ellipsis, style: heading(18, spacing: 1)),
+              ),
+              IconButton(key: const Key('zoom-out'), tooltip: 'Отдалить', icon: const Icon(Icons.zoom_out), onPressed: () => _zoomBy(1 / 1.5)),
+              IconButton(key: const Key('zoom-in'), tooltip: 'Приблизить', icon: const Icon(Icons.zoom_in), onPressed: () => _zoomBy(1.5)),
+              IconButton(
+                key: const Key('zoom-close'),
+                tooltip: 'Закрыть',
+                icon: const Icon(Icons.close),
+                onPressed: () => screen.setZoomed(false),
+              ),
+            ]),
+          ),
+          Expanded(
+            child: LayoutBuilder(builder: (context, box) {
+              _viewport = box.biggest;
+              // Содержимое раскладываем не уже 760 dp, а на узком экране сначала показываем целиком.
+              final width = box.maxWidth < 760 ? 760.0 : box.maxWidth;
+              final fit = box.maxWidth / width;
+              if (_fit != fit) {
+                final first = _fit == null;
+                _fit = fit;
+                final initial = Matrix4.diagonal3Values(fit, fit, 1);
+                if (first) {
+                  _controller.value = initial;
+                } else {
+                  // Повернули экран: подгоняем после кадра (во время сборки менять нельзя).
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _controller.value = initial;
+                  });
+                }
+              }
+              return InteractiveViewer(
+                key: const Key('board-zoom'),
+                transformationController: _controller,
+                constrained: false,
+                minScale: fit,
+                maxScale: 5,
+                boundaryMargin: const EdgeInsets.all(80),
+                child: SizedBox(
+                  width: width,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      _Board(screen: screen, maxCard: 200),
+                      const SizedBox(height: 12),
+                      _Hints(screen: screen, size: 96),
+                    ]),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ]),
+      ),
+    );
   }
 }
 
