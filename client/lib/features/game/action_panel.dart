@@ -638,16 +638,6 @@ class ActionPanel extends StatelessWidget {
               const SizedBox(height: 6),
               Text(won ? 'Вы победили' : 'Вы проиграли',
                   style: heading(16, color: won ? AppColors.believed : AppColors.redSoft)),
-              // Команда Убийцы победила, а Сообщника арестовали: по правилам он не побеждает — объясняем почему.
-              if (!won && me.role == 'Accomplice' && result.side == 'Killer' && (finale?.arrested.contains(me.id) ?? false))
-                const Padding(
-                  key: Key('arrested-accomplice'),
-                  padding: EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Ваша команда победила, но вас арестовали — по правилам арестованный Сообщник не побеждает.',
-                    style: TextStyle(fontSize: 13, color: AppColors.muted),
-                  ),
-                ),
             ],
           ]),
         ),

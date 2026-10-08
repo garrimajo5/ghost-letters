@@ -163,25 +163,4 @@ void main() {
     expect(find.byKey(const Key('hunt-witness')), findsOneWidget);
     expect(find.byKey(const Key('hunt-expert')), findsOneWidget);
   });
-
-  testWidgets('итог: арестованному Сообщнику объясняем, почему он проиграл с победившей командой', (tester) async {
-    await _open(
-      tester,
-      _snap('AwardNomination', const ['Like'], 'Accomplice', finale: {
-        'arrested': ['u2'],
-        'result': {
-          'solved': false,
-          'correctRows': 1,
-          'killerCaught': false,
-          'side': 'Killer',
-          'imitatorWon': false,
-          'blackmailerWon': false,
-          'winners': ['u3'],
-        },
-      }),
-    );
-
-    expect(find.text('Вы проиграли'), findsOneWidget);
-    expect(find.byKey(const Key('arrested-accomplice')), findsOneWidget);
-  });
 }

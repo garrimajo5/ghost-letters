@@ -469,7 +469,8 @@ public static partial class GameEngine
         bool SideWins(PlayerState p) => side switch
         {
             WinningSide.Detectives => p.Role.IsDetectiveTeam(),
-            WinningSide.Killer => p.Role == Role.Killer || (p.Role == Role.Accomplice && !state.Arrested.Contains(p.Id)),
+            // Сообщники побеждают вместе с командой Убийцы, даже если их арестовали (правило стола).
+            WinningSide.Killer => p.Role is Role.Killer or Role.Accomplice,
             _ => false,
         };
 
