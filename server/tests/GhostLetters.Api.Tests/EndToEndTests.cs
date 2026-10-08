@@ -15,7 +15,7 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
     public async Task DisposeAsync() => await _factory.DisposeAsync();
 
     [Fact]
-    public async Task CooperativeRankedGame_SolvedCase_RaisesRating()
+    public async Task CooperativeGame_DoesNotChangeRating()
     {
         var game = await GameHarness.StartAsync(_factory, players: 3, new LobbySettings { Rounds = 1 });
         var driver = new GameDriver(game);
@@ -23,8 +23,7 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
         await driver.RunUntilAsync(p => p == "Finished");
 
         var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.AsNoTracking().Where(h => h.GameId == game.GameId).ToListAsync());
-        history.Should().HaveCount(3, "в кооперативе все — команда детективов");
-        history.Should().OnlyContain(h => h.Delta > 0, "дело раскрыто — победа над «партией»");
+        history.Should().BeEmpty("в кооперативе нет соперника — рейтинг не меняется");
     }
 
     [Fact]

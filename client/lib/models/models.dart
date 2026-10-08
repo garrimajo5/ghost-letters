@@ -815,3 +815,22 @@ class TeamSuggestion {
   final String? target;
   final String? guess;
 }
+
+/// Строка таблицы лидеров.
+class LeaderRow {
+  const LeaderRow({required this.user, required this.rating, required this.games, required this.wins, this.isBot = false});
+
+  factory LeaderRow.fromJson(Json j) => LeaderRow(
+        user: User.fromJson(Map<String, dynamic>.from(j['user'] as Map)),
+        rating: (j['rating'] as num).toInt(),
+        games: (j['games'] as num).toInt(),
+        wins: (j['wins'] as num).toInt(),
+        isBot: j['isBot'] as bool? ?? false,
+      );
+
+  final User user;
+  final int rating;
+  final int games;
+  final int wins;
+  final bool isBot;
+}

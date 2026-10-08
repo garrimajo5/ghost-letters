@@ -108,6 +108,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       context.push('/rules');
                     } else if (v == 'history') {
                       context.push('/history');
+                    } else if (v == 'leaderboard') {
+                      context.push('/leaderboard');
                     } else if (v == 'profile') {
                       context.push('/profile/${user.id}');
                     } else if (v == 'logout') {
@@ -117,6 +119,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                   itemBuilder: (_) => const [
                     PopupMenuItem(value: 'history', child: Text('История партий')),
+                    PopupMenuItem(value: 'leaderboard', child: Text('Рейтинг игроков')),
                     PopupMenuItem(value: 'rules', child: Text('Правила')),
                     PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
                     PopupMenuItem(value: 'logout', child: Text('Выйти')),

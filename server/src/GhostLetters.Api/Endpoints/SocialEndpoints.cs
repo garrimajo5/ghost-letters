@@ -55,8 +55,8 @@ public static class SocialEndpoints
         api.MapGet("/users/{userId:guid}/profile", (Guid userId, ProfileService profiles, CancellationToken ct) =>
             profiles.GetProfileAsync(userId, ct)).WithTags("Profile").RequireAuthorization().WithName("GetProfile");
 
-        api.MapGet("/leaderboard", (int? limit, ProfileService profiles, CancellationToken ct) =>
-            profiles.LeaderboardAsync(limit ?? 50, ct)).WithTags("Profile").RequireAuthorization().WithName("GetLeaderboard");
+        api.MapGet("/leaderboard", (int? limit, bool? bots, ProfileService profiles, CancellationToken ct) =>
+            profiles.LeaderboardAsync(limit ?? 50, ct, bots ?? false)).WithTags("Profile").RequireAuthorization().WithName("GetLeaderboard");
 
         return api;
     }
