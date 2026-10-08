@@ -26,13 +26,13 @@ public sealed class MigrationTests(PostgresFixture postgres)
         await db.Database.ExecuteSqlRawAsync("""
             SET session_replication_role = replica;
             INSERT INTO public.chat_messages (id, game_id, round, channel, author_id, kind, text, media_id, card_ids, created_at)
-            VALUES (gen_random_uuid(), gen_random_uuid(), 1, 'public', NULL, 'text', 'старое сообщение', NULL, '{}', now());
+            VALUES (gen_random_uuid(), gen_random_uuid(), 1, 'public', NULL, 'text', 'старое сообщение', NULL, '{{}}', now());
             SET session_replication_role = origin;
             """);
 
         await migrator.MigrateAsync();
 
-        var empty = await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM public.chat_messages WHERE card_notes = '{}'").SingleAsync();
+        var empty = await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM public.chat_messages WHERE card_notes = '{{}}'").SingleAsync();
         empty.Should().Be(1);
     }
 
