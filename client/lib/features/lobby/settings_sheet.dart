@@ -63,7 +63,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           SwitchListTile(
             key: const Key('ranked'),
             title: const Text('Рейтинговая партия'),
-            subtitle: const Text('Итог меняет рейтинг всех игроков, ботов тоже. Обычная — только статистика.'),
+            subtitle: const Text('Итог меняет рейтинг всех игроков, ботов тоже. Кооператив и обычная партия — только статистика.'),
             value: s.ranked,
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(ranked: v)),
           ),

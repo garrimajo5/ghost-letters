@@ -195,6 +195,10 @@ class Api {
   Future<User> updateMe({String? nickname, String? color}) async =>
       User.fromJson(await patch('/me', {if (nickname != null) 'nickname': nickname, if (color != null) 'avatarColor': color}) as Json);
 
+  /// Таблица лидеров; [bots] — показать и ботов.
+  Future<List<LeaderRow>> leaderboard({bool bots = false}) async =>
+      ((await get('/leaderboard', query: {'limit': 100, 'bots': bots})) as List).map((e) => LeaderRow.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+
   Future<Profile> profile(String userId) async => Profile.fromJson(await get('/users/$userId/profile') as Json);
 
   Future<List<MyGame>> myGames({String? status}) async =>
