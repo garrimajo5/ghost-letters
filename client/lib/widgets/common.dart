@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
@@ -13,10 +14,13 @@ Color colorFromHex(String hex) {
 
 /// Заглушка-аватар: цвет игрока и первая буква ника (портреты персонажей не используем).
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.nickname, required this.color, this.size = 40, this.highlight = false, this.ring, this.photoId});
+  const Avatar({super.key, required this.nickname, required this.color, this.size = 40, this.highlight = false, this.ring, this.photoId, this.photoBytes});
 
   /// Загруженная аватарка игрока; пока грузится или если не вышло — круг с буквой.
   final String? photoId;
+
+  /// Фото, которое ещё не загружено (превью в редакторе) — важнее [photoId].
+  final Uint8List? photoBytes;
 
   final String nickname;
   final String color;
@@ -40,7 +44,14 @@ class Avatar extends StatelessWidget {
       ),
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
-      child: photoId == null
+      child: photoBytes != null
+          ? Image.memory(photoBytes!,
+              key: const Key('avatar-photo-local'),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0)))
+          : photoId == null
           ? Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0))
           : Image.network(
               AppConfig.avatarUrl(photoId!),

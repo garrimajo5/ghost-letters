@@ -256,6 +256,16 @@ class Api {
     return BotInfo.fromJson((id == null ? await post('/admin/bots', body) : await put('/admin/bots/$id', body)) as Json);
   }
 
+  /// Фото бота (только админ): уже обрезанное под круг.
+  Future<BotInfo> uploadBotAvatar(String botId, Uint8List bytes, String fileName) async {
+    final form = FormData.fromMap({'file': MultipartFile.fromBytes(bytes, filename: fileName)});
+    return BotInfo.fromJson(await _call(
+        () => _dio.post<dynamic>('/admin/bots/$botId/avatar', data: form, options: Options(contentType: 'multipart/form-data'))) as Json);
+  }
+
+  Future<BotInfo> removeBotAvatar(String botId) async =>
+      BotInfo.fromJson(await _call(() => _dio.delete<dynamic>('/admin/bots/$botId/avatar')) as Json);
+
   Future<List<BotInfo>> createPresetBots() async =>
       ((await post('/admin/bots/presets')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 

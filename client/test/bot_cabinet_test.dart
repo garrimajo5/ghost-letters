@@ -81,4 +81,58 @@ void main() {
 
     expect(app.api.named('addBot').single.$2, ['l1', 'p1']);
   });
+
+  testWidgets('админ ставит фото боту: обрезка, превью, загрузка при сохранении; можно убрать', (tester) async {
+    final app = await _start(tester, admin: true);
+    app.api.botList = const [
+      BotInfo(id: 'p1', nickname: 'Бот Пуаро', avatarColor: '#5C7C99', about: '', spectra: BotSpectra(), enabled: true),
+    ];
+    app.go('/admin/bots');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Бот Пуаро'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bot-photo-remove')), findsNothing, reason: 'фото ещё нет');
+    await tester.tap(find.byKey(const Key('bot-photo-pick')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('avatar-photo-local')), findsOneWidget, reason: 'превью до сохранения');
+    expect(app.api.named('uploadBotAvatar'), isEmpty, reason: 'загружаем только по «Сохранить»');
+
+    final list = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await tester.tap(find.byKey(const Key('bot-save')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('uploadBotAvatar').single.$2, ['p1', 4, 'avatar.png']);
+    expect(find.byKey(const Key('avatar-photo-photo-p1')), findsOneWidget, reason: 'в списке кабинета — фото');
+
+    await tester.tap(find.text('Бот Пуаро'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bot-photo-remove')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await tester.tap(find.byKey(const Key('bot-save')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('removeBotAvatar').single.$2, ['p1']);
+    expect(find.byKey(const Key('avatar-photo-photo-p1')), findsNothing);
+  });
+
+  testWidgets('новый бот: фото выбрано до создания — загружается после', (tester) async {
+    final app = await _start(tester, admin: true);
+    app.go('/admin/bots');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('bot-new')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('bot-name')), 'Холмс');
+    await tester.tap(find.byKey(const Key('bot-photo-pick')));
+    await tester.pumpAndSettle();
+    final list = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await tester.tap(find.byKey(const Key('bot-save')));
+    await tester.pumpAndSettle();
+
+    final created = app.api.botList.single;
+    expect(app.api.named('uploadBotAvatar').single.$2.first, created.id);
+    expect(created.avatarId, isNotNull);
+  });
 }

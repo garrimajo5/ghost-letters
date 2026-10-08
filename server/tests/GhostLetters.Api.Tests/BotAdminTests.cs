@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Bots;
@@ -100,5 +101,45 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
         mind.Should().NotBeNull();
         mind!.Personality.Risk.Should().BeApproximately(0.8, 0.04, "изменчивость 0.1 сдвигает спектр не больше чем на 0.035");
         none.Should().BeNull("бот без характера играет классически");
+    }
+
+    [Fact]
+    public async Task Admin_SetsAndRemovesBotAvatar_OthersCannot()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        MakeAdmin(admin);
+        var player = await TestPlayer.LoginAsync(_factory, "Игрок");
+        var bot = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Пуаро", spectra = Spectra() });
+        var botId = bot.Id("id");
+        byte[] png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3];
+
+        var withPhoto = await UploadAsync(admin, $"/api/v1/admin/bots/{botId}/avatar", png, HttpStatusCode.OK);
+        var avatarId = withPhoto.GetProperty("avatarId").GetGuid();
+        withPhoto.Str("nickname").Should().Be("Бот Пуаро");
+        (await player.GetAsync("/api/v1/bots")).EnumerateArray().Single(b => b.Id("id") == botId)
+            .GetProperty("avatarId").GetGuid().Should().Be(avatarId, "хост видит фото бота в лобби");
+        (await player.Client.GetAsync($"/api/v1/avatars/{avatarId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Не админ не может, и админ не может так поменять фото живому игроку.
+        (await UploadAsync(player, $"/api/v1/admin/bots/{botId}/avatar", png, HttpStatusCode.Forbidden)).Code().Should().Be("FORBIDDEN");
+        (await UploadAsync(admin, $"/api/v1/admin/bots/{player.Id}/avatar", png, HttpStatusCode.NotFound)).Code().Should().Be("NOT_FOUND");
+        (await UploadAsync(admin, $"/api/v1/admin/bots/{botId}/avatar", "<html>"u8.ToArray(), HttpStatusCode.BadRequest)).Code().Should().Be("VALIDATION");
+
+        var removed = await admin.Client.DeleteAsync($"/api/v1/admin/bots/{botId}/avatar");
+        removed.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await admin.GetAsync("/api/v1/admin/bots")).EnumerateArray().Single(b => b.Id("id") == botId)
+            .GetProperty("avatarId").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    private static async Task<JsonElement> UploadAsync(TestPlayer player, string url, byte[] bytes, HttpStatusCode expected)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        form.Add(file, "file", "avatar.png");
+        var response = await player.Client.PostAsync(url, form);
+        var text = await response.Content.ReadAsStringAsync();
+        response.StatusCode.Should().Be(expected, text);
+        return JsonDocument.Parse(text).RootElement.Clone();
     }
 }

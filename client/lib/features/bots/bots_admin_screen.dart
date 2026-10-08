@@ -1,11 +1,15 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/avatar_picker.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 import '../auth/login_screen.dart' show avatarPalette;
+import '../profile/avatar_crop.dart';
 
 /// Админ ли я — показывать ли пункт «Боты» в меню.
 final isAdminProvider = FutureProvider.autoDispose<bool>((ref) async {
@@ -182,6 +186,27 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
   late bool _enabled = widget.bot?.enabled ?? true;
   bool _busy = false;
 
+  /// Новое фото (уже обрезанное) или «убрать фото» — применяются при сохранении,
+  /// чтобы у нового бота фото тоже можно было выбрать до создания.
+  Uint8List? _newPhoto;
+  bool _removePhoto = false;
+
+  /// Новый бот уже создан, а фото не загрузилось — повторное «Сохранить» не плодит второго.
+  String? _createdId;
+
+  bool get _hasPhoto => _newPhoto != null || (widget.bot?.avatarId != null && !_removePhoto);
+
+  Future<void> _pickPhoto() async {
+    final picked = await ref.read(avatarPickerProvider)();
+    if (picked == null || !mounted) return;
+    final cropped = await ref.read(avatarCropperProvider)(context, picked.bytes);
+    if (cropped == null || !mounted) return;
+    setState(() {
+      _newPhoto = cropped;
+      _removePhoto = false;
+    });
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -195,17 +220,25 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
       return;
     }
     setState(() => _busy = true);
-    final saved = await runAction(
-      context,
-      () => ref.read(apiProvider).saveBot(
-            id: widget.bot?.id,
-            nickname: _name.text.trim(),
-            color: _color,
-            about: _about.text.trim(),
-            spectra: _s,
-            enabled: _enabled,
-          ),
-    );
+    final api = ref.read(apiProvider);
+    final saved = await runAction(context, () async {
+      var bot = await api.saveBot(
+        id: widget.bot?.id ?? _createdId,
+        nickname: _name.text.trim(),
+        color: _color,
+        about: _about.text.trim(),
+        spectra: _s,
+        enabled: _enabled,
+      );
+      _createdId = bot.id;
+      final photo = _newPhoto;
+      if (photo != null) {
+        bot = await api.uploadBotAvatar(bot.id, photo, 'avatar.png');
+      } else if (_removePhoto && bot.avatarId != null) {
+        bot = await api.removeBotAvatar(bot.id);
+      }
+      return bot;
+    });
     if (!mounted) return;
     setState(() => _busy = false);
     if (saved != null) Navigator.of(context).pop(saved);
@@ -245,6 +278,43 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
           decoration: const InputDecoration(labelText: 'Пара слов о характере — видно хосту в лобби'),
         ),
         const SizedBox(height: 8),
+        Row(children: [
+          Avatar(
+            key: const Key('bot-avatar'),
+            nickname: _name.text.isEmpty ? '?' : _name.text,
+            color: _color,
+            photoId: _removePhoto ? null : widget.bot?.avatarId,
+            photoBytes: _newPhoto,
+            size: 72,
+            highlight: true,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Wrap(spacing: 8, runSpacing: 8, children: [
+              OutlinedButton.icon(
+                key: const Key('bot-photo-pick'),
+                icon: const Icon(Icons.photo_library_outlined),
+                label: Text(_hasPhoto ? 'Сменить фото' : 'Фото'),
+                onPressed: _busy ? null : _pickPhoto,
+              ),
+              if (_hasPhoto)
+                TextButton.icon(
+                  key: const Key('bot-photo-remove'),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Убрать'),
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                            _newPhoto = null;
+                            _removePhoto = true;
+                          }),
+                ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        const Text('Цвет — если фото нет', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+        const SizedBox(height: 6),
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final col in avatarPalette)
             GestureDetector(
