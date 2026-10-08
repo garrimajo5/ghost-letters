@@ -2,6 +2,29 @@
 
 Схема: **Caddy** (HTTPS, сертификат Let's Encrypt) → **API** (образ из GitHub Container Registry) → **PostgreSQL**. Всё в Docker Compose на одном VPS.
 
+
+## Автоматически через GitHub Actions (рекомендуется)
+
+Workflow **Deploy server** сам ставит Docker на чистый Ubuntu, создаёт `.env` с паролями, скачивает образ и запускает
+сервер с HTTPS. Дальше обновляет сервер после каждого изменения `server/` в main. Каждую ночь делает копию базы (14 дней).
+
+1. Отдельный ключ для деплоя (PowerShell на своём компьютере):
+   ```
+   ssh-keygen -t ed25519 -f $HOME\.ssh\ghost_deploy -N '""' -C ghost-deploy
+   type $HOME\.ssh\ghost_deploy.pub | ssh root@<IP> "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+   ```
+2. GitHub → Settings → Secrets and variables → Actions:
+   - **Secrets** → `DEPLOY_SSH_KEY` = всё содержимое файла `ghost_deploy` (приватный ключ, без `.pub`);
+   - **Variables** → `DEPLOY_HOST` = IP сервера; при необходимости `DEPLOY_USER` (по умолчанию `root`)
+     и `DEPLOY_DOMAIN` (пока домена нет — не задавайте: будет `<ip-через-дефисы>.sslip.io`, HTTPS работает и так).
+3. Actions → **Deploy server** → Run workflow. В конце шага Health check — адрес сервера.
+
+Клиент на этот сервер: `flutter run --dart-define=API_URL=https://<адрес>`.
+
+## Вручную
+
+Если без GitHub Actions — ниже ручная установка.
+
 ## Что нужно
 
 - VPS с Ubuntu 22.04/24.04: 1 vCPU, 1–2 ГБ памяти, 20 ГБ диска — для компании друзей достаточно.
