@@ -31,12 +31,18 @@ class HistoryScreen extends ConsumerWidget {
                     child: Text('Сыгранных партий пока нет', style: TextStyle(color: AppColors.muted)),
                   ),
                 ])
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) => _HistoryCard(game: list[i]),
-                ),
+              : LayoutBuilder(builder: (context, box) {
+                  // На широком экране — карточки в две колонки по центру.
+                  final insets = pageInsets(context, max: 1200, top: 8, bottom: 24);
+                  final inner = box.maxWidth - insets.horizontal;
+                  final columns = inner >= 900 ? 2 : 1;
+                  final cardWidth = ((inner - 8 * (columns - 1)) / columns).floorToDouble();
+                  return ListView(padding: insets, children: [
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final g in list) SizedBox(width: cardWidth, child: _HistoryCard(game: g)),
+                    ]),
+                  ]);
+                }),
         ),
       ),
     );

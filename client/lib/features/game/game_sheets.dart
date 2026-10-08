@@ -413,9 +413,12 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
 
 /// Чат партии: общий канал и, для команды Убийцы, свой канал. Текст, голосовые и упоминания карт.
 class ChatSheet extends ConsumerStatefulWidget {
-  const ChatSheet({super.key, required this.screen});
+  const ChatSheet({super.key, required this.screen, this.embedded = false});
 
   final GameScreenState screen;
+
+  /// Чат встроен сбоку игрового стола (широкий экран), а не открыт шторкой.
+  final bool embedded;
 
   static Future<void> show(BuildContext context, GameScreenState screen) => showModalBottomSheet<void>(
         context: context,
@@ -564,10 +567,15 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     final canWrite = screen.view?.me != null;
     final voice = _voice;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: widget.embedded ? 0 : MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: widget.embedded ? null : MediaQuery.of(context).size.height * 0.75,
         child: Column(children: [
+          if (widget.embedded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+              child: Align(alignment: Alignment.centerLeft, child: Text('ЧАТ', style: sectionLabel(size: 13))),
+            ),
           if (_killerTeam || screen.view?.isGhost == true)
             Padding(
               padding: const EdgeInsets.all(8),
@@ -607,7 +615,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                     final bubble = GestureDetector(
                       onLongPress: quotable ? () => _quoteToNote(m) : null,
                       child: Container(
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+                        constraints: BoxConstraints(maxWidth: widget.embedded ? 280 : MediaQuery.of(context).size.width * 0.72),
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
                         decoration: BoxDecoration(
                           color: mine ? AppColors.border : AppColors.surface,

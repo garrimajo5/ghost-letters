@@ -14,7 +14,7 @@ class RulesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('ПРАВИЛА')),
-      body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
+      body: ListView(padding: pageInsets(context, top: 4, bottom: 32), children: [
         const _Section(
           icon: Icons.flag_outlined,
           title: 'ЦЕЛЬ',

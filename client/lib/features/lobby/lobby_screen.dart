@@ -158,7 +158,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           ? null
           : SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                padding: pageInsets(context, bottom: 12),
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   _RolesPreview(lobby: lobby, players: players.length),
                   const SizedBox(height: 8),
@@ -169,7 +169,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       body: Column(children: [
         const ConnectionBanner(),
         Expanded(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: pageInsets(context),
         children: [
           Panel(
             padding: const EdgeInsets.all(16),
