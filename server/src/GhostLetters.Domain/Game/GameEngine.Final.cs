@@ -88,6 +88,17 @@ public static partial class GameEngine
                 SetPhase(state, Phase.Voting, events);
                 break;
             case Phase.Hunt:
+                // Убийца не успел — решает самая частая подсказка Сообщников; без подсказок — промах.
+                var suggested = state.TeamSuggestions.Values.Where(s => s.Target is not null)
+                    .GroupBy(s => s.Target!.Value).OrderByDescending(g => g.Count()).FirstOrDefault();
+                var hunted = state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).Distinct().Count();
+                var guess = suggested?.Select(s => s.Guess).FirstOrDefault(g => g is not null);
+                if (suggested is not null && (hunted == 1 || guess is Role.Witness or Role.Expert))
+                {
+                    ApplyHunt(state, state.Player(suggested.Key), guess, events);
+                    break;
+                }
+
                 state.Hunt = new HuntResult();
                 events.Add(new GameEvent("HuntMissed"));
                 NextFinaleStep(state, events);

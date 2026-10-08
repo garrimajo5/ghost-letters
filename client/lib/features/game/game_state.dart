@@ -99,6 +99,11 @@ String actionHint(GameView v) {
     };
   }
 
+  if (v.can('TeamSuggest')) {
+    if (suggestedToKiller(v)) return 'Подсказка отправлена — решает Убийца';
+    return v.phase == 'Night' ? 'Подскажите Убийце истинные улики' : 'Подскажите Убийце, кого назвать';
+  }
+
   return switch (v.phase) {
     'RoleReveal' => 'Посмотрите свою роль',
     'Night' => 'Выберите по одной истинной улике в каждом ряду',
@@ -122,7 +127,11 @@ String actionHint(GameView v) {
 const _optionalCommands = {'Like', 'RaiseHand'};
 
 /// От игрока сейчас ждут действие — экран подсвечивает это: «ВАШ ХОД», вибрация, кнопка внизу.
-bool needsMe(GameView v) => v.me != null && v.allowedCommands.any((c) => !_optionalCommands.contains(c));
+bool needsMe(GameView v) =>
+    v.me != null && v.allowedCommands.any((c) => !_optionalCommands.contains(c) && !(c == 'TeamSuggest' && suggestedToKiller(v)));
+
+/// Сообщник уже подсказал Убийце в этой фазе (подсказку можно поменять, но ход уже не ждут).
+bool suggestedToKiller(GameView v) => v.me != null && v.teamSuggestions.any((s) => s.from == v.me!.id);
 
 /// Раунды по правилам: 2–4 игрока → 5, 5–7 → 4, 8–10 → 3, 11–12 → 2.
 int defaultRounds(int players) => players <= 4

@@ -3,7 +3,7 @@
 #   /download/            → страница загрузки и APK для Android
 #   всё остальное         → веб-версия (для iPhone и браузеров)
 {$DOMAIN} {
-	encode gzip
+	encode zstd gzip
 
 	@api path /api/* /hubs/* /health
 	handle @api {
@@ -21,6 +21,10 @@
 		root * /srv/web
 		# Новая версия сразу: браузер каждый раз сверяется с сервером (304, если не менялось).
 		header Cache-Control "no-cache"
+		# Картинки карт, шрифты, звуки и движок меняются редко: час без запросов к серверу,
+		# а сутки после — показываем из кэша и тихо сверяемся в фоне. Код (main.dart.js) — как выше.
+		@static path /assets/* /canvaskit/* /icons/*
+		header @static Cache-Control "public, max-age=3600, stale-while-revalidate=86400"
 		try_files {path} /index.html
 		file_server
 	}

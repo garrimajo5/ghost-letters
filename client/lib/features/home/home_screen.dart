@@ -186,7 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       )
                     : Column(children: [for (final g in list) _GameCard(game: g)]),
                 loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
-                error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiError.from(e).message)),
+                error: (e, _) => ErrorRetry(message: ApiError.from(e).message, onRetry: () => ref.invalidate(myGamesProvider)),
               ),
               const SizedBox(height: 24),
               Text(

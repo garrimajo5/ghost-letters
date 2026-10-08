@@ -49,6 +49,12 @@ public sealed record ReadyRevote : GameCommand;
 /// </summary>
 public sealed record HuntPick(Guid Target, Role? Guess = null) : GameCommand;
 
+/// <summary>
+/// Подсказка Сообщника Убийце (видна только команде Убийцы): ночью — карта в каждом ряду (Columns),
+/// на охоте — игрок (Target) и, если в игре и Свидетель, и Эксперт, роль (Guess). Решает всё равно Убийца.
+/// </summary>
+public sealed record TeamSuggest(IReadOnlyList<int>? Columns = null, Guid? Target = null, Role? Guess = null) : GameCommand;
+
 /// <summary>Убийца указывает, кого считает Шантажистом.</summary>
 public sealed record BlackmailerPick(Guid Target) : GameCommand;
 
