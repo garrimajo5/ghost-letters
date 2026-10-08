@@ -1,0 +1,67 @@
+[
+  {
+    "file": "sfx/phase.mp3",
+    "review_preview": "03_phase_v2.mp3",
+    "sha256": "f1434f044afa1b71f9f829d5bebb93f9141fc5096fd581548094037ab0569501"
+  },
+  {
+    "file": "sfx/yourTurn.mp3",
+    "review_preview": "04_your_turn_v2.mp3",
+    "sha256": "1d5241ae6724571431c9432d5ec8e18742019dc4833aa77ce2281a31093f39db"
+  },
+  {
+    "file": "sfx/letterSent.mp3",
+    "review_preview": "05_letter_sent_v2.mp3",
+    "sha256": "98f6ec1956782d6136068241bd7912709b706be9849d1de471093b361bcc1c42"
+  },
+  {
+    "file": "sfx/reveal.mp3",
+    "review_preview": "06_reveal_v2.mp3",
+    "sha256": "c34d276744e4ffd51b81d1bcd63c1160f3feefd93c317dfcdf86934abe97056e"
+  },
+  {
+    "file": "sfx/vanish.mp3",
+    "review_preview": "07_vanish_v2.mp3",
+    "sha256": "6f82132713cad7c96618c39487de9846b19620853d1129813f6c8580bf9eab2f"
+  },
+  {
+    "file": "sfx/chat.mp3",
+    "review_preview": "08_chat_v2.mp3",
+    "sha256": "b4bec09c66132ec2fa60adda344fceefe293a15603d8ffc2e35ef1243f301627"
+  },
+  {
+    "file": "sfx/tick.mp3",
+    "review_preview": "09_timer_tick_v2.mp3",
+    "sha256": "f70c0ebedf115eed752d263bd5ec0ed8a51a98e3c9a502897412be41c085c5a3"
+  },
+  {
+    "file": "sfx/timeUp.mp3",
+    "review_preview": "10_timer_end_v2.mp3",
+    "sha256": "66b2bca1cb61108e474d3a89568215d65eac1d06f64d4f813ab78efeef95092c"
+  },
+  {
+    "file": "sfx/vote.mp3",
+    "review_preview": "11_vote_v2.mp3",
+    "sha256": "8f8b72e0250a58f3ad041c45a4ac79a8fc36c3eb60b9788eefaef61af5ddfc36"
+  },
+  {
+    "file": "sfx/correct.mp3",
+    "review_preview": "12_correct_v2.mp3",
+    "sha256": "716271aa6fd0b6bb459405b82e59b00e8b9dbed94a2613e82e8bc46649481c7e"
+  },
+  {
+    "file": "sfx/incorrect.mp3",
+    "review_preview": "13_incorrect_v2.mp3",
+    "sha256": "62d023927adbd1011a271f7932710c781d723850471bc2df79b3f8a25969665e"
+  },
+  {
+    "file": "sfx/defeat.mp3",
+    "review_preview": "15_defeat_v2.mp3",
+    "sha256": "75020c3919418bb2a26e581c8fee3ea4569c39657f94c4b0ef8f52da7043d2d9"
+  },
+  {
+    "file": "sfx/victory.mp3",
+    "review_preview": "14_victory_happy_v3.mp3",
+    "sha256": "f44eb619443e8090cfc15655a0dc33678a6255c6e1e3360e9d950a2d27c9a599"
+  }
+]

@@ -39,7 +39,7 @@ class FakeApi extends Api {
 
   @override
   Future<AuthTokens> loginByCode(String deviceId, String code) async => _record('loginByCode', [deviceId, code],
-      () => const AuthTokens(accessToken: 'access2', refreshToken: 'refresh2', user: const User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B')));
+      () => const AuthTokens(accessToken: 'access2', refreshToken: 'refresh2', user: User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B')));
 
   @override
   Future<Profile> profile(String userId) async => _record('profile', [userId], () => Profile(
