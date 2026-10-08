@@ -16,8 +16,10 @@ class Voice {
 
   final Api _api;
   // Плагины создаются при первом использовании — открыть чат можно и без звука.
-  late final AudioRecorder _recorder = AudioRecorder();
-  late final AudioPlayer _player = AudioPlayer();
+  AudioRecorder? _recorderInstance;
+  AudioPlayer? _playerInstance;
+  AudioRecorder get _recorder => _recorderInstance ??= AudioRecorder();
+  AudioPlayer get _player => _playerInstance ??= AudioPlayer();
   final Stopwatch _clock = Stopwatch();
   String? _path;
   String _mime = 'audio/mp4';
@@ -75,8 +77,10 @@ class Voice {
   }
 
   Future<void> dispose() async {
-    await _recorder.dispose();
-    await _player.dispose();
+    // Плагины создаются лениво: если чатом со звуком не пользовались — освобождать нечего
+    // (иначе dispose сам создавал бы рекордер и дёргал платформу уже при закрытии).
+    await _recorderInstance?.dispose();
+    await _playerInstance?.dispose();
     await _playing.close();
   }
 }
