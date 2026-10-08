@@ -25,7 +25,12 @@ public sealed record MyGameDto(
     bool YourTurn,
     DateTimeOffset? Deadline,
     DateTimeOffset StartedAt,
-    DateTimeOffset? FinishedAt);
+    DateTimeOffset? FinishedAt,
+    int TotalRounds = 0,
+    int Players = 0,
+    string? Title = null,
+    string? Role = null,
+    bool? Won = null);
 
 public sealed record SummaryPlayerDto(Guid Id, string Nickname, string AvatarColor, int Seat, string Role, bool Won);
 
@@ -93,12 +98,20 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         };
 
         var list = await query.OrderByDescending(g => g.StartedAt).Take(50).ToListAsync(ct);
+        var lobbyIds = list.Where(g => g.LobbyId != null).Select(g => g.LobbyId!.Value).Distinct().ToList();
+        var titles = await db.Lobbies.AsNoTracking().Where(l => lobbyIds.Contains(l.Id))
+            .ToDictionaryAsync(l => l.Id, l => l.Title, ct);
         return list.Select(g =>
         {
             var state = GameStore.Read(g);
-            var allowed = GameProjection.AllowedCommands(state, state.Player(userId));
+            var me = state.Player(userId);
+            var allowed = GameProjection.AllowedCommands(state, me);
             return new MyGameDto(g.Id, g.LobbyId, g.Status, g.Phase, state.Round,
-                allowed.Any(c => c != nameof(Domain.Game.Like)), g.PhaseDeadline, g.StartedAt, g.FinishedAt);
+                allowed.Any(c => c != nameof(Domain.Game.Like)), g.PhaseDeadline, g.StartedAt, g.FinishedAt,
+                state.TotalRounds, state.Players.Count,
+                g.LobbyId is { } lobbyId ? titles.GetValueOrDefault(lobbyId) : null,
+                me.Role.ToString(),
+                state.Result is { } result ? (bool?)result.Winners.Contains(userId) : null);
         }).ToList();
     }
 

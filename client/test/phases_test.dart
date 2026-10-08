@@ -166,9 +166,12 @@ void main() {
     expect(find.text('ЭТО ИСТИНА'), findsOneWidget);
     expect(button().onPressed, isNull);
 
+    // Нажатие открывает карту крупно с кнопкой «Выбрать истинной», удержание выбирает сразу.
     await tester.tap(find.byKey(const Key('board-0-3')));
-    await tester.pump();
-    await tester.tap(find.byKey(const Key('board-1-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('zoom-action')));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const Key('board-1-1')));
     await tester.pump();
     expect(button().onPressed, isNotNull);
 

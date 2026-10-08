@@ -102,6 +102,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onSelected: (v) async {
                     if (v == 'rules') {
                       context.push('/rules');
+                    } else if (v == 'history') {
+                      context.push('/history');
                     } else if (v == 'profile') {
                       context.push('/profile/${user.id}');
                     } else if (v == 'logout') {
@@ -110,6 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     }
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'history', child: Text('История партий')),
                     PopupMenuItem(value: 'rules', child: Text('Правила')),
                     PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
                     PopupMenuItem(value: 'logout', child: Text('Выйти')),
@@ -212,9 +215,21 @@ class _GameCard extends StatelessWidget {
             child: Row(children: [
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(T.phase(g.phase), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  Text(g.title ?? T.phase(g.phase), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
                   const SizedBox(height: 4),
-                  Text(g.yourTurn ? 'Ваш ход' : 'Ждём других игроков', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+                  Text(
+                    [
+                      if (g.round > 0 && g.totalRounds > 0) 'Раунд ${g.round} из ${g.totalRounds}' else T.phase(g.phase),
+                      if (g.players > 0) T.players(g.players),
+                      if (g.startedAt != null) 'начата ${T.when(g.startedAt)}',
+                    ].join(' · '),
+                    style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                  if (g.title != null)
+                    Text(
+                      '${T.phase(g.phase)} · ${g.yourTurn ? 'ваш ход' : 'ждём других'}',
+                      style: TextStyle(fontSize: 12, color: g.yourTurn ? AppColors.amberLight : AppColors.dim),
+                    ),
                 ]),
               ),
               Container(

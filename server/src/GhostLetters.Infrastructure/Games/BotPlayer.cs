@@ -183,15 +183,16 @@ public static class BotPlayer
         public IReadOnlyList<string> HintsToReveal()
         {
             var mailbox = view.MailboxForGhost ?? [];
-            // Без тегов похожесть не оценить — открываем наугад одно-два письма.
+            // Без тегов похожесть не оценить — открываем наугад от нуля до всех писем.
             if (Truth is not { } truth || mailbox.Count == 0 || tags.Count == 0)
             {
-                return mailbox.OrderBy(_ => rng.Next()).Take(rng.Next(1, 3)).ToList();
+                return mailbox.OrderBy(_ => rng.Next()).Take(rng.Next(0, mailbox.Count + 1)).ToList();
             }
 
+            // Открываем все письма, похожие на истинные улики (их может быть сколько угодно — или ни одного).
             var scored = mailbox.Select(l => (l, s: Best(l, TruthCards(truth)) + Noise())).OrderByDescending(x => x.s).ToList();
-            var good = scored.Where(x => x.s >= Hint).Take(3).Select(x => x.l).ToList();
-            if (good.Count == 0 && scored[0].s >= Hint / 2)
+            var good = scored.Where(x => x.s >= 0.15).Select(x => x.l).ToList();
+            if (good.Count == 0 && scored[0].s >= 0.08 && rng.Next(3) > 0)
             {
                 good.Add(scored[0].l);
             }
@@ -312,13 +313,7 @@ public static class BotPlayer
                 _ => "Тайна",
             };
 
-            var letter = me.Letters.LastOrDefault();
-            if (letter is { Revealed: false } && rng.Next(2) == 0)
-            {
-                var (row, col) = Closest(letter.CardId);
-                return ($"Моё письмо исчезло — значит, {Name(view.Board[row].Category)}: карта {col + 1} вряд ли.", [Card(row, col)]);
-            }
-
+            var (claimText, claimCard) = LetterClaim();
             int target;
             int column;
             if (KillerTeam && Truth is { } truth)
@@ -346,7 +341,46 @@ public static class BotPlayer
                     $"Пока не ясно. Проверял бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
-            return (lines[rng.Next(lines.Length)], [card]);
+            var opinion = lines[rng.Next(lines.Length)];
+            if (claimCard is null)
+            {
+                return (opinion, new List<string> { card });
+            }
+
+            var cards = new List<string> { claimCard };
+            if (claimCard != card)
+            {
+                cards.Add(card);
+            }
+
+            return ($"{claimText} {opinion}", cards);
+        }
+
+        /// <summary>
+        /// Что бот говорит о своём письме этого раунда. По правилам можно рассказывать, что отправил;
+        /// чёрные (команда Убийцы, Шантажист, Подражатель) иногда врут — выдают чужую открытую подсказку за свою.
+        /// </summary>
+        private (string Text, string? Card) LetterClaim()
+        {
+            var letter = me.Letters.LastOrDefault(l => l.Round == view.Round) ?? me.Letters.LastOrDefault();
+            if (letter is null)
+            {
+                return ("", null);
+            }
+
+            var liar = me.Role is Role.Killer or Role.Accomplice or Role.Blackmailer or Role.Imitator;
+            var others = view.Hints.Where(h => h.Round == letter.Round).SelectMany(h => h.Cards).Where(c => c != letter.CardId).ToList();
+            if (liar && letter.Revealed != true && others.Count > 0 && rng.Next(5) < 3)
+            {
+                return ("Я отправлял вот эту — и она открылась!", others[rng.Next(others.Count)]);
+            }
+
+            return letter.Revealed switch
+            {
+                true => ("Моё письмо — вот это, оно открылось.", letter.CardId),
+                false => ("Отправлял вот эту — исчезла.", letter.CardId),
+                null => ("Отправил вот эту, ждём Призрака.", letter.CardId),
+            };
         }
 
         private static readonly string[] Awards = ["sherlock", "best_liar", "steel_balls", "ghost_whisperer"];

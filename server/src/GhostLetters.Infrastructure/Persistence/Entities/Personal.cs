@@ -34,6 +34,9 @@ public sealed class CardMark
     public int Checks { get; set; }
 
     public bool Believed { get; set; }
+
+    /// <summary>Откуда сведения (JSON <c>MarkSources</c>): кто проверял, чьё это письмо, что я говорю о своём письме.</summary>
+    public string Sources { get; set; } = "{}";
 }
 
 public sealed class Like

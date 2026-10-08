@@ -81,10 +81,13 @@ public sealed class ChatService(
         }
 
         var cards = (request.CardIds ?? []).Distinct().ToList();
-        var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand).ToHashSet();
+        // Свои письма тоже можно показать: «отправлял вот эту».
+        var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand)
+            .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId))
+            .ToHashSet();
         if (cards.Count > MaxCards || cards.Any(c => !known.Contains(c)))
         {
-            throw AppException.Validation($"Можно упомянуть до {MaxCards} карт с поля, подсказок или своей руки.");
+            throw AppException.Validation($"Можно упомянуть до {MaxCards} карт с поля, подсказок, своей руки или своих писем.");
         }
 
         var message = new ChatMessage

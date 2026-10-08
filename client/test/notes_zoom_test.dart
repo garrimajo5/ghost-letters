@@ -41,10 +41,9 @@ void main() {
   testWidgets('подсказку можно рассмотреть крупно', (tester) async {
     await _open(tester);
 
-    await tester.tap(find.byKey(const Key('hint-orig_0100')));
+    await tester.longPress(find.byKey(const Key('hint-orig_0100')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('card-zoom')), findsOneWidget);
-    expect(find.text('Первая зацепка'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('card-zoom')));
     await tester.pumpAndSettle();

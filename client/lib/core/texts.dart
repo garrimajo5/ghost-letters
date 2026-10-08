@@ -70,4 +70,28 @@ class T {
   static String shortPhase(String p) => shortPhases[p] ?? phase(p);
 
   static String category(String c) => categories[c] ?? c;
+
+  static const _months = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+  /// «сегодня 21:40», «вчера 18:05», «7 окт 21:40» — по местному времени.
+  static String when(DateTime? t, {DateTime? now}) {
+    if (t == null) return '';
+    final local = t.toLocal();
+    final today = now ?? DateTime.now();
+    final day = DateTime(local.year, local.month, local.day);
+    final diff = DateTime(today.year, today.month, today.day).difference(day).inDays;
+    final hm = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    if (diff == 0) return 'сегодня $hm';
+    if (diff == 1) return 'вчера $hm';
+    return '${local.day} ${_months[local.month - 1]}${local.year != today.year ? ' ${local.year}' : ''} $hm';
+  }
+
+  /// «6 игроков», «2 игрока», «1 игрок».
+  static String players(int n) {
+    final mod10 = n % 10, mod100 = n % 100;
+    final word = mod10 == 1 && mod100 != 11
+        ? 'игрок'
+        : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'игрока' : 'игроков');
+    return '$n $word';
+  }
 }

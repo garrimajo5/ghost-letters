@@ -135,7 +135,7 @@ public sealed class BotBrainTests
 
         var command = (RevealHints)BotPlayer.Decide(view, new Random(6), CardTags.Empty)!;
 
-        command.CardIds.Should().NotBeEmpty().And.OnlyContain(c => c == "sword" || c == "tulip");
+        command.CardIds.Except(["sword", "tulip"]).Should().BeEmpty("без тегов — любые из присланных, от нуля до всех");
     }
 
     [Fact]
@@ -206,5 +206,34 @@ public sealed class BotBrainTests
         var suspects = Enumerable.Range(0, 20).Select(seed => ((CastVote)BotPlayer.Decide(view, new Random(seed), Tags)!).Suspect).ToList();
 
         suspects.Should().OnlyContain(s => s == Ann, "Аня голосовала против подсказок");
+    }
+
+    [Fact]
+    public void Bots_TellWhichLetterTheySent_LiarsSometimesClaimSomeoneElses()
+    {
+        var hints = new List<HintGroupView> { new(1, ["sword", "dog"]) };
+        PlayerView WithLetter(Role role, bool? revealed) => View(Phase.Discussion, [nameof(ReadyNextRound)], role, truth: role == Role.Killer ? new[] { 0, 1 } : null, hints: hints) with
+        {
+            Me = new MeView(Me, role, [], [new MyLetterView(1, revealed == true ? "sword" : "tulip", revealed)]),
+        };
+
+        var honest = BotPlayer.Say(WithLetter(Role.Detective, false), new Random(1), Tags)!.Value;
+        honest.Cards[0].Should().Be("tulip", "детектив честно показывает своё исчезнувшее письмо");
+        honest.Text.Should().Contain("исчезла");
+
+        var lies = Enumerable.Range(0, 30)
+            .Select(seed => BotPlayer.Say(WithLetter(Role.Killer, false), new Random(seed), Tags)!.Value)
+            .Count(l => l.Cards[0] is "sword" or "dog");
+        lies.Should().BeGreaterThan(5, "Убийца иногда выдаёт чужую открытую подсказку за своё письмо");
+    }
+
+    [Fact]
+    public void Ghost_RevealsNothing_WhenNoLetterLooksLikeTruth()
+    {
+        var view = View(Phase.GhostPick, [nameof(RevealHints)], Role.Ghost, truth: [0, 1], mailbox: ["tulip", "ship"]);
+
+        var command = (RevealHints)BotPlayer.Decide(view, new Random(9), Tags)!;
+
+        command.CardIds.Should().BeEmpty();
     }
 }

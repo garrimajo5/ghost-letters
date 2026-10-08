@@ -250,6 +250,17 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   void refresh() => setState(() {});
 
+  /// Прокрутить к месту, где нужно действие: панель хода (выбор игрока, письма Призрака, итоги).
+  void scrollToAction() {
+    final ctx = _panelKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 350), alignment: 0.05);
+    } else if (_scroll.hasClients) {
+      // Панель ещё не построена (далеко внизу списка) — едем в конец, она там.
+      _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
+    }
+  }
+
   void setSuspicion(String userId, int value) {
     if (mounted) setState(() => suspicion[userId] = value);
   }
@@ -276,11 +287,23 @@ class GameScreenState extends ConsumerState<GameScreen> {
   /// Ряд, где сейчас выбирают карту: истина ночью, назвать улики, голосование по ряду.
   bool get choosingTruth => view != null && (view!.can('ChooseTruth') || view!.can('NameTruth'));
 
+  void selectTruth(int row, int column) {
+    HapticFeedback.selectionClick();
+    setState(() => truth[row] = column);
+  }
+
   void tapCard(int row, int column, String cardId) {
     final v = view!;
     final stage = v.finale?.currentStage;
     if (choosingTruth) {
-      setState(() => truth[row] = column);
+      // Нажатие — рассмотреть карту (и выбрать оттуда), удержание — выбрать сразу.
+      showCardZoom(
+        context,
+        cardId,
+        caption: '${T.category(v.board[row].category)}, карта ${column + 1}',
+        actionLabel: truth[row] == column ? null : 'Выбрать истинной',
+        onAction: () => selectTruth(row, column),
+      );
     } else if (v.can('CastVote') && stage != null && stage.isRow && stage.row == row) {
       // В ряду голосования выбираются только кандидаты; остальные карты не реагируют.
       if (stage.candidateColumns.contains(column)) setState(() => voteColumn = column);
@@ -356,7 +379,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
                   child: ListView(padding: const EdgeInsets.fromLTRB(8, 4, 16, 16), children: [
                     ActionPanel(screen: this),
                     const SizedBox(height: 10),
-                    _Hints(view: v),
+                    _Hints(screen: this),
                   ]),
                 ),
               ]),
@@ -375,10 +398,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
                 if (night) const _NightBanner(),
                 _Board(screen: this),
                 const SizedBox(height: 10),
-                _Hints(view: v),
+                _Hints(screen: this),
                 if (v.me != null && v.me!.letters.isNotEmpty && !finale) ...[
                   const SizedBox(height: 10),
-                  _MyLetters(me: v.me!),
+                  _MyLetters(screen: this),
                 ],
                 if (!panelFirst) ...[
                   const SizedBox(height: 10),
@@ -626,7 +649,8 @@ class _PlayerChip extends StatelessWidget {
               ),
             ),
           ),
-          if (speaking || v.radioHolder == p.id)
+          // Рация одна: в обсуждении — у говорящего, до него — у того, кто её получил.
+          if (v.phase == 'Discussion' && v.isRadio ? speaking : v.radioHolder == p.id)
             const Positioned(top: -4, right: -4, child: _Radio()),
           if (p.hasActed)
             Positioned(
@@ -738,7 +762,9 @@ class _Board extends StatelessWidget {
                     onTap: () => screen.tapCard(r, c, v.board[r].cards[c]),
                     onLongPress: v.me == null
                         ? null
-                        : () {
+                        : screen.choosingTruth
+                            ? () => screen.selectTruth(r, c)
+                            : () {
                             final id = v.board[r].cards[c];
                             final m = screen.marks[id] ?? const CardMark();
                             HapticFeedback.selectionClick();
@@ -847,9 +873,11 @@ class BoardCard extends StatelessWidget {
 
 /// Подсказки Призрака по раундам и жетон «исчезло ×N».
 class _Hints extends StatelessWidget {
-  const _Hints({required this.view});
+  const _Hints({required this.screen});
 
-  final GameView view;
+  final GameScreenState screen;
+
+  GameView get view => screen.view!;
 
   @override
   Widget build(BuildContext context) {
@@ -889,8 +917,20 @@ class _Hints extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: 4),
                               child: GestureDetector(
                                 key: Key('hint-$c'),
-                                onTap: () => showCardZoom(context, c, caption: h.round == 0 ? 'Первая зацепка' : 'Подсказка раунда ${h.round}'),
-                                child: CardImage(cardId: c, size: size, radius: 8),
+                                onTap: () => screen.view?.me == null
+                                    ? showCardZoom(context, c, caption: h.round == 0 ? 'Первая зацепка' : 'Подсказка раунда ${h.round}')
+                                    : HintSheet.show(context, screen, c, h.round),
+                                onLongPress: () => showCardZoom(context, c),
+                                child: Stack(clipBehavior: Clip.none, children: [
+                                  CardImage(cardId: c, size: size, radius: 8),
+                                  // Кто сказал, что это его письмо.
+                                  if (screen.marks[c]?.claimedBy case final who?)
+                                    Positioned(
+                                      right: -4,
+                                      bottom: -4,
+                                      child: Avatar(key: Key('claimed-$c'), nickname: screen.nick(who), color: screen.colorOf(who), size: 18),
+                                    ),
+                                ]),
                               ),
                             ),
                       ]),
@@ -971,7 +1011,10 @@ class _Dock extends StatelessWidget {
                       label: Text(cta.label.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   )
-                : _StatusBar(text: actionHint(v), mine: mine, pulse: screen.turnPulse),
+                : GestureDetector(
+                    onTap: screen.scrollToAction,
+                    child: _StatusBar(text: actionHint(v), mine: mine, pulse: screen.turnPulse),
+                  ),
           ),
           const SizedBox(width: 10),
           _ChatButton(screen: screen),
@@ -1149,37 +1192,50 @@ class _Hand extends StatelessWidget {
 
 /// Мои письма по раундам: что отправил и открыл ли Призрак — чтобы не держать в голове.
 class _MyLetters extends StatelessWidget {
-  const _MyLetters({required this.me});
+  const _MyLetters({required this.screen});
 
-  final Me me;
+  final GameScreenState screen;
 
   @override
   Widget build(BuildContext context) {
+    final me = screen.view!.me!;
     return Panel(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('МОИ ПИСЬМА', style: sectionLabel()),
+        Row(children: [
+          Text('МОИ ПИСЬМА', style: sectionLabel()),
+          const Spacer(),
+          const Text('нажмите — что я говорю', style: TextStyle(fontSize: 10, color: AppColors.dim)),
+        ]),
         const SizedBox(height: 6),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Row(children: [
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             for (final l in me.letters)
               Padding(
                 padding: const EdgeInsets.only(right: 12),
-                child: Column(children: [
-                  Text('р. ${l.round}', style: const TextStyle(fontSize: 10, color: AppColors.muted)),
-                  const SizedBox(height: 4),
-                  GestureDetector(
-                    onTap: () => showCardZoom(context, l.cardId, caption: 'Моё письмо, раунд ${l.round}'),
-                    child: Opacity(opacity: l.revealed == false ? 0.4 : 1, child: CardImage(cardId: l.cardId, size: 40, radius: 8)),
-                  ),
-                  const SizedBox(height: 2),
-                  Icon(
-                    l.revealed == null ? Icons.hourglass_empty : (l.revealed! ? Icons.visibility : Icons.visibility_off),
-                    size: 14,
-                    color: l.revealed == true ? AppColors.believed : AppColors.dim,
-                  ),
-                ]),
+                child: GestureDetector(
+                  key: Key('letter-${l.cardId}'),
+                  onTap: () => LetterSheet.show(context, screen, l),
+                  onLongPress: () => showCardZoom(context, l.cardId, caption: 'Моё письмо, раунд ${l.round}'),
+                  child: Column(children: [
+                    Text('р. ${l.round}', style: const TextStyle(fontSize: 10, color: AppColors.muted)),
+                    const SizedBox(height: 4),
+                    Opacity(opacity: l.revealed == false ? 0.4 : 1, child: CardImage(cardId: l.cardId, size: 40, radius: 8)),
+                    const SizedBox(height: 2),
+                    Icon(
+                      l.revealed == null ? Icons.hourglass_empty : (l.revealed! ? Icons.visibility : Icons.visibility_off),
+                      size: 14,
+                      color: l.revealed == true ? AppColors.believed : AppColors.dim,
+                    ),
+                    // Если говорю другим, что отправил другую карту, — она рядом.
+                    if (screen.marks[l.cardId]?.claim case final claim?) ...[
+                      const SizedBox(height: 2),
+                      const Text('говорю:', style: TextStyle(fontSize: 9, color: AppColors.amber)),
+                      CardImage(key: Key('claim-of-${l.cardId}'), cardId: claim, size: 26, radius: 5),
+                    ],
+                  ]),
+                ),
               ),
           ]),
         ),

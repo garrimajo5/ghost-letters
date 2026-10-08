@@ -676,7 +676,21 @@ class ChatMessage {
 }
 
 class MyGame {
-  const MyGame({required this.gameId, required this.status, required this.phase, required this.yourTurn, required this.deadline});
+  const MyGame({
+    required this.gameId,
+    required this.status,
+    required this.phase,
+    required this.yourTurn,
+    required this.deadline,
+    this.round = 0,
+    this.totalRounds = 0,
+    this.players = 0,
+    this.title,
+    this.role,
+    this.won,
+    this.startedAt,
+    this.finishedAt,
+  });
 
   factory MyGame.fromJson(Json j) => MyGame(
         gameId: j['gameId'] as String,
@@ -684,6 +698,14 @@ class MyGame {
         phase: j['phase'] as String,
         yourTurn: j['yourTurn'] as bool? ?? false,
         deadline: _date(j['deadline']),
+        round: (j['round'] as num?)?.toInt() ?? 0,
+        totalRounds: (j['totalRounds'] as num?)?.toInt() ?? 0,
+        players: (j['players'] as num?)?.toInt() ?? 0,
+        title: j['title'] as String?,
+        role: j['role'] as String?,
+        won: j['won'] as bool?,
+        startedAt: _date(j['startedAt']),
+        finishedAt: _date(j['finishedAt']),
       );
 
   final String gameId;
@@ -691,6 +713,14 @@ class MyGame {
   final String phase;
   final bool yourTurn;
   final DateTime? deadline;
+  final int round;
+  final int totalRounds;
+  final int players;
+  final String? title;
+  final String? role;
+  final bool? won;
+  final DateTime? startedAt;
+  final DateTime? finishedAt;
 }
 
 class Profile {

@@ -74,6 +74,14 @@ class _MarkSheetState extends State<MarkSheet> {
                 value: mark.crosses,
                 onChanged: (v) => _set(mark.copyWith(crosses: v)),
               ),
+              SourceChips(
+                key: const Key('cross-by'),
+                screen: widget.screen,
+                label: 'Кто проверял:',
+                selected: mark.crossBy,
+                color: AppColors.red,
+                onToggle: (id) => _set(mark.toggleSource(id, cross: true)),
+              ),
               const Divider(height: 1, color: AppColors.surface2),
               _Counter(
                 key: const Key('mark-checks'),
@@ -82,6 +90,14 @@ class _MarkSheetState extends State<MarkSheet> {
                 label: 'Подсказки указывают сюда',
                 value: mark.checks,
                 onChanged: (v) => _set(mark.copyWith(checks: v)),
+              ),
+              SourceChips(
+                key: const Key('check-by'),
+                screen: widget.screen,
+                label: 'Чьи подсказки:',
+                selected: mark.checkBy,
+                color: AppColors.green,
+                onToggle: (id) => _set(mark.toggleSource(id, cross: false)),
               ),
               Material(
                 color: mark.believed ? AppColors.green : Colors.transparent,
@@ -243,6 +259,36 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
     if (mounted) Navigator.pop(context);
   }
 
+  /// Что я отметил о нём на картах: какое письмо он назвал своим, что проверял (✕) и на что указывали его подсказки (✓).
+  List<Widget> _intel(TextStyle label) {
+    final marks = widget.screen.marks;
+    final id = widget.userId;
+    final claimed = [for (final e in marks.entries) if (e.value.claimedBy == id) e.key];
+    final crossed = [for (final e in marks.entries) if (e.value.crossBy.contains(id)) e.key];
+    final checked = [for (final e in marks.entries) if (e.value.checkBy.contains(id)) e.key];
+    if (claimed.isEmpty && crossed.isEmpty && checked.isEmpty) return const [];
+    Widget row(String title, List<String> cards, {Color? color}) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            SizedBox(width: 120, child: Text(title, style: TextStyle(fontSize: 13, color: color ?? AppColors.text))),
+            Expanded(
+              child: Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final c in cards)
+                  GestureDetector(onTap: () => showCardZoom(context, c), child: CardImage(cardId: c, size: 40, radius: 6)),
+              ]),
+            ),
+          ]),
+        );
+    return [
+      const SizedBox(height: 14),
+      Text('О ПИСЬМАХ — ПО МОИМ ПОМЕТКАМ', style: label),
+      const SizedBox(height: 8),
+      if (claimed.isNotEmpty) row('Говорит, что отправил', claimed, color: AppColors.ice),
+      if (crossed.isNotEmpty) row('Проверял — не то ✕', crossed, color: AppColors.redSoft),
+      if (checked.isNotEmpty) row('Его подсказки указывают ✓', checked, color: AppColors.greenSoft),
+    ];
+  }
+
   /// Что известно о игроке без заметок: роль (если видна), письма, голоса в финале.
   List<String> _facts() {
     final screen = widget.screen;
@@ -318,6 +364,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
                 Expanded(child: Text(f, style: const TextStyle(fontSize: 13))),
               ]),
             ),
+          ..._intel(label),
           if (said.isNotEmpty) ...[
             const SizedBox(height: 14),
             const Text('ИЗ ЧАТА', style: label),
@@ -716,5 +763,266 @@ class _VoiceTile extends StatelessWidget {
             Text('🎤 ${(durationMs / 1000).toStringAsFixed(0)} с'),
           ]);
         },
+      );
+}
+
+/// Игроки-источники пометки: нажатие добавляет или убирает игрока (и подправляет счётчик).
+class SourceChips extends StatelessWidget {
+  const SourceChips({
+    super.key,
+    required this.screen,
+    required this.label,
+    required this.selected,
+    required this.onToggle,
+    this.color = AppColors.amber,
+    this.single = false,
+  });
+
+  final GameScreenState screen;
+  final String label;
+  final List<String> selected;
+  final ValueChanged<String> onToggle;
+  final Color color;
+  final bool single;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view;
+    if (v == null) return const SizedBox.shrink();
+    final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              for (final p in players.where((p) => !p.isGhost))
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    key: Key('src-${p.id}'),
+                    onTap: () => onToggle(p.id),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.fromLTRB(3, 3, 10, 3),
+                      decoration: BoxDecoration(
+                        color: selected.contains(p.id) ? color : AppColors.surface2,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 22),
+                        const SizedBox(width: 6),
+                        Text(
+                          p.id == v.me?.id ? 'Я' : screen.nick(p.id),
+                          style: TextStyle(fontSize: 12, color: selected.contains(p.id) ? Colors.white : AppColors.text),
+                        ),
+                      ]),
+                    ),
+                  ),
+                ),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Подсказка: крупно и «кто сказал, что это его письмо» — сведения попадут в заметку об игроке.
+class HintSheet extends StatefulWidget {
+  const HintSheet({super.key, required this.screen, required this.cardId, required this.round});
+
+  final GameScreenState screen;
+  final String cardId;
+  final int round;
+
+  static Future<void> show(BuildContext context, GameScreenState screen, String cardId, int round) =>
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => HintSheet(screen: screen, cardId: cardId, round: round),
+      );
+
+  @override
+  State<HintSheet> createState() => _HintSheetState();
+}
+
+class _HintSheetState extends State<HintSheet> {
+  late CardMark mark = widget.screen.marks[widget.cardId] ?? const CardMark();
+
+  void _set(CardMark m) {
+    setState(() => mark = m);
+    widget.screen.saveMark(widget.cardId, m);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mine = widget.screen.view?.me?.letters.any((l) => l.cardId == widget.cardId) == true;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          GestureDetector(
+            onTap: () => showCardZoom(context, widget.cardId),
+            child: CardImage(cardId: widget.cardId, size: 200, radius: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            widget.round == 0 ? 'Первая зацепка Призрака' : 'Подсказка раунда ${widget.round}${mine ? ' · это ваше письмо' : ''}',
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          if (widget.round > 0) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: Text('Кто говорит, что это его письмо?', style: TextStyle(fontSize: 14)),
+                ),
+                SourceChips(
+                  key: const Key('claimed-by'),
+                  screen: widget.screen,
+                  label: '',
+                  selected: [if (mark.claimedBy != null) mark.claimedBy!],
+                  onToggle: (id) => _set(mark.claimedBy == id ? mark.copyWith(clearClaimedBy: true) : mark.copyWith(claimedBy: id)),
+                ),
+              ]),
+            ),
+          ],
+          const SizedBox(height: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.ice,
+              foregroundColor: AppColors.bg,
+              minimumSize: const Size(140, 48),
+              shape: const StadiumBorder(),
+              textStyle: const TextStyle(fontFamily: AppFonts.body, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Готово'),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Моё письмо: что я говорю другим, что отправил. Команде Убийцы бывает выгодно соврать — и не забыть, что соврал.
+class LetterSheet extends StatefulWidget {
+  const LetterSheet({super.key, required this.screen, required this.letter});
+
+  final GameScreenState screen;
+  final MyLetter letter;
+
+  static Future<void> show(BuildContext context, GameScreenState screen, MyLetter letter) => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => LetterSheet(screen: screen, letter: letter),
+      );
+
+  @override
+  State<LetterSheet> createState() => _LetterSheetState();
+}
+
+class _LetterSheetState extends State<LetterSheet> {
+  late CardMark mark = widget.screen.marks[widget.letter.cardId] ?? const CardMark();
+
+  void _set(CardMark m) {
+    setState(() => mark = m);
+    widget.screen.saveMark(widget.letter.cardId, m);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = widget.screen.view!;
+    final l = widget.letter;
+    final options = <String>{
+      for (final h in v.hints.where((h) => h.round == l.round)) ...h.cards,
+      for (final h in v.hints.where((h) => h.round != l.round)) ...h.cards,
+    }.where((c) => c != l.cardId).toList();
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Center(child: CardImage(cardId: l.cardId, size: 160, radius: 18)),
+          const SizedBox(height: 8),
+          Text(
+            'Моё письмо, раунд ${l.round} · ${l.revealed == null ? 'ждём Призрака' : (l.revealed! ? 'открылось' : 'исчезло')}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          const SizedBox(height: 16),
+          Text('ЧТО Я ГОВОРЮ ДРУГИМ', style: sectionLabel()),
+          const SizedBox(height: 4),
+          const Text(
+            'Видите только вы. Если называете другую карту — запомните, какую.',
+            style: TextStyle(fontSize: 12, color: AppColors.muted),
+          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _ClaimOption(
+              key: const Key('claim-truth'),
+              selected: mark.claim == null,
+              label: 'Правду',
+              child: CardImage(cardId: l.cardId, size: 56, radius: 8),
+              onTap: () => _set(mark.copyWith(clearClaim: true)),
+            ),
+            for (final c in options)
+              _ClaimOption(
+                key: Key('claim-$c'),
+                selected: mark.claim == c,
+                label: 'Эту',
+                child: CardImage(cardId: c, size: 56, radius: 8),
+                onTap: () => _set(mark.copyWith(claim: c)),
+              ),
+          ]),
+          if (options.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text('Чужих подсказок пока нет — назвать можно только своё письмо.', style: TextStyle(fontSize: 12, color: AppColors.dim)),
+            ),
+          const SizedBox(height: 16),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.ice,
+              foregroundColor: AppColors.bg,
+              textStyle: const TextStyle(fontFamily: AppFonts.body, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Готово'),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _ClaimOption extends StatelessWidget {
+  const _ClaimOption({super.key, required this.selected, required this.label, required this.child, required this.onTap});
+
+  final bool selected;
+  final String label;
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Column(children: [
+          Container(
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: selected ? AppColors.amber : AppColors.border, width: selected ? 3 : 1),
+            ),
+            child: child,
+          ),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(fontSize: 11, color: selected ? AppColors.amber : AppColors.dim)),
+        ]),
       );
 }
