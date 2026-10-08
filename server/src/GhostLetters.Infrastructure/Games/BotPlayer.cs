@@ -34,7 +34,8 @@ public static class BotPlayer
         return type switch
         {
             nameof(AckRole) => new AckRole(),
-            nameof(ChooseTruth) => new ChooseTruth(view.Board.Select(r => rng.Next(r.Cards.Count)).ToList()),
+            nameof(ChooseTruth) => new ChooseTruth(brain.TruthColumns()),
+            nameof(TeamSuggest) => brain.Suggestion(),
             nameof(NameTruth) => new NameTruth(view.Board.Select((_, r) => brain.BestColumn(r, null)).ToList()),
             nameof(GiveFirstClue) => new GiveFirstClue(brain.FirstClue()),
             nameof(SendLetter) => new SendLetter(brain.Letters(GameDefaults.LettersPerPlayer(view.Players.Count))),
@@ -46,8 +47,8 @@ public static class BotPlayer
             nameof(CastVote) when stage is { Kind: VoteStageKind.Row } => new CastVote(brain.RowVote(stage), null),
             nameof(CastVote) when stage is not null => new CastVote(null, brain.SuspectVote(stage)),
             nameof(CastVote) => new CastVote(null, null),
-            nameof(HuntPick) => brain.HuntTarget() is { } t ? new HuntPick(t, brain.HuntGuess(t)) : null,
-            nameof(BlackmailerPick) => brain.RandomOther() is { } b ? new BlackmailerPick(b) : null,
+            nameof(HuntPick) => (brain.TeamTarget() ?? brain.HuntTarget()) is { } t ? new HuntPick(t, brain.TeamGuess(t) ?? brain.HuntGuess(t)) : null,
+            nameof(BlackmailerPick) => (brain.TeamTarget() ?? brain.RandomOther()) is { } b ? new BlackmailerPick(b) : null,
             nameof(Nominate) => brain.Nomination(),
             nameof(AwardVote) => new AwardVote(brain.AwardChoice()),
             _ => null,
@@ -236,6 +237,41 @@ public static class BotPlayer
             var board = view.Board.SelectMany(r => r.Cards).ToList();
             var (card, score) = me.Hand.Select(h => (h, Best(h, board))).MinBy(x => x.Item2 + Noise());
             return score < 0.1 && rng.Next(2) == 0 ? card : null;
+        }
+
+        private IReadOnlyList<TeamSuggestionView> Team => view.TeamSuggestions ?? [];
+
+        /// <summary>Ночью Убийца берёт в каждом ряду карту, которую чаще предлагали Сообщники; без подсказок — случайную.</summary>
+        public IReadOnlyList<int> TruthColumns() => view.Board.Select((r, i) =>
+        {
+            var offered = Team.Where(s => s.Columns is { } c && c.Count > i).Select(s => s.Columns![i]).ToList();
+            return offered.Count > 0
+                ? offered.GroupBy(c => c).OrderByDescending(g => g.Count()).ThenBy(_ => rng.Next()).First().Key
+                : rng.Next(r.Cards.Count);
+        }).ToList();
+
+        /// <summary>Игрок, на которого чаще указывали Сообщники.</summary>
+        public Guid? TeamTarget() => Team.Where(s => s.Target is not null)
+            .GroupBy(s => s.Target!.Value).OrderByDescending(g => g.Count()).ThenBy(_ => rng.Next()).FirstOrDefault()?.Key;
+
+        public Role? TeamGuess(Guid target) => Team.Where(s => s.Target == target && s.Guess is not null)
+            .GroupBy(s => s.Guess!.Value).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+
+        /// <summary>Сообщник подсказывает один раз за фазу: ночью — случайные карты, на охоте — своего подозреваемого.</summary>
+        public TeamSuggest? Suggestion()
+        {
+            if (Team.Any(s => s.From == me.Id))
+            {
+                return null;
+            }
+
+            return view.Phase switch
+            {
+                Phase.Night => new TeamSuggest(Columns: view.Board.Select(r => rng.Next(r.Cards.Count)).ToList()),
+                Phase.Hunt => HuntTarget() is { } t ? new TeamSuggest(Target: t, Guess: HuntGuess(t)) : null,
+                Phase.BlackmailerHunt => RandomOther() is { } b ? new TeamSuggest(Target: b) : null,
+                _ => null,
+            };
         }
 
         /// <summary>Охота: тот, кто голосовал против команды Убийцы, — скорее всего Свидетель или Эксперт.</summary>

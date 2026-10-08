@@ -105,6 +105,9 @@ public sealed partial class GameState
 
     public HashSet<Guid> RaisedHands { get; init; } = [];
 
+    /// <summary>Подсказки Сообщников Убийце в текущей фазе (ночь, охота). Сбрасываются со сменой фазы.</summary>
+    public Dictionary<Guid, TeamSuggestion> TeamSuggestions { get; init; } = [];
+
     [JsonIgnore]
     public PlayerState Ghost => Players.Single(p => p.Role == Role.Ghost);
 
@@ -122,4 +125,14 @@ public sealed partial class GameState
     /// <summary>Игроки, кроме Призрака, по местам.</summary>
     [JsonIgnore]
     public IEnumerable<PlayerState> Investigators => Players.Where(p => p.Role != Role.Ghost).OrderBy(p => p.Seat);
+}
+
+/// <summary>Подсказка Сообщника: карты ночью или игрок на охоте.</summary>
+public sealed class TeamSuggestion
+{
+    public List<int>? Columns { get; init; }
+
+    public Guid? Target { get; init; }
+
+    public Role? Guess { get; init; }
 }
