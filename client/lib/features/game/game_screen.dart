@@ -335,7 +335,22 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Ряд, где сейчас выбирают карту: истина ночью, назвать улики, голосование по ряду.
-  bool get choosingTruth => view != null && (view!.can('ChooseTruth') || view!.can('NameTruth'));
+  bool get choosingTruth =>
+      view != null && (view!.can('ChooseTruth') || view!.can('NameTruth') || (view!.phase == 'Night' && view!.can('TeamSuggest')));
+
+  /// Убийца берёт подсказку Сообщника целиком.
+  void applyTruth(List<int> columns) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      truth.clear();
+      for (var r = 0; r < columns.length; r++) {
+        truth[r] = columns[r];
+      }
+    });
+  }
+
+  /// Убийца выбирает игрока, на которого указал Сообщник.
+  void pickTarget(String id) => setState(() => target = id);
 
   void selectTruth(int row, int column) {
     HapticFeedback.selectionClick();
@@ -372,6 +387,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
   bool get pickingPlayer {
     final v = view!;
     return v.can('HuntPick') || v.can('BlackmailerPick') || v.can('GiveFloor') ||
+        (v.can('TeamSuggest') && v.phase != 'Night') ||
         (v.can('CastVote') && v.finale?.currentStage?.isRow == false);
   }
 
@@ -409,7 +425,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     }
 
     final v = snap.view;
-    final night = v.phase == 'Night' && v.can('ChooseTruth');
+    final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final finale = isFinale(v);
     final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
     final width = MediaQuery.sizeOf(context).width;
@@ -576,7 +592,7 @@ class _Header extends StatelessWidget {
     final mine = needsMe(v);
     final acted = v.players.where((p) => p.hasActed).length;
     final counted = const {'Mailbox', 'Refill', 'Voting', 'VoteTie', 'RoleReveal'}.contains(v.phase);
-    final killerNight = v.phase == 'Night' && v.can('ChooseTruth');
+    final killerNight = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final pillColor = killerNight ? AppColors.red : (mine ? AppColors.amber : AppColors.surface2);
     final pillText = killerNight ? AppColors.text : (mine ? AppColors.onAmber : AppColors.text);
 
@@ -788,7 +804,7 @@ class _Board extends StatelessWidget {
     final columns = v.board.isEmpty ? 5 : v.board.first.cards.length;
     final stage = v.finale?.currentStage;
     final outcomes = v.finale?.outcomes ?? const <VoteOutcome>[];
-    final killerNight = v.phase == 'Night' && v.can('ChooseTruth');
+    final killerNight = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
 
     return LayoutBuilder(builder: (context, box) {
       // Карта = (ширина − колонка жетонов − промежутки) / столбцы, но не больше 96.

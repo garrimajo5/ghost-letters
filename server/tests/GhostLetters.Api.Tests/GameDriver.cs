@@ -11,7 +11,7 @@ public sealed class GameDriver(GameHarness game)
 {
     public const string AwardCode = "steel_balls";
 
-    private static readonly HashSet<string> Passive = ["Like", "RaiseHand", "GiveFloor"];
+    private static readonly HashSet<string> Passive = ["Like", "RaiseHand", "GiveFloor", "TeamSuggest"];
 
     public int Steps { get; private set; }
 

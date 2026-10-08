@@ -72,6 +72,9 @@ public static partial class GameEngine
                 RequirePhase(state, Phase.RoleReveal);
                 AckRoleFor(state, actor, events);
                 break;
+            case TeamSuggest suggest:
+                ApplyTeamSuggest(state, actor, suggest, events);
+                break;
             case ChooseTruth choose:
                 RequirePhase(state, Phase.Night);
                 if (actor.Id != TruthChooser(state).Id)
@@ -181,7 +184,9 @@ public static partial class GameEngine
 
                 break;
             case Phase.Night:
-                var columns = state.Board.Select(_ => rng.Next(state.Settings.Columns)).ToList();
+                // Убийца не успел — берём подсказку Сообщника, если она есть, иначе случайные карты.
+                var columns = state.TeamSuggestions.Values.Select(s => s.Columns).FirstOrDefault(c => c is not null)?.ToList()
+                              ?? state.Board.Select(_ => rng.Next(state.Settings.Columns)).ToList();
                 ApplyTruth(state, columns, events);
                 break;
             case Phase.FirstClue:
@@ -224,6 +229,52 @@ public static partial class GameEngine
 
         state.Version++;
         return events;
+    }
+
+    /// <summary>Фазы, в которых Сообщники подсказывают Убийце.</summary>
+    public static bool TeamSuggestPhase(GameState state) =>
+        state.Phase is Phase.Night or Phase.Hunt or Phase.BlackmailerHunt && state.Players.Any(p => p.Role == Role.Killer);
+
+    private static void ApplyTeamSuggest(GameState state, PlayerState actor, TeamSuggest suggest, List<GameEvent> events)
+    {
+        if (actor.Role != Role.Accomplice)
+        {
+            throw GameRuleException.NotAllowed("Подсказывать Убийце могут только Сообщники.");
+        }
+
+        if (!TeamSuggestPhase(state))
+        {
+            throw GameRuleException.NotAllowed("Сейчас Убийца ничего не выбирает.");
+        }
+
+        TeamSuggestion suggestion;
+        if (state.Phase == Phase.Night)
+        {
+            var columns = suggest.Columns;
+            if (columns is null || columns.Count != state.Board.Count ||
+                columns.Select((c, r) => c >= 0 && c < state.Board[r].Cards.Count).Any(ok => !ok))
+            {
+                throw GameRuleException.Validation("Предложите по одной карте в каждом ряду.");
+            }
+
+            suggestion = new TeamSuggestion { Columns = columns.ToList() };
+        }
+        else
+        {
+            var target = suggest.Target is { } t ? state.Players.FirstOrDefault(p => p.Id == t) : null;
+            if (target is null || target.Role == Role.Ghost || target.Id == actor.Id)
+            {
+                throw GameRuleException.Validation("Выберите игрока.");
+            }
+
+            suggestion = new TeamSuggestion { Target = target.Id, Guess = suggest.Guess };
+        }
+
+        state.TeamSuggestions[actor.Id] = suggestion;
+        foreach (var teammate in state.Players.Where(p => p.Role is Role.Killer or Role.Accomplice && p.Id != actor.Id))
+        {
+            events.Add(new GameEvent("TeamSuggested", actor.Id, OnlyFor: teammate.Id));
+        }
     }
 
     /// <summary>Кто выбирает истинные улики ночью.</summary>
@@ -459,6 +510,7 @@ public static partial class GameEngine
     {
         state.Phase = phase;
         state.Done.Clear();
+        state.TeamSuggestions.Clear();
         events.Add(new GameEvent("PhaseChanged", Detail: phase.ToString()));
     }
 

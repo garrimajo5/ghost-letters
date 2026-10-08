@@ -34,7 +34,8 @@ public sealed class BotBrainTests
         IReadOnlyList<HintGroupView>? hints = null,
         IReadOnlyList<string>? mailbox = null,
         FinaleView? finale = null,
-        IReadOnlyList<PlayerInfoView>? players = null) => new(
+        IReadOnlyList<PlayerInfoView>? players = null,
+        IReadOnlyList<TeamSuggestionView>? team = null) => new(
         Guid.NewGuid(), 1, phase, 1, 3, DiscussionMode.FreeChat,
         [new BoardRowView(Category.Motive, ["knife", "rose"]), new BoardRowView(Category.Place, ["boat", "cat"])],
         hints ?? [], 0,
@@ -46,7 +47,7 @@ public sealed class BotBrainTests
             new PlayerInfoView(Bob, 3, false, null, false, 5),
         ],
         new MeView(Me, role, hand ?? [], []),
-        truth, mailbox?.Count ?? 0, mailbox, null, null, null, [], allowed, finale);
+        truth, mailbox?.Count ?? 0, mailbox, null, null, null, [], allowed, finale, team);
 
     private static FinaleView Finale(VoteStageView? stage, IReadOnlyList<VoteRecordView>? votes = null, IReadOnlyList<VoteOutcomeView>? outcomes = null) =>
         new(stage, 3, null, votes ?? [], outcomes ?? [], [], null, null, null, [], []);
@@ -268,5 +269,64 @@ public sealed class BotBrainTests
         tags.Similarity("apple", "ball").Should().BeGreaterThan(0, "красное и круглое");
         tags.Similarity("apple", "brick").Should().Be(0);
         tags.Similarity("apple", "pear").Should().BeGreaterThan(tags.Similarity("apple", "ball"), "общий смысл весит больше цвета и формы");
+    }
+
+    [Fact]
+    public void Killer_AtNight_FollowsAccompliceSuggestion()
+    {
+        var view = View(Phase.Night, [nameof(ChooseTruth)], Role.Killer, team: [new TeamSuggestionView(Ann, [1, 0], null, null)]);
+
+        var command = (ChooseTruth)BotPlayer.Decide(view, new Random(3), Tags)!;
+
+        command.Columns.Should().Equal(1, 0);
+    }
+
+    [Fact]
+    public void Killer_OnHunt_PicksMostSuggestedPlayer()
+    {
+        var view = View(Phase.Hunt, [nameof(HuntPick)], Role.Killer, finale: Finale(null),
+            team: [new TeamSuggestionView(Ann, null, Bob, Role.Witness)]);
+
+        var command = (HuntPick)BotPlayer.Decide(view, new Random(3), Tags)!;
+
+        command.Target.Should().Be(Bob);
+        command.Guess.Should().Be(Role.Witness);
+    }
+
+    [Fact]
+    public void Accomplice_SuggestsOncePerPhase()
+    {
+        var first = View(Phase.Night, [nameof(TeamSuggest)], Role.Accomplice);
+        var suggestion = (TeamSuggest)BotPlayer.Decide(first, new Random(3), Tags)!;
+        suggestion.Columns.Should().HaveCount(2);
+
+        var again = View(Phase.Night, [nameof(TeamSuggest)], Role.Accomplice, team: [new TeamSuggestionView(Me, [0, 0], null, null)]);
+        BotPlayer.Decide(again, new Random(3), Tags).Should().BeNull();
+    }
+
+    [Fact]
+    public void BotKiller_WaitsForLiveAccomplices_UntilLast30Seconds()
+    {
+        var ids = Enumerable.Range(1, 7).Select(i => new Guid(i, 0, 0, new byte[8])).ToList();
+        var deck = Enumerable.Range(1, 300).Select(i => $"c{i:000}").ToList();
+        var state = GameEngine.Create(Guid.NewGuid(), ids, new GameSettings(), deck, 42);
+        foreach (var p in state.Players)
+        {
+            GameEngine.Execute(state, p.Id, new AckRole());
+        }
+
+        var killer = state.Players.First(p => p.Role == Role.Killer);
+        var accomplice = state.Players.First(p => p.Role == Role.Accomplice);
+        var now = DateTimeOffset.UtcNow;
+        var onlyKiller = new HashSet<Guid> { killer.Id };
+
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, now.AddSeconds(60), now).Should().BeTrue("живой Сообщник ещё не подсказал");
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, now.AddSeconds(20), now).Should().BeFalse("время на исходе");
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, null, now).Should().BeFalse("без таймера не ждём");
+        BotService.WaitsForTeam(state, killer.Id, new HashSet<Guid> { killer.Id, accomplice.Id }, now.AddSeconds(60), now)
+            .Should().BeFalse("Сообщник — тоже бот");
+
+        GameEngine.Execute(state, accomplice.Id, new TeamSuggest(Columns: state.Board.Select(_ => 0).ToList()));
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, now.AddSeconds(60), now).Should().BeFalse("подсказка получена");
     }
 }
