@@ -309,19 +309,23 @@ class MyLetter {
 }
 
 class Me {
-  const Me({required this.id, required this.role, required this.hand, required this.letters});
+  const Me({required this.id, required this.role, required this.hand, required this.letters, this.discarded = const []});
 
   factory Me.fromJson(Json j) => Me(
         id: j['id'] as String,
         role: j['role'] as String,
         hand: _strings(j['hand']),
         letters: _list(j['letters'], MyLetter.fromJson),
+        discarded: _strings(j['discarded']),
       );
 
   final String id;
   final String role;
   final List<String> hand;
   final List<MyLetter> letters;
+
+  /// Карты, которые я сбросил за партию (видны только мне).
+  final List<String> discarded;
 }
 
 class VoteStage {

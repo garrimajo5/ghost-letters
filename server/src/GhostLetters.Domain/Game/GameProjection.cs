@@ -12,7 +12,7 @@ public sealed record PlayerInfoView(Guid Id, int Seat, bool IsGhost, Role? Known
 
 public sealed record MyLetterView(int Round, string CardId, bool? Revealed);
 
-public sealed record MeView(Guid Id, Role Role, IReadOnlyList<string> Hand, IReadOnlyList<MyLetterView> Letters);
+public sealed record MeView(Guid Id, Role Role, IReadOnlyList<string> Hand, IReadOnlyList<MyLetterView> Letters, IReadOnlyList<string>? Discarded = null);
 
 /// <summary>Всё, что видит один игрок (или экран стола, если Me == null).</summary>
 public sealed record PlayerView(
@@ -61,7 +61,7 @@ public static class GameProjection
                 .Where(l => l.From == viewer.Id)
                 .Select(l => new MyLetterView(l.Round, l.CardId, IsRoundRevealed(state, l.Round) ? l.Revealed : null))
                 .ToList();
-            me = new MeView(viewer.Id, viewer.Role, viewer.Hand.ToList(), letters);
+            me = new MeView(viewer.Id, viewer.Role, viewer.Hand.ToList(), letters, viewer.Discarded.ToList());
         }
 
         var isGhost = viewer?.Role == Role.Ghost;

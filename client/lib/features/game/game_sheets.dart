@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/card_catalog.dart';
 import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
@@ -958,14 +959,34 @@ class _LetterSheetState extends State<LetterSheet> {
     widget.screen.saveMark(widget.letter.cardId, m);
   }
 
+  Future<void> _pickAny() async {
+    final l = widget.letter;
+    final sets = widget.screen.lobby?.settings.cardSets;
+    final picked = await AnyCardPicker.show(context, sets: sets, exclude: l.cardId, selected: mark.claim);
+    if (picked != null && mounted) _set(picked == l.cardId ? mark.copyWith(clearClaim: true) : mark.copyWith(claim: picked));
+  }
+
+  Widget _option(String c, String label) => _ClaimOption(
+        key: Key('claim-$c'),
+        selected: mark.claim == c,
+        label: label,
+        child: CardImage(cardId: c, size: 56, radius: 8),
+        onTap: () => _set(mark.copyWith(claim: c)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final v = widget.screen.view!;
     final l = widget.letter;
-    final options = <String>{
-      for (final h in v.hints.where((h) => h.round == l.round)) ...h.cards,
-      for (final h in v.hints.where((h) => h.round != l.round)) ...h.cards,
-    }.where((c) => c != l.cardId).toList();
+    final me = v.me;
+    // В приоритете — карты, которые у меня были: на руке и сброшенные.
+    final hand = [for (final c in me?.hand ?? const <String>[]) if (c != l.cardId) c];
+    final discarded = [
+      for (final c in (me?.discarded ?? const <String>[]).reversed.toSet()) if (c != l.cardId && !hand.contains(c)) c,
+    ];
+    final claim = mark.claim;
+    final other = claim != null && !hand.contains(claim) && !discarded.contains(claim) ? claim : null;
+    const hint = TextStyle(fontSize: 12, color: AppColors.muted);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -980,34 +1001,38 @@ class _LetterSheetState extends State<LetterSheet> {
           const SizedBox(height: 16),
           Text('ЧТО Я ГОВОРЮ ДРУГИМ', style: sectionLabel()),
           const SizedBox(height: 4),
-          const Text(
-            'Видите только вы. Если называете другую карту — запомните, какую.',
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
-          ),
+          const Text('Видите только вы. Если называете другую карту — запомните, какую.', style: hint),
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, children: [
             _ClaimOption(
               key: const Key('claim-truth'),
-              selected: mark.claim == null,
+              selected: claim == null,
               label: 'Правду',
               child: CardImage(cardId: l.cardId, size: 56, radius: 8),
               onTap: () => _set(mark.copyWith(clearClaim: true)),
             ),
-            for (final c in options)
-              _ClaimOption(
-                key: Key('claim-$c'),
-                selected: mark.claim == c,
-                label: 'Эту',
-                child: CardImage(cardId: c, size: 56, radius: 8),
-                onTap: () => _set(mark.copyWith(claim: c)),
-              ),
+            if (other != null) _option(other, 'Выбрана'),
           ]),
-          if (options.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text('Чужих подсказок пока нет — назвать можно только своё письмо.', style: TextStyle(fontSize: 12, color: AppColors.dim)),
-            ),
-          const SizedBox(height: 16),
+          if (hand.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Text('С РУКИ', key: Key('claim-hand'), style: hint),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, runSpacing: 8, children: [for (final c in hand) _option(c, 'Эту')]),
+          ],
+          if (discarded.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Text('СБРОШЕННЫЕ', key: Key('claim-discarded'), style: hint),
+            const SizedBox(height: 6),
+            Wrap(spacing: 8, runSpacing: 8, children: [for (final c in discarded) _option(c, 'Эту')]),
+          ],
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            key: const Key('claim-any'),
+            icon: const Icon(Icons.grid_view, size: 18),
+            label: const Text('Любая карта из набора…'),
+            onPressed: _pickAny,
+          ),
+          const SizedBox(height: 12),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.ice,
@@ -1018,6 +1043,97 @@ class _LetterSheetState extends State<LetterSheet> {
             child: const Text('Готово'),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// Выбор любой карты из наборов партии: вкладки по наборам и сетка карт.
+class AnyCardPicker extends ConsumerStatefulWidget {
+  const AnyCardPicker({super.key, this.sets, this.exclude, this.selected});
+
+  /// Коды наборов партии; null — все наборы.
+  final List<String>? sets;
+  final String? exclude;
+  final String? selected;
+
+  static Future<String?> show(BuildContext context, {List<String>? sets, String? exclude, String? selected}) =>
+      showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        builder: (_) => AnyCardPicker(sets: sets, exclude: exclude, selected: selected),
+      );
+
+  @override
+  ConsumerState<AnyCardPicker> createState() => _AnyCardPickerState();
+}
+
+class _AnyCardPickerState extends ConsumerState<AnyCardPicker> {
+  String? _set; // null — все наборы партии
+
+  @override
+  Widget build(BuildContext context) {
+    final catalog = ref.watch(cardCatalogProvider);
+    final height = MediaQuery.sizeOf(context).height * 0.8;
+    return SafeArea(
+      child: SizedBox(
+        height: height,
+        child: catalog.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => const Center(child: Text('Не удалось загрузить карты', style: TextStyle(color: AppColors.muted))),
+          data: (all) {
+            final sets = [for (final s in all) if (widget.sets == null || widget.sets!.contains(s.code)) s];
+            final shown = [
+              for (final s in sets)
+                if (_set == null || s.code == _set)
+                  for (final c in s.cards) if (c != widget.exclude) c,
+            ];
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: Text('ЛЮБАЯ КАРТА ИЗ НАБОРА', style: sectionLabel()),
+              ),
+              if (sets.length > 1)
+                // Все наборы видны сразу (переносом строк), без горизонтальной прокрутки.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(spacing: 8, runSpacing: 4, children: [
+                    for (final s in [null, ...sets])
+                      ChoiceChip(
+                        key: Key('any-set-${s?.code ?? 'all'}'),
+                        label: Text(s?.title ?? 'Все'),
+                        showCheckmark: false,
+                        selected: _set == s?.code,
+                        onSelected: (_) => setState(() => _set = s?.code),
+                      ),
+                  ]),
+                ),
+              Expanded(
+                child: GridView.builder(
+                  key: const Key('any-grid'),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 96, mainAxisSpacing: 8, crossAxisSpacing: 8),
+                  itemCount: shown.length,
+                  itemBuilder: (context, i) {
+                    final c = shown[i];
+                    final selected = c == widget.selected;
+                    return GestureDetector(
+                      key: Key('any-$c'),
+                      onTap: () => Navigator.pop(context, c),
+                      child: Container(
+                        foregroundDecoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: selected ? AppColors.amber : AppColors.border, width: selected ? 3 : 1),
+                        ),
+                        child: LayoutBuilder(builder: (context, box) => CardImage(cardId: c, size: box.maxWidth, radius: 8)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]);
+          },
+        ),
       ),
     );
   }

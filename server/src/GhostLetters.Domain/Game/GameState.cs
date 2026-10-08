@@ -13,6 +13,9 @@ public sealed class PlayerState
 
     public List<string> Hand { get; init; } = [];
 
+    /// <summary>Карты, которые игрок сам сбросил за партию (видит только он) — их удобно «назвать» вместо своего письма.</summary>
+    public List<string> Discarded { get; init; } = [];
+
     public bool Acknowledged { get; set; }
 }
 

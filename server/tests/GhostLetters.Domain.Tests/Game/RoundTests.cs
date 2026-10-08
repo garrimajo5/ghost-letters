@@ -132,6 +132,22 @@ public class RoundTests
     }
 
     [Fact]
+    public void Discard_IsRememberedOnlyForTheDiscarder()
+    {
+        var state = TestGame.Create(players: 4);
+        state.ToRound1();
+        state.SendAll();
+        var detective = state.WithRole(Role.Detective);
+        var other = state.Players.First(p => p.Id != detective.Id && p.Id != state.Ghost.Id);
+        var dropped = detective.Hand[0];
+
+        state.Run(detective, new Discard(dropped));
+
+        GameProjection.For(state, detective.Id).Me!.Discarded.Should().Equal(dropped);
+        GameProjection.For(state, other.Id).Me!.Discarded.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Discussion_StartsWhenHintsOpenAndEveryoneDecided()
     {
         var state = TestGame.Create(players: 4);
