@@ -49,20 +49,34 @@ public sealed class CardCatalog(GhostLettersDbContext db, IConfiguration configu
         }
     }
 
+    /// <summary>
+    /// Карты из манифеста: новые добавляются, а карта, которую перенесли в другой набор (разметка по символу
+    /// на карте), переезжает туда же — id карты не меняется, так что идущие партии это не задевает.
+    /// </summary>
     public async Task<int> ImportManifestAsync(string path, CancellationToken ct)
     {
         await using var stream = File.OpenRead(path);
         var manifest = await JsonSerializer.DeserializeAsync<Manifest>(stream, GameJson.Options, ct)
                        ?? throw new InvalidOperationException("Пустой манифест карт.");
         var added = 0;
+        var moved = 0;
         foreach (var set in manifest.Sets)
         {
             var setId = await db.CardSets.Where(s => s.Code == set.Code).Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct)
                         ?? throw new InvalidOperationException($"Набора {set.Code} нет в каталоге.");
-            added += await AddMissingAsync(setId, set.Cards.Select(c => c.Id).ToList(), ct);
+            var keys = set.Cards.Select(c => c.Id).Distinct().ToList();
+            var known = await db.Cards.Where(c => keys.Contains(c.ImageKey)).ToListAsync(ct);
+            foreach (var card in known.Where(c => c.SetId != setId))
+            {
+                card.SetId = setId;
+                moved++;
+            }
+
+            await db.SaveChangesAsync(ct);
+            added += await AddMissingAsync(setId, keys.Except(known.Select(c => c.ImageKey)).ToList(), ct);
         }
 
-        logger.LogInformation("Импорт карт из {Path}: добавлено {Added}", path, added);
+        logger.LogInformation("Импорт карт из {Path}: добавлено {Added}, перенесено в другой набор {Moved}", path, added, moved);
         return added;
     }
 

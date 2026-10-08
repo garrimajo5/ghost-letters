@@ -79,7 +79,10 @@ public sealed record LobbySettings
 
     public PhaseTimers Timers { get; init; } = new();
 
-    public IReadOnlyList<string> CardSets { get; init; } = ["original"];
+    /// <summary>Наборы карт; по умолчанию — все четыре (761 карта).</summary>
+    public IReadOnlyList<string> CardSets { get; init; } = AllCardSets;
+
+    public static readonly IReadOnlyList<string> AllCardSets = ["original", "mailbox", "ritual", "mirror"];
 
     /// <summary>Назначенный хостом Призрак (id игрока лобби); null — по жребию. Если игрок ушёл — тоже по жребию.</summary>
     public Guid? GhostUserId { get; init; }

@@ -31,6 +31,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   static const _sets = {'original': 'Оригинальный', 'mailbox': 'Почтовый ящик', 'ritual': 'Тайный ритуал', 'mirror': 'Зеркало истины'};
 
+  /// Как отличить набор: символ в правом верхнем углу карты.
+  static const _setHints = {
+    'original': 'базовая игра, без символа',
+    'mailbox': 'символ — почтовый ящик',
+    'ritual': 'символ — пламя',
+    'mirror': 'символ — зеркало',
+  };
+
   bool get _rulesLocked => widget.inGame;
 
   void _timer(String key, int value) => setState(() => s = s.copyWith(timers: {...s.timers, key: value}));
@@ -138,7 +146,9 @@ class _SettingsSheetState extends State<SettingsSheet> {
           Text('НАБОРЫ КАРТ', style: sectionLabel(size: 13)),
           for (final e in _sets.entries)
             CheckboxListTile(
+              key: Key('set-${e.key}'),
               title: Text(e.value),
+              subtitle: Text(_setHints[e.key] ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
               value: s.cardSets.contains(e.key),
               onChanged: _rulesLocked
                   ? null

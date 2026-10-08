@@ -101,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--catalog", default=os.path.join(here, "sheets.json"))
     ap.add_argument("--size", type=int, default=512)
     ap.add_argument("--quality", type=int, default=82)
+    ap.add_argument("--sets", default=os.path.join(here, "card_sets.json"),
+                    help="разметка карт по наборам (id → original/mailbox/ritual/mirror); нет файла — всё в «Оригинальный»")
     args = ap.parse_args(argv)
 
     with open(args.catalog, encoding="utf-8") as f:
@@ -153,13 +155,40 @@ def main(argv: list[str] | None = None) -> int:
         cards.append({"id": card_id, "file": name,
                       "source": {"sheet": card.sheet, "col": card.col, "row": card.row}})
 
-    manifest = {"version": 1, "sets": [{"code": "original", "title": "Оригинальный", "cards": cards}]}
+    manifest = split_by_sets(cards, load_set_map(args.sets))
     with open(os.path.join(args.out, "cards.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=1)
 
     print(f"ячеек {stats['cells']}, пустых {stats['empty']}, рубашек {stats['backs']}, "
           f"дубликатов {stats['duplicates']}, карт {len(cards)}")
     return 0
+
+
+SET_TITLES = {
+    "original": "Оригинальный",
+    "mailbox": "Почтовый ящик",
+    "ritual": "Тайный ритуал",
+    "mirror": "Зеркало истины",
+}
+
+
+def load_set_map(path: str | None = None) -> dict:
+    """card_sets.json рядом со скриптом: id карты → набор (по символу в правом верхнем углу карты)."""
+    path = path or os.path.join(os.path.dirname(os.path.abspath(__file__)), "card_sets.json")
+    if not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def split_by_sets(cards: list, set_map: dict) -> dict:
+    """Манифест с наборами в постоянном порядке; карты без разметки — в «Оригинальном»."""
+    by_set = {code: [] for code in SET_TITLES}
+    for card in cards:
+        by_set.setdefault(set_map.get(card["id"], "original"), []).append(card)
+    return {"version": 1, "sets": [
+        {"code": code, "title": SET_TITLES.get(code, code), "cards": items} for code, items in by_set.items() if items
+    ]}
 
 
 if __name__ == "__main__":

@@ -44,7 +44,8 @@ class CutCardsTest(unittest.TestCase):
                 json.dump(catalog, f)
 
             code = cut_cards.main(["--resource", res, "--out", out,
-                                   "--catalog", os.path.join(res, "sheets.json"), "--size", "64"])
+                                   "--catalog", os.path.join(res, "sheets.json"), "--size", "64",
+                                   "--sets", os.path.join(res, "no-sets.json")])
             self.assertEqual(code, 0)
 
             with open(os.path.join(out, "cards.json"), encoding="utf-8") as f:
@@ -62,3 +63,17 @@ class CutCardsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SplitBySetsTest(unittest.TestCase):
+    def test_cards_go_to_their_sets_unknown_to_original(self):
+        cards = [{"id": "orig_0001"}, {"id": "orig_0002"}, {"id": "orig_0003"}]
+        manifest = cut_cards.split_by_sets(cards, {"orig_0001": "mirror", "orig_0002": "ritual"})
+        sets = {s["code"]: [c["id"] for c in s["cards"]] for s in manifest["sets"]}
+        self.assertEqual(sets, {"original": ["orig_0003"], "ritual": ["orig_0002"], "mirror": ["orig_0001"]})
+        self.assertEqual([s["code"] for s in manifest["sets"]], ["original", "ritual", "mirror"])
+
+    def test_real_mapping_covers_every_card_once(self):
+        mapping = cut_cards.load_set_map()
+        self.assertTrue(set(mapping.values()) <= set(cut_cards.SET_TITLES))
+        self.assertGreater(len(mapping), 700)
