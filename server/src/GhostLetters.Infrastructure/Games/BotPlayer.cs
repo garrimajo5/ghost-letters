@@ -292,7 +292,9 @@ public static class BotPlayer
         }
 
         /// <summary>Тот, кто почти всегда голосовал за истинные карты, похож на Эксперта.</summary>
-        public Role HuntGuess(Guid target) => RowAccuracy(target) >= 0.75 ? Role.Expert : Role.Witness;
+        public Role HuntGuess(Guid target) => view.HuntRoles is [var only]
+            ? only
+            : RowAccuracy(target) >= 0.75 ? Role.Expert : Role.Witness;
 
         public Guid? RandomOther()
         {

@@ -6,12 +6,15 @@ import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 /// Сообщники подсказывают Убийце: ночью — истинные улики, в финале — кого назвать Свидетелем.
-GameSnapshot _snap(String phase, List<String> allowed, String role, {List<Json> team = const []}) {
+GameSnapshot _snap(String phase, List<String> allowed, String role,
+    {List<Json> team = const [], List<String>? huntRoles, Map<String, dynamic> finale = const {}}) {
   final j = snapshotJson(phase: phase, allowed: allowed);
   final v = j['view'] as Json;
   (v['me'] as Json)['role'] = role;
   (v['finale'] as Json)['currentStage'] = null;
   v['teamSuggestions'] = team;
+  if (huntRoles != null) v['huntRoles'] = huntRoles;
+  (v['finale'] as Json).addAll(finale);
   // u3 — Сообщник для Убийцы и наоборот: команда знает друг друга.
   final players = (v['players'] as List).cast<Json>();
   for (final p in players) {
@@ -120,5 +123,65 @@ void main() {
 
     expect(find.text('ВАШ ХОД'), findsNothing);
     expect(find.text('Подсказка отправлена — решает Убийца'), findsWidgets);
+  });
+
+  testWidgets('ночь: подсказка Сообщника — «большой палец» на карте, без рамки выбора', (tester) async {
+    await _open(tester, _snap('Night', const ['TeamSuggest'], 'Accomplice'));
+
+    await tester.tap(find.byKey(const Key('board-0-2')));
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byKey(const Key('thumb-orig_0003')), findsOneWidget);
+    expect(find.byKey(const Key('thumb-orig_0001')), findsNothing);
+  });
+
+  testWidgets('ночь, Убийца: видит пальцы Сообщника на картах', (tester) async {
+    await _open(
+      tester,
+      _snap('Night', const ['ChooseTruth'], 'Killer', team: [
+        {'from': 'u3', 'columns': [1, 3], 'target': null, 'guess': null},
+      ]),
+    );
+
+    expect(find.byKey(const Key('thumb-orig_0002')), findsOneWidget);
+    expect(find.byKey(const Key('thumb-orig_0009')), findsOneWidget);
+    expect(find.byKey(const Key('thumb-orig_0001')), findsNothing);
+  });
+
+  testWidgets('охота без Эксперта в партии: назвать можно только Свидетеля', (tester) async {
+    await _open(tester, _snap('Hunt', const ['TeamSuggest'], 'Accomplice', huntRoles: const ['Witness']));
+
+    await tester.ensureVisible(find.byKey(const Key('suggest-witness')));
+    expect(find.byKey(const Key('suggest-witness')), findsOneWidget);
+    expect(find.byKey(const Key('suggest-expert')), findsNothing);
+  });
+
+  testWidgets('охота с обеими ролями: обе кнопки', (tester) async {
+    await _open(tester, _snap('Hunt', const ['HuntPick'], 'Killer', huntRoles: const ['Witness', 'Expert']));
+
+    await tester.ensureVisible(find.byKey(const Key('hunt-expert')));
+    expect(find.byKey(const Key('hunt-witness')), findsOneWidget);
+    expect(find.byKey(const Key('hunt-expert')), findsOneWidget);
+  });
+
+  testWidgets('итог: арестованному Сообщнику объясняем, почему он проиграл с победившей командой', (tester) async {
+    await _open(
+      tester,
+      _snap('AwardNomination', const ['Like'], 'Accomplice', finale: {
+        'arrested': ['u2'],
+        'result': {
+          'solved': false,
+          'correctRows': 1,
+          'killerCaught': false,
+          'side': 'Killer',
+          'imitatorWon': false,
+          'blackmailerWon': false,
+          'winners': ['u3'],
+        },
+      }),
+    );
+
+    expect(find.text('Вы проиграли'), findsOneWidget);
+    expect(find.byKey(const Key('arrested-accomplice')), findsOneWidget);
   });
 }
