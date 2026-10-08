@@ -139,6 +139,9 @@ public static class FinaleProjection
             case Phase.BlackmailerHunt when viewer.Role == Role.Killer:
                 list.Add(nameof(BlackmailerPick));
                 break;
+            case Phase.Hunt or Phase.BlackmailerHunt when viewer.Role == Role.Accomplice && GameEngine.TeamSuggestPhase(state):
+                list.Add(nameof(TeamSuggest));
+                break;
             case Phase.BlackmailerClaim when viewer.Role == Role.Blackmailer:
                 list.Add(nameof(NameTruth));
                 break;

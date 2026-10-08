@@ -554,6 +554,7 @@ class GameView {
     required this.raisedHands,
     required this.allowedCommands,
     required this.finale,
+    this.teamSuggestions = const [],
   });
 
   factory GameView.fromJson(Json j) => GameView(
@@ -577,6 +578,7 @@ class GameView {
         raisedHands: _strings(j['raisedHands']),
         allowedCommands: _strings(j['allowedCommands']),
         finale: j['finale'] is Map ? Finale.fromJson(Map<String, dynamic>.from(j['finale'] as Map)) : null,
+        teamSuggestions: j['teamSuggestions'] is List ? _list(j['teamSuggestions'], TeamSuggestion.fromJson) : const [],
       );
 
   final String gameId;
@@ -599,6 +601,9 @@ class GameView {
   final List<String> raisedHands;
   final List<String> allowedCommands;
   final Finale? finale;
+
+  /// Подсказки Сообщников Убийце (ночь, охота) — приходят только команде Убийцы.
+  final List<TeamSuggestion> teamSuggestions;
 
   bool can(String command) => allowedCommands.contains(command);
 
@@ -771,4 +776,21 @@ class Profile {
   final int rating;
   final int likes;
   final List<({String title, int count})> achievements;
+}
+
+/// Подсказка Сообщника: карты ночью (columns) или игрок на охоте (target, guess).
+class TeamSuggestion {
+  const TeamSuggestion({required this.from, this.columns, this.target, this.guess});
+
+  factory TeamSuggestion.fromJson(Json j) => TeamSuggestion(
+        from: j['from'] as String,
+        columns: j['columns'] is List ? _ints(j['columns']) : null,
+        target: j['target'] as String?,
+        guess: j['guess'] as String?,
+      );
+
+  final String from;
+  final List<int>? columns;
+  final String? target;
+  final String? guess;
 }

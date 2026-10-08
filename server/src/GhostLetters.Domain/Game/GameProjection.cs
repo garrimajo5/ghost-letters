@@ -35,7 +35,11 @@ public sealed record PlayerView(
     Guid? FloorGrantedTo,
     IReadOnlyList<Guid> RaisedHands,
     IReadOnlyList<string> AllowedCommands,
-    FinaleView? Finale);
+    FinaleView? Finale,
+    IReadOnlyList<TeamSuggestionView>? TeamSuggestions = null);
+
+/// <summary>Подсказка Сообщника Убийце — видна только команде Убийцы.</summary>
+public sealed record TeamSuggestionView(Guid From, IReadOnlyList<int>? Columns, Guid? Target, Role? Guess);
 
 /// <summary>Строит проекцию состояния для игрока по матрице «кто что знает».</summary>
 public static class GameProjection
@@ -86,7 +90,10 @@ public static class GameProjection
             state.FloorGrantedTo,
             state.RaisedHands.ToList(),
             viewer is null ? Array.Empty<string>() : AllowedCommands(state, viewer),
-            FinaleProjection.For(state, viewer));
+            FinaleProjection.For(state, viewer),
+            viewer?.Role is Role.Killer or Role.Accomplice && GameEngine.TeamSuggestPhase(state)
+                ? state.TeamSuggestions.Select(kv => new TeamSuggestionView(kv.Key, kv.Value.Columns, kv.Value.Target, kv.Value.Guess)).ToList()
+                : null);
     }
 
     /// <summary>Знает ли смотрящий роль игрока target.</summary>
@@ -142,6 +149,9 @@ public static class GameProjection
                 break;
             case Phase.Night when GameEngine.TruthChooser(state).Id == viewer.Id:
                 list.Add(nameof(ChooseTruth));
+                break;
+            case Phase.Night when viewer.Role == Role.Accomplice && GameEngine.TeamSuggestPhase(state):
+                list.Add(nameof(TeamSuggest));
                 break;
             case Phase.FirstClue when ghost:
                 list.Add(nameof(GiveFirstClue));

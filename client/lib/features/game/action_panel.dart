@@ -64,6 +64,16 @@ class ActionPanel extends StatelessWidget {
         danger: true,
       );
     }
+    if (v.phase == 'Night' && v.can('TeamSuggest')) {
+      return Cta(
+        suggestedToKiller(v) ? 'Изменить подсказку' : 'Подсказать Убийце',
+        screen.truth.length == rows
+            ? () => screen.send('TeamSuggest', {'columns': [for (var r = 0; r < rows; r++) screen.truth[r]]})
+            : null,
+        icon: Icons.tips_and_updates_outlined,
+        danger: true,
+      );
+    }
     if (v.can('NameTruth')) {
       return Cta(
         'Назвать улики',
@@ -161,6 +171,16 @@ class ActionPanel extends StatelessWidget {
         if (me == null) return const [];
         return [RoleReveal(role: me.role)];
       case 'Night':
+        if (v.can('TeamSuggest')) {
+          return [
+            Text(
+              'Выберите карты, которые советуете Убийце сделать истинными, — по одной в каждом ряду. Решает Убийца. '
+              'Выбрано ${screen.truth.length} из ${v.board.length}.',
+              style: const TextStyle(color: AppColors.redSoft),
+            ),
+            ..._teamSuggestions(),
+          ];
+        }
         if (!v.can('ChooseTruth')) {
           return [
             const _Illustration('night'),
@@ -174,6 +194,7 @@ class ActionPanel extends StatelessWidget {
             'Выбрано ${screen.truth.length} из ${v.board.length}.',
             style: const TextStyle(color: AppColors.redSoft),
           ),
+          ..._teamSuggestions(),
         ];
       case 'FirstClue':
         if (!v.can('GiveFirstClue')) return [const Text('Призрак думает о первой зацепке…', style: TextStyle(color: AppColors.muted))];
@@ -419,8 +440,112 @@ class ActionPanel extends StatelessWidget {
     return names.isEmpty ? '' : 'за: ${names.join(', ')}';
   }
 
+  /// Подсказки Сообщников: Убийца видит их и может взять ночью одним нажатием; Сообщники видят друг друга.
+  List<Widget> _teamSuggestions() {
+    final list = v.teamSuggestions;
+    final killer = v.me?.role == 'Killer';
+    if (list.isEmpty) {
+      return [
+        if (killer && v.players.any((p) => p.knownRole == 'Accomplice')) ...[
+          const SizedBox(height: 8),
+          const Text('Сообщники пока не подсказали.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
+        ],
+      ];
+    }
+    String describe(TeamSuggestion s) {
+      if (s.columns != null) {
+        return [
+          for (var r = 0; r < s.columns!.length && r < v.board.length; r++) '${T.category(v.board[r].category)} ${s.columns![r] + 1}',
+        ].join(' · ');
+      }
+      final who = s.target == null ? '?' : screen.nick(s.target!);
+      final role = switch (s.guess) { 'Witness' => ' — Свидетель', 'Expert' => ' — Эксперт', _ => '' };
+      return '$who$role';
+    }
+
+    return [
+      const SizedBox(height: 10),
+      Text('ПОДСКАЗКИ СООБЩНИКОВ', style: sectionLabel(size: 12)),
+      const SizedBox(height: 4),
+      for (final s in list)
+        Padding(
+          key: Key('suggestion-${s.from}'),
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(children: [
+            Avatar(nickname: screen.nick(s.from), color: screen.colorOf(s.from), size: 26),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${s.from == v.me?.id ? 'Вы' : screen.nick(s.from)}: ${describe(s)}',
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+            if (killer && s.columns != null && v.can('ChooseTruth'))
+              TextButton(
+                key: Key('take-${s.from}'),
+                onPressed: () => screen.applyTruth(s.columns!),
+                child: const Text('Взять'),
+              ),
+            if (killer && s.target != null && (v.can('HuntPick') || v.can('BlackmailerPick')))
+              TextButton(
+                key: Key('take-${s.from}'),
+                onPressed: () => screen.pickTarget(s.target!),
+                child: const Text('Выбрать'),
+              ),
+          ]),
+        ),
+    ];
+  }
+
   List<Widget> _hunt(BuildContext context) {
     final command = v.can('HuntPick') ? 'HuntPick' : (v.can('BlackmailerPick') ? 'BlackmailerPick' : null);
+    if (command == null && v.can('TeamSuggest')) {
+      final me = v.me?.id;
+      final candidates = [
+        for (final p in v.players)
+          if (p.id != me && !p.isGhost && !isKillerTeam(p.knownRole) && v.finale?.arrested.contains(p.id) != true) p.id,
+      ];
+      void suggest(String? guess) =>
+          screen.send('TeamSuggest', {'target': screen.target, if (guess != null) 'guess': guess});
+      return [
+        Text(
+          v.phase == 'Hunt'
+              ? 'Подскажите Убийце, кто Свидетель или Эксперт. Решает Убийца.'
+              : 'Подскажите Убийце, кто Шантажист. Решает Убийца.',
+          style: const TextStyle(color: AppColors.redSoft),
+        ),
+        const SizedBox(height: 10),
+        PlayerPicker(screen: screen, candidates: candidates, color: AppColors.redBright),
+        const SizedBox(height: 10),
+        if (v.phase == 'Hunt')
+          Row(children: [
+            Expanded(
+              child: FilledButton(
+                key: const Key('suggest-witness'),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+                onPressed: screen.target == null ? null : () => suggest('Witness'),
+                child: const Text('Подсказать: Свидетель'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                key: const Key('suggest-expert'),
+                onPressed: screen.target == null ? null : () => suggest('Expert'),
+                child: const Text('Подсказать: Эксперт'),
+              ),
+            ),
+          ])
+        else
+          FilledButton(
+            key: const Key('suggest-target'),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white),
+            onPressed: screen.target == null ? null : () => suggest(null),
+            child: const Text('Подсказать Убийце'),
+          ),
+        ..._teamSuggestions(),
+      ];
+    }
     if (command == null) {
       return [
         Row(children: [
@@ -443,7 +568,7 @@ class ActionPanel extends StatelessWidget {
         if (p.id != me && !p.isGhost && !isKillerTeam(p.knownRole) && v.finale?.arrested.contains(p.id) != true) p.id,
     ];
     return [
-      const Text('Выберите игрока. Сообщники могут подсказать в канале команды.', style: TextStyle(color: AppColors.redSoft)),
+      const Text('Выберите игрока. Подсказки Сообщников — ниже, можно выбрать одним нажатием.', style: TextStyle(color: AppColors.redSoft)),
       const SizedBox(height: 10),
       PlayerPicker(screen: screen, candidates: candidates, color: AppColors.redBright),
       if (command == 'HuntPick') ...[
@@ -467,6 +592,7 @@ class ActionPanel extends StatelessWidget {
           ),
         ]),
       ],
+      ..._teamSuggestions(),
     ];
   }
 

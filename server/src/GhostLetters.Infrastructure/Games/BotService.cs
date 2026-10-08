@@ -32,8 +32,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             var row = await db.Games.AsNoTracking().FirstAsync(g => g.Id == game.Key, ct);
             var state = GameStore.Read(row);
             var rng = new Random(HashCode.Combine(state.Seed, state.Version));
-            foreach (var botId in game.Select(r => r.UserId).OrderBy(_ => rng.Next()))
+            var bots = game.Select(r => r.UserId).ToHashSet();
+            foreach (var botId in bots.OrderBy(_ => rng.Next()))
             {
+                if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, DateTimeOffset.UtcNow))
+                {
+                    continue;
+                }
+
                 if (await TryMoveAsync(state, botId, rng, ct))
                 {
                     moves++;
@@ -43,6 +49,21 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
 
         return moves;
+    }
+
+    /// <summary>
+    /// Бот-Убийца ночью и на охоте даёт живым Сообщникам время подсказать: ждёт, пока все не подскажут
+    /// или до конца фазы не останется 30 секунд. Без таймера не ждёт.
+    /// </summary>
+    public static bool WaitsForTeam(GameState state, Guid botId, IReadOnlySet<Guid> bots, DateTimeOffset? deadline, DateTimeOffset now)
+    {
+        if (deadline is null || !GameEngine.TeamSuggestPhase(state) || state.Player(botId).Role != Role.Killer)
+        {
+            return false;
+        }
+
+        var pending = state.Players.Any(p => p.Role == Role.Accomplice && !bots.Contains(p.Id) && !state.TeamSuggestions.ContainsKey(p.Id));
+        return pending && deadline.Value - now > TimeSpan.FromSeconds(30);
     }
 
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
