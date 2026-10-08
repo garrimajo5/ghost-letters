@@ -137,6 +137,83 @@ public static class BotPlayer
             return sum;
         }
 
+        /// <summary>
+        /// Насколько стол обвиняет игрока: сумма обвинений из чата с доверием к их авторам. Сговорчивый
+        /// прислушивается сильнее, упрямый — почти не слушает; слова известной команды Убийцы — со скидкой.
+        /// </summary>
+        private double Accused(Guid id)
+        {
+            if (Classic)
+            {
+                return 0;
+            }
+
+            double sum = 0;
+            foreach (var a in mind!.AccusationList.Where(a => a.Target == id && a.Author != me.Id))
+            {
+                var trust = Known(a.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? 0.3 * P.Compromise : 1;
+                trust *= 1 - PastSuspicion(a.Author) * (1 - P.Compromise);
+                sum += a.Strength * trust;
+            }
+
+            return sum * (0.05 + 0.95 * P.Compromise);
+        }
+
+        /// <summary>
+        /// Подозрительное поведение в чате: игрок советует карты, которые плохо сходятся с подсказками
+        /// (по моей оценке; Эксперт и команда Убийцы сверяют с истиной). Чем больше — тем подозрительнее.
+        /// </summary>
+        private double ChatContrarian(Guid id)
+        {
+            if (Classic)
+            {
+                return 0;
+            }
+
+            var count = 0.0;
+            foreach (var o in mind!.Opinions.Where(o => o.Author == id))
+            {
+                var (row, column) = Position(o.CardId);
+                if (row < 0)
+                {
+                    continue;
+                }
+
+                if (Truth is { } truth && (me.Role == Role.Expert || KillerTeam))
+                {
+                    count += truth[row] == column ? 0 : o.Strength;
+                    continue;
+                }
+
+                var best = view.Board[row].Cards.Max(Evidence);
+                if (best - Evidence(o.CardId) > 0.15)
+                {
+                    count += o.Strength * 0.6;
+                }
+            }
+
+            return count;
+        }
+
+        private (int Row, int Column) Position(string card)
+        {
+            for (var r = 0; r < view.Board.Count; r++)
+            {
+                for (var c = 0; c < view.Board[r].Cards.Count; c++)
+                {
+                    if (view.Board[r].Cards[c] == card)
+                    {
+                        return (r, c);
+                    }
+                }
+            }
+
+            return (-1, -1);
+        }
+
+        /// <summary>Итоговое подозрение к игроку: память, чужие обвинения и странные советы в чате.</summary>
+        private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) + 0.5 * ChatContrarian(id);
+
         /// <summary>Своя оценка карт ряда, смешанная с мнением стола в доле компромисса.</summary>
         private double Blend(int row, int column, IReadOnlyList<int> columns)
         {
@@ -240,7 +317,8 @@ public static class BotPlayer
 
                 // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
                 // Память добавляет подозрение тем, кто часто бывал Убийцей в прошлых партиях с ботом.
-                return candidates.OrderByDescending(c => Contrarian(c) + rng.NextDouble() * 0.5 + 3 * PastSuspicion(c)).First();
+                // Подозрения: память о прошлых партиях, обвинения стола и странные советы в чате.
+                return candidates.OrderByDescending(c => Contrarian(c) + rng.NextDouble() * 0.5 + Suspicion(c)).First();
             }
             else
             {
@@ -382,9 +460,13 @@ public static class BotPlayer
             var votes = view.Finale?.Votes ?? [];
             return candidates
                 .OrderByDescending(c => votes.Count(v => v.Voter == c && v.Suspect is { } s && team.Contains(s)) * 2
-                                        + RowAccuracy(c) + 2 * PastInformed(c) + Noise())
+                                        + RowAccuracy(c) + 2 * PastInformed(c) + 3 * AccusedTeam(c, team) + Noise())
                 .First();
         }
+
+        /// <summary>Сколько игрок обвинял в чате команду Убийцы — меткий обвинитель похож на Свидетеля.</summary>
+        private double AccusedTeam(Guid player, HashSet<Guid> team) =>
+            Classic ? 0 : mind!.AccusationList.Where(a => a.Author == player && team.Contains(a.Target)).Sum(a => a.Strength);
 
         /// <summary>Тот, кто почти всегда голосовал за истинные карты, похож на Эксперта.</summary>
         public Role HuntGuess(Guid target) => view.HuntRoles is [var only]
@@ -481,17 +563,43 @@ public static class BotPlayer
                 return "";
             }
 
-            if (!KillerTeam && me.Role != Role.Ghost)
+            if (me.Role == Role.Ghost)
             {
-                var suspect = view.Players.Where(p => p.Id != me.Id && !p.IsGhost)
-                    .Select(p => (p.Id, s: PastSuspicion(p.Id))).OrderByDescending(x => x.s).FirstOrDefault();
-                if (suspect.s > 0.25 && rng.NextDouble() < P.Risk && NameOf(suspect.Id) is { } who)
-                {
-                    return $" И помните: {who} уже бывал Убийцей.";
-                }
+                return "";
             }
 
-            return "";
+            var others = view.Players.Where(p => p.Id != me.Id && !p.IsGhost).ToList();
+            if (KillerTeam)
+            {
+                // Чёрные переводят стрелки: рисковый обвиняет того, кто обвинял его команду (или случайного «белого»).
+                if (rng.NextDouble() >= P.Risk * 0.7)
+                {
+                    return "";
+                }
+
+                var team = others.Where(p => p.KnownRole is { } r && r.IsKillerTeam()).Select(p => p.Id).Append(me.Id).ToHashSet();
+                var target = others.Where(p => !team.Contains(p.Id))
+                    .OrderByDescending(p => mind!.AccusationList.Where(a => a.Author == p.Id && team.Contains(a.Target)).Sum(a => a.Strength) + rng.NextDouble() * 0.3)
+                    .FirstOrDefault();
+                return target is not null && NameOf(target.Id) is { } framed ? $" Подозреваю, что {framed} из чёрных." : "";
+            }
+
+            // Белые: говорят о подозрениях, если они достаточно сильные; смелый — раньше, осторожный — только при уверенности.
+            var top = others.Where(p => p.KnownRole is not { } r || r.IsKillerTeam())
+                .Select(p => (p.Id, s: Suspicion(p.Id))).OrderByDescending(x => x.s).FirstOrDefault();
+            if (top.Id == Guid.Empty || NameOf(top.Id) is not { } who || top.s < 1.3 - 0.9 * P.Risk)
+            {
+                return "";
+            }
+
+            if (top.s > 2)
+            {
+                return $" Думаю, Убийца — {who}.";
+            }
+
+            return PastSuspicion(top.Id) > 0.25 && rng.Next(2) == 0
+                ? $" Подозреваю {who}: уже бывал Убийцей."
+                : $" Подозреваю, что {who} из чёрных.";
         }
 
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
