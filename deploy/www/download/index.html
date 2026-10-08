@@ -21,6 +21,9 @@
   .btn.alt { background: transparent; border: 1px solid var(--amber); color: var(--amber); }
   .small { color: var(--muted); font-size: 14px; margin-top: 10px; }
   code { background: #0B1420; border-radius: 6px; padding: 2px 6px; }
+  .note { display: none; margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #1C2E44; color: var(--text); font-size: 15px; }
+  .note.show { display: block; }
+  .here { outline: 2px solid var(--ice); }
 </style>
 </head>
 <body>
@@ -28,9 +31,10 @@
   <h1>ПИСЬМА ПРИЗРАКА</h1>
   <p class="lead">Детективная игра для своей компании. Выберите свой телефон.</p>
 
-  <section>
+  <section id="android">
     <h2>Android</h2>
-    <a class="btn" href="ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
+    <a class="btn" id="apk" href="ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
+    <div class="note" id="apk-note"></div>
     <p class="small" id="version">Версия: —</p>
     <ol>
       <li>Нажмите «Скачать приложение» и откройте скачанный файл.</li>
@@ -39,7 +43,7 @@
     </ol>
   </section>
 
-  <section>
+  <section id="iphone">
     <h2>iPhone</h2>
     <a class="btn alt" href="/">ОТКРЫТЬ ИГРУ</a>
     <ol>
@@ -51,6 +55,24 @@
   </section>
 </main>
 <script>
+  var ua = navigator.userAgent;
+  var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var note = document.getElementById('apk-note');
+  if (ios) {
+    // На iPhone APK не установить: показываем сначала инструкцию для iPhone.
+    var iphone = document.getElementById('iphone');
+    iphone.parentNode.insertBefore(iphone, document.getElementById('android'));
+    iphone.classList.add('here');
+  }
+  document.getElementById('apk').addEventListener('click', function (e) {
+    if (ios) {
+      e.preventDefault();
+      note.textContent = 'Это файл для Android — на iPhone его не установить. Для iPhone используйте «Открыть игру» выше.';
+    } else {
+      note.textContent = 'Загрузка началась (около 25 МБ). Когда закончится — откройте файл из уведомления или папки «Загрузки» и нажмите «Установить».';
+    }
+    note.classList.add('show');
+  });
   fetch('version.txt', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
     .then(function (t) { if (t) document.getElementById('version').textContent = 'Версия: ' + t.trim(); });
 </script>
