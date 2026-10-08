@@ -8,6 +8,7 @@ import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import 'avatar_crop.dart';
 
 final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, id) => ref.read(apiProvider).profile(id));
 
@@ -39,7 +40,10 @@ Future<void> _editAvatar(BuildContext context, WidgetRef ref, User user) async {
   if (action == 'pick') {
     final picked = await ref.read(avatarPickerProvider)();
     if (picked == null || !context.mounted) return;
-    updated = await runAction(context, () => api.uploadAvatar(picked.bytes, picked.name));
+    // Обрезка под круг: подвинуть и приблизить, чтобы лицо было по центру.
+    final cropped = await ref.read(avatarCropperProvider)(context, picked.bytes);
+    if (cropped == null || !context.mounted) return;
+    updated = await runAction(context, () => api.uploadAvatar(cropped, 'avatar.png'));
   } else {
     updated = await runAction(context, api.removeAvatar);
   }
