@@ -15,7 +15,7 @@ public sealed record CommandRequest(string Type, JsonElement? Payload, int? Expe
 public sealed record CommandResult(int Version, bool Duplicate);
 
 /// <summary>Игрок партии для подписей: ник и цвет заглушки-аватара.</summary>
-public sealed record RosterEntry(Guid Id, string Nickname, string AvatarColor, int Seat);
+public sealed record RosterEntry(Guid Id, string Nickname, string AvatarColor, int Seat, Guid? AvatarId = null);
 
 /// <summary>Полный снимок для экрана партии: проекция, дедлайн фазы, состав и лобби.</summary>
 public sealed record GameSnapshot(PlayerView View, DateTimeOffset? Deadline, IReadOnlyList<RosterEntry> Roster, Guid? LobbyId);
@@ -71,7 +71,7 @@ public sealed class GameService(
                 join u in db.Users.AsNoTracking() on p.UserId equals u.Id
                 where p.GameId == gameId
                 orderby p.Seat
-                select new RosterEntry(u.Id, u.Nickname, u.AvatarColor, p.Seat))
+                select new RosterEntry(u.Id, u.Nickname, u.AvatarColor, p.Seat, u.AvatarMediaId))
             .ToListAsync(ct);
         return new GameSnapshot(GameProjection.For(GameStore.Read(game), viewer.IsTable ? null : userId), game.PhaseDeadline,
             roster, game.LobbyId);

@@ -61,7 +61,7 @@ class LeaderboardScreen extends ConsumerWidget {
                               SizedBox(width: 32, child: Text('${i + 1}', style: heading(16, color: i < 3 ? AppColors.amber : AppColors.muted))),
                               r.isBot
                                   ? CircleAvatar(radius: 18, backgroundColor: colorFromHex(r.user.avatarColor), child: const Icon(Icons.smart_toy_outlined, size: 18, color: Colors.white))
-                                  : Avatar(nickname: r.user.nickname, color: r.user.avatarColor, size: 36),
+                                  : Avatar(nickname: r.user.nickname, color: r.user.avatarColor, photoId: r.user.avatarId, size: 36),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

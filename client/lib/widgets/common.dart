@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/api.dart';
+import '../core/config.dart';
 import '../core/theme.dart';
 
 Color colorFromHex(String hex) {
@@ -12,7 +13,10 @@ Color colorFromHex(String hex) {
 
 /// Заглушка-аватар: цвет игрока и первая буква ника (портреты персонажей не используем).
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.nickname, required this.color, this.size = 40, this.highlight = false, this.ring});
+  const Avatar({super.key, required this.nickname, required this.color, this.size = 40, this.highlight = false, this.ring, this.photoId});
+
+  /// Загруженная аватарка игрока; пока грузится или если не вышло — круг с буквой.
+  final String? photoId;
 
   final String nickname;
   final String color;
@@ -35,7 +39,18 @@ class Avatar extends StatelessWidget {
         border: Border.all(color: ringColor ?? AppColors.bg, width: ringColor == null ? 0 : (size > 60 ? 3 : 2)),
       ),
       alignment: Alignment.center,
-      child: Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0)),
+      clipBehavior: Clip.antiAlias,
+      child: photoId == null
+          ? Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0))
+          : Image.network(
+              AppConfig.avatarUrl(photoId!),
+              key: Key('avatar-photo-$photoId'),
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              cacheWidth: (size * (MediaQuery.maybeDevicePixelRatioOf(context) ?? 2)).ceil(),
+              errorBuilder: (_, __, ___) => Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0)),
+            ),
     );
   }
 }

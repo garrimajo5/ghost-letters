@@ -186,7 +186,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                   Stack(clipBehavior: Clip.none, children: [
                     p.isBot
                         ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
-                        : Avatar(nickname: p.nickname, color: p.avatarColor, highlight: p.userId == me.id),
+                        : Avatar(nickname: p.nickname, color: p.avatarColor, photoId: p.avatarId, highlight: p.userId == me.id),
                     if (lobby.settings.ghostUserId == p.userId)
                       Positioned(left: -6, bottom: -4, child: GhostBadge(key: Key('lobby-ghost-badge-${p.userId}'))),
                   ]),

@@ -13,9 +13,9 @@ public sealed record LinkCodeResponse(string Code, DateTimeOffset ExpiresAt);
 
 public sealed record UpdateProfileRequest(string? Nickname, string? AvatarColor);
 
-public sealed record UserDto(Guid Id, string Nickname, string AvatarColor, DateTimeOffset CreatedAt)
+public sealed record UserDto(Guid Id, string Nickname, string AvatarColor, DateTimeOffset CreatedAt, Guid? AvatarId = null)
 {
-    public static UserDto From(User user) => new(user.Id, user.Nickname, user.AvatarColor, user.CreatedAt);
+    public static UserDto From(User user) => new(user.Id, user.Nickname, user.AvatarColor, user.CreatedAt, user.AvatarMediaId);
 }
 
 public sealed record AuthResponse(string AccessToken, DateTimeOffset AccessTokenExpiresAt, string RefreshToken, UserDto User);

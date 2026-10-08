@@ -91,7 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () => context.push('/profile/${user.id}'),
                   child: Tooltip(
                     message: 'Профиль',
-                    child: Avatar(nickname: user.nickname, color: user.avatarColor, size: 48, highlight: true),
+                    child: Avatar(nickname: user.nickname, color: user.avatarColor, photoId: user.avatarId, size: 48, highlight: true),
                   ),
                 ),
                 const SizedBox(width: 12),

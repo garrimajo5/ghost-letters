@@ -329,7 +329,7 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Avatar(nickname: r?.nickname ?? '?', color: r?.avatarColor ?? '#3D6A99', size: 52),
+            Avatar(nickname: r?.nickname ?? '?', color: r?.avatarColor ?? '#3D6A99', photoId: r?.avatarId, size: 52),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -675,7 +675,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           if (!mine) ...[
-                            Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#3D6A99', size: 28),
+                            Avatar(nickname: author?.nickname ?? '?', color: author?.avatarColor ?? '#3D6A99', photoId: author?.avatarId, size: 28),
                             const SizedBox(width: 8),
                           ],
                           Flexible(child: bubble),
@@ -839,7 +839,7 @@ class SourceChips extends StatelessWidget {
                         borderRadius: BorderRadius.circular(99),
                       ),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 22),
+                        Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 22),
                         const SizedBox(width: 6),
                         Text(
                           p.id == v.me?.id ? 'Я' : screen.nick(p.id),

@@ -10,6 +10,9 @@ class AppConfig {
 
   static String get api => '$apiUrl/api/v1';
 
+  /// Картинка аватарки (без входа, кэшируется надолго).
+  static String avatarUrl(String id) => '$api/avatars/$id';
+
   static String get hub => '$apiUrl/hubs/play';
 
   /// Версия приложения: подставляется при сборке в CI (--dart-define), локально — «для разработки».

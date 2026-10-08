@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ghost_letters/app.dart';
 import 'package:ghost_letters/core/api.dart';
 import 'package:ghost_letters/core/app_version.dart';
+import 'package:ghost_letters/core/avatar_picker.dart';
 import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
@@ -41,13 +43,27 @@ class FakeApi extends Api {
 
   @override
   Future<Profile> profile(String userId) async => _record('profile', [userId], () => Profile(
-        user: User(id: userId, nickname: userId == 'u2' ? 'Ватсон' : 'Игрок', avatarColor: '#3FB68B'),
+        user: User(id: userId, nickname: userId == 'u2' ? 'Ватсон' : 'Игрок', avatarColor: '#3FB68B', avatarId: userId == 'u2' ? avatarId : null),
         games: 3,
         wins: 2,
         rating: 1016,
         likes: 1,
         achievements: const [],
       ));
+
+  String? avatarId;
+
+  @override
+  Future<User> uploadAvatar(Uint8List bytes, String fileName) async => _record('uploadAvatar', [bytes.length, fileName], () {
+        avatarId = 'm1';
+        return const User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B', avatarId: 'm1');
+      });
+
+  @override
+  Future<User> removeAvatar() async => _record('removeAvatar', const [], () {
+        avatarId = null;
+        return const User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B');
+      });
 
   @override
   Future<List<LeaderRow>> leaderboard({bool bots = false}) async => _record('leaderboard', [bots], () => [
@@ -197,6 +213,7 @@ class TestApp {
       apiProvider.overrideWith(FakeApi.new),
       realtimeProvider.overrideWith(FakeRealtime.new),
       cardCatalogProvider.overrideWith((ref) async => testCatalog),
+      avatarPickerProvider.overrideWithValue(() async => (bytes: Uint8List.fromList(const [0x89, 0x50, 0x4E, 0x47]), name: 'me.png')),
       latestAndroidVersionProvider.overrideWith((ref) async => null),
     ]);
     return TestApp._(UncontrolledProviderScope(container: container, child: const GhostLettersApp()), container);

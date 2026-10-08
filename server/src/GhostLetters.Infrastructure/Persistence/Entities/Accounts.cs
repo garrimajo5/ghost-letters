@@ -19,6 +19,9 @@ public sealed class User
 
     /// <summary>Бот для отладки: ходит сам, в рейтинг не попадает.</summary>
     public bool IsBot { get; set; }
+
+    /// <summary>Загруженная игроком аватарка (файл в media); null — круг с буквой.</summary>
+    public Guid? AvatarMediaId { get; set; }
 }
 
 public static class AuthProviders
