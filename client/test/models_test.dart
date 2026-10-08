@@ -69,6 +69,19 @@ void main() {
     final m = empty.copyWith(crosses: 25, checks: -3, believed: true);
     expect(m.crosses, 20);
     expect(m.checks, 0);
-    expect(m.toJson('orig_0001'), {'cardId': 'orig_0001', 'crosses': 20, 'checks': 0, 'believed': true});
+    expect(m.toJson('orig_0001'), {
+      'cardId': 'orig_0001',
+      'crosses': 20,
+      'checks': 0,
+      'believed': true,
+      'sources': {'crossBy': <String>[], 'checkBy': <String>[], 'claimedBy': null, 'claim': null},
+    });
+
+    // Источник ✕: добавили игрока — счётчик +1, убрали — −1; список и пометка с источниками не «пустые».
+    final byMarple = empty.toggleSource('u3', cross: true);
+    expect((byMarple.crosses, byMarple.crossBy, byMarple.isEmpty), (1, ['u3'], false));
+    final back = byMarple.toggleSource('u3', cross: true);
+    expect((back.crosses, back.crossBy, back.isEmpty), (0, <String>[], true));
+    expect(CardMark.fromJson(byMarple.toJson('x')).crossBy, ['u3']);
   });
 }
