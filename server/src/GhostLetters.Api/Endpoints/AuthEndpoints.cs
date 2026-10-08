@@ -42,6 +42,28 @@ public static class AuthEndpoints
                 users.UpdateAsync(http.User.UserId(), request, ct))
             .WithName("UpdateMe");
 
+        me.MapPost("/avatar", async (IFormFile file, HttpContext http, UserService users, CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return await users.SetAvatarAsync(http.User.UserId(), stream, file.Length, ct);
+            })
+            .DisableAntiforgery()
+            .WithName("UploadAvatar");
+
+        me.MapDelete("/avatar", (HttpContext http, UserService users, CancellationToken ct) =>
+                users.RemoveAvatarAsync(http.User.UserId(), ct))
+            .WithName("RemoveAvatar");
+
+        api.MapGet("/avatars/{mediaId:guid}", async (Guid mediaId, HttpContext http, UserService users, CancellationToken ct) =>
+            {
+                var (content, contentType) = await users.OpenAvatarAsync(mediaId, ct);
+                // Новая аватарка — новый id, так что файл можно кэшировать навсегда.
+                http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+                return Results.Stream(content, contentType);
+            })
+            .WithTags("Profile")
+            .WithName("GetAvatar");
+
         return api;
     }
 }

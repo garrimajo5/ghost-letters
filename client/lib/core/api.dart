@@ -265,6 +265,15 @@ class Api {
         if (mediaId != null) 'mediaId': mediaId,
       }) as Json);
 
+  /// Загрузить свою аватарку (JPEG/PNG/WebP до 1 МБ).
+  Future<User> uploadAvatar(Uint8List bytes, String fileName) async {
+    final form = FormData.fromMap({'file': MultipartFile.fromBytes(bytes, filename: fileName)});
+    return User.fromJson(
+        await _call(() => _dio.post<dynamic>('/me/avatar', data: form, options: Options(contentType: 'multipart/form-data'))) as Json);
+  }
+
+  Future<User> removeAvatar() async => User.fromJson(await _call(() => _dio.delete<dynamic>('/me/avatar')) as Json);
+
   /// Загрузить голосовое и получить его id для сообщения.
   Future<String> uploadVoice(MultipartFile file, int durationMs) async {
     final form = FormData.fromMap({

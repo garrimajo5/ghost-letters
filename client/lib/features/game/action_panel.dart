@@ -409,7 +409,7 @@ class ActionPanel extends StatelessWidget {
             if (o.kind == 'Row' && o.column != null)
               CardImage(cardId: v.board[o.row].cards[o.column!], size: 40, radius: 8)
             else
-              Avatar(nickname: screen.nick(o.suspect), color: screen.colorOf(o.suspect), size: 40),
+              Avatar(nickname: screen.nick(o.suspect), color: screen.colorOf(o.suspect), photoId: screen.photoOf(o.suspect), size: 40),
             const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -472,7 +472,7 @@ class ActionPanel extends StatelessWidget {
           key: Key('suggestion-${s.from}'),
           padding: const EdgeInsets.only(top: 4),
           child: Row(children: [
-            Avatar(nickname: screen.nick(s.from), color: screen.colorOf(s.from), size: 26),
+            Avatar(nickname: screen.nick(s.from), color: screen.colorOf(s.from), photoId: screen.photoOf(s.from), size: 26),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -637,7 +637,7 @@ class ActionPanel extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
-              Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 34, highlight: p.id == me?.id),
+              Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 34, highlight: p.id == me?.id),
               const SizedBox(width: 10),
               Expanded(child: Text(screen.nick(p.id))),
               Text(T.role(p.knownRole), style: TextStyle(fontSize: 13, color: isKillerTeam(p.knownRole) ? AppColors.redSoft : AppColors.muted)),
@@ -708,7 +708,7 @@ class ActionPanel extends StatelessWidget {
                 border: a.won ? Border.all(color: AppColors.amber) : null,
               ),
               child: Row(children: [
-                Avatar(nickname: screen.nick(a.nominee), color: screen.colorOf(a.nominee), size: 34),
+                Avatar(nickname: screen.nick(a.nominee), color: screen.colorOf(a.nominee), photoId: screen.photoOf(a.nominee), size: 34),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -767,7 +767,7 @@ class ActionPanel extends StatelessWidget {
             ListTile(
               key: Key('nominee-$id'),
               contentPadding: EdgeInsets.zero,
-              leading: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 40),
+              leading: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: 40),
               title: Text(screen.nick(id)),
               onTap: () => Navigator.pop(context, id),
             ),
@@ -842,7 +842,7 @@ class PlayerPicker extends StatelessWidget {
                   shape: BoxShape.circle,
                   border: Border.all(color: screen.target == id ? color : Colors.transparent, width: 2.5),
                 ),
-                child: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 44),
+                child: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: 44),
               ),
               const SizedBox(height: 3),
               Text(
@@ -949,7 +949,7 @@ class _VotersProgress extends StatelessWidget {
         for (final p in voters)
           Opacity(
             opacity: p.hasActed ? 1 : 0.35,
-            child: Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), size: 26),
+            child: Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 26),
           ),
       ]),
     ]);
@@ -1097,7 +1097,7 @@ class TieBreakdown extends StatelessWidget {
               else if (stage.isRow)
                 CardImage(cardId: v.board[stage.row].cards[e.key! as int], size: 44, radius: 8)
               else
-                Avatar(nickname: screen.nick(e.key! as String), color: screen.colorOf(e.key! as String), size: 44),
+                Avatar(nickname: screen.nick(e.key! as String), color: screen.colorOf(e.key! as String), photoId: screen.photoOf(e.key! as String), size: 44),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

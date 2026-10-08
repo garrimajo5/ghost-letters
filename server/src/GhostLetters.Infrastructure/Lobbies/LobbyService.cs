@@ -431,7 +431,7 @@ public sealed class LobbyService(
             lobby.CurrentGameId,
             members
                 .OrderBy(x => x.m.JoinMode == JoinModes.Table ? 1 : 0).ThenBy(x => x.m.Seat)
-                .Select(x => new LobbyMemberDto(x.u.Id, x.u.Nickname, x.u.AvatarColor, x.m.Seat, x.m.JoinMode, x.m.IsReady, x.u.IsBot))
+                .Select(x => new LobbyMemberDto(x.u.Id, x.u.Nickname, x.u.AvatarColor, x.m.Seat, x.m.JoinMode, x.m.IsReady, x.u.IsBot, x.u.AvatarMediaId))
                 .ToList());
     }
 }

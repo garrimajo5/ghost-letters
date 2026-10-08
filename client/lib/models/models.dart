@@ -12,16 +12,23 @@ List<int> _ints(dynamic v) => v is List ? v.map((e) => (e as num).toInt()).toLis
 DateTime? _date(dynamic v) => v is String ? DateTime.tryParse(v) : null;
 
 class User {
-  const User({required this.id, required this.nickname, required this.avatarColor});
+  const User({required this.id, required this.nickname, required this.avatarColor, this.avatarId});
 
-  factory User.fromJson(Json j) =>
-      User(id: j['id'] as String, nickname: j['nickname'] as String, avatarColor: j['avatarColor'] as String);
+  factory User.fromJson(Json j) => User(
+        id: j['id'] as String,
+        nickname: j['nickname'] as String,
+        avatarColor: j['avatarColor'] as String,
+        avatarId: j['avatarId'] as String?,
+      );
 
   final String id;
   final String nickname;
   final String avatarColor;
 
-  Json toJson() => {'id': id, 'nickname': nickname, 'avatarColor': avatarColor};
+  /// Загруженная аватарка; null — круг с буквой.
+  final String? avatarId;
+
+  Json toJson() => {'id': id, 'nickname': nickname, 'avatarColor': avatarColor, 'avatarId': avatarId};
 }
 
 class AuthTokens {
@@ -201,6 +208,7 @@ class LobbyMember {
     required this.mode,
     required this.isReady,
     this.isBot = false,
+    this.avatarId,
   });
 
   factory LobbyMember.fromJson(Json j) => LobbyMember(
@@ -211,8 +219,10 @@ class LobbyMember {
         mode: j['mode'] as String,
         isReady: j['isReady'] as bool? ?? false,
         isBot: j['isBot'] as bool? ?? false,
+        avatarId: j['avatarId'] as String?,
       );
 
+  final String? avatarId;
   final String userId;
   final String nickname;
   final String avatarColor;
@@ -628,11 +638,12 @@ class GameView {
 }
 
 class RosterEntry {
-  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat);
+  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat, [this.avatarId]);
 
-  factory RosterEntry.fromJson(Json j) =>
-      RosterEntry(j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt());
+  factory RosterEntry.fromJson(Json j) => RosterEntry(
+      j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt(), j['avatarId'] as String?);
 
+  final String? avatarId;
   final String id;
   final String nickname;
   final String avatarColor;

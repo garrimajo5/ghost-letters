@@ -185,7 +185,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 child: Row(children: [
                   p.isBot
                       ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
-                      : Avatar(nickname: p.nickname, color: p.avatarColor, highlight: p.userId == me.id),
+                      : Avatar(nickname: p.nickname, color: p.avatarColor, photoId: p.avatarId, highlight: p.userId == me.id),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text.rich(TextSpan(children: [

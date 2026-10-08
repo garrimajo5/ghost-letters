@@ -86,6 +86,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   String colorOf(String? id) => rosterOf(id)?.avatarColor ?? '#3D6A99';
 
+  String? photoOf(String? id) => rosterOf(id)?.avatarId;
+
   String? get lobbyId => _snap?.lobbyId;
 
   void openLobby(String id) => context.go('/lobby/$id');
@@ -521,7 +523,7 @@ class _RoleScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 6, 14, 6),
           decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Avatar(nickname: screen.nick(id), color: screen.colorOf(id), size: 32),
+            Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: 32),
             const SizedBox(width: 10),
             Flexible(child: Text(text, style: const TextStyle(fontSize: 14))),
           ]),
@@ -742,7 +744,7 @@ class _PlayerChip extends StatelessWidget {
               opacity: arrested ? 0.5 : 1,
               child: Avatar(
                 nickname: screen.nick(p.id),
-                color: screen.colorOf(p.id),
+                color: screen.colorOf(p.id), photoId: screen.photoOf(p.id),
                 size: 40,
                 ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
               ),
@@ -1035,7 +1037,7 @@ class _Hints extends StatelessWidget {
                                     Positioned(
                                       right: -4,
                                       bottom: -4,
-                                      child: Avatar(key: Key('claimed-$c'), nickname: screen.nick(who), color: screen.colorOf(who), size: 18),
+                                      child: Avatar(key: Key('claimed-$c'), nickname: screen.nick(who), color: screen.colorOf(who), photoId: screen.photoOf(who), size: 18),
                                     ),
                                 ]),
                               ),
