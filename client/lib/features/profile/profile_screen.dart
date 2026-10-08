@@ -133,7 +133,7 @@ class ProfileScreen extends ConsumerWidget {
               child: TextButton.icon(
                 key: const Key('copy-user-id'),
                 icon: const Icon(Icons.copy, size: 14),
-                label: Text('ID игрока: ${p.user.id.substring(0, 8)}…', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                label: Text('ID игрока: ${p.user.id.length > 8 ? '${p.user.id.substring(0, 8)}…' : p.user.id}', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: p.user.id));
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ID скопирован')));

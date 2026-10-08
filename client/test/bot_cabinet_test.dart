@@ -45,10 +45,11 @@ void main() {
     await tester.enterText(find.byKey(const Key('bot-name')), 'Холмс');
     expect(find.text('Смысл 50% · форма 25% · цвет 25%'), findsOneWidget);
     // Двигаем «Риск» до конца вправо — «блефует и обвиняет в лоб».
-    await tester.ensureVisible(find.byKey(const Key('spectrum-risk')));
+    final list = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(find.byKey(const Key('spectrum-risk')), 200, scrollable: list);
     await tester.drag(find.byKey(const Key('spectrum-risk')), const Offset(600, 0));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('bot-save')));
+    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
 
