@@ -170,21 +170,37 @@ public sealed class LobbyService(
         }
         else
         {
+            // Бот без характера: имя, которого нет в лобби и нет в кабинете. Такой бот уже был в прошлых
+            // партиях — берём его же (одно имя — один бот со своей историей и рейтингом), иначе создаём.
             var bots = await (from m in db.LobbyMembers
                               join u in db.Users on m.UserId equals u.Id
                               where m.LobbyId == lobbyId && u.IsBot
                               select u.Nickname).ToListAsync(ct);
-            var bot = new User
+            var cabinet = await (from b in db.BotProfiles join u in db.Users on b.UserId equals u.Id select u.Nickname).ToListAsync(ct);
+            var name = BotNames.FirstOrDefault(n => !bots.Contains(n) && !cabinet.Contains(n)) ?? $"Бот {bots.Count + 1}";
+            var existing = await db.Users
+                .Where(u => u.IsBot && u.Nickname == name && !db.BotProfiles.Any(b => b.UserId == u.Id))
+                .OrderBy(u => u.CreatedAt)
+                .Select(u => (Guid?)u.Id)
+                .FirstOrDefaultAsync(ct);
+            if (existing is { } known)
             {
-                Id = Guid.NewGuid(),
-                Nickname = BotNames.FirstOrDefault(n => !bots.Contains(n)) ?? $"Бот {bots.Count + 1}",
-                AvatarColor = BotColors[bots.Count % BotColors.Length],
-                CreatedAt = now,
-                LastSeenAt = now,
-                IsBot = true,
-            };
-            db.Users.Add(bot);
-            chosen = bot.Id;
+                chosen = known;
+            }
+            else
+            {
+                var bot = new User
+                {
+                    Id = Guid.NewGuid(),
+                    Nickname = name,
+                    AvatarColor = BotColors[bots.Count % BotColors.Length],
+                    CreatedAt = now,
+                    LastSeenAt = now,
+                    IsBot = true,
+                };
+                db.Users.Add(bot);
+                chosen = bot.Id;
+            }
         }
 
         db.LobbyMembers.Add(new LobbyMember

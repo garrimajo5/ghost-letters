@@ -34,6 +34,23 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Bots_OneNameIsOnePlayer_AcrossLobbies()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        for (var lobbyNo = 0; lobbyNo < 2; lobbyNo++)
+        {
+            var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings() });
+            await host.PostAsync($"/api/v1/lobbies/{lobby.Id("id")}/bots", null);
+            await host.PostAsync($"/api/v1/lobbies/{lobby.Id("id")}/bots", null);
+        }
+
+        // Одно имя — один бот: во втором лобби те же боты, а не новые одноимённые игроки.
+        var duplicates = await _factory.WithDbAsync(db => db.Users.Where(u => u.IsBot)
+            .GroupBy(u => u.Nickname).Where(g => g.Count() > 1).Select(g => g.Key).ToListAsync());
+        duplicates.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task OneHumanAndBots_PlayWholeGame()
     {
         var host = await TestPlayer.LoginAsync(_factory, "Хост");
