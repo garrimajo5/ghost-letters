@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ghost_letters/app.dart';
 import 'package:ghost_letters/core/api.dart';
+import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
 import 'package:ghost_letters/models/models.dart';
@@ -167,9 +168,16 @@ class TestApp {
       prefsProvider.overrideWithValue(prefs),
       apiProvider.overrideWith(FakeApi.new),
       realtimeProvider.overrideWith(FakeRealtime.new),
+      cardCatalogProvider.overrideWith((ref) async => testCatalog),
     ]);
     return TestApp._(UncontrolledProviderScope(container: container, child: const GhostLettersApp()), container);
   }
+
+  /// Маленький каталог вместо assets/cards/cards.json (в тестах ассеты грузятся медленно).
+  static const testCatalog = [
+    CardSetInfo(code: 'original', title: 'Оригинальный', cards: ['orig_0300', 'orig_0301', 'orig_0302']),
+    CardSetInfo(code: 'ritual', title: 'Тайный ритуал', cards: ['orig_0400', 'orig_0401']),
+  ];
 
   void go(String location) => container.read(routerProvider).go(location);
 }

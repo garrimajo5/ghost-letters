@@ -384,6 +384,7 @@ public static partial class GameEngine
             }
 
             state.DiscardPile.Add(cardId);
+            player.Discarded.Add(cardId);
         }
 
         Refill(state, player);

@@ -86,14 +86,14 @@ void main() {
 
     await tester.tap(find.byKey(const Key('letter-orig_0300')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('claim-orig_0301')));
+    await tester.tap(find.byKey(const Key('claim-orig_0200')));
     await tester.pump();
     await tester.tap(find.text('Готово'));
     await tester.pumpAndSettle();
 
     final saved = (app.api.named('saveMarks').last.$2[0] as List).cast<Json>().single;
     expect(saved['cardId'], 'orig_0300');
-    expect((saved['sources'] as Json)['claim'], 'orig_0301');
+    expect((saved['sources'] as Json)['claim'], 'orig_0200');
     expect(find.byKey(const Key('claim-of-orig_0300')), findsOneWidget);
   });
 
