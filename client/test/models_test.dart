@@ -79,9 +79,13 @@ void main() {
 
     // Источник ✕: добавили игрока — счётчик +1, убрали — −1; список и пометка с источниками не «пустые».
     final byMarple = empty.toggleSource('u3', cross: true);
-    expect((byMarple.crosses, byMarple.crossBy, byMarple.isEmpty), (1, ['u3'], false));
+    expect(byMarple.crosses, 1);
+    expect(byMarple.crossBy, ['u3']);
+    expect(byMarple.isEmpty, isFalse);
     final back = byMarple.toggleSource('u3', cross: true);
-    expect((back.crosses, back.crossBy, back.isEmpty), (0, <String>[], true));
+    expect(back.crosses, 0);
+    expect(back.crossBy, isEmpty);
+    expect(back.isEmpty, isTrue);
     expect(CardMark.fromJson(byMarple.toJson('x')).crossBy, ['u3']);
   });
 }
