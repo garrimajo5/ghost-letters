@@ -2,6 +2,21 @@
 
 Инструкция для Windows: Docker Desktop, Flutter SDK, Android Studio (только ради SDK и эмулятора), VS Code.
 
+
+## Одной командой (Windows)
+
+`scripts\dev.bat` — двойной щелчок или из консоли в корне репозитория:
+
+1. `git pull` (пропустить: `scripts\dev.bat --no-pull`);
+2. запускает Docker Desktop, если он не запущен;
+3. `docker compose up -d --build` и ждёт, пока сервер ответит на `/health`;
+4. `flutter pub get` и `flutter run` (аргументы передаются дальше: `scripts\dev.bat -d emulator-5554`).
+
+`scripts\server.bat` — только пересобрать и запустить сервер.
+
+Во время `flutter run`: `r` — горячая перезагрузка (правки в экранах), `R` — перезапуск приложения, `q` — выход.
+После смены иконки, шрифтов или картинок нужен полный `flutter run` заново.
+
 ## 1. Сервер и база
 
 ```powershell
