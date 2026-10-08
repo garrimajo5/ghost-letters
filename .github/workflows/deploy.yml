@@ -11,6 +11,10 @@ on:
     workflows: ['Release server image']
     types: [completed]
     branches: [main]
+  # Изменились настройки сервера (Caddy, compose, страница загрузки) — тоже выкатываем.
+  push:
+    branches: [main]
+    paths: ['deploy/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 concurrency: deploy
@@ -21,7 +25,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       HOST: ${{ vars.DEPLOY_HOST }}
@@ -54,6 +58,8 @@ jobs:
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
           scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile \
             client/assets/cards/cards.json client/assets/cards/tags.json "$SSH_USER@$HOST:$APP_DIR/"
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR/www/download"
+          scp -i ~/.ssh/deploy deploy/www/download/index.html "$SSH_USER@$HOST:$APP_DIR/www/download/index.html"
 
       - name: Deploy
         if: steps.cfg.outputs.skip != 'true'

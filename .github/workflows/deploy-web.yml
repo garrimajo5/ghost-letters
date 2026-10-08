@@ -1,0 +1,61 @@
+name: Deploy web
+
+# Веб-версия игры (для iPhone и браузеров) на том же сервере: https://<домен>/
+# Собирается и выкладывается при каждом изменении клиента в main и вручную.
+# Нужны те же настройки, что у «Deploy server»: секрет DEPLOY_SSH_KEY и переменная DEPLOY_HOST.
+on:
+  push:
+    branches: [main]
+    paths: ['client/**', '.github/workflows/deploy-web.yml']
+  workflow_dispatch:
+
+concurrency: deploy-web
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.DEPLOY_HOST }}
+      SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
+      APP_DIR: /opt/ghost-letters
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Без API_URL веб-версия ходит на тот же адрес, с которого открыта.
+      - name: Build
+        working-directory: client
+        run: |
+          flutter pub get
+          flutter build web --release --build-number=${{ github.run_number }}
+          tar -czf ../web.tgz -C build/web .
+
+      - name: Upload
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+            echo "::warning::Деплой не настроен: нужны переменная DEPLOY_HOST и секрет DEPLOY_SSH_KEY"
+            exit 0
+          fi
+          mkdir -p ~/.ssh && printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/deploy web.tgz "$SSH_USER@$HOST:/tmp/ghost-web.tgz"
+          # Новая версия раскладывается рядом и подменяет старую одним переименованием.
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "set -e; cd $APP_DIR; mkdir -p www; rm -rf www/web.new; mkdir www/web.new; \
+            tar -xzf /tmp/ghost-web.tgz -C www/web.new; rm -f /tmp/ghost-web.tgz; \
+            rm -rf www/web.old; [ -d www/web ] && mv www/web www/web.old; mv www/web.new www/web; rm -rf www/web.old"
+          domain="${{ vars.DEPLOY_DOMAIN }}"; domain="${domain:-$(echo "$HOST" | tr . -).sslip.io}"
+          for i in $(seq 1 10); do
+            if curl -fsS "https://$domain/" | grep -q flutter_bootstrap; then echo "Веб-версия: https://$domain/"; exit 0; fi
+            sleep 3
+          done
+          echo "::error::https://$domain/ не отдаёт веб-версию — нужен «Deploy server» с новым Caddyfile?"
+          exit 1

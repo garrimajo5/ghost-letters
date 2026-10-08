@@ -502,7 +502,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     setState(() => _sending = true);
     await runAction(context, () async {
       final api = ref.read(apiProvider);
-      final mediaId = await api.uploadVoice(take.path, take.durationMs);
+      final mediaId = await api.uploadVoice(take.file, take.durationMs);
       await api.sendChat(_gameId, '', channel: _channel, cards: List.of(_cards), mediaId: mediaId);
     });
     if (mounted) {
