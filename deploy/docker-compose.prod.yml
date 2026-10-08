@@ -29,6 +29,7 @@ services:
       RateLimit__AuthPerMinute: ${AUTH_PER_MINUTE:-30}
     volumes:
       - ./cards.json:/app/cards/cards.json:ro
+      - ./tags.json:/app/cards/tags.json:ro
       - media:/app/data/media
     depends_on:
       postgres:
