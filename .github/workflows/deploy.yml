@@ -1,0 +1,79 @@
+name: Deploy server
+
+# Обновляет сервер на VPS: после сборки нового образа сервера (Release server image) на main и вручную.
+# Настройка (Settings → Secrets and variables → Actions):
+#   секрет  DEPLOY_SSH_KEY — приватный SSH-ключ, чей публичный ключ лежит на сервере в ~/.ssh/authorized_keys
+#   перемен. DEPLOY_HOST   — IP сервера
+#   перемен. DEPLOY_USER   — пользователь (по умолчанию root)
+#   перемен. DEPLOY_DOMAIN — домен; пока его нет — <ip-через-дефисы>.sslip.io (HTTPS работает и так)
+on:
+  workflow_run:
+    workflows: ['Release server image']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency: deploy
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.DEPLOY_HOST }}
+      SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
+      APP_DIR: /opt/ghost-letters
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Settings
+        id: cfg
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DOMAIN_VAR: ${{ vars.DEPLOY_DOMAIN }}
+        run: |
+          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+            echo "::warning::Деплой не настроен: нужны переменная DEPLOY_HOST и секрет DEPLOY_SSH_KEY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          domain="${DOMAIN_VAR:-$(echo "$HOST" | tr . -).sslip.io}"
+          echo "domain=$domain" >> "$GITHUB_OUTPUT"
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
+          echo "Сервер: $SSH_USER@$HOST, адрес: https://$domain"
+
+      - name: Copy files
+        if: steps.cfg.outputs.skip != 'true'
+        run: |
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
+          scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile \
+            client/assets/cards/cards.json client/assets/cards/tags.json "$SSH_USER@$HOST:$APP_DIR/"
+
+      - name: Deploy
+        if: steps.cfg.outputs.skip != 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q\n' \
+              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR"
+            cat deploy/remote-deploy.sh
+          } | ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" 'bash -s'
+
+      - name: Health check
+        if: steps.cfg.outputs.skip != 'true'
+        run: |
+          url="https://${{ steps.cfg.outputs.domain }}/health"
+          for i in $(seq 1 30); do
+            if curl -fsS "$url"; then echo; echo "Сервер отвечает: $url"; exit 0; fi
+            sleep 6
+          done
+          echo "::error::Сервер не ответил на $url"
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && docker compose -f docker-compose.prod.yml logs --tail 80"
+          exit 1
