@@ -96,27 +96,19 @@ public sealed class GameRecorder(GhostLettersDbContext db)
             return;
         }
 
+        // Кооператив (без Убийцы) рейтинг не меняет: соперника нет, сравнивать не с кем.
         var detectives = state.Players.Where(p => p.Role.IsDetectiveTeam()).ToList();
         var killers = state.Players.Where(p => p.Role.IsKillerTeam()).ToList();
-        if (detectives.Count == 0)
+        if (!state.HasKiller || detectives.Count == 0 || killers.Count == 0)
         {
             return;
         }
 
-        // Без Убийцы (кооператив) детективы играют против «партии» со стартовым рейтингом:
-        // раскрыли дело — победа, нет — поражение.
-        var coop = !state.HasKiller || killers.Count == 0;
-        var side = coop ? (result.Solved ? WinningSide.Detectives : WinningSide.Killer) : result.Side;
         var (dDelta, kDelta) = EloDelta(
             detectives.Average(p => stats[p.Id].Rating),
-            coop ? UserStats.InitialRating : killers.Average(p => stats[p.Id].Rating),
-            side);
-        var changes = detectives.Select(p => (p, dDelta));
-        if (!coop)
-        {
-            changes = changes.Concat(killers.Select(p => (p, kDelta)));
-        }
-
+            killers.Average(p => stats[p.Id].Rating),
+            result.Side);
+        var changes = detectives.Select(p => (p, dDelta)).Concat(killers.Select(p => (p, kDelta)));
         foreach (var (p, delta) in changes)
         {
             var s = stats[p.Id];

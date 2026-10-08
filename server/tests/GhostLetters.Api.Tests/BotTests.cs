@@ -75,6 +75,11 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
 
         var board = await host.GetAsync("/api/v1/leaderboard?limit=100");
         board.EnumerateArray().Select(r => r.GetProperty("user").Str("nickname")).Should().NotContain(n => n.StartsWith("Бот"));
+
+        // Галочка «показать ботов»: боты в таблице, с пометкой.
+        var withBots = await host.GetAsync("/api/v1/leaderboard?limit=100&bots=true");
+        withBots.EnumerateArray().Where(r => r.GetProperty("isBot").GetBoolean())
+            .Select(r => r.GetProperty("user").Str("nickname")).Should().NotBeEmpty().And.OnlyContain(n => n.StartsWith("Бот"));
     }
 
     [Fact]

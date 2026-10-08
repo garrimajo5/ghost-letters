@@ -14,7 +14,7 @@ public sealed record AchievementDto(string Code, string Title, int Count);
 
 public sealed record ProfileDto(UserDto User, StatsDto Stats, IReadOnlyList<AchievementDto> Achievements);
 
-public sealed record LeaderboardRow(UserDto User, int Rating, int Games, int Wins);
+public sealed record LeaderboardRow(UserDto User, int Rating, int Games, int Wins, bool IsBot = false);
 
 public sealed record MyGameDto(
     Guid GameId,
@@ -68,17 +68,18 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
                 .ToList());
     }
 
-    public async Task<IReadOnlyList<LeaderboardRow>> LeaderboardAsync(int limit, CancellationToken ct)
+    /// <summary>Таблица лидеров; боты — по желанию (галочка «показать ботов»).</summary>
+    public async Task<IReadOnlyList<LeaderboardRow>> LeaderboardAsync(int limit, CancellationToken ct, bool bots = false)
     {
         var rows = await (
                 from s in db.Stats.AsNoTracking()
                 join u in db.Users.AsNoTracking() on s.UserId equals u.Id
-                where s.Games > 0 && !u.IsBot
+                where s.Games > 0 && (bots || !u.IsBot)
                 orderby s.Rating descending, s.Wins descending, u.Nickname
                 select new { u, s.Rating, s.Games, s.Wins })
             .Take(Math.Clamp(limit, 1, 100))
             .ToListAsync(ct);
-        return rows.Select(r => new LeaderboardRow(UserDto.From(r.u), r.Rating, r.Games, r.Wins)).ToList();
+        return rows.Select(r => new LeaderboardRow(UserDto.From(r.u), r.Rating, r.Games, r.Wins, r.u.IsBot)).ToList();
     }
 
     /// <summary>Мои партии; «ваш ход» — есть доступные команды (кроме лайков).</summary>

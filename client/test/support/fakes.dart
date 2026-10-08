@@ -50,6 +50,13 @@ class FakeApi extends Api {
       ));
 
   @override
+  Future<List<LeaderRow>> leaderboard({bool bots = false}) async => _record('leaderboard', [bots], () => [
+        const LeaderRow(user: User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B'), rating: 1032, games: 4, wins: 3),
+        if (bots) const LeaderRow(user: User(id: 'b1', nickname: 'Бот Лестрейд', avatarColor: '#5C7C99'), rating: 1010, games: 9, wins: 4, isBot: true),
+        const LeaderRow(user: User(id: 'u1', nickname: 'Призрачный', avatarColor: '#7C6CF2'), rating: 984, games: 4, wins: 1),
+      ]);
+
+  @override
   Future<LinkCode> createLinkCode() async =>
       _record('createLinkCode', const [], () => LinkCode(code: 'ABCDEFGH', expiresAt: DateTime(2026, 10, 9, 12, 30)));
 
