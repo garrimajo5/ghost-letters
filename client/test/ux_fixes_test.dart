@@ -117,7 +117,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final saved = app.api.named('saveMarks').last.$2[0] as List;
-    expect(saved.single, {'cardId': 'orig_0001', 'crosses': 1, 'checks': 0, 'believed': true});
+    expect(saved.single, {
+      'cardId': 'orig_0001',
+      'crosses': 1,
+      'checks': 0,
+      'believed': true,
+      'sources': {'crossBy': <String>[], 'checkBy': <String>[], 'claimedBy': null, 'claim': null},
+    });
     expect(find.byKey(const Key('x-orig_0001')), findsOneWidget);
   });
 

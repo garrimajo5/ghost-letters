@@ -1,28 +1,87 @@
 import '../../models/models.dart';
 
-/// Пометка на карте поля: ✕, ✓ и «считаю истинной».
+/// Пометка на карте: ✕ и ✓ (по словам кого), «считаю истинной», чьё это письмо (для подсказок)
+/// и какую карту я называю своим письмом (для моих писем — можно и соврать).
 class CardMark {
-  const CardMark({this.crosses = 0, this.checks = 0, this.believed = false});
+  const CardMark({
+    this.crosses = 0,
+    this.checks = 0,
+    this.believed = false,
+    this.crossBy = const [],
+    this.checkBy = const [],
+    this.claimedBy,
+    this.claim,
+  });
 
-  factory CardMark.fromJson(Json j) => CardMark(
-        crosses: (j['crosses'] as num?)?.toInt() ?? 0,
-        checks: (j['checks'] as num?)?.toInt() ?? 0,
-        believed: j['believed'] as bool? ?? false,
-      );
+  factory CardMark.fromJson(Json j) {
+    final src = j['sources'] is Map ? Map<String, dynamic>.from(j['sources'] as Map) : const <String, dynamic>{};
+    List<String> ids(Object? v) => v is List ? v.map((e) => e.toString()).toList() : const [];
+    return CardMark(
+      crosses: (j['crosses'] as num?)?.toInt() ?? 0,
+      checks: (j['checks'] as num?)?.toInt() ?? 0,
+      believed: j['believed'] as bool? ?? false,
+      crossBy: ids(src['crossBy']),
+      checkBy: ids(src['checkBy']),
+      claimedBy: src['claimedBy'] as String?,
+      claim: src['claim'] as String?,
+    );
+  }
 
   final int crosses;
   final int checks;
   final bool believed;
 
-  bool get isEmpty => crosses == 0 && checks == 0 && !believed;
+  /// По словам кого стоят ✕ и ✓ (id игроков).
+  final List<String> crossBy;
+  final List<String> checkBy;
 
-  CardMark copyWith({int? crosses, int? checks, bool? believed}) => CardMark(
+  /// Кто сказал, что эта подсказка — его письмо.
+  final String? claimedBy;
+
+  /// Для моего письма: какую карту я называю своей.
+  final String? claim;
+
+  bool get isEmpty => crosses == 0 && checks == 0 && !believed && crossBy.isEmpty && checkBy.isEmpty && claimedBy == null && claim == null;
+
+  CardMark copyWith({
+    int? crosses,
+    int? checks,
+    bool? believed,
+    List<String>? crossBy,
+    List<String>? checkBy,
+    String? claimedBy,
+    bool clearClaimedBy = false,
+    String? claim,
+    bool clearClaim = false,
+  }) =>
+      CardMark(
         crosses: (crosses ?? this.crosses).clamp(0, 20),
         checks: (checks ?? this.checks).clamp(0, 20),
         believed: believed ?? this.believed,
+        crossBy: crossBy ?? this.crossBy,
+        checkBy: checkBy ?? this.checkBy,
+        claimedBy: clearClaimedBy ? null : (claimedBy ?? this.claimedBy),
+        claim: clearClaim ? null : (claim ?? this.claim),
       );
 
-  Json toJson(String cardId) => {'cardId': cardId, 'crosses': crosses, 'checks': checks, 'believed': believed};
+  /// Переключить игрока в списке источников и подправить счётчик: добавили — +1, убрали — −1.
+  CardMark toggleSource(String userId, {required bool cross}) {
+    final list = [...(cross ? crossBy : checkBy)];
+    final added = !list.remove(userId);
+    if (added) list.add(userId);
+    final count = (cross ? crosses : checks) + (added ? 1 : -1);
+    return cross
+        ? copyWith(crossBy: list, crosses: count < list.length ? list.length : count)
+        : copyWith(checkBy: list, checks: count < list.length ? list.length : count);
+  }
+
+  Json toJson(String cardId) => {
+        'cardId': cardId,
+        'crosses': crosses,
+        'checks': checks,
+        'believed': believed,
+        'sources': {'crossBy': crossBy, 'checkBy': checkBy, 'claimedBy': claimedBy, 'claim': claim},
+      };
 }
 
 /// Сколько писем отправляет каждый игрок: вдвоём — по два.

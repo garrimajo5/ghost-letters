@@ -115,6 +115,7 @@ String roleImage(String? role) => switch (role) {
       'Accomplice' => 'role_accomplice',
       'Witness' => 'role_witness',
       'Imitator' => 'role_imitator',
+      'Blackmailer' => 'role_blackmailer',
       _ => 'role_back',
     };
 
@@ -221,7 +222,8 @@ Future<T?> runAction<T>(BuildContext context, Future<T> Function() action) async
 }
 
 /// Карта крупно поверх экрана: нажмите в любом месте, чтобы закрыть.
-Future<void> showCardZoom(BuildContext context, String cardId, {String? caption}) => showDialog<void>(
+Future<void> showCardZoom(BuildContext context, String cardId, {String? caption, String? actionLabel, VoidCallback? onAction}) =>
+    showDialog<void>(
       context: context,
       barrierColor: const Color(0xEB050A10),
       builder: (context) {
@@ -235,6 +237,17 @@ Future<void> showCardZoom(BuildContext context, String cardId, {String? caption}
               CardImage(cardId: cardId, size: size, radius: 20),
               const SizedBox(height: 12),
               if (caption != null) Text(caption, style: const TextStyle(fontSize: 14, color: AppColors.muted)),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 12),
+                FilledButton(
+                  key: const Key('zoom-action'),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onAction();
+                  },
+                  child: Text(actionLabel),
+                ),
+              ],
               const SizedBox(height: 4),
               const Text('Нажмите, чтобы закрыть', style: TextStyle(fontSize: 12, color: AppColors.dim)),
             ]),
