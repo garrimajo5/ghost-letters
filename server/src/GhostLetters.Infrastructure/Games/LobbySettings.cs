@@ -84,6 +84,9 @@ public sealed record LobbySettings
 
     public static readonly IReadOnlyList<string> AllCardSets = ["original", "mailbox", "ritual", "mirror"];
 
+    /// <summary>Рейтинговая или обычная партия.</summary>
+    public bool Ranked { get; init; } = true;
+
     /// <summary>Назначенный хостом Призрак (id игрока лобби); null — по жребию. Если игрок ушёл — тоже по жребию.</summary>
     public Guid? GhostUserId { get; init; }
 
@@ -96,6 +99,7 @@ public sealed record LobbySettings
         Roles = Roles ?? RoleOptions.Default,
         Discussion = Discussion,
         GhostPlayerId = GhostUserId,
+        Ranked = Ranked,
     };
 
     /// <summary>Проверка без числа игроков: оно известно только при старте.</summary>

@@ -81,6 +81,21 @@ void main() {
     expect((app.api.named('saveSettings').single.$2[1] as LobbySettings).columns, 6);
   });
 
+  testWidgets('рейтинговая или обычная: выбирается с метки и уходит на сервер', (tester) async {
+    final app = await openLobby(tester, lobbyWithGhost(null));
+    app.api.lobbyResult = lobbyWithGhost(null);
+
+    expect(find.text('рейтинговая'), findsOneWidget, reason: 'по умолчанию партия рейтинговая');
+    await tester.tap(find.byKey(const Key('chip-ranked')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Обычная — без рейтинга').last);
+    await tester.pumpAndSettle();
+
+    final saved = app.api.named('saveSettings').single.$2[1] as LobbySettings;
+    expect(saved.ranked, isFalse);
+    expect(saved.toJson()['ranked'], isFalse);
+  });
+
   testWidgets('метки у гостя — только для чтения', (tester) async {
     final app = await TestApp.create(user: watson);
     addTearDown(app.container.dispose);

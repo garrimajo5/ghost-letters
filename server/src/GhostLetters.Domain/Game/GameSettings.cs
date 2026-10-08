@@ -22,6 +22,9 @@ public sealed record GameSettings
 
     public DiscussionMode Discussion { get; init; } = DiscussionMode.Radio;
 
+    /// <summary>Рейтинговая партия: итог меняет рейтинг всех участников, включая ботов. Обычная — только статистику.</summary>
+    public bool Ranked { get; init; } = true;
+
     /// <summary>Кто будет Призраком (роль открытая, на баланс не влияет); null — по жребию.</summary>
     public Guid? GhostPlayerId { get; init; }
 
