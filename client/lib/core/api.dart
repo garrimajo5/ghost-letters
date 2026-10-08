@@ -43,9 +43,12 @@ class ApiError implements Exception {
 
 /// REST-клиент: подставляет токен и один раз обновляет его при 401.
 class Api {
-  Api(this._ref) {
+  Api(this._ref, {HttpClientAdapter? adapter}) : _adapter = adapter {
+    if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
+      onRequest: (options, handler) async {
+        // Профиль запомнен, а токенов нет (сменился сервер) — сначала тихо входим тем же устройством.
+        if (!_ref.read(sessionProvider).hasTokens && !options.path.startsWith('/auth/')) await ensureTokens();
         final token = _ref.read(sessionProvider).accessToken;
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
         handler.next(options);
@@ -72,6 +75,7 @@ class Api {
   }
 
   final Ref _ref;
+  final HttpClientAdapter? _adapter;
   final Dio _dio = Dio(BaseOptions(
     baseUrl: AppConfig.api,
     connectTimeout: const Duration(seconds: 8),
@@ -85,22 +89,57 @@ class Api {
   /// старого refresh-токена сервер считает кражей и отзывает все сессии.
   Future<bool> refreshTokens() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
 
+  /// Есть запомненный профиль, но нет токенов — войти заново (тот же deviceId — тот же игрок).
+  Future<bool> ensureTokens() {
+    final session = _ref.read(sessionProvider);
+    if (session.hasTokens) return Future.value(true);
+    if (session.user == null) return Future.value(false);
+    return _refreshing ??= _relogin().whenComplete(() => _refreshing = null);
+  }
+
+  Dio _bare() {
+    final dio = Dio(BaseOptions(baseUrl: AppConfig.api, connectTimeout: const Duration(seconds: 8)));
+    final adapter = _adapter;
+    if (adapter != null) dio.httpClientAdapter = adapter;
+    return dio;
+  }
+
   Future<bool> _doRefresh() async {
     final refresh = _ref.read(sessionProvider).refreshToken;
-    if (refresh == null) return false;
+    if (refresh == null) return _relogin();
     try {
-      final r = await Dio(BaseOptions(baseUrl: AppConfig.api)).post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refresh});
+      final r = await _bare().post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refresh});
       _ref.read(sessionProvider.notifier).signIn(AuthTokens.fromJson(r.data!));
       return true;
     } on DioException catch (e) {
-      // Выходим, только если сервер отверг сессию; при обрыве сети остаёмся в аккаунте.
-      if (e.response?.statusCode == 401) _ref.read(sessionProvider.notifier).signOut();
+      // Сервер отверг сессию (истекла, отозвана, другой сервер) — входим заново тем же устройством.
+      // При обрыве сети остаёмся в аккаунте и ничего не трогаем.
+      if (e.response?.statusCode == 401) return _relogin();
+      return false;
+    }
+  }
+
+  /// Тихий повторный вход гостем: deviceId, ник и цвет уже известны — экран входа не нужен.
+  Future<bool> _relogin() async {
+    final controller = _ref.read(sessionProvider.notifier);
+    final user = _ref.read(sessionProvider).user;
+    if (user == null) return false;
+    try {
+      final r = await _bare().post<Map<String, dynamic>>('/auth/guest',
+          data: {'deviceId': controller.deviceId, 'nickname': user.nickname, 'avatarColor': user.avatarColor});
+      controller.signIn(AuthTokens.fromJson(r.data!));
+      return true;
+    } on DioException catch (e) {
+      // Сервер явно отказал (не сеть) — тогда уже на экран входа.
+      final code = e.response?.statusCode;
+      if (code != null && code >= 400 && code < 500 && code != 429) controller.signOut();
       return false;
     }
   }
 
   /// Токен для хаба: если истекает в ближайшую минуту — сначала обновляем.
   Future<String> freshAccessToken() async {
+    if (!_ref.read(sessionProvider).hasTokens) await ensureTokens();
     final token = _ref.read(sessionProvider).accessToken;
     if (token == null) return '';
     final exp = jwtExpiry(token);

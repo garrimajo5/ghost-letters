@@ -23,6 +23,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    // После выхода из аккаунта подставляем прежние ник и цвет.
+    final last = ref.read(sessionProvider.notifier).lastProfile;
+    if (last != null) {
+      _nick.text = last.nickname;
+      if (avatarPalette.contains(last.avatarColor)) _color = last.avatarColor;
+    }
+  }
+
+  @override
   void dispose() {
     _nick.dispose();
     super.dispose();
