@@ -55,10 +55,11 @@ public static class BotPlayer
     }
 
     /// <summary>
-    /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты.
+    /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты; если отправлял письмо —
+    /// показывает его («кидал эту») и карты поля, которые им проверял (их может быть несколько).
     /// Команда Убийцы так же уверенно указывает на ложную карту. Призрак молчит.
     /// </summary>
-    public static (string Text, IReadOnlyList<string> Cards)? Say(PlayerView view, Random rng, CardTags? tags = null)
+    public static (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Say(PlayerView view, Random rng, CardTags? tags = null)
     {
         if (view.Me is not { } me || me.Role == Role.Ghost || view.Board.Count == 0)
         {
@@ -303,7 +304,7 @@ public static class BotPlayer
             return scores.Count < 2 ? 0 : scores[0] - scores[1];
         }
 
-        public (string Text, IReadOnlyList<string> Cards) Say()
+        public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
         {
             static string Name(Category c) => c switch
             {
@@ -329,6 +330,7 @@ public static class BotPlayer
             }
 
             var card = Card(target, column);
+            string Where(int r, int c) => $"{Name(view.Board[r].Category).ToLowerInvariant()} {c + 1}";
             var lines = Evidence(card) > 0
                 ? new[]
                 {
@@ -338,23 +340,45 @@ public static class BotPlayer
                 }
                 : new[]
                 {
-                    $"Пока не ясно. Проверял бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
+                    $"Пока не ясно. Проверил бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
             var opinion = lines[rng.Next(lines.Length)];
             if (claimCard is null)
             {
-                return (opinion, new List<string> { card });
+                return (opinion, new List<string> { card }, new List<string> { "думаю, эта" });
             }
 
+            // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
+            var checkedCards = Checked(claimCard);
             var cards = new List<string> { claimCard };
-            if (claimCard != card)
+            var notes = new List<string> { "кидал эту" };
+            foreach (var (r, c) in checkedCards)
+            {
+                cards.Add(Card(r, c));
+                notes.Add("проверял эту");
+            }
+
+            if (!cards.Contains(card) && cards.Count < ChatService.MaxCards)
             {
                 cards.Add(card);
+                notes.Add("думаю, эта");
             }
 
-            return ($"{claimText} {opinion}", cards);
+            var checkedText = checkedCards.Count == 0 ? "" : $" Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.";
+            return ($"{claimText}{checkedText} {opinion}", cards, notes);
         }
+
+        /// <summary>Карты поля, на которые похоже письмо: до трёх самых похожих (без тегов — ни одной).</summary>
+        private List<(int Row, int Column)> Checked(string letter) =>
+            Enumerable.Range(0, view.Board.Count)
+                .SelectMany(r => Enumerable.Range(0, view.Board[r].Cards.Count).Select(c => (Row: r, Column: c)))
+                .Select(x => (x, s: tags.Similarity(letter, Card(x.Row, x.Column))))
+                .Where(x => x.s > 0 && Card(x.x.Row, x.x.Column) != letter)
+                .OrderByDescending(x => x.s)
+                .Take(3)
+                .Select(x => x.x)
+                .ToList();
 
         /// <summary>
         /// Что бот говорит о своём письме этого раунда. По правилам можно рассказывать, что отправил;

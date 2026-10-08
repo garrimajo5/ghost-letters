@@ -23,6 +23,16 @@ public static partial class GameEngine
         var rng = new Random(seed);
         var roles = RoleTable.Compose(playerIds.Count, settings.Roles).ToList();
         Shuffle(roles, rng);
+
+        // Хост заранее назначил Призрака — меняем его роль местами с выпавшей Призраку.
+        if (settings.GhostPlayerId is { } ghostId && playerIds.ToList().IndexOf(ghostId) is var seat and >= 0)
+        {
+            var ghostSeat = roles.IndexOf(Role.Ghost);
+            if (ghostSeat >= 0)
+            {
+                (roles[seat], roles[ghostSeat]) = (roles[ghostSeat], roles[seat]);
+            }
+        }
         Shuffle(cards, rng);
 
         var state = new GameState

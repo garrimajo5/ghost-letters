@@ -170,4 +170,28 @@ public sealed class LobbyTests(PostgresFixture postgres) : IAsyncLifetime
             settings with { Rounds = 2, Discussion = DiscussionMode.FreeChat });
         (await game.Host.ViewAsync(game.GameId)).Str("discussion").Should().Be("FreeChat");
     }
+
+    [Fact]
+    public async Task HostCanPickTheGhost()
+    {
+        var players = new List<TestPlayer>();
+        for (var i = 0; i < 4; i++)
+        {
+            players.Add(await TestPlayer.LoginAsync(_factory, $"Игрок {i + 1}"));
+        }
+
+        var chosen = players[2];
+        var lobby = await players[0].PostAsync("/api/v1/lobbies", new { title = "Призрак назначен", settings = new { ghostUserId = chosen.Id } });
+        lobby.GetProperty("settings").GetProperty("ghostUserId").GetGuid().Should().Be(chosen.Id);
+        var lobbyId = lobby.Id("id");
+        foreach (var p in players.Skip(1))
+        {
+            await p.PostAsync($"/api/v1/lobbies/{lobby.Str("code")}/join", new { mode = "player" });
+            await p.PostAsync($"/api/v1/lobbies/{lobbyId}/ready", new { ready = true });
+        }
+
+        var gameId = (await players[0].PostAsync($"/api/v1/lobbies/{lobbyId}/start", null)).Id("gameId");
+
+        (await chosen.ViewAsync(gameId)).GetProperty("me").Str("role").Should().Be("Ghost");
+    }
 }

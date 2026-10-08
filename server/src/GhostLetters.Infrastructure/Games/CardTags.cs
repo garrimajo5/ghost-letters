@@ -20,7 +20,16 @@ public sealed class CardTags
 
     public IReadOnlyCollection<string> Of(string cardId) => _tags.TryGetValue(cardId, out var t) ? t : [];
 
-    /// <summary>Похожесть двух карт 0…1: доля общих тегов (мера Жаккара). Одна и та же карта — 1.</summary>
+    /// <summary>Цвета и форма (shape-*) — визуальные теги: они тоже связывают карты, но вдвое слабее смысла.</summary>
+    private static readonly HashSet<string> Colors =
+        ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white", "gray"];
+
+    public static double Weight(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) || Colors.Contains(tag) ? 0.5 : 1;
+
+    /// <summary>
+    /// Похожесть двух карт 0…1: взвешенная доля общих тегов (мера Жаккара; цвет и форма весят половину).
+    /// Одна и та же карта — 1.
+    /// </summary>
     public double Similarity(string a, string b)
     {
         if (a == b)
@@ -33,8 +42,8 @@ public sealed class CardTags
             return 0;
         }
 
-        var common = x.Count(y.Contains);
-        return common == 0 ? 0 : common / (double)(x.Count + y.Count - common);
+        var common = x.Where(y.Contains).Sum(Weight);
+        return common == 0 ? 0 : common / (x.Sum(Weight) + y.Sum(Weight) - common);
     }
 
     public static CardTags Parse(string json)

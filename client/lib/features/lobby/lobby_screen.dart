@@ -195,7 +195,11 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             ]),
           ),
           const SizedBox(height: 12),
-          _SettingsSummary(settings: lobby.settings, players: players.length),
+          _SettingsSummary(
+            settings: lobby.settings,
+            players: players.length,
+            ghost: players.where((p) => p.userId == lobby.settings.ghostUserId).map((p) => p.nickname).firstOrNull,
+          ),
           const SizedBox(height: 20),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Expanded(child: Text('ИГРОКИ', style: heading(18, color: AppColors.ice, spacing: 2))),
@@ -217,6 +221,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       TextSpan(text: p.nickname),
                       if (p.userId == me.id) const TextSpan(text: ' · вы', style: TextStyle(color: AppColors.amber, fontSize: 13)),
                       if (p.userId == lobby.hostUserId) const TextSpan(text: ' · хост', style: TextStyle(color: AppColors.ice, fontSize: 13)),
+                      if (lobby.settings.ghostUserId == p.userId)
+                        const TextSpan(text: ' · Призрак', style: TextStyle(color: AppColors.ice, fontSize: 13, fontWeight: FontWeight.w600)),
                     ])),
                   ),
                   if (p.userId != lobby.hostUserId)
@@ -225,6 +231,21 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                     const SizedBox(width: 6),
                     const Icon(Icons.check_circle, color: AppColors.believed, size: 20),
                   ],
+                  if (isHost && lobby.status == 'open')
+                    IconButton(
+                      key: Key('ghost-${p.userId}'),
+                      tooltip: lobby.settings.ghostUserId == p.userId ? 'Призрак по жребию' : 'Сделать Призраком',
+                      onPressed: () => _apply((api) => api.saveSettings(
+                            lobby.id,
+                            lobby.settings.ghostUserId == p.userId
+                                ? lobby.settings.copyWith(clearGhost: true)
+                                : lobby.settings.copyWith(ghostUserId: p.userId),
+                          )),
+                      icon: Opacity(
+                        opacity: lobby.settings.ghostUserId == p.userId ? 1 : 0.35,
+                        child: const AppImage('role_ghost', width: 22, height: 30, radius: 3),
+                      ),
+                    ),
                   if (isHost && p.userId != me.id)
                     IconButton(
                       tooltip: 'Исключить',
@@ -271,10 +292,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 }
 
 class _SettingsSummary extends StatelessWidget {
-  const _SettingsSummary({required this.settings, required this.players});
+  const _SettingsSummary({required this.settings, required this.players, this.ghost});
 
   final LobbySettings settings;
   final int players;
+
+  /// Ник игрока, которому хост заранее отдал роль Призрака.
+  final String? ghost;
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +310,7 @@ class _SettingsSummary extends StatelessWidget {
       r.killerEnabled ? 'с Убийцей' : 'кооператив',
       settings.discussion == 'Radio' ? 'рация' : 'свободное обсуждение',
       settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)',
+      'Призрак: ${ghost ?? 'по жребию'}',
     ];
     return Wrap(spacing: 6, runSpacing: 6, children: [
       for (final p in parts)

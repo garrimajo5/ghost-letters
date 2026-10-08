@@ -182,4 +182,27 @@ public class SetupTests
 
         state.Version.Should().Be(4);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    [InlineData(6)]
+    public void Create_HostPickedGhost_GetsGhostRole(int seat)
+    {
+        var ids = TestGame.PlayerIds(7);
+        for (var seed = 0; seed < 10; seed++)
+        {
+            var state = GameEngine.Create(Guid.NewGuid(), ids, new GameSettings { GhostPlayerId = ids[seat] }, TestGame.Deck, seed);
+            state.Player(ids[seat]).Role.Should().Be(Role.Ghost);
+            state.Players.Count(p => p.Role == Role.Ghost).Should().Be(1);
+        }
+    }
+
+    [Fact]
+    public void Create_UnknownGhost_FallsBackToLot()
+    {
+        var ids = TestGame.PlayerIds(5);
+        var state = GameEngine.Create(Guid.NewGuid(), ids, new GameSettings { GhostPlayerId = Guid.NewGuid() }, TestGame.Deck, 1);
+        state.Players.Count(p => p.Role == Role.Ghost).Should().Be(1);
+    }
 }

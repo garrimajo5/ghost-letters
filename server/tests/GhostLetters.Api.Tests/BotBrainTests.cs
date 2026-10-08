@@ -236,4 +236,37 @@ public sealed class BotBrainTests
 
         command.CardIds.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Bot_LabelsLetterAndTheBoardCardsItChecked()
+    {
+        var view = View(Phase.Discussion, [nameof(ReadyNextRound)], Role.Detective) with
+        {
+            Me = new MeView(Me, Role.Detective, [], [new MyLetterView(1, "sword", false)]),
+        };
+
+        var line = BotPlayer.Say(view, new Random(3), Tags)!.Value;
+
+        line.Cards[0].Should().Be("sword");
+        line.Notes[0].Should().Be("кидал эту");
+        line.Notes.Should().HaveSameCount(line.Cards);
+        line.Cards[line.Notes.ToList().IndexOf("проверял эту")].Should().Be("knife", "меч похож на нож на поле");
+        line.Text.Should().Contain("Проверял: мотив 1");
+    }
+
+    [Fact]
+    public void Similarity_ColorAndShapeLinkCards_ButWeakerThanMeaning()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["apple"] = ["apple", "fruit", "sweet", "red", "shape-round"],
+            ["ball"] = ["ball", "toy", "red", "shape-round"],
+            ["pear"] = ["pear", "fruit", "sweet", "green", "shape-tall"],
+            ["brick"] = ["brick", "stone", "gray", "shape-compact"],
+        });
+
+        tags.Similarity("apple", "ball").Should().BeGreaterThan(0, "красное и круглое");
+        tags.Similarity("apple", "brick").Should().Be(0);
+        tags.Similarity("apple", "pear").Should().BeGreaterThan(tags.Similarity("apple", "ball"), "общий смысл весит больше цвета и формы");
+    }
 }

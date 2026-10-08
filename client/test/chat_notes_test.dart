@@ -44,4 +44,35 @@ void main() {
     expect(saved[2], 'Подозрительно молчит\nРаунд 2: «Я отправила ключ»');
     expect(find.text('Цитата добавлена в заметку о Марпл'), findsOneWidget);
   });
+
+  testWidgets('под картами в сообщении подписи: кидал эту, проверял эту', (tester) async {
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1.5;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    app.realtime.game = snapshot(phase: 'Discussion', allowed: const ['RaiseHand']);
+    app.go('/game/g1');
+    await tester.pumpAndSettle();
+
+    app.realtime.chatCtl.add(ChatMessage.fromJson({
+      'id': 'm2',
+      'channel': 'public',
+      'authorId': 'u3',
+      'kind': 'text',
+      'text': 'Отправлял вот эту — исчезла.',
+      'cardIds': ['orig_1', 'orig_2', 'orig_3'],
+      'cardNotes': ['кидал эту', 'проверял эту', 'проверял эту'],
+      'createdAt': '2026-10-07T10:01:00Z',
+      'round': 1,
+    }));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Чат'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('кидал эту'), findsOneWidget);
+    expect(find.text('проверял эту'), findsNWidgets(2));
+  });
 }
