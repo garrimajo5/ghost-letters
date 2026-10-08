@@ -68,4 +68,30 @@ void main() {
 
     expect(find.text('наборы: Оригинальный, Зеркало истины'), findsOneWidget);
   });
+
+  testWidgets('хост меняет настройку прямо с метки: нажал «5 карт в ряду» → выбрал 6', (tester) async {
+    final app = await openLobby(tester, lobbyWithGhost(null));
+    app.api.lobbyResult = lobbyWithGhost(null);
+
+    await tester.tap(find.byKey(const Key('chip-columns')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('6 карт в ряду').last);
+    await tester.pumpAndSettle();
+
+    expect((app.api.named('saveSettings').single.$2[1] as LobbySettings).columns, 6);
+  });
+
+  testWidgets('метки у гостя — только для чтения', (tester) async {
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    app.realtime.lobby = lobbyWithGhost(null);
+    app.go('/lobby/l1');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('chip-columns')));
+    await tester.pumpAndSettle();
+    expect(find.text('6 карт в ряду'), findsNothing);
+  });
 }
