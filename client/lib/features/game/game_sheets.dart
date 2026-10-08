@@ -1101,18 +1101,17 @@ class _AnyCardPickerState extends ConsumerState<AnyCardPicker> {
                 child: Text('ЛЮБАЯ КАРТА ИЗ НАБОРА', style: sectionLabel()),
               ),
               if (sets.length > 1)
-                SizedBox(
-                  height: 44,
-                  child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), children: [
+                // Все наборы видны сразу (переносом строк), без горизонтальной прокрутки.
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Wrap(spacing: 8, runSpacing: 4, children: [
                     for (final s in [null, ...sets])
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          key: Key('any-set-${s?.code ?? 'all'}'),
-                          label: Text(s?.title ?? 'Все'),
-                          selected: _set == s?.code,
-                          onSelected: (_) => setState(() => _set = s?.code),
-                        ),
+                      ChoiceChip(
+                        key: Key('any-set-${s?.code ?? 'all'}'),
+                        label: Text(s?.title ?? 'Все'),
+                        showCheckmark: false,
+                        selected: _set == s?.code,
+                        onSelected: (_) => setState(() => _set = s?.code),
                       ),
                   ]),
                 ),
