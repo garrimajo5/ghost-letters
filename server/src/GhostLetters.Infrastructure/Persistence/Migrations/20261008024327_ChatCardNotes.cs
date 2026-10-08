@@ -16,7 +16,9 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                 schema: "public",
                 table: "chat_messages",
                 type: "text[]",
-                nullable: false);
+                nullable: false,
+                // В базе уже есть сообщения: без значения по умолчанию NOT NULL-колонка не добавится.
+                defaultValueSql: "'{}'");
         }
 
         /// <inheritdoc />
