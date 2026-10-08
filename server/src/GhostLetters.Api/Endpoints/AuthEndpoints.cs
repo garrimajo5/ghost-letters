@@ -12,6 +12,15 @@ public static class AuthEndpoints
                 service.GuestAsync(request, ct))
             .WithName("LoginGuest");
 
+        auth.MapPost("/link", (LinkLoginRequest request, AuthService service, CancellationToken ct) =>
+                service.LinkAsync(request, ct))
+            .WithName("LoginByLinkCode");
+
+        auth.MapPost("/link-code", (HttpContext http, AuthService service, CancellationToken ct) =>
+                service.CreateLinkCodeAsync(http.User.UserId(), ct))
+            .RequireAuthorization()
+            .WithName("CreateLinkCode");
+
         auth.MapPost("/refresh", (RefreshRequest request, AuthService service, CancellationToken ct) =>
                 service.RefreshAsync(request.RefreshToken, ct))
             .WithName("RefreshTokens");

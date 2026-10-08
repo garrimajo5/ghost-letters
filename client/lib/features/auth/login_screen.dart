@@ -56,6 +56,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (mounted) setState(() => _busy = false);
   }
 
+  /// Уже играю на другом устройстве: ввожу код оттуда — и это тот же аккаунт.
+  Future<void> _loginByCode() async {
+    final code = await showDialog<String>(context: context, builder: (_) => const _CodeDialog());
+    if (code == null || !mounted) return;
+    setState(() => _busy = true);
+    final session = ref.read(sessionProvider.notifier);
+    await runAction(context, () async {
+      final tokens = await ref.read(apiProvider).loginByCode(session.deviceId, code);
+      session.signIn(tokens);
+    });
+    if (mounted) setState(() => _busy = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final nick = _nick.text.trim();
@@ -134,7 +147,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                         : const Text('ВОЙТИ'),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    key: const Key('login-by-code'),
+                    onPressed: _busy ? null : _loginByCode,
+                    child: const Text('Уже играю на другом устройстве — войти по коду'),
+                  ),
+                  const SizedBox(height: 8),
                   const Text(
                     'Вы играете как гость на этом устройстве.',
                     textAlign: TextAlign.center,
@@ -154,4 +173,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     );
   }
+}
+
+class _CodeDialog extends StatefulWidget {
+  const _CodeDialog();
+
+  @override
+  State<_CodeDialog> createState() => _CodeDialogState();
+}
+
+class _CodeDialogState extends State<_CodeDialog> {
+  final _code = TextEditingController();
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  String get _clean => _code.text.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Вход по коду'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text(
+            'На устройстве, где вы уже играете, откройте свой профиль → «Войти на другом устройстве» и введите код.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('link-code-input'),
+            controller: _code,
+            autofocus: true,
+            textCapitalization: TextCapitalization.characters,
+            style: heading(22, spacing: 3),
+            decoration: const InputDecoration(hintText: 'ABCD-EFGH'),
+            onChanged: (_) => setState(() {}),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+          FilledButton(
+            key: const Key('link-code-submit'),
+            onPressed: _clean.length == 8 ? () => Navigator.pop(context, _clean) : null,
+            child: const Text('Войти'),
+          ),
+        ],
+      );
 }

@@ -772,3 +772,16 @@ class Profile {
   final int likes;
   final List<({String title, int count})> achievements;
 }
+
+/// Код входа на другом устройстве.
+class LinkCode {
+  const LinkCode({required this.code, required this.expiresAt});
+
+  factory LinkCode.fromJson(Json j) => LinkCode(code: j['code'] as String, expiresAt: DateTime.parse(j['expiresAt'] as String).toLocal());
+
+  final String code;
+  final DateTime expiresAt;
+
+  /// Для чтения вслух и ввода: «ABCD-EFGH».
+  String get pretty => code.length == 8 ? '${code.substring(0, 4)}-${code.substring(4)}' : code;
+}
