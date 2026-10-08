@@ -57,12 +57,12 @@ void main() {
 
     testWidgets('ошибка сервера показывается игроку', (tester) async {
       final app = await _start(tester);
-      app.api.failWith = const ApiError('OFFLINE', 'Нет связи с сервером. Проверьте, что он запущен.');
+      app.api.failWith = const ApiError('OFFLINE', ApiError.offlineMessage);
 
       await tester.tap(find.byKey(const Key('create-lobby')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Нет связи с сервером. Проверьте, что он запущен.'), findsOneWidget);
+      expect(find.text(ApiError.offlineMessage), findsOneWidget);
       expect(find.byKey(const Key('create-lobby')), findsOneWidget);
     });
   });

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
@@ -24,15 +25,28 @@ class ApiError implements Exception {
         );
       }
       if (e.response == null) {
-        return const ApiError('OFFLINE', 'Нет связи с сервером. Проверьте, что он запущен.');
+        final slow = e.type == DioExceptionType.connectionTimeout ||
+            e.type == DioExceptionType.receiveTimeout ||
+            e.type == DioExceptionType.sendTimeout;
+        return ApiError('OFFLINE', slow ? slowMessage : offlineMessage);
       }
-      return ApiError('HTTP_${e.response?.statusCode}', 'Ошибка сервера (${e.response?.statusCode}).', e.response?.statusCode);
+      final status = e.response?.statusCode;
+      // 502–504 — сервер перезапускается (обычно при обновлении) и вернётся через минуту.
+      if (status != null && status >= 502 && status <= 504) return ApiError('UNAVAILABLE', restartingMessage, status);
+      return ApiError('HTTP_$status', 'Ошибка сервера ($status). Попробуйте ещё раз.', status);
     }
     // Ошибки хаба приходят текстом «… КОД: сообщение».
     final hub = RegExp(r'([A-Z][A-Z_]{3,}):\s*(.+)$', multiLine: true).firstMatch(e.toString());
     if (hub != null) return ApiError(hub.group(1)!, hub.group(2)!.trim());
-    return ApiError('ERROR', e.toString());
+    // Остальное — внутренняя ошибка: технический текст игроку не показываем.
+    debugPrint('Необработанная ошибка: $e');
+    return const ApiError('ERROR', unknownMessage);
   }
+
+  static const offlineMessage = 'Нет связи с сервером. Проверьте интернет и попробуйте ещё раз.';
+  static const slowMessage = 'Сервер долго не отвечает. Проверьте интернет и попробуйте ещё раз.';
+  static const restartingMessage = 'Сервер обновляется — попробуйте через минуту.';
+  static const unknownMessage = 'Что-то пошло не так. Попробуйте ещё раз.';
 
   final String code;
   final String message;

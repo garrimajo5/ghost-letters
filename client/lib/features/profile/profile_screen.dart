@@ -21,7 +21,7 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('ПРОФИЛЬ')),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(ApiError.from(e).message)),
+        error: (e, _) => ErrorRetry(message: ApiError.from(e).message, onRetry: () => ref.invalidate(profileProvider(userId))),
         data: (p) => ListView(padding: pageInsets(context, top: 16), children: [
           Center(child: Avatar(nickname: p.user.nickname, color: p.user.avatarColor, size: 88, highlight: true)),
           const SizedBox(height: 10),

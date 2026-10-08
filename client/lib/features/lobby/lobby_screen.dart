@@ -135,44 +135,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(tooltip: 'На главную', icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/')),
-        title: Text(lobby.title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis),
-        actions: [
-          if (isHost)
-            IconButton(
-              tooltip: 'Настройки',
-              icon: const Icon(Icons.tune),
-              onPressed: () => _openSettings(lobby, players.length),
-            ),
-          IconButton(
-            tooltip: 'Выйти из лобби',
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await runAction(context, () => ref.read(apiProvider).leaveLobby(lobby.id));
-              if (context.mounted) context.go('/');
-            },
-          ),
-        ],
-      ),
-      bottomNavigationBar: bottom == null
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: pageInsets(context, bottom: 12),
-                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _RolesPreview(lobby: lobby, players: players.length),
-                  const SizedBox(height: 8),
-                  bottom,
-                ]),
-              ),
-            ),
-      body: Column(children: [
-        const ConnectionBanner(),
-        Expanded(child: ListView(
-        padding: pageInsets(context),
-        children: [
+    final landscape = isCompactLandscape(context);
+    final headItems = <Widget>[
           Panel(
             padding: const EdgeInsets.all(16),
             child: Row(children: [
@@ -205,6 +169,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             onChange: isHost ? (next) => _apply((api) => api.saveSettings(lobby.id, next)) : null,
             onOpenSheet: isHost ? () => _openSettings(lobby, players.length) : null,
           ),
+    ];
+    final playerItems = <Widget>[
           const SizedBox(height: 20),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Expanded(child: Text('ИГРОКИ', style: heading(18, color: AppColors.ice, spacing: 2))),
@@ -289,8 +255,73 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             const SizedBox(height: 12),
             _RolesPreview(lobby: lobby, players: players.length),
           ],
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(tooltip: 'На главную', icon: const Icon(Icons.arrow_back), onPressed: () => context.go('/')),
+        title: Text(lobby.title.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis),
+        actions: [
+          if (isHost)
+            IconButton(
+              tooltip: 'Настройки',
+              icon: const Icon(Icons.tune),
+              onPressed: () => _openSettings(lobby, players.length),
+            ),
+          IconButton(
+            tooltip: 'Выйти из лобби',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await runAction(context, () => ref.read(apiProvider).leaveLobby(lobby.id));
+              if (context.mounted) context.go('/');
+            },
+          ),
         ],
-      )),
+      ),
+      bottomNavigationBar: bottom == null || landscape
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: pageInsets(context, bottom: 12),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  _RolesPreview(lobby: lobby, players: players.length),
+                  const SizedBox(height: 8),
+                  bottom,
+                ]),
+              ),
+            ),
+      body: Column(children: [
+        const ConnectionBanner(),
+        Expanded(
+          child: landscape
+              // Телефон боком: слева код, настройки и кнопка, справа игроки в две колонки.
+              ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  SizedBox(
+                    width: (MediaQuery.sizeOf(context).width * 0.44).clamp(280.0, 420.0),
+                    child: ListView(
+                      key: const Key('lobby-left'),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+                      children: [
+                        ...headItems,
+                        if (bottom != null) ...[
+                          const SizedBox(height: 12),
+                          _RolesPreview(lobby: lobby, players: players.length),
+                          const SizedBox(height: 8),
+                          bottom,
+                        ],
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      key: const Key('lobby-right'),
+                      padding: const EdgeInsets.fromLTRB(8, 0, 16, 16),
+                      children: playerItems,
+                    ),
+                  ),
+                ])
+              : ListView(padding: pageInsets(context), children: [...headItems, ...playerItems]),
+        ),
       ]),
     );
   }

@@ -48,14 +48,24 @@ class CardImage extends StatelessWidget {
   final double size;
   final double? radius;
 
+  /// Исходники карт — 512×512. Декодируем под размер на экране (с шагом 64 px, чтобы
+  /// одна карта не плодила много копий в кэше): ~1 МБ на карту вместо 64–256 КБ на телефоне.
+  static int decodeSize(double size, double devicePixelRatio) {
+    final px = (size * devicePixelRatio).ceil();
+    return ((px + 63) ~/ 64 * 64).clamp(64, 512);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final decode = decodeSize(size, MediaQuery.maybeDevicePixelRatioOf(context) ?? 2);
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius ?? (size * 0.16).clamp(4, 14)),
       child: Image.asset(
         'assets/cards/$cardId.webp',
         width: size,
         height: size,
+        cacheWidth: decode,
+        cacheHeight: decode,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stack) => Container(
           width: size,
@@ -221,6 +231,28 @@ Future<T?> runAction<T>(BuildContext context, Future<T> Function() action) async
   }
 }
 
+/// Ошибка загрузки экрана: понятный текст и кнопка «Повторить».
+class ErrorRetry extends StatelessWidget {
+  const ErrorRetry({super.key, required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.cloud_off, color: AppColors.muted, size: 36),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.4)),
+            const SizedBox(height: 16),
+            OutlinedButton(key: const Key('retry'), onPressed: onRetry, child: const Text('Повторить')),
+          ]),
+        ),
+      );
+}
+
 /// Карта крупно поверх экрана: нажмите в любом месте, чтобы закрыть.
 Future<void> showCardZoom(BuildContext context, String cardId, {String? caption, String? actionLabel, VoidCallback? onAction}) =>
     showDialog<void>(
@@ -258,6 +290,12 @@ Future<void> showCardZoom(BuildContext context, String cardId, {String? caption,
 
 /// Поля страницы: на телефоне — обычные [side], на широком экране контент идёт колонкой
 /// не шире [max] по центру (фон и прокрутка — во всю ширину).
+/// Телефон, повёрнутый боком: экран шире, чем высокий, и низкий (до 500 dp).
+bool isCompactLandscape(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  return size.width > size.height && size.height < 500;
+}
+
 EdgeInsets pageInsets(BuildContext context, {double max = 760, double side = 16, double top = 8, double bottom = 16}) {
   final width = MediaQuery.sizeOf(context).width;
   final h = width > max + side * 2 ? (width - max) / 2 : side;
