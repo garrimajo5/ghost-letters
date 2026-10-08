@@ -48,14 +48,24 @@ class CardImage extends StatelessWidget {
   final double size;
   final double? radius;
 
+  /// Исходники карт — 512×512. Декодируем под размер на экране (с шагом 64 px, чтобы
+  /// одна карта не плодила много копий в кэше): ~1 МБ на карту вместо 64–256 КБ на телефоне.
+  static int decodeSize(double size, double devicePixelRatio) {
+    final px = (size * devicePixelRatio).ceil();
+    return ((px + 63) ~/ 64 * 64).clamp(64, 512);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final decode = decodeSize(size, MediaQuery.maybeDevicePixelRatioOf(context) ?? 2);
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius ?? (size * 0.16).clamp(4, 14)),
       child: Image.asset(
         'assets/cards/$cardId.webp',
         width: size,
         height: size,
+        cacheWidth: decode,
+        cacheHeight: decode,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stack) => Container(
           width: size,
