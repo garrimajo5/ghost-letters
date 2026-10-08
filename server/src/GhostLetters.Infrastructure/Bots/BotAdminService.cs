@@ -114,6 +114,26 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
         return ToDto(profile, user, stats?.Games ?? 0, stats?.Wins ?? 0, stats?.Rating ?? UserStats.InitialRating);
     }
 
+    /// <summary>Один бот кабинета (после смены аватарки и т. п.).</summary>
+    public async Task<BotDto> GetAsync(Guid adminId, Guid botId, CancellationToken ct)
+    {
+        await RequireBotAsync(adminId, botId, ct);
+        var profile = await db.BotProfiles.AsNoTracking().SingleAsync(b => b.UserId == botId, ct);
+        var user = await db.Users.AsNoTracking().SingleAsync(u => u.Id == botId, ct);
+        var stats = await db.Stats.AsNoTracking().FirstOrDefaultAsync(s => s.UserId == botId, ct);
+        return ToDto(profile, user, stats?.Games ?? 0, stats?.Wins ?? 0, stats?.Rating ?? UserStats.InitialRating);
+    }
+
+    /// <summary>Админ трогает только ботов кабинета — не людей и не старых безликих ботов.</summary>
+    public async Task RequireBotAsync(Guid adminId, Guid botId, CancellationToken ct)
+    {
+        RequireAdmin(adminId);
+        if (!await db.BotProfiles.AnyAsync(b => b.UserId == botId, ct))
+        {
+            throw AppException.NotFound("Бот не найден.");
+        }
+    }
+
     /// <summary>Готовые характеры одной кнопкой; уже созданные (по имени) не дублируются.</summary>
     public async Task<IReadOnlyList<BotDto>> CreatePresetsAsync(Guid adminId, CancellationToken ct)
     {

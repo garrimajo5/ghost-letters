@@ -118,10 +118,31 @@ class FakeApi extends Api {
   Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled}) async =>
       _record('saveBot', [id, nickname, spectra, enabled], () {
         final bot = BotInfo(
-            id: id ?? 'b${botList.length + 1}', nickname: 'Бот $nickname'.replaceFirst('Бот Бот ', 'Бот '), avatarColor: color, about: about, spectra: spectra, enabled: enabled);
+            id: id ?? 'b${botList.length + 1}',
+            nickname: 'Бот $nickname'.replaceFirst('Бот Бот ', 'Бот '),
+            avatarColor: color,
+            avatarId: botList.where((b) => b.id == id).firstOrNull?.avatarId,
+            about: about,
+            spectra: spectra,
+            enabled: enabled);
         botList = [for (final b in botList) if (b.id != bot.id) b, bot];
         return bot;
       });
+
+  @override
+  Future<BotInfo> uploadBotAvatar(String botId, Uint8List bytes, String fileName) async =>
+      _record('uploadBotAvatar', [botId, bytes.length, fileName], () => _setBotPhoto(botId, 'photo-$botId'));
+
+  @override
+  Future<BotInfo> removeBotAvatar(String botId) async => _record('removeBotAvatar', [botId], () => _setBotPhoto(botId, null));
+
+  BotInfo _setBotPhoto(String botId, String? photo) {
+    final b = botList.firstWhere((b) => b.id == botId);
+    final bot = BotInfo(
+        id: b.id, nickname: b.nickname, avatarColor: b.avatarColor, avatarId: photo, about: b.about, spectra: b.spectra, enabled: b.enabled);
+    botList = [for (final x in botList) x.id == botId ? bot : x];
+    return bot;
+  }
 
   @override
   Future<List<BotInfo>> createPresetBots() async => _record('createPresetBots', const [], () {
