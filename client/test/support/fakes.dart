@@ -9,6 +9,7 @@ import 'package:ghost_letters/core/app_version.dart';
 import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
+import 'package:ghost_letters/core/sound.dart';
 import 'package:ghost_letters/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -167,6 +168,7 @@ class TestApp {
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(overrides: [
       prefsProvider.overrideWithValue(prefs),
+      soundOutputProvider.overrideWith((ref) => FakeSoundOutput()),
       apiProvider.overrideWith(FakeApi.new),
       realtimeProvider.overrideWith(FakeRealtime.new),
       cardCatalogProvider.overrideWith((ref) async => testCatalog),
@@ -182,4 +184,15 @@ class TestApp {
   ];
 
   void go(String location) => container.read(routerProvider).go(location);
+}
+
+class FakeSoundOutput implements SoundOutput {
+  final effects = <Sfx>[];
+  final musicCalls = <({Music? track, double volume})>[];
+  @override
+  void music(Music? track, double volume) => musicCalls.add((track: track, volume: volume));
+  @override
+  void effect(Sfx effect, double volume) => effects.add(effect);
+  @override
+  void dispose() {}
 }

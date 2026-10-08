@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api.dart';
+import '../../core/sound.dart';
+import '../../core/sound_settings_sheet.dart';
 import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
@@ -16,6 +18,7 @@ import '../lobby/settings_sheet.dart';
 import 'action_panel.dart';
 import 'game_sheets.dart';
 import 'game_state.dart';
+import 'game_audio.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -29,6 +32,11 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class GameScreenState extends ConsumerState<GameScreen> {
   GameSnapshot? _snap;
+  late final GameAudio _audio;
+  Timer? _audioTimer;
+  bool _audioBaseline = false;
+  bool _chatOpen = false;
+  bool _audioActive = true;
   String? _error;
   final _subs = <StreamSubscription<Object?>>[];
   late final Realtime _realtime;
@@ -85,11 +93,24 @@ class GameScreenState extends ConsumerState<GameScreen> {
   @override
   void initState() {
     super.initState();
+    _audio = GameAudio(ref.read(soundProvider));
+    _audioTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      if (_audioActive && !_audioBaseline) _audio.tick(DateTime.now());
+    });
     _realtime = ref.read(realtimeProvider);
+    _subs.add(_realtime.connected.listen((connected) {
+      if (!connected) _audioBaseline = true;
+    }));
     _subs.add(_realtime.views.listen((u) {
       if (u.view.gameId != widget.gameId || !mounted) return;
       final current = _snap;
       if (current == null || u.view.version < current.view.version) return;
+      if (_audioBaseline || !_audioActive) {
+        _audio.baseline(u.view, u.deadline);
+        _audioBaseline = false;
+      } else {
+        _audio.update(u.view, u.deadline);
+      }
       setState(() {
         if (u.view.phase != current.view.phase || u.view.round != current.view.round) _resetSelection();
         _snap = current.withView(u.view, u.deadline);
@@ -97,16 +118,23 @@ class GameScreenState extends ConsumerState<GameScreen> {
     }));
     _subs.add(_realtime.chat.listen((m) {
       if (!mounted || chat.any((c) => c.id == m.id)) return;
+      if (!chatDocked && !_chatOpen && !_audioBaseline && _audioActive &&
+          m.authorId != view?.me?.id && DateTime.now().difference(m.createdAt).abs() < const Duration(seconds: 10)) {
+        ref.read(soundProvider).play(Sfx.chat);
+      }
       setState(() {
         chat.add(m);
-        if (!chatDocked) unread++;
+        if (!chatDocked && !_chatOpen) unread++;
       });
     }));
     _subs.add(_realtime.lobbyUpdates.listen((l) {
       if (mounted && l.id == lobbyId) setState(() => lobby = l);
     }));
     // Вернулись из фона: связь могла прерваться — подписываемся заново и перечитываем партию.
-    _lifecycle = AppLifecycleListener(onResume: _resync);
+    _lifecycle = AppLifecycleListener(onResume: _resync, onStateChange: (state) {
+      _audioActive = state == AppLifecycleState.resumed;
+      _audioBaseline = true;
+    });
     _load();
   }
 
@@ -136,10 +164,15 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Future<void> _resync() async {
+    _audioBaseline = true;
     try {
       await _realtime.resync();
       final fresh = await ref.read(apiProvider).snapshot(widget.gameId);
-      if (mounted && fresh.view.version >= (view?.version ?? 0)) setState(() => _snap = fresh);
+      if (mounted && fresh.view.version >= (view?.version ?? 0)) {
+        _audio.baseline(fresh.view, fresh.deadline);
+        _audioBaseline = false;
+        setState(() => _snap = fresh);
+      }
     } catch (_) {
       // Не вышло — обновление придёт, когда хаб переподключится.
     }
@@ -153,6 +186,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
       final current = _snap;
       setState(() => _snap = current != null && current.view.version > snap.view.version ? current : snap);
 
+      _audio.baseline(_snap!.view, _snap!.deadline);
+      _audioBaseline = false;
       final api = ref.read(apiProvider);
       final history = await api.chat(widget.gameId);
       final savedMarks = snap.view.me == null ? const <Json>[] : await api.marks(widget.gameId);
@@ -200,6 +235,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     for (final s in _subs) {
       s.cancel();
     }
+    _audioTimer?.cancel();
     _lifecycle.dispose();
     _scroll.dispose();
     _realtime.forgetGame(widget.gameId);
@@ -222,8 +258,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
         return;
       }
 
+      if (!mounted) return;
       final fresh = await runAction(context, () => api.snapshot(widget.gameId));
       if (fresh == null || !mounted) return;
+      _audio.baseline(fresh.view, fresh.deadline);
       setState(() => _snap = fresh);
       if (!fresh.view.can(type)) return;
       try {
@@ -237,7 +275,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
     if (!mounted) return;
     setState(_resetSelection);
     final fresh = await runAction(context, () => api.snapshot(widget.gameId));
-    if (fresh != null && mounted && fresh.view.version >= (view?.version ?? 0)) setState(() => _snap = fresh);
+    if (fresh != null && mounted && fresh.view.version >= (view?.version ?? 0)) {
+      _audio.update(fresh.view, fresh.deadline);
+      setState(() => _snap = fresh);
+    }
   }
 
   void _snack(String text) {
@@ -272,9 +313,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
     if (mounted) setState(() => suspicion[userId] = value);
   }
 
-  void openChat() {
+  Future<void> openChat() async {
     setState(() => unread = 0);
-    if (!chatDocked) ChatSheet.show(context, this);
+    if (chatDocked) return;
+    _chatOpen = true;
+    try { await ChatSheet.show(context, this); } finally { _chatOpen = false; }
   }
 
   Future<void> saveMark(String cardId, CardMark mark) async {
@@ -567,7 +610,7 @@ class _Header extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Countdown(deadline: deadline),
+        Flexible(child: Countdown(deadline: deadline)),
         PopupMenuButton<String>(
           tooltip: 'Меню партии',
           icon: const Icon(Icons.more_horiz, color: AppColors.muted),
@@ -575,6 +618,8 @@ class _Header extends StatelessWidget {
             switch (value) {
               case 'home':
                 context.go('/');
+              case 'audio':
+                SoundSettingsSheet.show(context);
               case 'settings':
                 screen.editSettings();
               case 'rules':
@@ -582,6 +627,7 @@ class _Header extends StatelessWidget {
             }
           },
           itemBuilder: (_) => [
+            const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),

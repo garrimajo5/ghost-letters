@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api.dart';
+import '../../core/sound_settings_sheet.dart';
 import '../../core/app_version.dart';
 import '../../core/config.dart';
 import '../../core/realtime.dart';
@@ -84,6 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           onRefresh: () async => ref.invalidate(myGamesProvider),
           child: LayoutBuilder(builder: (context, box) {
             final actions = <Widget>[
+              Align(alignment: Alignment.centerRight, child: IconButton(tooltip: 'Звук и музыка', icon: const Icon(Icons.volume_up_outlined), onPressed: () => SoundSettingsSheet.show(context))),
               Row(children: [
                 GestureDetector(
                   onTap: () => context.push('/profile/${user.id}'),

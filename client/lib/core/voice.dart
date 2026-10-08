@@ -6,11 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
 
 import 'api.dart';
+import 'sound.dart';
 import 'platform/voice_files.dart';
 
 /// Голосовые: запись с микрофона (AAC, до 60 секунд) и прослушивание.
 class Voice {
-  Voice(this._api);
+  Voice(this._api, {Sound? sound}) : _sound = sound;
+
+  final Sound? _sound;
+  StreamSubscription<void>? _completion;
+  int _playGeneration = 0;
 
   static const maxDuration = Duration(seconds: 60);
 
@@ -37,10 +42,19 @@ class Voice {
     // AAC (m4a) понимают все; браузеры без него (Chrome, Firefox) пишут Opus в WebM.
     final aac = await _recorder.isEncoderSupported(AudioEncoder.aacLc);
     _mime = aac ? 'audio/mp4' : 'audio/webm';
-    await _recorder.start(
-      RecordConfig(encoder: aac ? AudioEncoder.aacLc : AudioEncoder.opus, bitRate: 64000, sampleRate: aac ? 22050 : 48000),
-      path: path,
-    );
+    _sound?.recording(true);
+    try {
+      await _recorder.start(
+        RecordConfig(
+            encoder: aac ? AudioEncoder.aacLc : AudioEncoder.opus,
+            bitRate: 64000,
+            sampleRate: aac ? 22050 : 48000),
+        path: path,
+      );
+    } catch (_) {
+      _sound?.recording(false);
+      rethrow;
+    }
     _path = path;
     _clock
       ..reset()
@@ -51,7 +65,12 @@ class Voice {
   /// Остановить и вернуть запись с длительностью; null — запись слишком короткая.
   Future<({MultipartFile file, int durationMs})?> stop() async {
     _clock.stop();
-    final path = await _recorder.stop() ?? _path;
+    String? path;
+    try {
+      path = await _recorder.stop() ?? _path;
+    } finally {
+      _sound?.recording(false);
+    }
     final ms = _clock.elapsedMilliseconds.clamp(0, maxDuration.inMilliseconds);
     if (path == null || path.isEmpty || ms < 500) return null;
     return (file: await recordingUpload(path, _mime), durationMs: ms);
@@ -59,24 +78,66 @@ class Voice {
 
   Future<void> cancel() async {
     _clock.stop();
-    await _recorder.cancel();
+    try {
+      await _recorderInstance?.cancel();
+    } finally {
+      _sound?.recording(false);
+    }
   }
 
   Future<void> play(String mediaId) async {
-    final source = await playableVoice(mediaId, () => _api.downloadVoice(mediaId));
-
+    final generation = ++_playGeneration;
+    late Source source;
+    try {
+      source = await playableVoice(mediaId, () => _api.downloadVoice(mediaId));
+    } catch (_) {
+      if (generation == _playGeneration) await stopPlaying();
+      rethrow;
+    }
+    if (generation != _playGeneration) return;
+    await _completion?.cancel();
     await _player.stop();
+    if (generation != _playGeneration) return;
+    _sound?.playingVoice(true);
     _playing.add(mediaId);
-    await _player.play(source);
-    unawaited(_player.onPlayerComplete.first.then((_) => _playing.add(null)));
+    _completion = _player.onPlayerComplete.listen((_) {
+      if (generation == _playGeneration) {
+        _sound?.playingVoice(false);
+        _playing.add(null);
+      }
+    }, onError: (Object error, StackTrace stack) {
+      if (generation == _playGeneration) {
+        _sound?.playingVoice(false);
+        _playing.add(null);
+      }
+    });
+    try {
+      await _player.play(source);
+    } catch (_) {
+      if (generation == _playGeneration) {
+        _sound?.playingVoice(false);
+        _playing.add(null);
+      }
+      rethrow;
+    }
   }
 
   Future<void> stopPlaying() async {
-    await _player.stop();
-    _playing.add(null);
+    _playGeneration++;
+    await _completion?.cancel();
+    try {
+      await _playerInstance?.stop();
+    } finally {
+      _sound?.playingVoice(false);
+      _playing.add(null);
+    }
   }
 
   Future<void> dispose() async {
+    _playGeneration++;
+    await _completion?.cancel();
+    _sound?.recording(false);
+    _sound?.playingVoice(false);
     // Плагины создаются лениво: если чатом со звуком не пользовались — освобождать нечего
     // (иначе dispose сам создавал бы рекордер и дёргал платформу уже при закрытии).
     await _recorderInstance?.dispose();
@@ -86,7 +147,7 @@ class Voice {
 }
 
 final voiceProvider = Provider<Voice>((ref) {
-  final voice = Voice(ref.read(apiProvider));
+  final voice = Voice(ref.read(apiProvider), sound: ref.read(soundProvider));
   ref.onDispose(voice.dispose);
   return voice;
 });
