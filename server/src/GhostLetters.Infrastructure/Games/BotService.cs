@@ -159,7 +159,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         var messages = await db.ChatMessages.AsNoTracking()
             .Where(m => m.GameId == state.Id && m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId)
-            .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes })
+            .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
         var opinions = new List<ChatOpinion>();
@@ -177,8 +177,11 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             }
         }
 
-        var names = await db.Users.AsNoTracking().Where(u => others.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
-        return new BotMind(personality, history, opinions, names);
+        var everyone = state.Players.Select(p => p.Id).ToList();
+        var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
+        // Обвинения из чата (боты и люди): «Убийца — Олег», «Подозреваю, что Маша из чёрных».
+        var accusations = messages.SelectMany(m => AccusationReader.Read(m.AuthorId!.Value, m.Text, names)).ToList();
+        return new BotMind(personality, history, opinions, names, accusations);
     }
 
     private static CommandRequest Request(GameCommand command, int version) => new(

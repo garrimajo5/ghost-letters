@@ -27,10 +27,11 @@ public sealed class BotPersonalityTests
         ["ball"] = ["ball", "toy", "red", "shape-round"],
     });
 
+    private static readonly Dictionary<Guid, string> Names = new() { [Ann] = "Аня", [Bob] = "Бот Боб", [Ghost] = "Лена", [Me] = "Я" };
+
     private static BotMind Mind(BotPersonality p, IReadOnlyList<ChatOpinion>? opinions = null,
-        IReadOnlyDictionary<Guid, PlayerHistory>? history = null) =>
-        new(p, history ?? new Dictionary<Guid, PlayerHistory>(), opinions ?? [],
-            new Dictionary<Guid, string> { [Ann] = "Аня", [Bob] = "Боб", [Ghost] = "Лена" });
+        IReadOnlyDictionary<Guid, PlayerHistory>? history = null, IReadOnlyList<Accusation>? accusations = null) =>
+        new(p, history ?? new Dictionary<Guid, PlayerHistory>(), opinions ?? [], Names, accusations);
 
     // Ряд 0: knife | rose; ряд 1: boat | cat.
     private static PlayerView View(Phase phase, string[] allowed, Role role, IReadOnlyList<MyLetterView>? letters = null,
@@ -137,7 +138,7 @@ public sealed class BotPersonalityTests
         var view = View(Phase.Discussion, [], Role.Witness, hints: [new HintGroupView(1, ["sword"])], players: players);
 
         var bold = Enumerable.Range(0, 30).Count(seed =>
-            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Боб"));
+            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Бот Боб"));
         var careful = Enumerable.Range(0, 30).Count(seed =>
             BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0 }))!.Value.Text.Contains("Боб"));
 
@@ -164,5 +165,59 @@ public sealed class BotPersonalityTests
     {
         BotPresets.All.Select(p => p.P).Distinct().Should().HaveCount(BotPresets.All.Count);
         BotPresets.All.Select(p => p.Name).Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void AccusationReader_FindsNamesNextToSuspicionWords()
+    {
+        AccusationReader.Read(Ann, "Мне кажется, Убийца — Бот Боб.", Names).Should().ContainSingle()
+            .Which.Should().Be(new Accusation(Ann, Bob, 1));
+        AccusationReader.Read(Bob, "Подозреваю, что аня из чёрных", Names).Should().ContainSingle().Which.Strength.Should().Be(0.6);
+        AccusationReader.Read(Ann, "Боб точно не убийца", Names).Should().BeEmpty();
+        AccusationReader.Read(Ann, "Боб, какая у тебя карта?", Names).Should().BeEmpty("без подозрения — не обвинение");
+        AccusationReader.Read(Ann, "Аня — Убийца!", Names).Should().BeEmpty("себя автор не обвиняет");
+    }
+
+    [Fact]
+    public void Accusations_AgreeableBotsListenToTheTable()
+    {
+        var accusations = new[] { new Accusation(Ann, Bob, 1), new Accusation(Ann, Bob, 1) };
+        var view = View(Phase.Voting, [nameof(CastVote)], Role.Detective, finale: KillerStage());
+
+        int VotesForBob(double compromise) => Enumerable.Range(0, 40).Count(seed =>
+            ((CastVote)BotPlayer.Decide(view, new Random(seed), Tags, Mind(new BotPersonality { Compromise = compromise, Memory = 0 }, accusations: accusations))!)
+            .Suspect == Bob);
+
+        VotesForBob(0.9).Should().Be(40, "сговорчивый верит, что Боб — Убийца");
+        VotesForBob(0).Should().BeLessThan(38, "упрямый почти не слушает чужих обвинений");
+    }
+
+    [Fact]
+    public void Discussion_WhiteBotNamesSuspect_WhenConfident()
+    {
+        var accusations = new[] { new Accusation(Ann, Bob, 1), new Accusation(Ann, Bob, 1), new Accusation(Ghost, Bob, 1) };
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
+
+        var lines = Enumerable.Range(0, 20)
+            .Select(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0.8, Compromise = 0.9 }, accusations: accusations))!.Value.Text)
+            .ToList();
+
+        lines.Should().OnlyContain(t => t.Contains("Убийца — Бот Боб"), "подозрение сильное — говорит прямо");
+        AccusationReader.Read(Me, lines[0], Names).Should().Contain(a => a.Target == Bob, "и другие боты прочитают это обвинение");
+    }
+
+    [Fact]
+    public void Discussion_KillerFramesTheAccuser()
+    {
+        var accusations = new[] { new Accusation(Ann, Me, 1) };
+        var view = View(Phase.Discussion, [], Role.Killer, hints: [new HintGroupView(1, ["sword"])], truth: [1, 0]);
+
+        var framed = Enumerable.Range(0, 40).Count(seed =>
+            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }, accusations: accusations))!.Value.Text.Contains("Аня из чёрных"));
+        var calm = Enumerable.Range(0, 40).Count(seed =>
+            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0 }, accusations: accusations))!.Value.Text.Contains("из чёрных"));
+
+        framed.Should().BeGreaterThan(15, "рисковый Убийца переводит стрелки на обвинителя");
+        calm.Should().Be(0, "осторожный не привлекает внимания");
     }
 }

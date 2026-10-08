@@ -104,9 +104,55 @@ public sealed record BotMind(
     BotPersonality Personality,
     IReadOnlyDictionary<Guid, PlayerHistory> History,
     IReadOnlyList<ChatOpinion> Opinions,
-    IReadOnlyDictionary<Guid, string> Names)
+    IReadOnlyDictionary<Guid, string> Names,
+    IReadOnlyList<Accusation>? Accusations = null)
 {
     public static readonly BotMind Neutral = new(BotPersonality.Default, new Dictionary<Guid, PlayerHistory>(), [], new Dictionary<Guid, string>());
+
+    public IReadOnlyList<Accusation> AccusationList => Accusations ?? [];
+}
+
+/// <summary>Обвинение из чата: автор назвал игрока Убийцей (1) или «из чёрных»/подозрительным (0.6), «присмотрелся бы» — 0.4.</summary>
+public sealed record Accusation(Guid Author, Guid Target, double Strength);
+
+/// <summary>Разбор обвинений в тексте чата — и бота, и человека: имя игрока рядом со словами-подозрениями.</summary>
+public static class AccusationReader
+{
+    public static IReadOnlyList<Accusation> Read(Guid author, string? text, IReadOnlyDictionary<Guid, string> names)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        var lower = text.ToLowerInvariant();
+        double strength = lower.Contains("убийц") ? 1
+            : lower.Contains("чёрн") || lower.Contains("черн") || lower.Contains("сообщник") || lower.Contains("подозр") ? 0.6
+            : lower.Contains("присмотр") || lower.Contains("не верю") ? 0.4
+            : 0;
+        if (strength == 0 || lower.Contains("не убийц"))
+        {
+            return [];
+        }
+
+        var found = new List<Accusation>();
+        foreach (var (id, name) in names)
+        {
+            if (id == author)
+            {
+                continue;
+            }
+
+            var full = name.ToLowerInvariant();
+            var bare = full.StartsWith("бот ", StringComparison.Ordinal) ? full[4..] : full;
+            if (bare.Length >= 2 && (lower.Contains(full) || lower.Contains(bare)))
+            {
+                found.Add(new Accusation(author, id, strength));
+            }
+        }
+
+        return found;
+    }
 }
 
 /// <summary>Мнение из чата: автор показал карту поля с подписью («думаю, эта», «проверял эту»).</summary>
