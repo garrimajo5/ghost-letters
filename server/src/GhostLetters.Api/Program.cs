@@ -86,6 +86,7 @@ api.MapAuth();
 api.MapLobbies();
 api.MapGames();
 api.MapSocial();
+api.MapBots();
 app.MapHub<PlayHub>(PlayHub.Path);
 
 await app.Services.MigrateDatabaseAsync(app.Configuration);

@@ -2,6 +2,7 @@ using System.Text.Json;
 using GhostLetters.Application;
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
+using GhostLetters.Infrastructure.Bots;
 using GhostLetters.Infrastructure.Persistence;
 using GhostLetters.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -69,12 +70,13 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
     {
         var view = GameProjection.For(state, botId);
-        if (await TrySpeakAsync(state, view, botId, rng, ct))
+        var mind = await MindAsync(state, botId, ct);
+        if (await TrySpeakAsync(state, view, botId, rng, mind, ct))
         {
             return true;
         }
 
-        var command = BotPlayer.Decide(view, rng, tags);
+        var command = BotPlayer.Decide(view, rng, tags, mind);
         if (command is null)
         {
             return false;
@@ -100,7 +102,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     }
 
     /// <summary>Раз за раунд обсуждения бот говорит, что думает (в рации — когда у него слово).</summary>
-    private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
+    private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, BotMind? mind, CancellationToken ct)
     {
         if (state.Phase != Phase.Discussion ||
             (view.Discussion == DiscussionMode.Radio && view.CurrentSpeaker != botId && view.FloorGrantedTo != botId))
@@ -109,7 +111,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
 
         var said = await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.AuthorId == botId && m.Round == state.Round, ct);
-        if (said || BotPlayer.Say(view, rng, tags) is not { } line)
+        if (said || BotPlayer.Say(view, rng, tags, mind) is not { } line)
         {
             return false;
         }
@@ -124,6 +126,59 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             logger.LogDebug("Бот {Bot} не смог написать: {Error}", botId, e.Message);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Характер бота на эту партию, его память о соигроках (только партии с ним) и мнения стола из чата.
+    /// Бот без характера в кабинете — null: играет «классически».
+    /// </summary>
+    public async Task<BotMind?> MindAsync(GameState state, Guid botId, CancellationToken ct)
+    {
+        var profile = await db.BotProfiles.AsNoTracking().FirstOrDefaultAsync(b => b.UserId == botId, ct);
+        if (profile is null)
+        {
+            return null;
+        }
+
+        var personality = BotAdminService.Personality(profile).ForGame(state.Id, botId);
+        var others = state.Players.Select(p => p.Id).Where(id => id != botId).ToList();
+
+        var past = await (from mine in db.GamePlayers.AsNoTracking()
+                          join g in db.Games.AsNoTracking() on mine.GameId equals g.Id
+                          join other in db.GamePlayers.AsNoTracking() on mine.GameId equals other.GameId
+                          where mine.UserId == botId && g.Id != state.Id && g.Status == GameStatuses.Finished
+                                && others.Contains(other.UserId)
+                          select new { other.UserId, other.Role })
+            .ToListAsync(ct);
+        var history = past.GroupBy(x => x.UserId).ToDictionary(
+            gr => gr.Key,
+            gr => new PlayerHistory(
+                gr.Count(),
+                gr.Count(x => x.Role is nameof(Role.Killer) or nameof(Role.Accomplice)),
+                gr.Count(x => x.Role is nameof(Role.Witness) or nameof(Role.Expert))));
+
+        var messages = await db.ChatMessages.AsNoTracking()
+            .Where(m => m.GameId == state.Id && m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId)
+            .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes })
+            .ToListAsync(ct);
+        var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
+        var opinions = new List<ChatOpinion>();
+        foreach (var m in messages)
+        {
+            for (var i = 0; i < m.CardIds.Count; i++)
+            {
+                var note = i < m.CardNotes.Count ? m.CardNotes[i] : string.Empty;
+                if (!board.Contains(m.CardIds[i]) || note.StartsWith("кидал", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                opinions.Add(new ChatOpinion(m.AuthorId!.Value, m.CardIds[i], note.StartsWith("проверял", StringComparison.Ordinal) ? 0.5 : 1));
+            }
+        }
+
+        var names = await db.Users.AsNoTracking().Where(u => others.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
+        return new BotMind(personality, history, opinions, names);
     }
 
     private static CommandRequest Request(GameCommand command, int version) => new(

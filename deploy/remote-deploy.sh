@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Выполняется на сервере (его запускает workflow «Deploy server» по SSH).
 # Ставит Docker при первом запуске, создаёт .env с паролями, обновляет и перезапускает сервис.
-# Ожидает переменные: DOMAIN, GHCR_USER, GHCR_TOKEN, APP_DIR.
+# Ожидает переменные: DOMAIN, GHCR_USER, GHCR_TOKEN, APP_DIR; необязательно ADMIN_USER_IDS (кабинет ботов).
 set -euo pipefail
 cd "$APP_DIR"
 
@@ -25,6 +25,15 @@ JWT_SIGNING_KEY=$(openssl rand -base64 48 | tr -d '\n')
 ENV
 else
   sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|" .env
+fi
+
+# Админы кабинета ботов — id игроков через запятую (переменная репозитория ADMIN_USER_IDS).
+if [ -n "${ADMIN_USER_IDS:-}" ]; then
+  if grep -q '^ADMIN_USER_IDS=' .env; then
+    sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$ADMIN_USER_IDS|" .env
+  else
+    echo "ADMIN_USER_IDS=$ADMIN_USER_IDS" >> .env
+  fi
 fi
 
 # Веб-версия и APK (их выкладывают workflow «Deploy web» и «Release Android»).

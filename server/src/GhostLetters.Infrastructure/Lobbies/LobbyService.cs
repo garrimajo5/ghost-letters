@@ -133,7 +133,11 @@ public sealed class LobbyService(
     }
 
     /// <summary>Добавить бота-игрока (только хост, пока лобби открыто). Бот сразу готов.</summary>
-    public async Task<LobbyDto> AddBotAsync(Guid lobbyId, Guid hostId, CancellationToken ct)
+    /// <summary>
+    /// Добавить бота: выбранного из кабинета (botId), иначе случайного включённого из кабинета, которого ещё нет в лобби;
+    /// если кабинет пуст — безымянного бота без характера, как раньше.
+    /// </summary>
+    public async Task<LobbyDto> AddBotAsync(Guid lobbyId, Guid hostId, CancellationToken ct, Guid? botId = null)
     {
         var lobby = await RequireHostAsync(lobbyId, hostId, ct);
         if (lobby.Status != LobbyStatuses.Open)
@@ -147,25 +151,45 @@ public sealed class LobbyService(
             throw AppException.Conflict(AppException.Codes.LobbyFull, $"В лобби уже {RoleTable.MaxPlayers} игроков.");
         }
 
-        var bots = await (from m in db.LobbyMembers
-                          join u in db.Users on m.UserId equals u.Id
-                          where m.LobbyId == lobbyId && u.IsBot
-                          select u.Nickname).ToListAsync(ct);
-        var name = BotNames.FirstOrDefault(n => !bots.Contains(n)) ?? $"Бот {bots.Count + 1}";
+        var members = await db.LobbyMembers.Where(m => m.LobbyId == lobbyId).Select(m => m.UserId).ToListAsync(ct);
+        var available = await db.BotProfiles.Where(b => b.Enabled && !members.Contains(b.UserId)).Select(b => b.UserId).ToListAsync(ct);
         var now = time.GetUtcNow();
-        var bot = new User
+        Guid chosen;
+        if (botId is { } wanted)
         {
-            Id = Guid.NewGuid(),
-            Nickname = name,
-            AvatarColor = BotColors[bots.Count % BotColors.Length],
-            CreatedAt = now,
-            LastSeenAt = now,
-            IsBot = true,
-        };
-        db.Users.Add(bot);
+            if (members.Contains(wanted))
+            {
+                throw AppException.Conflict(AppException.Codes.Conflict, "Этот бот уже в лобби.");
+            }
+
+            chosen = available.Contains(wanted) ? wanted : throw AppException.NotFound("Такого бота нет или он выключен.");
+        }
+        else if (available.Count > 0)
+        {
+            chosen = available[Random.Shared.Next(available.Count)];
+        }
+        else
+        {
+            var bots = await (from m in db.LobbyMembers
+                              join u in db.Users on m.UserId equals u.Id
+                              where m.LobbyId == lobbyId && u.IsBot
+                              select u.Nickname).ToListAsync(ct);
+            var bot = new User
+            {
+                Id = Guid.NewGuid(),
+                Nickname = BotNames.FirstOrDefault(n => !bots.Contains(n)) ?? $"Бот {bots.Count + 1}",
+                AvatarColor = BotColors[bots.Count % BotColors.Length],
+                CreatedAt = now,
+                LastSeenAt = now,
+                IsBot = true,
+            };
+            db.Users.Add(bot);
+            chosen = bot.Id;
+        }
+
         db.LobbyMembers.Add(new LobbyMember
         {
-            LobbyId = lobbyId, UserId = bot.Id, Seat = players, JoinMode = JoinModes.Player, IsReady = true, JoinedAt = now,
+            LobbyId = lobbyId, UserId = chosen, Seat = players, JoinMode = JoinModes.Player, IsReady = true, JoinedAt = now,
         });
         await db.SaveChangesAsync(ct);
         return await PublishAsync(lobbyId, ct);
