@@ -79,9 +79,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async => ref.invalidate(myGamesProvider),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            children: [
+          child: LayoutBuilder(builder: (context, box) {
+            final actions = <Widget>[
               Row(children: [
                 GestureDetector(
                   onTap: () => context.push('/profile/${user.id}'),
@@ -165,7 +164,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 title: const Text('Как экран стола'),
                 subtitle: const Text('Общий экран для игры за одним столом — без тайной информации'),
               ),
-              const SizedBox(height: 12),
+            ];
+            final gamesList = <Widget>[
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Expanded(child: Text('МОИ ПАРТИИ', style: heading(18, color: AppColors.ice, spacing: 2))),
                 if (games.valueOrNull case final list? when list.isNotEmpty)
@@ -182,8 +182,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 loading: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
                 error: (e, _) => Padding(padding: const EdgeInsets.all(16), child: Text(ApiError.from(e).message)),
               ),
-            ],
-          ),
+            ];
+            // Компьютер: слева создание и вход, справа партии.
+            if (box.maxWidth >= 1100) {
+              final side = ((box.maxWidth - 1160) / 2).clamp(24.0, double.infinity);
+              return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                SizedBox(width: side),
+                SizedBox(
+                  width: 440,
+                  child: ListView(padding: const EdgeInsets.fromLTRB(0, 24, 0, 24), children: actions),
+                ),
+                const SizedBox(width: 40),
+                Expanded(
+                  child: ListView(key: const Key('home-games-column'), padding: const EdgeInsets.fromLTRB(0, 24, 0, 24), children: gamesList),
+                ),
+                SizedBox(width: side),
+              ]);
+            }
+            return ListView(
+              padding: pageInsets(context, max: 640, side: 20, top: 16, bottom: 24),
+              children: [...actions, const SizedBox(height: 12), ...gamesList],
+            );
+          }),
         ),
       ),
     );

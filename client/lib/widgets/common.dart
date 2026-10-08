@@ -255,3 +255,11 @@ Future<void> showCardZoom(BuildContext context, String cardId, {String? caption,
         );
       },
     );
+
+/// Поля страницы: на телефоне — обычные [side], на широком экране контент идёт колонкой
+/// не шире [max] по центру (фон и прокрутка — во всю ширину).
+EdgeInsets pageInsets(BuildContext context, {double max = 760, double side = 16, double top = 8, double bottom = 16}) {
+  final width = MediaQuery.sizeOf(context).width;
+  final h = width > max + side * 2 ? (width - max) / 2 : side;
+  return EdgeInsets.fromLTRB(h, top, h, bottom);
+}

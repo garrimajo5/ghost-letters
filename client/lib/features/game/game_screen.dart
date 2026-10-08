@@ -52,6 +52,13 @@ class GameScreenState extends ConsumerState<GameScreen> {
   final chat = <ChatMessage>[];
   int unread = 0;
 
+  /// Широкий экран (компьютер): чат постоянно открыт справа, счётчик непрочитанного не нужен.
+  bool chatDocked = false;
+
+  /// Ширина, с которой игрок видит стол в три колонки: поле, ход партии, чат.
+  static const wideFrom = 1000.0;
+  static const dockChatFrom = 1400.0;
+
   /// Сколько раз экран сигналил «ваш ход» — для вспышки кнопки.
   int turnPulse = 0;
   bool _wasMyTurn = false;
@@ -92,7 +99,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
       if (!mounted || chat.any((c) => c.id == m.id)) return;
       setState(() {
         chat.add(m);
-        unread++;
+        if (!chatDocked) unread++;
       });
     }));
     _subs.add(_realtime.lobbyUpdates.listen((l) {
@@ -267,7 +274,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   void openChat() {
     setState(() => unread = 0);
-    ChatSheet.show(context, this);
+    if (!chatDocked) ChatSheet.show(context, this);
   }
 
   Future<void> saveMark(String cardId, CardMark mark) async {
@@ -362,6 +369,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final night = v.phase == 'Night' && v.can('ChooseTruth');
     final finale = isFinale(v);
     final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+    final width = MediaQuery.sizeOf(context).width;
+    final wide = v.me != null && width >= wideFrom && !(v.phase == 'RoleReveal');
+    chatDocked = wide && width >= dockChatFrom;
     return Scaffold(
       backgroundColor: night ? AppColors.night : AppColors.bg,
       body: SafeArea(
@@ -371,6 +381,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
           _PlayersStrip(screen: this),
           if (v.phase == 'RoleReveal' && v.me != null)
             Expanded(child: _RoleScreen(screen: this))
+          else if (wide)
+            // Компьютер или планшет: поле крупно слева, ход партии и рука справа, на очень широком — ещё и чат.
+            Expanded(child: _WideTable(screen: this, night: night, finale: finale))
           else if (v.me == null && MediaQuery.sizeOf(context).width >= 720)
             // Экран стола на планшете или ТВ: поле слева, ход партии и подсказки справа.
             Expanded(
@@ -416,7 +429,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
               ],
             ),
           ),
-          _Dock(screen: this),
+          if (!wide) _Dock(screen: this),
         ]),
       ),
     );
@@ -965,10 +978,74 @@ class _Hints extends StatelessWidget {
 }
 
 /// Нижняя панель: рука и главная кнопка хода + чат. Когда ждут игрока — янтарная кнопка со вспышкой.
-class _Dock extends StatelessWidget {
-  const _Dock({required this.screen});
+/// Широкий экран игрока: поле во всю высоту, справа панель хода, подсказки и рука; при ширине от 1400 — чат.
+class _WideTable extends StatelessWidget {
+  const _WideTable({required this.screen, required this.night, required this.finale});
 
   final GameScreenState screen;
+  final bool night;
+  final bool finale;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final rows = v.board.isEmpty ? 4 : v.board.length;
+    return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(
+        child: LayoutBuilder(builder: (context, box) {
+          // Карта такая, чтобы всё поле помещалось по высоте без прокрутки.
+          final byHeight = ((box.maxHeight - 56 - (night ? 96 : 0)) / rows - _Board.gap).clamp(56.0, 180.0).floorToDouble();
+          return ListView(
+            key: const Key('wide-board'),
+            padding: const EdgeInsets.fromLTRB(16, 4, 12, 16),
+            children: [
+              if (night) const _NightBanner(),
+              Center(child: _Board(screen: screen, maxCard: byHeight)),
+            ],
+          );
+        }),
+      ),
+      Container(
+        width: 420,
+        decoration: const BoxDecoration(border: Border(left: BorderSide(color: AppColors.surface2))),
+        child: Column(children: [
+          Expanded(
+            child: ListView(
+              controller: screen._scroll,
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+              children: [
+                KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
+                const SizedBox(height: 10),
+                _Hints(screen: screen),
+                if (v.me != null && v.me!.letters.isNotEmpty && !finale) ...[
+                  const SizedBox(height: 10),
+                  _MyLetters(screen: screen),
+                ],
+              ],
+            ),
+          ),
+          _Dock(screen: screen, showChat: !screen.chatDocked),
+        ]),
+      ),
+      if (screen.chatDocked)
+        Container(
+          key: const Key('chat-docked'),
+          width: 380,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            border: Border(left: BorderSide(color: AppColors.surface2)),
+          ),
+          child: ChatSheet(screen: screen, embedded: true),
+        ),
+    ]);
+  }
+}
+
+class _Dock extends StatelessWidget {
+  const _Dock({required this.screen, this.showChat = true});
+
+  final GameScreenState screen;
+  final bool showChat;
 
   @override
   Widget build(BuildContext context) {
@@ -1023,8 +1100,10 @@ class _Dock extends StatelessWidget {
                     child: _StatusBar(text: actionHint(v), mine: mine, pulse: screen.turnPulse),
                   ),
           ),
-          const SizedBox(width: 10),
-          _ChatButton(screen: screen),
+          if (showChat) ...[
+            const SizedBox(width: 10),
+            _ChatButton(screen: screen),
+          ],
         ]),
       ]),
     );
@@ -1211,8 +1290,16 @@ class _MyLetters extends StatelessWidget {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Text('МОИ ПИСЬМА', style: sectionLabel()),
-          const Spacer(),
-          const Text('нажмите — что я говорю', style: TextStyle(fontSize: 10, color: AppColors.dim)),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'нажмите — что я говорю',
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 10, color: AppColors.dim),
+            ),
+          ),
         ]),
         const SizedBox(height: 6),
         SingleChildScrollView(

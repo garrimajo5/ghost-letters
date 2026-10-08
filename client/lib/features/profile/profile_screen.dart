@@ -22,7 +22,7 @@ class ProfileScreen extends ConsumerWidget {
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(ApiError.from(e).message)),
-        data: (p) => ListView(padding: const EdgeInsets.all(16), children: [
+        data: (p) => ListView(padding: pageInsets(context, top: 16), children: [
           Center(child: Avatar(nickname: p.user.nickname, color: p.user.avatarColor, size: 88, highlight: true)),
           const SizedBox(height: 10),
           Center(child: Text(p.user.nickname.toUpperCase(), style: heading(26, spacing: 1.5))),

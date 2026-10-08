@@ -19,7 +19,7 @@ def analyze(path: str) -> None:
 
 
 def tests(path: str) -> None:
-    names, errors, prints = {}, {}, {}
+    names, errors, prints, done = {}, {}, {}, set()
     for raw in open(path, encoding="utf-8", errors="replace"):
         try:
             event = json.loads(raw)
@@ -34,7 +34,13 @@ def tests(path: str) -> None:
             prints.setdefault(event["testID"], []).append(event.get("message", ""))
         elif event.get("type") == "error":
             errors.setdefault(event["testID"], []).append(event.get("error", "") + "\n" + event.get("stackTrace", "")[:800])
+            if event["testID"] in done:
+                # Ошибка уже после завершения теста (таймер, поток, асинхронный хвост).
+                print(f"::error title={esc('после завершения: ' + names.get(event['testID'], '?'))[:200]}::{esc(errors[event['testID']][-1][:3000])}")
+        elif event.get("type") == "testDone" and event.get("result") == "success":
+            done.add(event["testID"])
         elif event.get("type") == "testDone" and event.get("result") != "success":
+            done.add(event["testID"])
             # Скрытые «тесты» — загрузка файла тестов: их падение = ошибка компиляции или сбой вне теста.
             printed = "\n".join(prints.get(event["testID"], []))
             start = printed.find("EXCEPTION CAUGHT")
