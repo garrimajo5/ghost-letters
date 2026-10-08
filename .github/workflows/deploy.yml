@@ -75,5 +75,8 @@ jobs:
             sleep 6
           done
           echo "::error::Сервер не ответил на $url"
-          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && docker compose -f docker-compose.prod.yml logs --tail 80"
+          logs=$(ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && docker compose -f docker-compose.prod.yml ps; docker compose -f docker-compose.prod.yml logs --no-color --tail 40 api; df -h / | tail -1; free -m | head -2" 2>&1)
+          echo "$logs"
+          # Хвост логов — ещё и аннотацией: её видно на странице запуска без скачивания полного лога.
+          tail -c 3500 <<< "$logs" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed 's/^/::error title=Логи сервера::/'
           exit 1

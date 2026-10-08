@@ -5,6 +5,14 @@ import 'package:ghost_letters/models/models.dart';
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
+/// Дожидаемся, пока уйдёт снекбар, и снимаем экран до того, как освободится контейнер провайдеров:
+/// иначе таймеры и подписки срабатывают уже после теста.
+Future<void> finish(WidgetTester tester) async {
+  await tester.pump(const Duration(seconds: 6));
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump();
+}
+
 void main() {
   testWidgets('долгое нажатие на чужое сообщение добавляет цитату в заметку', (tester) async {
     tester.view.physicalSize = const Size(1200, 3000);
@@ -43,6 +51,7 @@ void main() {
     expect(saved[1], 1, reason: 'подозрение сохраняется');
     expect(saved[2], 'Подозрительно молчит\nРаунд 2: «Я отправила ключ»');
     expect(find.text('Цитата добавлена в заметку о Марпл'), findsOneWidget);
+    await finish(tester);
   });
 
   testWidgets('под картами в сообщении подписи: кидал эту, проверял эту', (tester) async {
@@ -74,5 +83,6 @@ void main() {
 
     expect(find.text('кидал эту'), findsOneWidget);
     expect(find.text('проверял эту'), findsNWidgets(2));
+    await finish(tester);
   });
 }
