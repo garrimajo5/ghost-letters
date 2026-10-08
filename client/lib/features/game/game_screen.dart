@@ -413,7 +413,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final finale = isFinale(v);
     final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
     final width = MediaQuery.sizeOf(context).width;
-    final wide = v.me != null && width >= wideFrom && !(v.phase == 'RoleReveal');
+    // Телефон боком: игроки колонкой слева, поле по высоте экрана, ход партии и рука справа.
+    final landscape = v.me != null && v.phase != 'RoleReveal' && isCompactLandscape(context);
+    final wide = v.me != null && width >= wideFrom && !(v.phase == 'RoleReveal') && !landscape;
     chatDocked = wide && width >= dockChatFrom;
     return Scaffold(
       backgroundColor: night ? AppColors.night : AppColors.bg,
@@ -421,9 +423,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
         child: Column(children: [
           const ConnectionBanner(),
           _Header(screen: this, deadline: snap.deadline),
-          _PlayersStrip(screen: this),
+          if (!landscape) _PlayersStrip(screen: this),
           if (v.phase == 'RoleReveal' && v.me != null)
             Expanded(child: _RoleScreen(screen: this))
+          else if (landscape)
+            Expanded(child: _LandscapeTable(screen: this, night: night, finale: finale))
           else if (wide)
             // Компьютер или планшет: поле крупно слева, ход партии и рука справа, на очень широком — ещё и чат.
             Expanded(child: _WideTable(screen: this, night: night, finale: finale))
@@ -472,7 +476,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
               ],
             ),
           ),
-          if (!wide) _Dock(screen: this),
+          if (!wide && !landscape) _Dock(screen: this),
         ]),
       ),
     );
@@ -1091,6 +1095,73 @@ class _WideTable extends StatelessWidget {
           child: ChatSheet(screen: screen, embedded: true),
         ),
     ]);
+  }
+}
+
+/// Телефон в альбомной ориентации: колонка игроков, поле во всю высоту, справа панель хода с рукой.
+class _LandscapeTable extends StatelessWidget {
+  const _LandscapeTable({required this.screen, required this.night, required this.finale});
+
+  final GameScreenState screen;
+  final bool night;
+  final bool finale;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final rows = v.board.isEmpty ? 4 : v.board.length;
+    final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
+    return LayoutBuilder(builder: (context, box) {
+      final panelWidth = (box.maxWidth * 0.42).clamp(280.0, 420.0);
+      // Поле целиком по высоте: строка номеров столбцов ~15 px, между рядами — зазор.
+      final byHeight = ((box.maxHeight - 24 - (night ? 96 : 0)) / rows - _Board.gap).clamp(32.0, 120.0).floorToDouble();
+      return Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        SizedBox(
+          width: 60,
+          child: ListView(
+            key: const Key('players-rail'),
+            padding: const EdgeInsets.fromLTRB(4, 2, 0, 8),
+            children: [
+              for (final p in players)
+                Padding(padding: const EdgeInsets.only(bottom: 6), child: _PlayerChip(screen: screen, player: p)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            key: const Key('landscape-board'),
+            padding: const EdgeInsets.fromLTRB(6, 0, 8, 8),
+            children: [
+              if (night) const _NightBanner(),
+              Center(child: _Board(screen: screen, maxCard: byHeight)),
+            ],
+          ),
+        ),
+        Container(
+          width: panelWidth,
+          decoration: const BoxDecoration(border: Border(left: BorderSide(color: AppColors.surface2))),
+          child: Column(children: [
+            Expanded(
+              child: ListView(
+                key: const Key('landscape-panel'),
+                controller: screen._scroll,
+                padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+                children: [
+                  KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
+                  const SizedBox(height: 10),
+                  _Hints(screen: screen),
+                  if (v.me != null && v.me!.letters.isNotEmpty && !finale) ...[
+                    const SizedBox(height: 10),
+                    _MyLetters(screen: screen),
+                  ],
+                ],
+              ),
+            ),
+            _Dock(screen: screen),
+          ]),
+        ),
+      ]);
+    });
   }
 }
 
