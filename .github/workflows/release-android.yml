@@ -81,12 +81,15 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then name="${GITHUB_REF#refs/tags/v}"; fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Build
         env:
           API_URL: ${{ github.event.inputs.api_url || vars.API_URL || (vars.DEPLOY_HOST && format('https://{0}.sslip.io', vars.DEPLOY_HOST)) }}
         run: |
           args="--release --build-name=${{ steps.version.outputs.name }} --build-number=${{ steps.version.outputs.code }}"
+          # Версия видна в приложении и сравнивается с /download/version.json для «Вышла новая версия».
+          args="$args --dart-define=APP_VERSION=${{ steps.version.outputs.name }} --dart-define=APP_BUILD=${{ steps.version.outputs.code }} --dart-define=APP_BUILD_DATE=${{ steps.version.outputs.date }}"
           if [ -n "$API_URL" ]; then
             args="$args --dart-define=API_URL=$API_URL"
           else
@@ -126,8 +129,11 @@ jobs:
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
           apk=$(ls dist/*.apk | head -1)
           printf '%s (%s)\n' "${{ steps.version.outputs.name }}" "${{ steps.version.outputs.code }}" > dist/version.txt
+          printf '{"version": "%s", "build": %s, "date": "%s"}\n' "${{ steps.version.outputs.name }}" "${{ steps.version.outputs.code }}" "${{ steps.version.outputs.date }}" > dist/version.json
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p /opt/ghost-letters/www/download"
           scp -i ~/.ssh/deploy "$apk" "$SSH_USER@$HOST:/opt/ghost-letters/www/download/ghost-letters.apk.new"
           scp -i ~/.ssh/deploy dist/version.txt "$SSH_USER@$HOST:/opt/ghost-letters/www/download/version.txt"
-          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mv /opt/ghost-letters/www/download/ghost-letters.apk.new /opt/ghost-letters/www/download/ghost-letters.apk"
+          scp -i ~/.ssh/deploy dist/version.json "$SSH_USER@$HOST:/opt/ghost-letters/www/download/version.json.new"
+          # Сначала APK, потом сведения о версии: приложение не предложит файл, которого ещё нет.
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd /opt/ghost-letters/www/download && mv ghost-letters.apk.new ghost-letters.apk && mv version.json.new version.json"
           echo "APK выложен: /download/ghost-letters.apk"

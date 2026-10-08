@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ghost_letters/app.dart';
 import 'package:ghost_letters/core/api.dart';
+import 'package:ghost_letters/core/app_version.dart';
 import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
@@ -169,6 +170,7 @@ class TestApp {
       apiProvider.overrideWith(FakeApi.new),
       realtimeProvider.overrideWith(FakeRealtime.new),
       cardCatalogProvider.overrideWith((ref) async => testCatalog),
+      latestAndroidVersionProvider.overrideWith((ref) async => null),
     ]);
     return TestApp._(UncontrolledProviderScope(container: container, child: const GhostLettersApp()), container);
   }

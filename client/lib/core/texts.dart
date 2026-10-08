@@ -86,6 +86,13 @@ class T {
     return '${local.day} ${_months[local.month - 1]}${local.year != today.year ? ' ${local.year}' : ''} $hm';
   }
 
+  /// «8 окт 2026, 17:20» — по местному времени.
+  static String date(DateTime t) {
+    final local = t.toLocal();
+    final hm = '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    return '${local.day} ${_months[local.month - 1]} ${local.year}, $hm';
+  }
+
   /// «6 игроков», «2 игрока», «1 игрок».
   static String players(int n) {
     final mod10 = n % 10, mod100 = n % 100;

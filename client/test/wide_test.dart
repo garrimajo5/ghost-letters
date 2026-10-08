@@ -29,6 +29,8 @@ void main() {
 
     // Карты поля крупнее, чем на телефоне (там не больше 96).
     expect(tester.getSize(find.byKey(const Key('board-0-0'))).width, greaterThan(100));
+    // Жетоны рядов растут вместе с картами.
+    expect(tester.getSize(find.byKey(const Key('token-0'))).width, greaterThan(50));
 
     app.realtime.chatCtl.add(ChatMessage.fromJson({
       'id': 'm9',
@@ -58,6 +60,7 @@ void main() {
     expect(find.byKey(const Key('wide-board')), findsNothing);
     expect(find.byKey(const Key('chat-docked')), findsNothing);
     expect(find.byTooltip('Чат'), findsOneWidget);
+    expect(tester.getSize(find.byKey(const Key('token-0'))).width, 34);
   });
 
   testWidgets('главная на компьютере: партии отдельной колонкой', (tester) async {

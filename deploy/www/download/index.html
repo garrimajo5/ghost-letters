@@ -35,7 +35,7 @@
     <h2>Android</h2>
     <a class="btn" id="apk" href="ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
     <div class="note" id="apk-note"></div>
-    <p class="small" id="version">Версия: —</p>
+    <p class="small" id="version">Актуальная версия: загружаю…</p>
     <ol>
       <li>Нажмите «Скачать приложение» и откройте скачанный файл.</li>
       <li>Если телефон спросит — разрешите установку из этого источника (браузера или файлового менеджера).</li>
@@ -51,6 +51,7 @@
       <li>Нажмите «Поделиться» (квадрат со стрелкой) → <b>«На экран „Домой“»</b> → «Добавить».</li>
       <li>Запускайте игру с иконки на экране «Домой» — она откроется во весь экран, как приложение.</li>
     </ol>
+    <p class="small" id="web-version"></p>
     <p class="small">Голосовые сообщения: при первой записи разрешите доступ к микрофону.</p>
   </section>
 </main>
@@ -73,8 +74,25 @@
     }
     note.classList.add('show');
   });
-  fetch('version.txt', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; })
-    .then(function (t) { if (t) document.getElementById('version').textContent = 'Версия: ' + t.trim(); });
+  var months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  function when(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ', ' + hm;
+  }
+  fetch('version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (v) {
+      var el = document.getElementById('version');
+      if (!v) { el.textContent = 'Версия для Android ещё не выложена'; return; }
+      el.textContent = 'Актуальная версия ' + v.version + ' (сборка ' + v.build + ') от ' + when(v.date);
+    })
+    .catch(function () {});
+  fetch('/version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (v) {
+      if (v) document.getElementById('web-version').textContent = 'Веб-версия ' + v.version + ' от ' + when(v.date) + ' — обновляется сама.';
+    })
+    .catch(function () {});
 </script>
 </body>
 </html>

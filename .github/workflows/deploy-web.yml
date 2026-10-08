@@ -34,7 +34,10 @@ jobs:
         working-directory: client
         run: |
           flutter pub get
-          flutter build web --release --build-number=${{ github.run_number }}
+          name=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
+          flutter build web --release --build-number=${{ github.run_number }} \
+            --dart-define=APP_VERSION=$name --dart-define=APP_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          printf '{"version": "%s", "build": %s, "date": "%s"}\n' "$name" "${{ github.run_number }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build/web/version.json
           tar -czf ../web.tgz -C build/web .
 
       - name: Upload

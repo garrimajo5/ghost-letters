@@ -11,4 +11,15 @@ class AppConfig {
   static String get api => '$apiUrl/api/v1';
 
   static String get hub => '$apiUrl/hubs/play';
+
+  /// Версия приложения: подставляется при сборке в CI (--dart-define), локально — «для разработки».
+  static const version = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0');
+  static const build = int.fromEnvironment('APP_BUILD');
+  static const _buildDate = String.fromEnvironment('APP_BUILD_DATE');
+
+  static DateTime? get buildDate => _buildDate.isEmpty ? null : DateTime.tryParse(_buildDate);
+
+  /// Где лежит страница загрузки и сведения о последней версии.
+  static String get downloadPage => '$apiUrl/download/';
+  static String get latestVersionUrl => '$apiUrl/download/version.json';
 }

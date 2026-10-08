@@ -70,6 +70,11 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     if (lobby != null && mounted) setState(() => _lobby = lobby);
   }
 
+  Future<void> _openSettings(Lobby lobby, int players) async {
+    final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players);
+    if (s != null) await _apply((api) => api.saveSettings(lobby.id, s));
+  }
+
   @override
   Widget build(BuildContext context) {
     final lobby = _lobby;
@@ -139,10 +144,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             IconButton(
               tooltip: 'Настройки',
               icon: const Icon(Icons.tune),
-              onPressed: () async {
-                final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players.length);
-                if (s != null) await _apply((api) => api.saveSettings(lobby.id, s));
-              },
+              onPressed: () => _openSettings(lobby, players.length),
             ),
           IconButton(
             tooltip: 'Выйти из лобби',
@@ -198,7 +200,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
           _SettingsSummary(
             settings: lobby.settings,
             players: players.length,
-            ghost: players.where((p) => p.userId == lobby.settings.ghostUserId).map((p) => p.nickname).firstOrNull,
+            members: players,
+            inGame: lobby.status == 'in_game',
+            onChange: isHost ? (next) => _apply((api) => api.saveSettings(lobby.id, next)) : null,
+            onOpenSheet: isHost ? () => _openSettings(lobby, players.length) : null,
           ),
           const SizedBox(height: 20),
           Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -299,36 +304,101 @@ String _setName(String code) => switch (code) {
       _ => code,
     };
 
+/// Пункт меню у метки настройки: подпись и что станет с настройками.
+typedef _Choice = (String label, LobbySettings Function(LobbySettings s));
+
+/// Метки текущих настроек. У хоста метка — кнопка: нажал и выбрал вариант прямо здесь.
 class _SettingsSummary extends StatelessWidget {
-  const _SettingsSummary({required this.settings, required this.players, this.ghost});
+  const _SettingsSummary({
+    required this.settings,
+    required this.players,
+    required this.members,
+    this.onChange,
+    this.onOpenSheet,
+    this.inGame = false,
+  });
 
   final LobbySettings settings;
   final int players;
 
-  /// Ник игрока, которому хост заранее отдал роль Призрака.
-  final String? ghost;
+  /// Игроки лобби — для выбора Призрака.
+  final List<LobbyMember> members;
+
+  /// null — не хост: метки только для чтения.
+  final ValueChanged<LobbySettings>? onChange;
+
+  /// Полные настройки (наборы карт, таймеры) — лист настроек.
+  final VoidCallback? onOpenSheet;
+
+  /// Партия идёт: менять можно только раунды, обсуждение и темп.
+  final bool inGame;
 
   @override
   Widget build(BuildContext context) {
     final r = settings.roles;
-    final parts = [
-      settings.useSecretRow ? '4 ряда (с «Тайной»)' : '3 ряда',
-      '${settings.columns} карт в ряду',
-      'раундов: ${settings.rounds ?? (players >= 2 ? defaultRounds(players) : 'по правилам')}',
-      r.killerEnabled ? 'с Убийцей' : 'кооператив',
-      settings.discussion == 'Radio' ? 'рация' : 'свободное обсуждение',
-      settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)',
-      'Призрак: ${ghost ?? 'по жребию'}',
-      settings.cardSets.length >= 4 ? 'все наборы карт' : 'наборы: ${settings.cardSets.map(_setName).join(', ')}',
+    final ghost = members.where((p) => p.userId == settings.ghostUserId).map((p) => p.nickname).firstOrNull;
+    final chips = <Widget>[
+      _chip(context, 'rows', settings.useSecretRow ? '4 ряда (с «Тайной»)' : '3 ряда', rules: true, choices: [
+        ('3 ряда: Мотив, Место, Способ', (s) => s.copyWith(useSecretRow: false)),
+        ('4 ряда: + «Тайна»', (s) => s.copyWith(useSecretRow: true)),
+      ]),
+      _chip(context, 'columns', '${settings.columns} карт в ряду', rules: true, choices: [
+        for (var c = 4; c <= 7; c++) ('$c карт в ряду', (s) => s.copyWith(columns: c)),
+      ]),
+      _chip(context, 'rounds', 'раундов: ${settings.rounds ?? (players >= 2 ? defaultRounds(players) : 'по правилам')}', choices: [
+        ('По правилам${players >= 2 ? ' (${defaultRounds(players)})' : ''}', (s) => s.copyWith(clearRounds: true)),
+        for (var n = 1; n <= 5; n++) ('$n', (s) => s.copyWith(rounds: n)),
+      ]),
+      _chip(context, 'killer', r.killerEnabled ? 'с Убийцей' : 'кооператив', rules: true, choices: [
+        ('С Убийцей', (s) => s.copyWith(roles: s.roles.copyWith(killerEnabled: true))),
+        ('Кооператив — без Убийцы', (s) => s.copyWith(roles: s.roles.copyWith(killerEnabled: false))),
+      ]),
+      _chip(context, 'discussion', settings.discussion == 'Radio' ? 'рация' : 'свободное обсуждение', choices: [
+        ('Рация: говорят по очереди', (s) => s.copyWith(discussion: 'Radio')),
+        ('Свободное обсуждение', (s) => s.copyWith(discussion: 'FreeChat')),
+      ]),
+      _chip(context, 'tempo', settings.tempo == 'live' ? 'живая' : 'походовая (${settings.turnHours} ч)', choices: [
+        ('Живая — таймеры в секундах', (s) => s.copyWith(tempo: 'live')),
+        for (final h in const [6, 12, 24, 48]) ('Походовая — $h ч на ход', (s) => s.copyWith(tempo: 'turn', turnHours: h)),
+      ]),
+      _chip(context, 'ghost', 'Призрак: ${ghost ?? 'по жребию'}', rules: true, choices: [
+        ('По жребию', (s) => s.copyWith(clearGhost: true)),
+        for (final m in members) (m.nickname, (s) => s.copyWith(ghostUserId: m.userId)),
+      ]),
+      _chip(context, 'sets', settings.cardSets.length >= 4 ? 'все наборы карт' : 'наборы: ${settings.cardSets.map(_setName).join(', ')}',
+          rules: true, opensSheet: true),
     ];
-    return Wrap(spacing: 6, runSpacing: 6, children: [
-      for (final p in parts)
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
-          child: Text(p, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-        ),
-    ]);
+    return Wrap(spacing: 6, runSpacing: 6, children: chips);
+  }
+
+  Widget _chip(BuildContext context, String id, String text, {List<_Choice> choices = const [], bool rules = false, bool opensSheet = false}) {
+    final editable = onChange != null && !(inGame && rules);
+    final body = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(99),
+        border: editable ? Border.all(color: AppColors.border) : null,
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(text, style: TextStyle(fontSize: 12, color: editable ? AppColors.text : AppColors.muted)),
+        if (editable) ...[
+          const SizedBox(width: 2),
+          const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.muted),
+        ],
+      ]),
+    );
+    if (!editable) return KeyedSubtree(key: Key('chip-$id'), child: body);
+    if (opensSheet) {
+      return InkWell(key: Key('chip-$id'), borderRadius: BorderRadius.circular(99), onTap: onOpenSheet, child: body);
+    }
+    return PopupMenuButton<int>(
+      key: Key('chip-$id'),
+      tooltip: 'Изменить',
+      onSelected: (i) => onChange!(choices[i].$2(settings)),
+      itemBuilder: (_) => [for (var i = 0; i < choices.length; i++) PopupMenuItem(value: i, child: Text(choices[i].$1))],
+      child: body,
+    );
   }
 }
 
