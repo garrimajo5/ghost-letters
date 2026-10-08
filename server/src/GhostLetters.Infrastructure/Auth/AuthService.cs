@@ -89,6 +89,85 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
         return new AuthResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, UserDto.From(user));
     }
 
+    /// <summary>Сколько живёт код входа на другом устройстве.</summary>
+    public static readonly TimeSpan LinkCodeLifetime = TimeSpan.FromMinutes(10);
+
+    /// <summary>Без похожих символов (0/O, 1/I/L): код диктуют голосом и вводят руками.</summary>
+    private const string LinkAlphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+    /// <summary>Новый код входа для игрока; прежние неиспользованные коды отзываются.</summary>
+    public async Task<LinkCodeResponse> CreateLinkCodeAsync(Guid userId, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        var old = await db.AuthIdentities.Where(i => i.Provider == AuthProviders.LinkCode && i.UserId == userId).ToListAsync(ct);
+        db.AuthIdentities.RemoveRange(old);
+
+        var code = new string(Enumerable.Range(0, 8).Select(_ => LinkAlphabet[RandomNumberGenerator.GetInt32(LinkAlphabet.Length)]).ToArray());
+        db.AuthIdentities.Add(new AuthIdentity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Provider = AuthProviders.LinkCode,
+            Subject = Hash(code),
+            CreatedAt = now,
+        });
+        await db.SaveChangesAsync(ct);
+        return new LinkCodeResponse(code, now + LinkCodeLifetime);
+    }
+
+    /// <summary>
+    /// Вход по коду: это устройство с этого момента входит как владелец кода. Если на устройстве был
+    /// другой гость, устройство переходит к владельцу кода (прежний гость остаётся в истории партий).
+    /// </summary>
+    public async Task<AuthResponse> LinkAsync(LinkLoginRequest request, CancellationToken ct)
+    {
+        var deviceId = ProfileRules.DeviceId(request.DeviceId);
+        var code = NormalizeCode(request.Code);
+        var now = time.GetUtcNow();
+        var hash = Hash(code);
+        var link = await db.AuthIdentities.FirstOrDefaultAsync(i => i.Provider == AuthProviders.LinkCode && i.Subject == hash, ct);
+        if (link is null || link.CreatedAt + LinkCodeLifetime < now)
+        {
+            throw AppException.Validation("Код не подошёл или устарел. Получите новый на другом устройстве.");
+        }
+
+        db.AuthIdentities.Remove(link);
+        var device = await db.AuthIdentities.FirstOrDefaultAsync(i => i.Provider == AuthProviders.Guest && i.Subject == deviceId, ct);
+        if (device is null)
+        {
+            db.AuthIdentities.Add(new AuthIdentity
+            {
+                Id = Guid.NewGuid(),
+                UserId = link.UserId,
+                Provider = AuthProviders.Guest,
+                Subject = deviceId,
+                CreatedAt = now,
+            });
+        }
+        else
+        {
+            device.UserId = link.UserId;
+        }
+
+        var user = await db.Users.SingleAsync(u => u.Id == link.UserId, ct);
+        user.LastSeenAt = now;
+        var tokens = Issue(user, now);
+        await db.SaveChangesAsync(ct);
+        return new AuthResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, UserDto.From(user));
+    }
+
+    /// <summary>Код вводят как угодно: строчными, с пробелами и дефисами.</summary>
+    public static string NormalizeCode(string? code)
+    {
+        var clean = new string((code ?? string.Empty).ToUpperInvariant().Where(char.IsLetterOrDigit).ToArray());
+        if (clean.Length != 8)
+        {
+            throw AppException.Validation("Код — 8 букв и цифр.");
+        }
+
+        return clean;
+    }
+
     public async Task LogoutAsync(string refreshToken, CancellationToken ct)
     {
         var stored = await FindAsync(refreshToken, ct);

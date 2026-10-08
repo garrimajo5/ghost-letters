@@ -1,12 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
+import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 
 final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, id) => ref.read(apiProvider).profile(id));
+
+/// Код для входа в этот аккаунт на другом устройстве (телефон, планшет, браузер).
+Future<void> _showLinkCode(BuildContext context, WidgetRef ref) async {
+  final code = await runAction(context, () => ref.read(apiProvider).createLinkCode());
+  if (code == null || !context.mounted) return;
+  final until = '${code.expiresAt.hour.toString().padLeft(2, '0')}:${code.expiresAt.minute.toString().padLeft(2, '0')}';
+  await showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Вход на другом устройстве'),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text(
+          'На новом устройстве откройте игру и нажмите «Уже играю на другом устройстве — войти по коду».',
+          style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
+        ),
+        const SizedBox(height: 16),
+        SelectableText(code.pretty, key: const Key('link-code'), style: heading(32, color: AppColors.amber, spacing: 4)),
+        const SizedBox(height: 8),
+        Text('Код одноразовый, действует до $until.', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+      ]),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: code.code));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Код скопирован')));
+          },
+          child: const Text('Скопировать'),
+        ),
+        FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Готово')),
+      ],
+    ),
+  );
+}
 
 /// Профиль: рейтинг, партии, победы, лайки и полка ачивок.
 class ProfileScreen extends ConsumerWidget {
@@ -17,6 +52,7 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(profileProvider(userId));
+    final mine = ref.watch(sessionProvider).user?.id == userId;
     return Scaffold(
       appBar: AppBar(title: const Text('ПРОФИЛЬ')),
       body: profile.when(
@@ -36,6 +72,15 @@ class ProfileScreen extends ConsumerWidget {
               _Stat('Лайки', '${p.likes}', color: AppColors.redSoft),
             ]),
           ),
+          if (mine) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              key: const Key('link-device'),
+              icon: const Icon(Icons.devices_other),
+              label: const Text('Войти на другом устройстве'),
+              onPressed: () => _showLinkCode(context, ref),
+            ),
+          ],
           const SizedBox(height: 24),
           Text('АЧИВКИ', style: heading(18, color: AppColors.ice, spacing: 2)),
           const SizedBox(height: 8),

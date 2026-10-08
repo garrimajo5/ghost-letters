@@ -26,6 +26,9 @@ public static class AuthProviders
     public const string Guest = "guest";
     public const string Google = "google";
     public const string Apple = "apple";
+
+    /// <summary>Одноразовый код входа на другом устройстве (Subject — хэш кода, живёт 10 минут).</summary>
+    public const string LinkCode = "link";
 }
 
 /// <summary>Способ входа: гость по deviceId, позже Google и Apple.</summary>

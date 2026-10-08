@@ -36,6 +36,24 @@ class FakeApi extends Api {
   Iterable<Call> named(String name) => calls.where((c) => c.$1 == name);
 
   @override
+  Future<AuthTokens> loginByCode(String deviceId, String code) async => _record('loginByCode', [deviceId, code],
+      () => const AuthTokens(accessToken: 'access2', refreshToken: 'refresh2', user: const User(id: 'u2', nickname: 'Ватсон', avatarColor: '#3FB68B')));
+
+  @override
+  Future<Profile> profile(String userId) async => _record('profile', [userId], () => Profile(
+        user: User(id: userId, nickname: userId == 'u2' ? 'Ватсон' : 'Игрок', avatarColor: '#3FB68B'),
+        games: 3,
+        wins: 2,
+        rating: 1016,
+        likes: 1,
+        achievements: const [],
+      ));
+
+  @override
+  Future<LinkCode> createLinkCode() async =>
+      _record('createLinkCode', const [], () => LinkCode(code: 'ABCDEFGH', expiresAt: DateTime(2026, 10, 9, 12, 30)));
+
+  @override
   Future<List<MyGame>> myGames({String? status}) async => _record('myGames', [status], () => games);
 
   @override

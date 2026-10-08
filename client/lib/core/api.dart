@@ -185,6 +185,13 @@ class Api {
   Future<AuthTokens> loginGuest(String deviceId, String nickname, String color) async =>
       AuthTokens.fromJson(await post('/auth/guest', {'deviceId': deviceId, 'nickname': nickname, 'avatarColor': color}) as Json);
 
+  /// Вход на этом устройстве по коду с другого — тот же игрок, что и там.
+  Future<AuthTokens> loginByCode(String deviceId, String code) async =>
+      AuthTokens.fromJson(await post('/auth/link', {'deviceId': deviceId, 'code': code}) as Json);
+
+  /// Одноразовый код (10 минут), чтобы войти в этот аккаунт на другом устройстве.
+  Future<LinkCode> createLinkCode() async => LinkCode.fromJson(await post('/auth/link-code') as Json);
+
   Future<User> updateMe({String? nickname, String? color}) async =>
       User.fromJson(await patch('/me', {if (nickname != null) 'nickname': nickname, if (color != null) 'avatarColor': color}) as Json);
 

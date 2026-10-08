@@ -184,6 +184,64 @@ public sealed class AuthTests : IAsyncLifetime
         stored.Should().Contain(hash).And.NotContain(login.RefreshToken);
     }
 
+    [Fact]
+    public async Task LinkCode_SecondDevice_LogsIntoSameAccount_Once()
+    {
+        var phone = await LoginAsync(NewDevice(), "Шерлок", null);
+        var code = await CreateLinkCodeAsync(phone.AccessToken);
+        code.Code.Should().HaveLength(8);
+        code.ExpiresAt.Should().BeCloseTo(_factory.Time.GetUtcNow().AddMinutes(10), TimeSpan.FromSeconds(5));
+
+        // Вводят как удобно: строчными, с дефисом.
+        var tabletDevice = NewDevice();
+        var typed = code.Code[..4].ToLowerInvariant() + "-" + code.Code[4..];
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(tabletDevice, typed));
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var tablet = (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
+        tablet.User.Id.Should().Be(phone.User.Id);
+
+        // Дальше планшет входит как обычный гость — и это тот же игрок.
+        (await LoginAsync(tabletDevice, "Неважно", null)).User.Id.Should().Be(phone.User.Id);
+
+        // Код одноразовый.
+        var again = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(NewDevice(), code.Code));
+        await ShouldBeProblem(again, HttpStatusCode.BadRequest, "VALIDATION");
+    }
+
+    [Fact]
+    public async Task LinkCode_MovesDeviceFromOtherGuest_AndExpires()
+    {
+        var owner = await LoginAsync(NewDevice(), "Холмс", null);
+        var otherDevice = NewDevice();
+        var other = await LoginAsync(otherDevice, "Случайный", null);
+
+        var code = await CreateLinkCodeAsync(owner.AccessToken);
+        var linked = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(otherDevice, code.Code));
+        linked.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await LoginAsync(otherDevice, "Случайный", null)).User.Id.Should().Be(owner.User.Id).And.NotBe(other.User.Id);
+
+        var stale = await CreateLinkCodeAsync(owner.AccessToken);
+        _factory.Time.Advance(TimeSpan.FromMinutes(11));
+        var late = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(NewDevice(), stale.Code));
+        await ShouldBeProblem(late, HttpStatusCode.BadRequest, "VALIDATION");
+    }
+
+    [Fact]
+    public async Task LinkCode_RequiresSignIn()
+    {
+        var response = await _client.PostAsync("/api/v1/auth/link-code", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<LinkCodeResponse> CreateLinkCodeAsync(string accessToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/link-code");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        var response = await _client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return (await response.Content.ReadFromJsonAsync<LinkCodeResponse>())!;
+    }
+
     private static string NewDevice() => $"device-{Guid.NewGuid():N}";
 
     private async Task<AuthResponse> LoginAsync(string device, string nickname, string? color)
