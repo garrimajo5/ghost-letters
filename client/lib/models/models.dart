@@ -105,6 +105,7 @@ class LobbySettings {
     this.timers = const {},
     this.cardSets = const ['original', 'mailbox', 'ritual', 'mirror'],
     this.ghostUserId,
+    this.ranked = true,
   });
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
@@ -121,6 +122,7 @@ class LobbySettings {
             : const {},
         cardSets: _strings(j['cardSets']).isEmpty ? const ['original', 'mailbox', 'ritual', 'mirror'] : _strings(j['cardSets']),
         ghostUserId: j['ghostUserId'] as String?,
+        ranked: j['ranked'] as bool? ?? true,
       );
 
   final bool useSecretRow;
@@ -137,6 +139,9 @@ class LobbySettings {
   /// Призрак, назначенный хостом; null — по жребию.
   final String? ghostUserId;
 
+  /// Рейтинговая партия (итог меняет рейтинг) или обычная.
+  final bool ranked;
+
   int timer(String key, int fallback) => timers[key] ?? fallback;
 
   LobbySettings copyWith({
@@ -152,6 +157,7 @@ class LobbySettings {
     List<String>? cardSets,
     String? ghostUserId,
     bool clearGhost = false,
+    bool? ranked,
   }) =>
       LobbySettings(
         useSecretRow: useSecretRow ?? this.useSecretRow,
@@ -165,6 +171,7 @@ class LobbySettings {
         timers: timers ?? this.timers,
         cardSets: cardSets ?? this.cardSets,
         ghostUserId: clearGhost ? null : ghostUserId ?? this.ghostUserId,
+        ranked: ranked ?? this.ranked,
       );
 
   Json toJson() => {
@@ -179,6 +186,7 @@ class LobbySettings {
         if (timers.isNotEmpty) 'timers': timers,
         'cardSets': cardSets,
         'ghostUserId': ghostUserId,
+        'ranked': ranked,
       };
 }
 

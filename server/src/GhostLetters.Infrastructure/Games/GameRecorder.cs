@@ -90,24 +90,34 @@ public sealed class GameRecorder(GhostLettersDbContext db)
             }
         }
 
-        // Рейтинг меняется только в соревновательной партии и без ботов.
-        if (await db.Users.AnyAsync(u => ids.Contains(u.Id) && u.IsBot, ct))
+        // Рейтинг меняется только в рейтинговой партии — для всех, включая ботов.
+        if (!state.Settings.Ranked)
         {
             return;
         }
 
         var detectives = state.Players.Where(p => p.Role.IsDetectiveTeam()).ToList();
         var killers = state.Players.Where(p => p.Role.IsKillerTeam()).ToList();
-        if (!state.HasKiller || detectives.Count == 0 || killers.Count == 0)
+        if (detectives.Count == 0)
         {
             return;
         }
 
+        // Без Убийцы (кооператив) детективы играют против «партии» со стартовым рейтингом:
+        // раскрыли дело — победа, нет — поражение.
+        var coop = !state.HasKiller || killers.Count == 0;
+        var side = coop ? (result.Solved ? WinningSide.Detectives : WinningSide.Killer) : result.Side;
         var (dDelta, kDelta) = EloDelta(
             detectives.Average(p => stats[p.Id].Rating),
-            killers.Average(p => stats[p.Id].Rating),
-            result.Side);
-        foreach (var (p, delta) in detectives.Select(p => (p, dDelta)).Concat(killers.Select(p => (p, kDelta))))
+            coop ? UserStats.InitialRating : killers.Average(p => stats[p.Id].Rating),
+            side);
+        var changes = detectives.Select(p => (p, dDelta));
+        if (!coop)
+        {
+            changes = changes.Concat(killers.Select(p => (p, kDelta)));
+        }
+
+        foreach (var (p, delta) in changes)
         {
             var s = stats[p.Id];
             s.Rating += delta;

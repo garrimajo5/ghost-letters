@@ -61,6 +61,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
             ),
           const SizedBox(height: 8),
           SwitchListTile(
+            key: const Key('ranked'),
+            title: const Text('Рейтинговая партия'),
+            subtitle: const Text('Итог меняет рейтинг всех игроков, ботов тоже. Обычная — только статистика.'),
+            value: s.ranked,
+            onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(ranked: v)),
+          ),
+          SwitchListTile(
             title: const Text('Ряд «Тайна»'),
             subtitle: const Text('Четвёртый ряд улик из дополнения'),
             value: s.useSecretRow,

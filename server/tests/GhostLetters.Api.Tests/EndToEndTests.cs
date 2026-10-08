@@ -15,6 +15,33 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
     public async Task DisposeAsync() => await _factory.DisposeAsync();
 
     [Fact]
+    public async Task CooperativeRankedGame_SolvedCase_RaisesRating()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 3, new LobbySettings { Rounds = 1 });
+        var driver = new GameDriver(game);
+
+        await driver.RunUntilAsync(p => p == "Finished");
+
+        var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.AsNoTracking().Where(h => h.GameId == game.GameId).ToListAsync());
+        history.Should().HaveCount(3, "в кооперативе все — команда детективов");
+        history.Should().OnlyContain(h => h.Delta > 0, "дело раскрыто — победа над «партией»");
+    }
+
+    [Fact]
+    public async Task CasualGame_CountsStats_ButNotRating()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 4, new LobbySettings { Rounds = 1, Ranked = false });
+        var driver = new GameDriver(game);
+
+        await driver.RunUntilAsync(p => p == "Finished");
+
+        var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.CountAsync(h => h.GameId == game.GameId));
+        history.Should().Be(0, "обычная партия рейтинг не меняет");
+        var profile = await game.Host.GetAsync($"/api/v1/users/{game.Host.Id}/profile");
+        profile.GetProperty("stats").GetProperty("games").GetInt32().Should().Be(1);
+    }
+
+    [Fact]
     public async Task SevenPlayers_FullGame_ResultsStatsRatingAchievements()
     {
         var game = await GameHarness.StartAsync(_factory, players: 7, new LobbySettings { Rounds = 1 });

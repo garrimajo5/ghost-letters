@@ -338,6 +338,10 @@ class _SettingsSummary extends StatelessWidget {
     final r = settings.roles;
     final ghost = members.where((p) => p.userId == settings.ghostUserId).map((p) => p.nickname).firstOrNull;
     final chips = <Widget>[
+      _chip(context, 'ranked', settings.ranked ? 'рейтинговая' : 'обычная', rules: true, choices: [
+        ('Рейтинговая — меняет рейтинг', (s) => s.copyWith(ranked: true)),
+        ('Обычная — без рейтинга', (s) => s.copyWith(ranked: false)),
+      ]),
       _chip(context, 'rows', settings.useSecretRow ? '4 ряда (с «Тайной»)' : '3 ряда', rules: true, choices: [
         ('3 ряда: Мотив, Место, Способ', (s) => s.copyWith(useSecretRow: false)),
         ('4 ряда: + «Тайна»', (s) => s.copyWith(useSecretRow: true)),

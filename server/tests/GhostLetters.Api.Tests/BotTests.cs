@@ -66,9 +66,10 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
             .Should().OnlyContain(m => m.GetProperty("isReady").GetBoolean(), "боты готовы к реваншу");
         botMoves.Should().BeGreaterThan(30);
 
-        // Партия с ботами рейтинг не меняет, но статистика человека учтена.
-        var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.CountAsync(h => h.GameId == gameId));
-        history.Should().Be(0);
+        // Рейтинговая партия с ботами меняет рейтинг всем, ботам тоже; статистика человека учтена.
+        var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.AsNoTracking().Where(h => h.GameId == gameId).ToListAsync());
+        history.Should().NotBeEmpty();
+        history.Should().Contain(h => h.UserId == host.Id);
         var profile = await host.GetAsync($"/api/v1/users/{host.Id}/profile");
         profile.GetProperty("stats").GetProperty("games").GetInt32().Should().Be(1);
 
