@@ -69,7 +69,7 @@ public sealed class MigrationTests(PostgresFixture postgres)
         await migrator.MigrateAsync();
 
         var poirots = await db.Database.SqlQueryRaw<Guid>("SELECT id AS \"Value\" FROM public.users WHERE nickname = 'Бот Пуаро'").ToListAsync();
-        poirots.Should().Equal(new Guid("00000000-0000-0000-0000-00000000000c"), "главный — бот из кабинета");
+        poirots.Should().ContainSingle().Which.Should().Be(new Guid("00000000-0000-0000-0000-00000000000c"), "главный — бот из кабинета");
         (await db.Database.SqlQueryRaw<int>("SELECT count(*)::int AS \"Value\" FROM public.users WHERE nickname = 'Бот Марпл'").SingleAsync()).Should().Be(1);
 
         var stats = await db.Database.SqlQueryRaw<string>(
