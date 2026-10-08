@@ -12,6 +12,7 @@ import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
 import 'package:ghost_letters/core/sound.dart';
+import 'package:ghost_letters/features/profile/avatar_crop.dart';
 import 'package:ghost_letters/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -247,6 +248,7 @@ class TestApp {
       apiProvider.overrideWith(FakeApi.new),
       realtimeProvider.overrideWith(FakeRealtime.new),
       cardCatalogProvider.overrideWith((ref) async => testCatalog),
+      avatarCropperProvider.overrideWithValue((context, bytes) async => bytes),
       avatarPickerProvider.overrideWithValue(() async => (bytes: Uint8List.fromList(const [0x89, 0x50, 0x4E, 0x47]), name: 'me.png')),
       latestAndroidVersionProvider.overrideWith((ref) async => null),
     ]);

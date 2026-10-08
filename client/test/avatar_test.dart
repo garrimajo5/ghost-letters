@@ -26,7 +26,7 @@ void main() {
     await tester.tap(find.byKey(const Key('avatar-pick')));
     await tester.pumpAndSettle();
 
-    expect(app.api.named('uploadAvatar').single.$2[1], 'me.png');
+    expect(app.api.named('uploadAvatar').single.$2[1], 'avatar.png');
     expect(app.container.read(sessionProvider).user?.avatarId, 'm1');
     expect(find.byKey(const Key('avatar-photo-m1')), findsOneWidget);
 
