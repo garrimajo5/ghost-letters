@@ -23,7 +23,7 @@ class HistoryScreen extends ConsumerWidget {
         onRefresh: () async => ref.invalidate(historyProvider),
         child: games.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(ApiError.from(e).message))]),
+          error: (e, _) => ListView(children: [ErrorRetry(message: ApiError.from(e).message, onRetry: () => ref.invalidate(historyProvider))]),
           data: (list) => list.isEmpty
               ? ListView(children: const [
                   Padding(

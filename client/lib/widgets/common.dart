@@ -231,6 +231,28 @@ Future<T?> runAction<T>(BuildContext context, Future<T> Function() action) async
   }
 }
 
+/// Ошибка загрузки экрана: понятный текст и кнопка «Повторить».
+class ErrorRetry extends StatelessWidget {
+  const ErrorRetry({super.key, required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.cloud_off, color: AppColors.muted, size: 36),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.4)),
+            const SizedBox(height: 16),
+            OutlinedButton(key: const Key('retry'), onPressed: onRetry, child: const Text('Повторить')),
+          ]),
+        ),
+      );
+}
+
 /// Карта крупно поверх экрана: нажмите в любом месте, чтобы закрыть.
 Future<void> showCardZoom(BuildContext context, String cardId, {String? caption, String? actionLabel, VoidCallback? onAction}) =>
     showDialog<void>(
