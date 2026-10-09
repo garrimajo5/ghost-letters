@@ -189,7 +189,7 @@ class BotEditorScreen extends ConsumerStatefulWidget {
 class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
   late final _name = TextEditingController(text: widget.bot?.nickname.replaceFirst('Бот ', '') ?? '');
   late final _about = TextEditingController(text: widget.bot?.about ?? '');
-  late BotSpectra _s = widget.bot?.spectra ?? const BotSpectra();
+  late BotSpectra _s = widget.bot?.spectra ?? BotSpectra(social: {for (final s in socialTraits) s.key: s.initial});
   late String _color = widget.bot?.avatarColor ?? avatarPalette.first;
   late bool _enabled = widget.bot?.enabled ?? true;
   bool _busy = false;

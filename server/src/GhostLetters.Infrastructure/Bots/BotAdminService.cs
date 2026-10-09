@@ -150,7 +150,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
             var nickname = BotNickname(name);
             if (!existing.Contains(nickname))
             {
-                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p)), ct);
+                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p) with { Social = null }), ct);
             }
         }
 

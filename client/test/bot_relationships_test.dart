@@ -4,8 +4,25 @@ import 'package:ghost_letters/models/models.dart';
 
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
+import 'bots_test.dart' show lobbyWithBot;
 
 void main() {
+  testWidgets('профиль с симпатиями открывается по аватарке бота в лобби', (tester) async {
+    final app = await TestApp.create(user: host);
+    addTearDown(app.container.dispose);
+    app.api.profileIsBot = true;
+    app.realtime.lobby = lobbyWithBot();
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    app.go('/lobby/l1');
+    await tester.pumpAndSettle();
+    final avatar = find.byKey(const Key('lobby-profile-b1'));
+    await tester.ensureVisible(avatar);
+    await tester.tap(avatar);
+    await tester.pumpAndSettle();
+    expect(find.text('СИМПАТИИ К ИГРОКАМ'), findsOneWidget);
+  });
+
   for (final admin in [false, true]) {
     testWidgets('профиль бота: симпатии и доступ к причинам, admin=$admin', (tester) async {
       tester.view.physicalSize = const Size(360, 800);

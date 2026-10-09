@@ -36,16 +36,16 @@ public sealed record BotSocialTraits
 public static class BotAffinity
 {
     /// <summary>Each component is a bounded contribution to the displayed total, not a role probability.</summary>
-    public static Dictionary<string, double> Observe(BotSocialTraits raw, double activity, double ownActivity,
+    public static Dictionary<string, double> Observe(BotSocialTraits raw, double? activity, double? ownActivity,
         double? agreement, double skillDifference, bool thanked, double? honesty, int sharedGames)
     {
         var s = raw.Clamped();
-        var expectations = 1 - 2 * Math.Abs(activity - s.ExpectedActivity);
-        if (agreement is { } a) expectations = (expectations + 1 - 2 * Math.Abs(a - s.ExpectedAgreement)) / 2;
+        var expectations = activity is { } active ? 1 - 2 * Math.Abs(active - s.ExpectedActivity) : 0;
+        if (agreement is { } a) expectations = (expectations + 1 - 2 * Math.Abs(a - s.ExpectedAgreement)) / (activity is null ? 1 : 2);
         return new()
         {
             ["expectations"] = 25 * expectations,
-            ["similarity"] = 15 * (2 * s.Similarity - 1) * (1 - 2 * Math.Abs(activity - ownActivity)),
+            ["similarity"] = activity is { } x && ownActivity is { } y ? 15 * (2 * s.Similarity - 1) * (1 - 2 * Math.Abs(x - y)) : 0,
             ["skill"] = 20 * (2 * s.SkillRespect - 1) * Math.Clamp(skillDifference * 2, -1, 1),
             ["reciprocity"] = thanked ? 10 * s.Reciprocity : 0,
             ["cooperation"] = agreement is { } c ? 10 * (2 * c - 1) : 0,

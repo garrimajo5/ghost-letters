@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GhostLetters.Application;
 using GhostLetters.Domain.Game;
+using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Auth;
 using GhostLetters.Infrastructure.Persistence;
 using GhostLetters.Infrastructure.Persistence.Entities;
@@ -52,7 +53,8 @@ public sealed class BotRelationshipService(GhostLettersDbContext db, BotAdminSer
         var profiles = await db.BotProfiles.AsNoTracking().Where(p => bots.Contains(p.UserId)).ToDictionaryAsync(p => p.UserId, ct);
         double Skill(Guid id) => stats.TryGetValue(id, out var s) ? (s.Wins + 2.0) / (s.Games + 4) : .5;
         // Count distinct participation rounds, not message volume. Repeating text cannot buy affinity.
-        double Activity(Guid id) => Math.Min(1, messages.Where(m => m.AuthorId == id).Select(m => m.Round).Distinct().Count() / (double)Math.Max(1, state.TotalRounds));
+        double? Activity(Guid id) => state.Players.First(p => p.Id == id).Role == Role.Ghost ? null :
+            Math.Min(1, messages.Where(m => m.AuthorId == id).Select(m => m.Round).Distinct().Count() / (double)Math.Max(1, state.TotalRounds));
 
         foreach (var bot in bots.Order())
         {

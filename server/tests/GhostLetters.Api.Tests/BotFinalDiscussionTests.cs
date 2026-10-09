@@ -39,6 +39,21 @@ public sealed class BotFinalDiscussionTests
     }
 
     [Fact]
+    public void AffinityCannotOverrideKnownKillerRole()
+    {
+        var bob = Guid.NewGuid();
+        var view = View with { Phase = Phase.Voting, AllowedCommands = [nameof(CastVote)],
+            Players = [new(Ghost, 0, true, Role.Ghost, false, 0), new(Me, 1, false, Role.Witness, false, 0),
+                new(Ann, 2, false, Role.Killer, false, 0), new(bob, 3, false, null, false, 0)],
+            Me = View.Me! with { Role = Role.Witness },
+            Finale = new(new(2, VoteStageKind.Killer, -1, 1, [], [Ann, bob]), 3, null, [], [], [], null, null, null, [], []) };
+        var mind = Mind with { Affinities = new Dictionary<Guid, int> { [Ann] = 100, [bob] = -100 },
+            Personality = Mind.Personality with { Social = new() { Influence = 1 } } };
+        var vote = (CastVote)BotPlayer.Decide(view, new Random(1), Tags, mind)!;
+        vote.Suspect.Should().Be(Ann);
+    }
+
+    [Fact]
     public void FullVersionUsesEarlyClues_AndExplainsEveryRow()
     {
         var view = View;

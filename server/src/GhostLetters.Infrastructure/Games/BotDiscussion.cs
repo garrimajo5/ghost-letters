@@ -87,7 +87,8 @@ public static class BotDiscussion
         {
             var others = view.Players.Where(p => p.Id != me.Id && !p.IsGhost && mind.Names.ContainsKey(p.Id)).OrderBy(p => p.Seat).ToList();
             var mySeat = view.Players.First(p => p.Id == me.Id).Seat;
-            var target = others.OrderByDescending(p => mind.AffinityBias(p.Id))
+            var followAffinity = mind.Personality.Social.Influence > 0 && rng.NextDouble() < mind.Personality.Social.Influence;
+            var target = others.OrderByDescending(p => followAffinity ? mind.AffinityBias(p.Id) : 0)
                 .ThenBy(p => p.Seat > mySeat ? 0 : 1).ThenBy(p => p.Seat).FirstOrDefault();
             if (target is null) return null;
             var row = me.Id.GetHashCode() % view.Board.Count;

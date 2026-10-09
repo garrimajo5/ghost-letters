@@ -233,12 +233,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       key: Key('lobby-profile-${p.userId}'),
                       onTap: () => context.push('/profile/${p.userId}'),
                       customBorder: const CircleBorder(),
-                      child: Tooltip(message: 'Профиль игрока', child: Avatar(
-                      nickname: p.isBot ? p.nickname.replaceFirst(RegExp(r'^Бот\s+'), '') : p.nickname,
-                      color: p.avatarColor,
-                      photoId: p.avatarId,
-                      highlight: p.userId == me.id,
-                    )),
+                      child: Tooltip(
+                        message: 'Профиль игрока',
+                        child: Avatar(
+                          nickname: p.isBot ? p.nickname.replaceFirst(RegExp(r'^Бот\s+'), '') : p.nickname,
+                          color: p.avatarColor,
+                          photoId: p.avatarId,
+                          highlight: p.userId == me.id,
+                        ),
+                      ),
                     ),
                     if (p.isBot)
                       Positioned(
