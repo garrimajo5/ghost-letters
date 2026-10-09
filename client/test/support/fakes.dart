@@ -176,17 +176,21 @@ class FakeApi extends Api {
       });
 
   @override
-  Future<List<ChatMessage>> chat(String gameId) async => const [];
+  Future<List<ChatMessage>> chat(String gameId) async => chatLoad == null ? const [] : await chatLoad!();
+
+  Future<List<ChatMessage>> Function()? chatLoad;
+  Future<List<Json>> Function()? marksLoad;
+  Future<List<Json>> Function()? notesLoad;
 
   List<Json> marksResult = const [];
 
   @override
-  Future<List<Json>> marks(String gameId) async => marksResult;
+  Future<List<Json>> marks(String gameId) async => marksLoad == null ? marksResult : await marksLoad!();
 
   List<Json> notesResult = const [];
 
   @override
-  Future<List<Json>> notes(String gameId) async => notesResult;
+  Future<List<Json>> notes(String gameId) async => notesLoad == null ? notesResult : await notesLoad!();
 
   @override
   Future<void> saveNote(String gameId, String userId, int suspicion, String body) async =>
@@ -205,6 +209,7 @@ class FakeRealtime extends Realtime {
   final lobbyCtl = StreamController<Lobby>.broadcast();
   final startedCtl = StreamController<({String lobbyId, String gameId})>.broadcast();
   final viewsCtl = StreamController<({GameView view, DateTime? deadline})>.broadcast();
+  final snapshotsCtl = StreamController<GameSnapshot>.broadcast();
   final chatCtl = StreamController<ChatMessage>.broadcast();
   final connectedCtl = StreamController<bool>.broadcast();
 
@@ -216,6 +221,7 @@ class FakeRealtime extends Realtime {
   @override
   Future<void> resync() async {
     resyncs++;
+    if (game case final snap?) snapshotsCtl.add(snap);
   }
 
   @override
@@ -226,6 +232,9 @@ class FakeRealtime extends Realtime {
 
   @override
   Stream<({GameView view, DateTime? deadline})> get views => viewsCtl.stream;
+
+  @override
+  Stream<GameSnapshot> get snapshots => snapshotsCtl.stream;
 
   @override
   Stream<ChatMessage> get chat => chatCtl.stream;

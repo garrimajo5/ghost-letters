@@ -58,6 +58,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
   /// Мои подозрения из заметок: id игрока → от −2 (точно чист) до 2 (это он!).
   final suspicion = <String, int>{};
   final chat = <ChatMessage>[];
+  final chatChanges = ValueNotifier<int>(0);
   int unread = 0;
 
   /// Широкий экран (компьютер): чат постоянно открыт справа, счётчик непрочитанного не нужен.
@@ -118,16 +119,24 @@ class GameScreenState extends ConsumerState<GameScreen> {
         _snap = current.withView(u.view, u.deadline);
       });
     }));
+    _subs.add(_realtime.snapshots.listen((snap) {
+      if (!mounted || snap.view.gameId != widget.gameId || snap.view.version < (view?.version ?? 0)) return;
+      _audio.baseline(snap.view, snap.deadline);
+      _audioBaseline = false;
+      setState(() {
+        if (snap.view.phase != view?.phase || snap.view.round != view?.round) _resetSelection();
+        _snap = snap;
+      });
+    }));
     _subs.add(_realtime.chat.listen((m) {
       if (!mounted || chat.any((c) => c.id == m.id)) return;
       if (!chatDocked && !_chatOpen && !_audioBaseline && _audioActive &&
           m.authorId != view?.me?.id && DateTime.now().difference(m.createdAt).abs() < const Duration(seconds: 10)) {
         ref.read(soundProvider).play(Sfx.chat);
       }
-      setState(() {
-        chat.add(m);
-        if (!chatDocked && !_chatOpen) unread++;
-      });
+      chat.add(m);
+      if (!chatDocked && !_chatOpen) unread++;
+      chatChanges.value++;
     }));
     _subs.add(_realtime.lobbyUpdates.listen((l) {
       if (mounted && l.id == lobbyId) setState(() => lobby = l);
@@ -169,12 +178,6 @@ class GameScreenState extends ConsumerState<GameScreen> {
     _audioBaseline = true;
     try {
       await _realtime.resync();
-      final fresh = await ref.read(apiProvider).snapshot(widget.gameId);
-      if (mounted && fresh.view.version >= (view?.version ?? 0)) {
-        _audio.baseline(fresh.view, fresh.deadline);
-        _audioBaseline = false;
-        setState(() => _snap = fresh);
-      }
     } catch (_) {
       // Не вышло — обновление придёт, когда хаб переподключится.
     }
@@ -191,34 +194,67 @@ class GameScreenState extends ConsumerState<GameScreen> {
       _audio.baseline(_snap!.view, _snap!.deadline);
       _audioBaseline = false;
       final api = ref.read(apiProvider);
-      final history = await api.chat(widget.gameId);
-      final savedMarks = snap.view.me == null ? const <Json>[] : await api.marks(widget.gameId);
-      final notes = snap.view.me == null ? const <Json>[] : await api.notes(widget.gameId).catchError((_) => const <Json>[]);
-      if (!mounted) return;
-      setState(() {
+      // Каждая секция появляется сразу после своего ответа, независимо от остальных.
+      Future<void> loadHistory() async {
+        final history = await api.chat(widget.gameId);
+        if (!mounted) return;
         final known = {for (final m in history) m.id};
         final live = chat.where((m) => !known.contains(m.id)).toList();
         chat
           ..clear()
           ..addAll(history)
           ..addAll(live);
-        marks
-          ..clear()
-          ..addEntries(savedMarks.map((m) => MapEntry(m['cardId'] as String, CardMark.fromJson(m))));
-        suspicion
-          ..clear()
-          ..addEntries(notes.map((n) => MapEntry(n['targetUserId'] as String, ((n['suspicion'] as num?) ?? 0).toInt())));
-      });
+        chatChanges.value++;
+      }
 
-      final lobbyId = snap.lobbyId;
-      if (lobbyId != null && snap.view.me != null) {
-        try {
-          final l = await _realtime.subscribeLobby(lobbyId);
-          if (mounted) setState(() => lobby = l);
-        } catch (_) {
-          // Лобби нужно только для настроек хоста.
+      Future<void> loadMarks() async {
+        final savedMarks = await api.marks(widget.gameId);
+        if (!mounted) return;
+        setState(() => marks
+          ..clear()
+          ..addEntries(savedMarks.map((m) => MapEntry(m['cardId'] as String, CardMark.fromJson(m)))));
+      }
+
+      Future<void> loadNotes() async {
+        final notes = await api.notes(widget.gameId);
+        if (!mounted) return;
+        setState(() => suspicion
+          ..clear()
+          ..addEntries(notes.map((n) => MapEntry(n['targetUserId'] as String, ((n['suspicion'] as num?) ?? 0).toInt()))));
+      }
+
+      Future<void> loadLobby() async {
+        final lobbyId = snap.lobbyId;
+        if (lobbyId != null && snap.view.me != null) {
+          try {
+            final l = await _realtime.subscribeLobby(lobbyId);
+            if (mounted) setState(() => lobby = l);
+          } catch (_) {
+            // Лобби нужно только для настроек хоста.
+          }
         }
       }
+
+      Future<void> section(Future<void> Function() load, String label) async {
+        try {
+          await load();
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Не удалось загрузить $label.'),
+              action: SnackBarAction(label: 'Повторить', onPressed: () {
+                if (mounted) unawaited(section(load, label));
+              }),
+            ));
+          }
+        }
+      }
+      await Future.wait([
+        section(loadHistory, 'историю чата'),
+        if (snap.view.me != null) section(loadMarks, 'пометки карт'),
+        if (snap.view.me != null) section(loadNotes, 'заметки'),
+        loadLobby(),
+      ]);
     } catch (e) {
       if (mounted) setState(() => _error = ApiError.from(e).message);
     }
@@ -240,6 +276,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     _audioTimer?.cancel();
     _lifecycle.dispose();
     _scroll.dispose();
+    chatChanges.dispose();
     _realtime.forgetGame(widget.gameId);
     final l = lobby;
     if (l != null) _realtime.unsubscribeLobby(l.id);
@@ -316,7 +353,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   Future<void> openChat() async {
-    setState(() => unread = 0);
+    unread = 0;
+    chatChanges.value++;
     if (chatDocked) return;
     _chatOpen = true;
     try { await ChatSheet.show(context, this); } finally { _chatOpen = false; }
@@ -1489,35 +1527,38 @@ class _ChatButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Чат',
-      child: InkWell(
-        onTap: screen.openChat,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Stack(alignment: Alignment.center, children: [
-            const Icon(Icons.chat_bubble_outline, color: AppColors.ice),
-            if (screen.unread > 0)
-              Positioned(
-                top: 5,
-                right: 5,
-                child: Container(
-                  constraints: const BoxConstraints(minWidth: 18),
-                  height: 18,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(99)),
-                  alignment: Alignment.center,
-                  child: Text('${screen.unread}', style: const TextStyle(fontSize: 11, color: AppColors.onAmber, fontWeight: FontWeight.w700)),
+    return ListenableBuilder(
+      listenable: screen.chatChanges,
+      builder: (context, _) => Tooltip(
+        message: 'Чат',
+        child: InkWell(
+          onTap: screen.openChat,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Stack(alignment: Alignment.center, children: [
+              const Icon(Icons.chat_bubble_outline, color: AppColors.ice),
+              if (screen.unread > 0)
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: Container(
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(99)),
+                    alignment: Alignment.center,
+                    child: Text('${screen.unread}', style: const TextStyle(fontSize: 11, color: AppColors.onAmber, fontWeight: FontWeight.w700)),
+                  ),
                 ),
-              ),
-          ]),
+            ]),
+          ),
         ),
       ),
     );
