@@ -169,7 +169,7 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
 
     private async Task RequirePlayerAsync(Guid gameId, Guid userId, CancellationToken ct)
     {
-        if ((await games.RequireViewerAsync(gameId, userId, ct)).IsTable)
+        if ((await games.RequireViewerAsync(gameId, userId, ct)).IsObserver)
         {
             throw AppException.Forbidden("Заметки ведут только игроки.");
         }

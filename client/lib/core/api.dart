@@ -237,8 +237,12 @@ class Api {
 
   Future<void> deleteSettingsPreset(String id) async => _call(() => _dio.delete<dynamic>('/me/settings-presets/$id'));
 
-  Future<Lobby> joinLobby(String code, {bool table = false}) async =>
-      Lobby.fromJson(await post('/lobbies/${code.toUpperCase()}/join', {'mode': table ? 'table' : 'player'}) as Json);
+
+  Future<List<WatchableGame>> watchableGames() async =>
+      (await get('/lobbies/watchable') as List).map((j) => WatchableGame.fromJson(j as Json)).toList();
+
+  Future<Lobby> joinLobby(String code, {bool table = false, bool spectator = false}) async =>
+      Lobby.fromJson(await post('/lobbies/${code.toUpperCase()}/join', {'mode': spectator ? 'spectator' : (table ? 'table' : 'player')}) as Json);
 
   Future<void> leaveLobby(String id) => post('/lobbies/$id/leave');
 

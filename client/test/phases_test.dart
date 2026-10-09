@@ -147,7 +147,7 @@ void main() {
       }),
       'Партия окончена'
     ),
-    'экран стола': (phaseSnapshot('Mailbox', const [], table: true), 'Экран стола'),
+    'экран стола': (phaseSnapshot('Mailbox', const [], table: true), 'Режим зрителя'),
   };
 
   for (final entry in cases.entries) {

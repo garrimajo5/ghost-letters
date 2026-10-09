@@ -43,6 +43,11 @@ class FakeApi extends Api {
 
   @override
   Future<void> deleteSettingsPreset(String id) async => _record('deleteSettingsPreset', [id], () => presetList.removeWhere((p) => p.id == id));
+
+  List<WatchableGame> watchable = const [];
+
+  @override
+  Future<List<WatchableGame>> watchableGames() async => _record('watchableGames', [], () => watchable);
   ApiError? failWith;
 
   T _record<T>(String name, List<Object?> args, T Function() result) {
@@ -104,7 +109,7 @@ class FakeApi extends Api {
   Future<Lobby> createLobby(String title, LobbySettings settings) async => _record('createLobby', [title], () => lobbyResult!);
 
   @override
-  Future<Lobby> joinLobby(String code, {bool table = false}) async => _record('joinLobby', [code, table], () => lobbyResult!);
+  Future<Lobby> joinLobby(String code, {bool table = false, bool spectator = false}) async => _record('joinLobby', [code, table, if (spectator) spectator], () => lobbyResult!);
 
   @override
   Future<Lobby> setReady(String id, bool ready) async => _record('setReady', [id, ready], () => lobbyResult!);

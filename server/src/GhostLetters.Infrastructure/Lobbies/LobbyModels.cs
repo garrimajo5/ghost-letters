@@ -18,6 +18,9 @@ public sealed record CreateLobbyRequest(string? Title, LobbySettings? Settings);
 
 public sealed record JoinLobbyRequest(string? Mode);
 
+/// <summary>Публичный список идущих партий, без ролей и состояния колоды.</summary>
+public sealed record WatchableGameDto(string Code, string Title, Guid GameId, string Phase, int Players);
+
 public sealed record ReadyRequest(bool Ready);
 
 public sealed record KickRequest(Guid UserId);

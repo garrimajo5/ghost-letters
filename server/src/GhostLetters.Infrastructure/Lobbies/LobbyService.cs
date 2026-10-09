@@ -68,27 +68,47 @@ public sealed class LobbyService(
         return await DtoAsync(lobbyId, ct);
     }
 
-    /// <summary>Войти игроком или экраном стола. Повторный вход — без изменений (можно сменить режим, пока лобби открыто).</summary>
+    public async Task<IReadOnlyList<WatchableGameDto>> WatchableAsync(Guid userId, CancellationToken ct) =>
+        await (from lobby in db.Lobbies.AsNoTracking()
+               join game in db.Games.AsNoTracking() on lobby.CurrentGameId equals game.Id
+               where lobby.Status == LobbyStatuses.InGame && game.Status == GameStatuses.Active
+                   && !db.GamePlayers.Any(p => p.GameId == game.Id && p.UserId == userId)
+               orderby game.StartedAt descending, game.Id
+               select new WatchableGameDto(lobby.Code, lobby.Title, game.Id, game.Phase,
+                   db.GamePlayers.Count(p => p.GameId == game.Id)))
+            .Take(50).ToListAsync(ct);
+
+    /// <summary>Войти игроком, зрителем или экраном стола. Во время партии режим менять нельзя.</summary>
     public async Task<LobbyDto> JoinAsync(string code, Guid userId, JoinLobbyRequest request, CancellationToken ct)
     {
         var mode = request.Mode ?? JoinModes.Player;
-        if (mode is not (JoinModes.Player or JoinModes.Table))
+        if (mode is not (JoinModes.Player or JoinModes.Table or JoinModes.Spectator))
         {
-            throw AppException.Validation("Режим входа — player или table.");
+            throw AppException.Validation("Режим входа — player, spectator или table.");
         }
 
         var lobby = await FindByCodeAsync(code, ct);
         var members = await db.LobbyMembers.Where(m => m.LobbyId == lobby.Id).ToListAsync(ct);
         var existing = members.FirstOrDefault(m => m.UserId == userId);
-        if (existing is not null && (existing.JoinMode == mode || lobby.Status != LobbyStatuses.Open))
+        if (existing is not null && existing.JoinMode == mode)
         {
             return await DtoAsync(lobby.Id, ct);
+        }
+
+        if (existing is not null && lobby.Status != LobbyStatuses.Open)
+        {
+            throw AppException.Conflict(AppException.Codes.GameInProgress, "Во время партии нельзя менять режим участия.");
+        }
+
+        if (userId == lobby.HostUserId && mode != JoinModes.Player)
+        {
+            throw AppException.Validation("Хост остаётся игроком. Для просмотра выйдите из лобби и войдите зрителем.");
         }
 
         // Экран стола можно подключить и к идущей партии; игроком — только пока лобби открыто.
         if (lobby.Status != LobbyStatuses.Open && mode == JoinModes.Player)
         {
-            throw AppException.Conflict(AppException.Codes.GameInProgress, "Партия уже идёт — можно подключиться экраном стола.");
+            throw AppException.Conflict(AppException.Codes.GameInProgress, "Партия уже идёт — можно подключиться зрителем.");
         }
 
         if (mode == JoinModes.Player && members.Count(m => m.JoinMode == JoinModes.Player) >= RoleTable.MaxPlayers)
@@ -239,6 +259,10 @@ public sealed class LobbyService(
     public async Task<LobbyDto> SetReadyAsync(Guid lobbyId, Guid userId, bool ready, CancellationToken ct)
     {
         var member = await RequireMemberAsync(lobbyId, userId, ct);
+        if (member.JoinMode != JoinModes.Player)
+        {
+            throw AppException.Forbidden("Зрители не участвуют в готовности игроков.");
+        }
         member.IsReady = ready;
         await db.SaveChangesAsync(ct);
         return await PublishAsync(lobbyId, ct);
@@ -481,7 +505,7 @@ public sealed class LobbyService(
             settings,
             lobby.CurrentGameId,
             members
-                .OrderBy(x => x.m.JoinMode == JoinModes.Table ? 1 : 0).ThenBy(x => x.m.Seat)
+                .OrderBy(x => x.m.JoinMode == JoinModes.Player ? 0 : 1).ThenBy(x => x.m.Seat)
                 .Select(x => new LobbyMemberDto(x.u.Id, x.u.Nickname, x.u.AvatarColor, x.m.Seat, x.m.JoinMode, x.m.IsReady, x.u.IsBot, x.u.AvatarMediaId))
                 .ToList());
     }

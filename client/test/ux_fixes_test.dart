@@ -178,7 +178,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(tester.getRect(find.byKey(const Key('board-0-4'))).right,
-        lessThan(tester.getRect(find.text('Экран стола').first).left));
+        lessThan(tester.getRect(find.text('Режим зрителя').first).left));
   });
 
   testWidgets('связь пропала — плашка с повтором, вернулась — плашка ушла', (tester) async {

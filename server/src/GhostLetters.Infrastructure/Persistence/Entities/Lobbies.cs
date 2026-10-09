@@ -34,6 +34,7 @@ public static class JoinModes
 {
     public const string Player = "player";
     public const string Table = "table";
+    public const string Spectator = "spectator";
 }
 
 public sealed class LobbyMember
