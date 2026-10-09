@@ -95,6 +95,33 @@ public sealed class BotFinalDiscussionTests
         line.Text.Should().Contain("сверил твой ответ").And.Contain("совпадают").And.Contain("мотив 2");
     }
 
+    [Theory]
+    [InlineData("rose", true)]
+    [InlineData("knife", false)]
+    [InlineData("unrelated-letter", false)]
+    public void ChangedChoiceIsExplicit_WithoutInventingARevision(string earlier, bool changed)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Моя версия", [earlier, "boat"], now),
+             new(Ann, "Бот Я, что думаешь о мотиве?", [], now.AddSeconds(1))], new Random(1))!.Value;
+        line.Cards[0].Should().Be("knife");
+        line.Text.Should().Contain("Подсказка р.0 №1");
+        if (changed) line.Text.Should().Contain("Пересмотрел выбор: мотив 2 → мотив 1");
+        else line.Text.Should().NotContain("Пересмотрел выбор");
+    }
+
+    [Fact]
+    public void RevisionUsesLatestPublicChoiceRatherThanOpeningVersion()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Сначала так", ["rose", "boat"], now),
+             new(Me, "Теперь так", ["knife", "boat"], now.AddSeconds(1)),
+             new(Ann, "Бот Я, что думаешь о мотиве?", [], now.AddSeconds(2))], new Random(1))!.Value;
+        line.Text.Should().NotContain("Пересмотрел выбор");
+    }
+
     [Fact]
     public void DoesNotAcknowledgeAnAcknowledgementAgain()
     {
