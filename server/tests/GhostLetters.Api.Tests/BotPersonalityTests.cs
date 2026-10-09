@@ -257,14 +257,42 @@ public sealed class BotPersonalityTests
         var view = View(Phase.Discussion, [], Role.Detective,
             letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["tulip"])]);
         var line = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 1 }))!.Value;
-        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("исключаю")
-            .And.Contain("не доказательство").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
+        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("ослабляет")
+            .And.Contain("не исключает").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
         line.Cards.Count.Should().BeLessThanOrEqualTo(ChatService.MaxCards);
         line.Notes.Should().HaveSameCount(line.Cards);
         line.Notes.Should().OnlyContain(n => n.Length <= ChatService.MaxNoteLength);
         var shrug = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 0 }))!.Value;
         shrug.Text.Should().Contain("не считаю это исключением");
+    }
+
+    [Fact]
+    public void VanishedLetterWeakensButDoesNotExcludeCardSupportedByOtherClues()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective,
+            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["dagger"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Negative = 0.1, Compromise = 0 });
+        var withoutVanishing = view with { Me = view.Me! with { Letters = [] } };
+        BotPlayer.Evidence(view, Tags, mind, "knife").Should().BeLessThan(
+            BotPlayer.Evidence(withoutVanishing, Tags, mind, "knife"));
+        var line = BotPlayer.Say(view, new Random(3), Tags, mind)!.Value;
+        var index = line.Cards.ToList().IndexOf("knife");
+        index.Should().BeGreaterThanOrEqualTo(0);
+        line.Notes[index].Should().Contain("думаю, эта");
+        line.Text.Should().NotContain("исключаю эти карты").And.Contain("ослабляет");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ResolvedLetterWithoutKnownLinksDoesNotClaimToAwaitItsResult(bool revealed)
+    {
+        var view = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(2, "sword", revealed)]);
+        var line = BotPlayer.Say(view, new Random(3), CardTags.Empty, Mind(BotPersonality.Default))!.Value;
+        line.Text.Should().NotContain("жду результат").And.NotContain("усиливает эти связи")
+            .And.Contain("явных связей с картами поля я не вижу");
+        line.Notes.Should().Contain("кидал эту");
     }
 
     [Fact]
