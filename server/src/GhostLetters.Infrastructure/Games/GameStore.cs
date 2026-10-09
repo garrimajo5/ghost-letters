@@ -47,5 +47,5 @@ public static class GameStore
 
     /// <summary>Отпечаток «шага» партии: если он изменился — нужен новый таймер.</summary>
     public static string StepKey(GameState state) =>
-        $"{state.Phase}|{state.Round}|{state.SpeakerIndex}|{state.VoteStageIndex}|{state.CurrentVoteStage?.Attempt}";
+        $"{state.Phase}|{state.Round}|{state.EffectiveDiscussion}|{state.SpeakerIndex}|{state.VoteStageIndex}|{state.CurrentVoteStage?.Attempt}";
 }

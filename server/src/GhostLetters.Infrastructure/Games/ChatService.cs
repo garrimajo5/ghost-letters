@@ -238,7 +238,7 @@ public sealed class ChatService(
             throw new AppException(GameRuleException.Codes.NotAllowed, "Призрак общается только подсказками.", 403);
         }
 
-        if (state.Phase == Phase.Discussion && state.Settings.Discussion == DiscussionMode.Radio &&
+        if (state.Phase == Phase.Discussion && state.EffectiveDiscussion == DiscussionMode.Radio &&
             state.CurrentSpeaker != author.Id && state.FloorGrantedTo != author.Id)
         {
             throw new AppException(GameRuleException.Codes.NotYourTurn, "Сейчас говорит другой игрок.", 409);

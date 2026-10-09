@@ -96,6 +96,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return true;
         }
 
+        if (state.Phase == Phase.Discussion && state.Round >= state.TotalRounds && view.Me?.Role != Role.Ghost &&
+            BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow())) return false;
+
         var command = BotPlayer.Decide(view, rng, tags, mind);
         if (command is null)
         {
@@ -130,6 +133,34 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return false;
         }
 
+        if (view.Me?.Role == Role.Ghost) return false;
+        if (state.Round >= state.TotalRounds)
+        {
+            var messages = await DiscussionAsync(state, ct);
+            var own = messages.Where(m => m.Author == botId).ToList();
+            var now = time.GetUtcNow();
+            if (messages.Count > 0 && now - messages[^1].At < TimeSpan.FromSeconds(3)) return false;
+            if (own.Count > 0 && now - own[^1].At < TimeSpan.FromSeconds(12)) return false;
+            if (mind is null)
+            {
+                var ids = state.Players.Select(p => p.Id).ToList();
+                var names = await db.Users.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
+                mind = BotMind.Neutral with { Names = names };
+            }
+            var proposal = BotDiscussion.Compose(view, tags, mind, messages, rng);
+            if (proposal is not { } finalLine) return false;
+            try
+            {
+                await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, finalLine.Text, null, finalLine.Cards, finalLine.Notes), ct);
+                return true;
+            }
+            catch (AppException e)
+            {
+                logger.LogDebug("Бот {Bot} не смог обсудить версию: {Error}", botId, e.Message);
+                return false;
+            }
+        }
+
         var said = await db.ChatMessages.Where(m => m.GameId == state.Id && m.AuthorId == botId &&
                 m.Round == state.Round && m.Channel == ChatChannels.Public)
             .OrderByDescending(m => m.CreatedAt).ToListAsync(ct);
@@ -155,6 +186,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return false;
         }
     }
+
+    private async Task<List<DiscussionLine>> DiscussionAsync(GameState state, CancellationToken ct) =>
+        await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&
+                m.Channel == ChatChannels.Public && m.AuthorId != null)
+            .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
+            .Select(m => new DiscussionLine(m.AuthorId!.Value, m.Text ?? "", m.CardIds, m.CreatedAt)).ToListAsync(ct);
 
     /// <summary>
     /// Характер бота на эту партию, его память о соигроках (только партии с ним) и мнения стола из чата.

@@ -170,7 +170,15 @@ public static partial class GameEngine
             return [];
         }
 
+        var previousDiscussion = state.EffectiveDiscussion;
         state.TotalRounds = rounds;
+        if (state.Phase == Phase.Discussion && previousDiscussion != state.EffectiveDiscussion)
+        {
+            state.Done.Clear();
+            state.SpeakerIndex = 0;
+            state.FloorGrantedTo = null;
+            state.RaisedHands.Clear();
+        }
         state.Version++;
         return [new GameEvent("RoundsChanged", Detail: rounds.ToString())];
     }

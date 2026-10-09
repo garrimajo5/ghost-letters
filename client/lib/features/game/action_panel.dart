@@ -341,7 +341,9 @@ class ActionPanel extends StatelessWidget {
     }
 
     return [
-      const Text('Обсуждайте в чате — текстом или голосом. Когда все нажмут «Готов», начнётся следующий раунд.'),
+      Text(v.round >= v.totalRounds
+          ? 'Общее обсуждение перед голосованием: сопоставьте улики всех раундов и договоритесь о версии. Когда все нажмут «Готов», начнётся голосование.'
+          : 'Обсуждайте в чате — текстом или голосом. Когда все нажмут «Готов», начнётся следующий раунд.'),
       const SizedBox(height: 8),
       OutlinedButton.icon(onPressed: screen.openChat, icon: const Icon(Icons.chat_bubble_outline), label: const Text('Открыть чат')),
     ];

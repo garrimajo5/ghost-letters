@@ -139,7 +139,7 @@ public static partial class GameEngine
             case ReadyNextRound:
                 RequirePhase(state, Phase.Discussion);
                 RequireInvestigator(actor);
-                if (state.Settings.Discussion != DiscussionMode.FreeChat)
+                if (state.EffectiveDiscussion != DiscussionMode.FreeChat)
                 {
                     throw GameRuleException.NotAllowed("В режиме рации раунд идёт по кругу говорящих.");
                 }
@@ -212,7 +212,7 @@ public static partial class GameEngine
 
                 break;
             case Phase.Discussion:
-                if (state.Settings.Discussion == DiscussionMode.Radio)
+                if (state.EffectiveDiscussion == DiscussionMode.Radio)
                 {
                     AdvanceSpeaker(state, events);
                 }
@@ -479,7 +479,7 @@ public static partial class GameEngine
         state.SpeakerIndex = 0;
         state.FloorGrantedTo = null;
         SetPhase(state, Phase.Discussion, events);
-        if (state.Settings.Discussion == DiscussionMode.Radio && state.CurrentSpeaker is { } speaker)
+        if (state.EffectiveDiscussion == DiscussionMode.Radio && state.CurrentSpeaker is { } speaker)
         {
             events.Add(new GameEvent("SpeakerChanged", speaker));
         }
@@ -574,7 +574,7 @@ public static partial class GameEngine
     private static void RequireRadioSpeaker(GameState state, PlayerState actor)
     {
         RequirePhase(state, Phase.Discussion);
-        if (state.Settings.Discussion != DiscussionMode.Radio)
+        if (state.EffectiveDiscussion != DiscussionMode.Radio)
         {
             throw GameRuleException.NotAllowed("Рация выключена в этой партии.");
         }
