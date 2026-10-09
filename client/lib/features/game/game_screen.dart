@@ -399,7 +399,13 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   void selectTruth(int row, int column) {
     HapticFeedback.selectionClick();
-    setState(() => truth[row] = column);
+    setState(() {
+      if (truth[row] == column) {
+        truth.remove(row);
+      } else {
+        truth[row] = column;
+      }
+    });
   }
 
   /// Двойное нажатие ночью: карта крупно, выбрать можно и оттуда.
@@ -409,7 +415,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
       context,
       cardId,
       caption: '${T.category(v.board[row].category)}, карта ${column + 1}',
-      actionLabel: truth[row] == column ? null : 'Выбрать',
+      actionLabel: truth[row] == column ? 'Снять выбор' : 'Выбрать',
       onAction: () => selectTruth(row, column),
     );
   }

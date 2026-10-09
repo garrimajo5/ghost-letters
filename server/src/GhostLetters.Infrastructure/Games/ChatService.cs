@@ -95,9 +95,19 @@ public sealed class ChatService(
         var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand)
             .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId))
             .ToHashSet();
+        if (cards.Count <= MaxCards && cards.Any(c => !known.Contains(c)))
+        {
+            // Повторять можно показанные карты, а не скрытые чужие письма.
+            // В общий канал не переносим карты, известные только из командного.
+            var shown = await db.ChatMessages.AsNoTracking()
+                .Where(m => m.GameId == gameId && (m.Channel == ChatChannels.Public ||
+                    (channel == ChatChannels.KillerTeam && m.Channel == ChatChannels.KillerTeam)))
+                .Select(m => m.CardIds).ToListAsync(ct);
+            known.UnionWith(shown.SelectMany(ids => ids));
+        }
         if (cards.Count > MaxCards || cards.Any(c => !known.Contains(c)))
         {
-            throw AppException.Validation($"Можно упомянуть до {MaxCards} карт с поля, подсказок, своей руки или своих писем.");
+            throw AppException.Validation($"Можно упомянуть до {MaxCards} карт с поля, подсказок, своей руки, своих писем или доступного чата.");
         }
 
         var message = new ChatMessage
