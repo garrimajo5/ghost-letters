@@ -69,7 +69,7 @@ public static class BotSandboxRunner
                     var (truth, hint) = pairs[index];
                     // Distractors have the weakest relation to all hints, across the participating personalities.
                     var distractors = deck.Where(c => !reserved.Contains(c)).OrderBy(c => seats.Max(seat =>
-                        pairs.Sum(pair => tags.Similarity(pair.Item2, c, seat.Personality.Attention, seat.Personality.Details))))
+                        pairs.Sum(pair => tags.Similarity(pair.Item2, c, seat.Personality.Attention, seat.Personality.Details, seat.Personality.SecondaryMeanings))))
                         .ThenBy(c => c, StringComparer.Ordinal).Take(state.Settings.Columns - 1).ToList();
                     var column = rng.Next(state.Settings.Columns);
                     distractors.Insert(column, truth);
@@ -105,7 +105,12 @@ public static class BotSandboxRunner
                 if (state.Phase == Phase.Discussion && !view.Players.Single(p => p.Id == seat.Id).IsGhost)
                 {
                     var discussion = messages.Where(m => m.Round == state.Round).Select(m => new DiscussionLine(m.Author, m.Text, m.Cards, m.At)).ToList();
-                    var line = BotDiscussion.Compose(view, tags, mind, discussion, rng);
+                    var own = discussion.Where(m => m.Author == seat.Id).ToList();
+                    var mayReply = own.Count == 1 && discussion.Any(m => m.Author != seat.Id && m.At > own[0].At);
+                    var line = state.Round >= state.TotalRounds
+                        ? BotDiscussion.Compose(view, tags, mind, discussion, rng)
+                        : own.Count == 0 ? BotPlayer.Say(view, rng, tags, mind)
+                        : mayReply ? BotPlayer.Reply(view, rng, tags, mind) : null;
                     if (line is { } said)
                     {
                         Say(seat.Id, said.Text, said.Cards, said.Notes);

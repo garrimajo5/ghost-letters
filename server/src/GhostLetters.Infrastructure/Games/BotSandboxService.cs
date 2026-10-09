@@ -17,7 +17,7 @@ public sealed record SandboxStep(int Index, int Total, string Action, Guid? Acto
 public sealed class SandboxGate { public SemaphoreSlim Semaphore { get; } = new(1, 1); }
 
 public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService admins, CardCatalog catalog,
-    CardTags tags, SandboxGate gate, TimeProvider time)
+    CardTagStore tagStore, SandboxGate gate, TimeProvider time)
 {
     public async Task<IReadOnlyList<SandboxSummary>> ListAsync(Guid admin, CancellationToken ct)
     {
@@ -36,6 +36,7 @@ public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService 
             if (await db.SandboxRuns.CountAsync(ct) >= 100) throw AppException.Conflict("SANDBOX_FULL", "Сохранено 100 прогонов. Удалите ненужные перед новым запуском.");
             var deck = await catalog.DeckAsync(LobbySettings.AllCardSets, ct);
             if (deck.Count < 120) throw AppException.Validation("Для песочницы нужно не менее 120 активных карт.");
+            var tags = await tagStore.LoadAsync(ct);
             var report = await Task.Run(() => BotSandboxRunner.Run(request.Scenario, request.Seed, deck, tags, ct), ct);
             var id = Guid.NewGuid(); var created = time.GetUtcNow();
             var summary = new SandboxSummary(id, created, request.Scenario, request.Seed, report.Status, report.Error,
