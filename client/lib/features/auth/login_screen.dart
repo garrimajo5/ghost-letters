@@ -10,7 +10,7 @@ import '../../widgets/common.dart';
 /// Палитра заглушек-аватаров — та же, что на сервере (приглушённые цвета из дизайна).
 const avatarPalette = ['#3E7C6E', '#6A5A9E', '#8A5A44', '#3D6A99', '#7A6A3A', '#9A4F6E', '#4F7F3F', '#5A6E82'];
 
-/// Вход гостем: имя и цвет аватара. С того же устройства вернётся тот же игрок.
+/// Создание гостя или подтверждение входа в существующий аккаунт по коду.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -145,7 +145,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _busy ? null : _submit,
                     child: _busy
                         ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('ВОЙТИ'),
+                        : const Text('СОЗДАТЬ АККАУНТ'),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
@@ -155,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Вы играете как гость на этом устройстве.',
+                    'Для существующего аккаунта используйте вход по коду. Ник сам по себе не восстанавливает аккаунт.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
                   ),

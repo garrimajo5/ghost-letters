@@ -36,6 +36,7 @@ public sealed class ChatService(
     GhostLettersDbContext db,
     GameService games,
     IMediaStorage storage,
+    MediaLimits mediaLimits,
     IRealtimeNotifier notifier,
     TimeProvider time)
 {
@@ -73,9 +74,11 @@ public sealed class ChatService(
         }
 
         Media? media = null;
+        await using var mediaTransaction = request.MediaId is not null ? await db.Database.BeginTransactionAsync(ct) : null;
         if (request.MediaId is { } mediaId)
         {
-            media = await db.MediaFiles.FirstOrDefaultAsync(m => m.Id == mediaId && m.OwnerId == userId, ct)
+            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74293821)", ct);
+            media = await db.MediaFiles.FirstOrDefaultAsync(m => m.Id == mediaId && m.OwnerId == userId && m.ContentType.StartsWith("audio/"), ct)
                     ?? throw AppException.Validation("Голосовое не найдено.");
         }
 
@@ -126,6 +129,7 @@ public sealed class ChatService(
         };
         db.ChatMessages.Add(message);
         await db.SaveChangesAsync(ct);
+        if (mediaTransaction is not null) await mediaTransaction.CommitAsync(ct);
 
         var dto = Dto(message, media?.DurationMs);
         var recipients = Recipients(state, channel);
@@ -176,6 +180,10 @@ public sealed class ChatService(
             throw AppException.Validation($"Голосовое — до {MaxVoiceMs / 1000} секунд.");
         }
 
+        using var buffer = await MediaLimits.ReadAsync(content, length, MaxVoiceBytes, ct);
+        if (!MediaLimits.IsVoice(buffer.GetBuffer().AsSpan(0, (int)buffer.Length), type))
+            throw AppException.Validation("Содержимое не соответствует формату голосового.");
+
         var media = new Media
         {
             Id = Guid.NewGuid(),
@@ -186,9 +194,7 @@ public sealed class ChatService(
             CreatedAt = time.GetUtcNow(),
         };
         media.StorageKey = media.Id.ToString("N");
-        await storage.SaveAsync(media.StorageKey, content, ct);
-        db.MediaFiles.Add(media);
-        await db.SaveChangesAsync(ct);
+        await mediaLimits.SaveAsync(media, buffer, null, ct);
         return new MediaDto(media.Id, media.DurationMs, media.ContentType);
     }
 

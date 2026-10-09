@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using GhostLetters.Application;
 
 namespace GhostLetters.Infrastructure.Games;
 
@@ -8,6 +9,8 @@ public interface IMediaStorage
     Task SaveAsync(string key, Stream content, CancellationToken ct);
 
     Stream? Open(string key);
+
+    void Delete(string key);
 }
 
 public sealed class FileMediaStorage(IConfiguration configuration) : IMediaStorage
@@ -19,6 +22,10 @@ public sealed class FileMediaStorage(IConfiguration configuration) : IMediaStora
     public async Task SaveAsync(string key, Stream content, CancellationToken ct)
     {
         Directory.CreateDirectory(_root);
+        // Includes orphan files from a process crash, which SQL quotas cannot see.
+        var used = new DirectoryInfo(_root).EnumerateFiles().Sum(f => f.Length);
+        if (used + content.Length > configuration.GetValue("Media:TotalQuotaBytes", 2L * 1024 * 1024 * 1024))
+            throw new AppException("MEDIA_QUOTA", "Лимит хранения файлов исчерпан.", 429);
         await using var file = File.Create(PathFor(key));
         await content.CopyToAsync(file, ct);
     }
@@ -28,6 +35,8 @@ public sealed class FileMediaStorage(IConfiguration configuration) : IMediaStora
         var path = PathFor(key);
         return File.Exists(path) ? File.OpenRead(path) : null;
     }
+
+    public void Delete(string key) => File.Delete(PathFor(key));
 
     /// <summary>Ключ — только из id, без путей от клиента.</summary>
     private string PathFor(string key) =>

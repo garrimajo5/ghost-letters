@@ -123,8 +123,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     } else if (v == 'profile') {
                       context.push('/profile/${user.id}');
                     } else if (v == 'logout') {
-                      await ref.read(realtimeProvider).disconnect();
-                      ref.read(sessionProvider.notifier).signOut();
+                      final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+                        title: const Text('Выйти из аккаунта?'),
+                        content: const Text('Чтобы вернуться в этот аккаунт, нужен код с другого устройства, где вы уже вошли. Если это единственное устройство, сначала подключите второе через профиль.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Остаться')),
+                          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Выйти')),
+                        ],
+                      ));
+                      if (confirmed != true || !context.mounted) return;
+                      await runAction(context, () async {
+                        await ref.read(apiProvider).logout();
+                        await ref.read(realtimeProvider).disconnect();
+                      });
                     }
                   },
                   itemBuilder: (_) => [

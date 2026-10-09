@@ -59,18 +59,18 @@ void main() {
     expect(find.text('СОЗДАТЬ ИГРУ'), findsOneWidget);
   });
 
-  test('токены другого сервера сбрасываются, профиль остаётся', () async {
+  test('токены другого сервера не дают вход в аккаунт', () async {
     final container = await containerWith({
       'session': jsonEncode({'user': host.toJson(), 'accessToken': 'a', 'refreshToken': 'r', 'server': 'http://other:8080'}),
     }, FakeServer({}));
 
     final session = container.read(sessionProvider);
-    expect(session.isSignedIn, isTrue);
+    expect(session.isSignedIn, isFalse);
     expect(session.hasTokens, isFalse);
-    expect(session.user!.nickname, host.nickname);
+    expect(session.user, isNull);
   });
 
-  test('без токенов API тихо входит тем же устройством и ником', () async {
+  test('без токенов API не восстанавливает вход по deviceId', () async {
     final server = FakeServer({
       '/auth/guest': (o) => (200, tokens('fresh')),
       '/me/games': (o) => (200, <Object>[]),
@@ -82,14 +82,11 @@ void main() {
 
     await container.read(apiProvider).myGames();
 
-    final login = server.requests.firstWhere((r) => r.path == '/auth/guest');
-    expect((login.data as Map)['deviceId'], 'device-1');
-    expect((login.data as Map)['nickname'], host.nickname);
-    expect(server.requests.last.headers['Authorization'], 'Bearer fresh');
-    expect(container.read(sessionProvider).accessToken, 'fresh');
+    expect(server.requests.where((r) => r.path == '/auth/guest'), isEmpty);
+    expect(container.read(sessionProvider).isSignedIn, isFalse);
   });
 
-  test('сервер отверг refresh — повторный вход гостем, а не экран ника', () async {
+  test('сервер отверг refresh — сессия удалена, обход через guest запрещён', () async {
     var gamesCalls = 0;
     final server = FakeServer({
       '/me/games': (o) => (++gamesCalls == 1 ? 401 : 200, <Object>[]),
@@ -100,10 +97,9 @@ void main() {
       'session': jsonEncode({'user': host.toJson(), 'accessToken': 'old', 'refreshToken': 'r', 'server': AppConfig.apiUrl}),
     }, server);
 
-    await container.read(apiProvider).myGames();
-
-    expect(container.read(sessionProvider).isSignedIn, isTrue);
-    expect(container.read(sessionProvider).accessToken, 'again');
+    await expectLater(container.read(apiProvider).myGames(), throwsA(isA<ApiError>()));
+    expect(container.read(sessionProvider).isSignedIn, isFalse);
+    expect(server.requests.where((r) => r.path == '/auth/guest'), isEmpty);
   });
 
   testWidgets('после выхода экран входа подставляет прежний ник', (tester) async {

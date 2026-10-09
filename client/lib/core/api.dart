@@ -62,7 +62,7 @@ class Api {
     if (adapter != null) _dio.httpClientAdapter = adapter;
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Профиль запомнен, а токенов нет (сменился сервер) — сначала тихо входим тем же устройством.
+        // Токены другого сервера не используются.
         if (!_ref.read(sessionProvider).hasTokens && !options.path.startsWith('/auth/')) await ensureTokens();
         final token = _ref.read(sessionProvider).accessToken;
         if (token != null) options.headers['Authorization'] = 'Bearer $token';
@@ -72,8 +72,8 @@ class Api {
         final retried = error.requestOptions.extra['retried'] == true;
         final used = (error.requestOptions.headers['Authorization'] as String?)?.replaceFirst('Bearer ', '');
         // Токен уже обновил параллельный запрос — просто повторяем с новым.
-        final alreadyFresh = used != null && used != _ref.read(sessionProvider).accessToken;
-        if (error.response?.statusCode == 401 && !retried && (alreadyFresh || await refreshTokens())) {
+        final alreadyFresh = used != null && _ref.read(sessionProvider).accessToken != null && used != _ref.read(sessionProvider).accessToken;
+        if (!error.requestOptions.path.startsWith('/auth/') && error.response?.statusCode == 401 && !retried && (alreadyFresh || await refreshTokens())) {
           final options = error.requestOptions
             ..extra['retried'] = true
             ..headers['Authorization'] = 'Bearer ${_ref.read(sessionProvider).accessToken}';
@@ -104,13 +104,8 @@ class Api {
   /// старого refresh-токена сервер считает кражей и отзывает все сессии.
   Future<bool> refreshTokens() => _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
 
-  /// Есть запомненный профиль, но нет токенов — войти заново (тот же deviceId — тот же игрок).
-  Future<bool> ensureTokens() {
-    final session = _ref.read(sessionProvider);
-    if (session.hasTokens) return Future.value(true);
-    if (session.user == null) return Future.value(false);
-    return _refreshing ??= _relogin().whenComplete(() => _refreshing = null);
-  }
+  /// Истекшую или отозванную сессию нельзя восстановить идентификатором устройства.
+  Future<bool> ensureTokens() async => _ref.read(sessionProvider).hasTokens;
 
   Dio _bare() {
     final dio = Dio(BaseOptions(baseUrl: AppConfig.api, connectTimeout: const Duration(seconds: 8)));
@@ -121,35 +116,25 @@ class Api {
 
   Future<bool> _doRefresh() async {
     final refresh = _ref.read(sessionProvider).refreshToken;
-    if (refresh == null) return _relogin();
+    if (refresh == null) return false;
     try {
       final r = await _bare().post<Map<String, dynamic>>('/auth/refresh', data: {'refreshToken': refresh});
       _ref.read(sessionProvider.notifier).signIn(AuthTokens.fromJson(r.data!));
       return true;
     } on DioException catch (e) {
-      // Сервер отверг сессию (истекла, отозвана, другой сервер) — входим заново тем же устройством.
-      // При обрыве сети остаёмся в аккаунте и ничего не трогаем.
-      if (e.response?.statusCode == 401) return _relogin();
+      // Сбой сети сохраняет сессию; явный отзыв требует нового подтверждения входа.
+      if (e.response?.statusCode == 401) _ref.read(sessionProvider.notifier).signOut();
       return false;
     }
   }
 
-  /// Тихий повторный вход гостем: deviceId, ник и цвет уже известны — экран входа не нужен.
-  Future<bool> _relogin() async {
-    final controller = _ref.read(sessionProvider.notifier);
-    final user = _ref.read(sessionProvider).user;
-    if (user == null) return false;
-    try {
-      final r = await _bare().post<Map<String, dynamic>>('/auth/guest',
-          data: {'deviceId': controller.deviceId, 'nickname': user.nickname, 'avatarColor': user.avatarColor});
-      controller.signIn(AuthTokens.fromJson(r.data!));
-      return true;
-    } on DioException catch (e) {
-      // Сервер явно отказал (не сеть) — тогда уже на экран входа.
-      final code = e.response?.statusCode;
-      if (code != null && code >= 400 && code < 500 && code != 429) controller.signOut();
-      return false;
+  Future<void> logout() async {
+    await _refreshing;
+    final refresh = _ref.read(sessionProvider).refreshToken;
+    if (refresh != null) {
+      await _call(() => _bare().post<dynamic>('/auth/logout', data: {'refreshToken': refresh}));
     }
+    _ref.read(sessionProvider.notifier).signOut();
   }
 
   /// Токен для хаба: если истекает в ближайшую минуту — сначала обновляем.

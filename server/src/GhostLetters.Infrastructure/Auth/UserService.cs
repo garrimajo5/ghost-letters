@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace GhostLetters.Infrastructure.Auth;
 
 /// <summary>Свой профиль: просмотр, смена ника и цвета.</summary>
-public sealed class UserService(GhostLettersDbContext db, IMediaStorage storage, TimeProvider time)
+public sealed class UserService(GhostLettersDbContext db, IMediaStorage storage, MediaLimits mediaLimits, TimeProvider time)
 {
     public async Task<UserDto> GetAsync(Guid userId, CancellationToken ct)
     {
@@ -49,8 +49,7 @@ public sealed class UserService(GhostLettersDbContext db, IMediaStorage storage,
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
                    ?? throw AppException.NotFound("Игрок не найден.");
 
-        using var buffer = new MemoryStream();
-        await content.CopyToAsync(buffer, ct);
+        using var buffer = await MediaLimits.ReadAsync(content, length, MaxAvatarBytes, ct);
         var contentType = ImageType(buffer.GetBuffer().AsSpan(0, (int)buffer.Length))
                           ?? throw AppException.Validation("Нужна картинка JPEG, PNG или WebP.");
 
@@ -64,10 +63,7 @@ public sealed class UserService(GhostLettersDbContext db, IMediaStorage storage,
         };
         media.StorageKey = media.Id.ToString("N");
         buffer.Position = 0;
-        await storage.SaveAsync(media.StorageKey, buffer, ct);
-        db.MediaFiles.Add(media);
-        user.AvatarMediaId = media.Id;
-        await db.SaveChangesAsync(ct);
+        await mediaLimits.SaveAsync(media, buffer, saved => user.AvatarMediaId = saved.Id, ct);
         return UserDto.From(user);
     }
 

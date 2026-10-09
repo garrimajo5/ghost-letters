@@ -27,6 +27,7 @@ services:
       Cards__ManifestPath: /app/cards/cards.json
       Media__StoragePath: /app/data/media
       RateLimit__AuthPerMinute: ${AUTH_PER_MINUTE:-30}
+      Proxy__KnownProxies: "172.29.214.2"
       Admin__UserIds: ${ADMIN_USER_IDS:-}
     volumes:
       - ./cards.json:/app/cards/cards.json:ro
@@ -36,6 +37,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - default
+      - edge
 
   caddy:
     image: caddy:2-alpine
@@ -52,6 +56,15 @@ services:
       - caddy_config:/config
     depends_on:
       - api
+    networks:
+      edge:
+        ipv4_address: 172.29.214.2
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: 172.29.214.0/29
 
 volumes:
   pgdata:

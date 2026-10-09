@@ -16,7 +16,7 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
 {
     private readonly JwtOptions _jwt = options.Value;
 
-    /// <summary>Гость входит по deviceId; с того же устройства — тот же игрок.</summary>
+    /// <summary>Регистрация гостя. Идентификатор устройства сам по себе не доказывает владение аккаунтом.</summary>
     public async Task<AuthResponse> GuestAsync(GuestLoginRequest request, CancellationToken ct)
     {
         var deviceId = ProfileRules.DeviceId(request.DeviceId);
@@ -51,8 +51,13 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
         }
         else
         {
-            user = await db.Users.SingleAsync(u => u.Id == identity.UserId, ct);
-            user.LastSeenAt = now;
+            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+                throw AppException.Unauthorized("Для этого аккаунта нужна действующая сессия или код с другого устройства.");
+            var proof = await db.RefreshTokens.AsNoTracking().FirstOrDefaultAsync(
+                t => t.TokenHash == Hash(request.RefreshToken), ct);
+            if (proof?.UserId != identity.UserId)
+                throw AppException.Unauthorized("Сессия не принадлежит этому аккаунту.");
+            return await RefreshAsync(request.RefreshToken, ct);
         }
 
         var tokens = Issue(user, now);
@@ -66,12 +71,22 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
     /// </summary>
     public async Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(refreshToken)) throw AppException.Validation("Нужен refreshToken.");
         var now = time.GetUtcNow();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        // Serialize rotation and revocation for the whole account across API processes.
+        var hash = Hash(refreshToken);
+        var owner = await db.RefreshTokens.AsNoTracking().Where(t => t.TokenHash == hash)
+            .Select(t => (Guid?)t.UserId).FirstOrDefaultAsync(ct)
+            ?? throw AppException.Unauthorized("Сессия не найдена.");
+        await LockAccountAsync(owner, ct);
         var stored = await FindAsync(refreshToken, ct) ?? throw AppException.Unauthorized("Сессия не найдена.");
+        await db.Entry(stored).ReloadAsync(ct);
 
         if (stored.RevokedAt is not null)
         {
             await RevokeAllAsync(stored.UserId, now, ct);
+            await transaction.CommitAsync(ct);
             throw AppException.Unauthorized("Сессия отозвана. Войдите заново.");
         }
 
@@ -86,6 +101,7 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
         stored.RevokedAt = now;
         stored.ReplacedById = replacement.Id;
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return new AuthResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, UserDto.From(user));
     }
 
@@ -170,12 +186,24 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
 
     public async Task LogoutAsync(string refreshToken, CancellationToken ct)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var stored = await FindAsync(refreshToken, ct);
+        if (stored is not null)
+        {
+            await LockAccountAsync(stored.UserId, ct);
+            await db.Entry(stored).ReloadAsync(ct);
+        }
         if (stored is { RevokedAt: null })
         {
             stored.RevokedAt = time.GetUtcNow();
             await db.SaveChangesAsync(ct);
         }
+        else if (stored?.ReplacedById is not null)
+        {
+            // A refresh won the race with logout. Do not leave its replacement usable.
+            await RevokeAllAsync(stored.UserId, time.GetUtcNow(), ct);
+        }
+        await transaction.CommitAsync(ct);
     }
 
     public static string Hash(string token) =>
@@ -227,12 +255,10 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
 
     private async Task RevokeAllAsync(Guid userId, DateTimeOffset now, CancellationToken ct)
     {
-        var active = await db.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null).ToListAsync(ct);
-        foreach (var token in active)
-        {
-            token.RevokedAt = now;
-        }
-
-        await db.SaveChangesAsync(ct);
+        await db.RefreshTokens.Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
     }
+
+    private Task LockAccountAsync(Guid userId, CancellationToken ct) => db.Database.ExecuteSqlInterpolatedAsync(
+        $"SELECT pg_advisory_xact_lock(hashtextextended({userId.ToString()}, 1))", ct);
 }

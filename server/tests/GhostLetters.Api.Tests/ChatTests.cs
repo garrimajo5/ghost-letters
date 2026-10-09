@@ -103,6 +103,7 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
         var listener = await game.WithRoleAsync("Killer");
         var stranger = await TestPlayer.LoginAsync(_factory, "Чужой");
         var bytes = Enumerable.Range(0, 4096).Select(i => (byte)i).ToArray();
+        bytes[0] = 0xff; bytes[1] = 0xf1; // AAC ADTS container header.
 
         var media = await UploadAsync(author, bytes, "audio/aac", 3200, HttpStatusCode.OK);
         var mediaId = media.Id("mediaId");
