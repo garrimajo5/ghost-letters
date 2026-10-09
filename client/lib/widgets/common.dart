@@ -390,4 +390,3 @@ class GhostPainter extends CustomPainter {
   @override
   bool shouldRepaint(GhostPainter old) => old.color != color || old.eyes != eyes;
 }
-
