@@ -1,0 +1,723 @@
+{
+  "duration": 94.78,
+  "fps": 30,
+  "music": "music/trailer_music_1m35.mp3",
+  "markers": "music/markers.json",
+  "fonts": {
+    "heading": "../client/assets/fonts/Oswald-700.ttf",
+    "body": "../client/assets/fonts/GolosText-500.ttf"
+  },
+  "icon": "../tools/app-icon/icon_1024.png",
+  "logo": [
+    "ПИСЬМА",
+    "ПРИЗРАКА"
+  ],
+  "mailbox": "../client/assets/images/mailbox.webp",
+  "envelope": "../client/assets/images/letter.webp",
+  "final_punch": 75.01,
+  "fade_to_black_start": 89.116,
+  "black_at": 93.5,
+  "scenes": [
+    {
+      "id": 1,
+      "start": 0,
+      "end": 3.77,
+      "kind": "intro",
+      "assets": []
+    },
+    {
+      "id": 2,
+      "start": 3.77,
+      "end": 7.484,
+      "kind": "cards",
+      "assets": [
+        "../client/assets/images/night.webp"
+      ]
+    },
+    {
+      "id": 3,
+      "start": 7.484,
+      "end": 11.198,
+      "kind": "cards",
+      "assets": [
+        "../client/assets/cards/orig_0401.webp",
+        "../client/assets/cards/orig_0716.webp",
+        "../client/assets/cards/orig_0002.webp",
+        "../client/assets/cards/orig_0097.webp"
+      ]
+    },
+    {
+      "id": 4,
+      "start": 11.198,
+      "end": 14.912,
+      "kind": "tokens",
+      "assets": [],
+      "steps": [
+        {
+          "at": 13.055,
+          "assets": [
+            "../client/assets/images/token_method.webp"
+          ]
+        },
+        {
+          "at": 13.51925,
+          "assets": [
+            "../client/assets/images/token_method.webp",
+            "../client/assets/images/token_motive.webp"
+          ]
+        },
+        {
+          "at": 13.9835,
+          "assets": [
+            "../client/assets/images/token_method.webp",
+            "../client/assets/images/token_motive.webp",
+            "../client/assets/images/token_place.webp"
+          ]
+        },
+        {
+          "at": 14.44775,
+          "assets": [
+            "../client/assets/images/token_method.webp",
+            "../client/assets/images/token_motive.webp",
+            "../client/assets/images/token_place.webp",
+            "../client/assets/images/token_secret.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 14.912,
+      "end": 18.626,
+      "kind": "cards",
+      "assets": [
+        "../client/assets/images/role_ghost.webp"
+      ],
+      "ghost": true,
+      "envelope": 18.161749999999998
+    },
+    {
+      "id": 6,
+      "start": 18.626,
+      "end": 20.483,
+      "kind": "screen",
+      "assets": [
+        "captures/C5.png"
+      ],
+      "flash": true
+    },
+    {
+      "id": 7,
+      "start": 20.483,
+      "end": 22.34,
+      "kind": "screen",
+      "assets": [
+        "captures/C6-motion.mp4"
+      ]
+    },
+    {
+      "id": 8,
+      "start": 22.34,
+      "end": 24.197,
+      "kind": "screen",
+      "assets": [
+        "captures/C7.png"
+      ],
+      "steps": [
+        {
+          "at": 22.34,
+          "assets": [
+            "captures/C7.png"
+          ]
+        },
+        {
+          "at": 23.2685,
+          "assets": [
+            "captures/C8-motion.mp4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 24.197,
+      "end": 26.054,
+      "kind": "cards",
+      "assets": [
+        "../client/assets/images/vanished.webp"
+      ]
+    },
+    {
+      "id": 10,
+      "start": 26.054,
+      "end": 29.768,
+      "kind": "rolefan",
+      "assets": [],
+      "steps": [
+        {
+          "at": 26.054,
+          "assets": [
+            "../client/assets/images/role_detective.webp"
+          ]
+        },
+        {
+          "at": 26.51825,
+          "assets": [
+            "../client/assets/images/role_witness.webp"
+          ]
+        },
+        {
+          "at": 26.982499999999998,
+          "assets": [
+            "../client/assets/images/role_lawyer.webp"
+          ]
+        },
+        {
+          "at": 27.446749999999998,
+          "assets": [
+            "../client/assets/images/role_blackmailer.webp"
+          ]
+        },
+        {
+          "at": 27.910999999999998,
+          "assets": [
+            "../client/assets/images/role_imitator.webp"
+          ]
+        },
+        {
+          "at": 28.375249999999998,
+          "assets": [
+            "../client/assets/images/role_accomplice.webp"
+          ]
+        },
+        {
+          "at": 28.839499999999997,
+          "assets": [
+            "../client/assets/images/role_killer.webp"
+          ]
+        },
+        {
+          "at": 29.303749999999997,
+          "assets": [
+            "../client/assets/images/role_back.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 29.768,
+      "end": 33.44,
+      "kind": "screen",
+      "assets": [
+        "captures/C4.png"
+      ]
+    },
+    {
+      "id": 12,
+      "start": 33.44,
+      "end": 37.154,
+      "kind": "screen",
+      "assets": [
+        "captures/C9.png"
+      ]
+    },
+    {
+      "id": 13,
+      "start": 37.154,
+      "end": 39.011,
+      "kind": "screen",
+      "assets": [
+        "captures/C10.png"
+      ],
+      "steps": [
+        {
+          "at": 37.154,
+          "assets": [
+            "captures/C10.png"
+          ]
+        },
+        {
+          "at": 38.0825,
+          "assets": [
+            "captures/C11-motion.mp4"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 39.011,
+      "end": 40.868,
+      "kind": "cards",
+      "assets": [],
+      "steps": [
+        {
+          "at": 39.011,
+          "assets": [
+            "../client/assets/cards/orig_0073.webp"
+          ]
+        },
+        {
+          "at": 39.47525,
+          "assets": [
+            "../client/assets/cards/orig_0186.webp"
+          ]
+        },
+        {
+          "at": 39.9395,
+          "assets": [
+            "../client/assets/cards/orig_0058.webp"
+          ]
+        },
+        {
+          "at": 40.40375,
+          "assets": [
+            "../client/assets/cards/orig_0557.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 40.868,
+      "end": 42.725,
+      "kind": "cards",
+      "assets": [],
+      "steps": [
+        {
+          "at": 40.868,
+          "assets": [
+            "../client/assets/cards/orig_0264.webp"
+          ]
+        },
+        {
+          "at": 41.33225,
+          "assets": [
+            "../client/assets/cards/orig_0243.webp"
+          ]
+        },
+        {
+          "at": 41.7965,
+          "assets": [
+            "../client/assets/cards/orig_0061.webp"
+          ]
+        },
+        {
+          "at": 42.26075,
+          "assets": [
+            "../client/assets/cards/orig_0229.webp"
+          ]
+        }
+      ],
+      "black_after": 42.26075
+    },
+    {
+      "id": 16,
+      "start": 42.725,
+      "end": 46.439,
+      "kind": "screen",
+      "assets": [
+        "captures/C12-motion.mp4"
+      ],
+      "flash": true
+    },
+    {
+      "id": 17,
+      "start": 46.439,
+      "end": 50.153,
+      "kind": "screen",
+      "assets": [
+        "captures/C13.png"
+      ]
+    },
+    {
+      "id": 18,
+      "start": 50.153,
+      "end": 53.867,
+      "kind": "cards",
+      "assets": [
+        "../client/assets/images/hunt.webp",
+        "captures/C14.png"
+      ]
+    },
+    {
+      "id": 19,
+      "start": 53.867,
+      "end": 57.581,
+      "kind": "screen",
+      "assets": [
+        "captures/C15.png"
+      ]
+    },
+    {
+      "id": 20,
+      "start": 57.581,
+      "end": 61.295,
+      "kind": "screen",
+      "assets": [
+        "captures/C2.png"
+      ]
+    },
+    {
+      "id": 21,
+      "start": 61.295,
+      "end": 65.009,
+      "kind": "devices",
+      "assets": [
+        "captures/C16.png",
+        "captures/C17.png"
+      ]
+    },
+    {
+      "id": 22,
+      "start": 65.009,
+      "end": 68.723,
+      "kind": "devices",
+      "assets": [
+        "captures/C18.png",
+        "captures/C8.png"
+      ]
+    },
+    {
+      "id": 23,
+      "start": 68.723,
+      "end": 72.437,
+      "kind": "recap",
+      "assets": [],
+      "steps": [
+        {
+          "at": 68.723,
+          "assets": [
+            "captures/C4.png"
+          ]
+        },
+        {
+          "at": 69.18725,
+          "assets": [
+            "captures/C8.png"
+          ]
+        },
+        {
+          "at": 69.6515,
+          "assets": [
+            "captures/C9.png"
+          ]
+        },
+        {
+          "at": 70.11575,
+          "assets": [
+            "captures/C11.png"
+          ]
+        },
+        {
+          "at": 70.58,
+          "assets": [
+            "captures/C12.png"
+          ]
+        },
+        {
+          "at": 71.04425,
+          "assets": [
+            "captures/C14.png"
+          ]
+        },
+        {
+          "at": 71.5085,
+          "assets": [
+            "captures/C15.png"
+          ]
+        },
+        {
+          "at": 71.97275,
+          "assets": [
+            "../client/assets/images/role_ghost.webp"
+          ]
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "start": 72.437,
+      "end": 74.26,
+      "kind": "breath",
+      "assets": []
+    },
+    {
+      "id": 25,
+      "start": 74.26,
+      "end": 76.117,
+      "kind": "logo",
+      "assets": [],
+      "flash": true
+    },
+    {
+      "id": 26,
+      "start": 76.117,
+      "end": 83.545,
+      "kind": "logo",
+      "assets": []
+    },
+    {
+      "id": 27,
+      "start": 83.545,
+      "end": 94.78,
+      "kind": "outro",
+      "assets": []
+    }
+  ],
+  "titles": [
+    {
+      "start": 3.77,
+      "end": 5.627,
+      "lines": [
+        "ГОРОД СПИТ."
+      ]
+    },
+    {
+      "start": 5.627,
+      "end": 7.484,
+      "lines": [
+        "НО НЕ ВСЕ."
+      ]
+    },
+    {
+      "start": 7.484,
+      "end": 11.198,
+      "lines": [
+        "УБИЙЦА ЗАМЁЛ СЛЕДЫ"
+      ]
+    },
+    {
+      "start": 14.912,
+      "end": 16.769,
+      "lines": [
+        "ЕДИНСТВЕННЫЙ СВИДЕТЕЛЬ —"
+      ],
+      "vertical": [
+        "ЕДИНСТВЕННЫЙ",
+        "СВИДЕТЕЛЬ —"
+      ]
+    },
+    {
+      "start": 16.769,
+      "end": 18.626,
+      "lines": [
+        "ПРИЗРАК."
+      ],
+      "color": "#A9D4EA"
+    },
+    {
+      "start": 18.626,
+      "end": 20.483,
+      "lines": [
+        "ПРИЗРАК НЕ МОЖЕТ ГОВОРИТЬ"
+      ],
+      "vertical": [
+        "ПРИЗРАК НЕ МОЖЕТ",
+        "ГОВОРИТЬ"
+      ]
+    },
+    {
+      "start": 20.483,
+      "end": 22.34,
+      "lines": [
+        "…НО МОЖЕТ ПОСЛАТЬ ПИСЬМО"
+      ],
+      "vertical": [
+        "…НО МОЖЕТ",
+        "ПОСЛАТЬ ПИСЬМО"
+      ]
+    },
+    {
+      "start": 22.34,
+      "end": 24.197,
+      "lines": [
+        "ОДНИ ПИСЬМА — ПОДСКАЗКИ."
+      ],
+      "vertical": [
+        "ОДНИ ПИСЬМА —",
+        "ПОДСКАЗКИ."
+      ]
+    },
+    {
+      "start": 24.197,
+      "end": 26.054,
+      "lines": [
+        "ДРУГИЕ — ИСЧЕЗАЮТ."
+      ]
+    },
+    {
+      "start": 26.054,
+      "end": 27.911,
+      "lines": [
+        "ДЕТЕКТИВЫ ИЩУТ ПРАВДУ"
+      ],
+      "vertical": [
+        "ДЕТЕКТИВЫ",
+        "ИЩУТ ПРАВДУ"
+      ]
+    },
+    {
+      "start": 27.911,
+      "end": 29.768,
+      "lines": [
+        "УБИЙЦА — СРЕДИ НИХ"
+      ],
+      "color": "#E08A7E"
+    },
+    {
+      "start": 29.768,
+      "end": 33.44,
+      "lines": [
+        "СООБЩНИКИ ПОДСКАЗЫВАЮТ ЕМУ"
+      ],
+      "vertical": [
+        "СООБЩНИКИ",
+        "ПОДСКАЗЫВАЮТ ЕМУ"
+      ]
+    },
+    {
+      "start": 33.44,
+      "end": 37.154,
+      "lines": [
+        "ГОВОРИТЕ ГОЛОСОМ ИЛИ В ЧАТЕ"
+      ],
+      "vertical": [
+        "ГОВОРИТЕ ГОЛОСОМ",
+        "ИЛИ В ЧАТЕ"
+      ]
+    },
+    {
+      "start": 37.154,
+      "end": 39.011,
+      "lines": [
+        "КТО ЛЖЁТ?"
+      ]
+    },
+    {
+      "start": 41.33225,
+      "end": 43.18925,
+      "lines": [
+        "КТО УБИЙЦА?"
+      ]
+    },
+    {
+      "start": 43.18925,
+      "end": 46.439,
+      "lines": [
+        "ГОЛОСУЙТЕ ЗА УЛИКИ"
+      ]
+    },
+    {
+      "start": 46.439,
+      "end": 50.153,
+      "lines": [
+        "АРЕСТУЙТЕ УБИЙЦУ"
+      ]
+    },
+    {
+      "start": 50.153,
+      "end": 53.867,
+      "lines": [
+        "ИЛИ ОН ВЫЧИСЛИТ СВИДЕТЕЛЯ"
+      ],
+      "vertical": [
+        "ИЛИ ОН ВЫЧИСЛИТ",
+        "СВИДЕТЕЛЯ"
+      ]
+    },
+    {
+      "start": 53.867,
+      "end": 57.581,
+      "lines": [
+        "ДЕЛО РАСКРЫТО?"
+      ]
+    },
+    {
+      "start": 57.581,
+      "end": 59.438,
+      "lines": [
+        "ИГРАЙТЕ С ДРУЗЬЯМИ"
+      ]
+    },
+    {
+      "start": 59.438,
+      "end": 61.295,
+      "lines": [
+        "…ИЛИ С БОТАМИ С ХАРАКТЕРОМ"
+      ],
+      "vertical": [
+        "…ИЛИ С БОТАМИ",
+        "С ХАРАКТЕРОМ"
+      ]
+    },
+    {
+      "start": 61.295,
+      "end": 65.009,
+      "lines": [
+        "РЕЙТИНГ И ДОСТИЖЕНИЯ"
+      ],
+      "vertical": [
+        "РЕЙТИНГ",
+        "И ДОСТИЖЕНИЯ"
+      ]
+    },
+    {
+      "start": 65.009,
+      "end": 68.723,
+      "lines": [
+        "ТЕЛЕФОН, ПЛАНШЕТ, БРАУЗЕР"
+      ],
+      "vertical": [
+        "ТЕЛЕФОН, ПЛАНШЕТ,",
+        "БРАУЗЕР"
+      ]
+    },
+    {
+      "start": 72.437,
+      "end": 74.26,
+      "lines": [
+        "ПРИЗРАК ЗНАЕТ ПРАВДУ"
+      ]
+    },
+    {
+      "start": 77.0455,
+      "end": 83.545,
+      "lines": [
+        "ДЕТЕКТИВНАЯ ИГРА НА АССОЦИАЦИЯХ"
+      ],
+      "vertical": [
+        "ДЕТЕКТИВНАЯ ИГРА",
+        "НА АССОЦИАЦИЯХ"
+      ],
+      "position": "bottom"
+    },
+    {
+      "start": 83.545,
+      "end": 93.5,
+      "lines": [
+        "СКОРО НА ANDROID И IPHONE"
+      ],
+      "vertical": [
+        "СКОРО НА",
+        "ANDROID И IPHONE"
+      ],
+      "position": "bottom"
+    }
+  ],
+  "asset_crops": {
+    "captures/C5.png": [
+      0,
+      0,
+      1,
+      0.69
+    ],
+    "captures/C18.png": [
+      0,
+      0,
+      1,
+      0.72
+    ]
+  }
+}

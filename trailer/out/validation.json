@@ -1,0 +1,518 @@
+{
+  "timing": [
+    {
+      "event": "scene 02",
+      "planned": 3.77,
+      "frame": 113,
+      "actual_seconds": 3.7666666666666666,
+      "nearest_beat": 3.77,
+      "error_ms": 3.333
+    },
+    {
+      "event": "scene 03",
+      "planned": 7.484,
+      "frame": 225,
+      "actual_seconds": 7.5,
+      "nearest_beat": 7.484,
+      "error_ms": 16.0
+    },
+    {
+      "event": "scene 04",
+      "planned": 11.198,
+      "frame": 336,
+      "actual_seconds": 11.2,
+      "nearest_beat": 11.198,
+      "error_ms": 2.0
+    },
+    {
+      "event": "scene 04 beat 1",
+      "planned": 13.055,
+      "frame": 392,
+      "actual_seconds": 13.066666666666666,
+      "nearest_beat": 13.055,
+      "error_ms": 11.667
+    },
+    {
+      "event": "scene 04 beat 2",
+      "planned": 13.51925,
+      "frame": 406,
+      "actual_seconds": 13.533333333333333,
+      "nearest_beat": 13.51925,
+      "error_ms": 14.083
+    },
+    {
+      "event": "scene 04 beat 3",
+      "planned": 13.9835,
+      "frame": 420,
+      "actual_seconds": 14.0,
+      "nearest_beat": 13.9835,
+      "error_ms": 16.5
+    },
+    {
+      "event": "scene 04 beat 4",
+      "planned": 14.44775,
+      "frame": 434,
+      "actual_seconds": 14.466666666666667,
+      "nearest_beat": 14.44775,
+      "error_ms": 18.917
+    },
+    {
+      "event": "scene 05",
+      "planned": 14.912,
+      "frame": 447,
+      "actual_seconds": 14.9,
+      "nearest_beat": 14.912,
+      "error_ms": 12.0
+    },
+    {
+      "event": "scene 06",
+      "planned": 18.626,
+      "frame": 559,
+      "actual_seconds": 18.633333333333333,
+      "nearest_beat": 18.626,
+      "error_ms": 7.333
+    },
+    {
+      "event": "scene 07",
+      "planned": 20.483,
+      "frame": 614,
+      "actual_seconds": 20.466666666666665,
+      "nearest_beat": 20.483,
+      "error_ms": 16.333
+    },
+    {
+      "event": "scene 08",
+      "planned": 22.34,
+      "frame": 670,
+      "actual_seconds": 22.333333333333332,
+      "nearest_beat": 22.34,
+      "error_ms": 6.667
+    },
+    {
+      "event": "scene 08 beat 1",
+      "planned": 22.34,
+      "frame": 671,
+      "actual_seconds": 22.366666666666667,
+      "nearest_beat": 22.34,
+      "error_ms": 26.667
+    },
+    {
+      "event": "scene 08 beat 2",
+      "planned": 23.2685,
+      "frame": 699,
+      "actual_seconds": 23.3,
+      "nearest_beat": 23.2685,
+      "error_ms": 31.5
+    },
+    {
+      "event": "scene 09",
+      "planned": 24.197,
+      "frame": 726,
+      "actual_seconds": 24.2,
+      "nearest_beat": 24.197,
+      "error_ms": 3.0
+    },
+    {
+      "event": "scene 10",
+      "planned": 26.054,
+      "frame": 782,
+      "actual_seconds": 26.066666666666666,
+      "nearest_beat": 26.054,
+      "error_ms": 12.667
+    },
+    {
+      "event": "scene 10 beat 1",
+      "planned": 26.054,
+      "frame": 782,
+      "actual_seconds": 26.066666666666666,
+      "nearest_beat": 26.054,
+      "error_ms": 12.667
+    },
+    {
+      "event": "scene 10 beat 2",
+      "planned": 26.51825,
+      "frame": 796,
+      "actual_seconds": 26.533333333333335,
+      "nearest_beat": 26.51825,
+      "error_ms": 15.083
+    },
+    {
+      "event": "scene 10 beat 3",
+      "planned": 26.982499999999998,
+      "frame": 810,
+      "actual_seconds": 27.0,
+      "nearest_beat": 26.982499999999998,
+      "error_ms": 17.5
+    },
+    {
+      "event": "scene 10 beat 4",
+      "planned": 27.446749999999998,
+      "frame": 824,
+      "actual_seconds": 27.466666666666665,
+      "nearest_beat": 27.446749999999998,
+      "error_ms": 19.917
+    },
+    {
+      "event": "scene 10 beat 5",
+      "planned": 27.910999999999998,
+      "frame": 838,
+      "actual_seconds": 27.933333333333334,
+      "nearest_beat": 27.911,
+      "error_ms": 22.333
+    },
+    {
+      "event": "scene 10 beat 6",
+      "planned": 28.375249999999998,
+      "frame": 852,
+      "actual_seconds": 28.4,
+      "nearest_beat": 28.37525,
+      "error_ms": 24.75
+    },
+    {
+      "event": "scene 10 beat 7",
+      "planned": 28.839499999999997,
+      "frame": 866,
+      "actual_seconds": 28.866666666666667,
+      "nearest_beat": 28.8395,
+      "error_ms": 27.167
+    },
+    {
+      "event": "scene 10 beat 8",
+      "planned": 29.303749999999997,
+      "frame": 880,
+      "actual_seconds": 29.333333333333332,
+      "nearest_beat": 29.30375,
+      "error_ms": 29.583
+    },
+    {
+      "event": "scene 11",
+      "planned": 29.768,
+      "frame": 893,
+      "actual_seconds": 29.766666666666666,
+      "nearest_beat": 29.768,
+      "error_ms": 1.333
+    },
+    {
+      "event": "scene 12",
+      "planned": 33.44,
+      "frame": 1003,
+      "actual_seconds": 33.43333333333333,
+      "nearest_beat": 33.44,
+      "error_ms": 6.667
+    },
+    {
+      "event": "scene 13",
+      "planned": 37.154,
+      "frame": 1115,
+      "actual_seconds": 37.166666666666664,
+      "nearest_beat": 37.154,
+      "error_ms": 12.667
+    },
+    {
+      "event": "scene 13 beat 1",
+      "planned": 37.154,
+      "frame": 1115,
+      "actual_seconds": 37.166666666666664,
+      "nearest_beat": 37.154,
+      "error_ms": 12.667
+    },
+    {
+      "event": "scene 13 beat 2",
+      "planned": 38.0825,
+      "frame": 1143,
+      "actual_seconds": 38.1,
+      "nearest_beat": 38.0825,
+      "error_ms": 17.5
+    },
+    {
+      "event": "scene 14",
+      "planned": 39.011,
+      "frame": 1170,
+      "actual_seconds": 39.0,
+      "nearest_beat": 39.011,
+      "error_ms": 11.0
+    },
+    {
+      "event": "scene 14 beat 1",
+      "planned": 39.011,
+      "frame": 1171,
+      "actual_seconds": 39.03333333333333,
+      "nearest_beat": 39.011,
+      "error_ms": 22.333
+    },
+    {
+      "event": "scene 14 beat 2",
+      "planned": 39.47525,
+      "frame": 1185,
+      "actual_seconds": 39.5,
+      "nearest_beat": 39.47525,
+      "error_ms": 24.75
+    },
+    {
+      "event": "scene 14 beat 3",
+      "planned": 39.9395,
+      "frame": 1199,
+      "actual_seconds": 39.96666666666667,
+      "nearest_beat": 39.9395,
+      "error_ms": 27.167
+    },
+    {
+      "event": "scene 14 beat 4",
+      "planned": 40.40375,
+      "frame": 1213,
+      "actual_seconds": 40.43333333333333,
+      "nearest_beat": 40.40375,
+      "error_ms": 29.583
+    },
+    {
+      "event": "scene 15",
+      "planned": 40.868,
+      "frame": 1226,
+      "actual_seconds": 40.86666666666667,
+      "nearest_beat": 40.868,
+      "error_ms": 1.333
+    },
+    {
+      "event": "scene 15 beat 1",
+      "planned": 40.868,
+      "frame": 1227,
+      "actual_seconds": 40.9,
+      "nearest_beat": 40.868,
+      "error_ms": 32.0
+    },
+    {
+      "event": "scene 15 beat 2",
+      "planned": 41.33225,
+      "frame": 1240,
+      "actual_seconds": 41.333333333333336,
+      "nearest_beat": 41.33225,
+      "error_ms": 1.083
+    },
+    {
+      "event": "scene 15 beat 3",
+      "planned": 41.7965,
+      "frame": 1254,
+      "actual_seconds": 41.8,
+      "nearest_beat": 41.7965,
+      "error_ms": 3.5
+    },
+    {
+      "event": "scene 15 beat 4",
+      "planned": 42.26075,
+      "frame": 1268,
+      "actual_seconds": 42.266666666666666,
+      "nearest_beat": 42.26075,
+      "error_ms": 5.917
+    },
+    {
+      "event": "black beat",
+      "planned": 42.26075,
+      "frame": 1268,
+      "actual_seconds": 42.266666666666666,
+      "nearest_beat": 42.26075,
+      "error_ms": 5.917
+    },
+    {
+      "event": "scene 16",
+      "planned": 42.725,
+      "frame": 1282,
+      "actual_seconds": 42.733333333333334,
+      "nearest_beat": 42.725,
+      "error_ms": 8.333
+    },
+    {
+      "event": "scene 17",
+      "planned": 46.439,
+      "frame": 1393,
+      "actual_seconds": 46.43333333333333,
+      "nearest_beat": 46.439,
+      "error_ms": 5.667
+    },
+    {
+      "event": "scene 18",
+      "planned": 50.153,
+      "frame": 1505,
+      "actual_seconds": 50.166666666666664,
+      "nearest_beat": 50.153,
+      "error_ms": 13.667
+    },
+    {
+      "event": "scene 19",
+      "planned": 53.867,
+      "frame": 1616,
+      "actual_seconds": 53.86666666666667,
+      "nearest_beat": 53.867,
+      "error_ms": 0.333
+    },
+    {
+      "event": "scene 20",
+      "planned": 57.581,
+      "frame": 1727,
+      "actual_seconds": 57.56666666666667,
+      "nearest_beat": 57.581,
+      "error_ms": 14.333
+    },
+    {
+      "event": "scene 21",
+      "planned": 61.295,
+      "frame": 1839,
+      "actual_seconds": 61.3,
+      "nearest_beat": 61.295,
+      "error_ms": 5.0
+    },
+    {
+      "event": "scene 22",
+      "planned": 65.009,
+      "frame": 1950,
+      "actual_seconds": 65.0,
+      "nearest_beat": 65.009,
+      "error_ms": 9.0
+    },
+    {
+      "event": "scene 23",
+      "planned": 68.723,
+      "frame": 2062,
+      "actual_seconds": 68.73333333333333,
+      "nearest_beat": 68.723,
+      "error_ms": 10.333
+    },
+    {
+      "event": "scene 23 beat 1",
+      "planned": 68.723,
+      "frame": 2062,
+      "actual_seconds": 68.73333333333333,
+      "nearest_beat": 68.723,
+      "error_ms": 10.333
+    },
+    {
+      "event": "scene 23 beat 2",
+      "planned": 69.18725,
+      "frame": 2076,
+      "actual_seconds": 69.2,
+      "nearest_beat": 69.18725,
+      "error_ms": 12.75
+    },
+    {
+      "event": "scene 23 beat 3",
+      "planned": 69.6515,
+      "frame": 2090,
+      "actual_seconds": 69.66666666666667,
+      "nearest_beat": 69.6515,
+      "error_ms": 15.167
+    },
+    {
+      "event": "scene 23 beat 4",
+      "planned": 70.11575,
+      "frame": 2104,
+      "actual_seconds": 70.13333333333334,
+      "nearest_beat": 70.11575,
+      "error_ms": 17.583
+    },
+    {
+      "event": "scene 23 beat 5",
+      "planned": 70.58,
+      "frame": 2118,
+      "actual_seconds": 70.6,
+      "nearest_beat": 70.58,
+      "error_ms": 20.0
+    },
+    {
+      "event": "scene 23 beat 6",
+      "planned": 71.04425,
+      "frame": 2132,
+      "actual_seconds": 71.06666666666666,
+      "nearest_beat": 71.04425,
+      "error_ms": 22.417
+    },
+    {
+      "event": "scene 23 beat 7",
+      "planned": 71.5085,
+      "frame": 2146,
+      "actual_seconds": 71.53333333333333,
+      "nearest_beat": 71.5085,
+      "error_ms": 24.833
+    },
+    {
+      "event": "scene 23 beat 8",
+      "planned": 71.97275,
+      "frame": 2160,
+      "actual_seconds": 72.0,
+      "nearest_beat": 71.97275,
+      "error_ms": 27.25
+    },
+    {
+      "event": "scene 24",
+      "planned": 72.437,
+      "frame": 2173,
+      "actual_seconds": 72.43333333333334,
+      "nearest_beat": 72.437,
+      "error_ms": 3.667
+    },
+    {
+      "event": "scene 25",
+      "planned": 74.26,
+      "frame": 2228,
+      "actual_seconds": 74.26666666666667,
+      "nearest_beat": 74.26,
+      "error_ms": 6.667
+    },
+    {
+      "event": "scene 26",
+      "planned": 76.117,
+      "frame": 2284,
+      "actual_seconds": 76.13333333333334,
+      "nearest_beat": 76.117,
+      "error_ms": 16.333
+    },
+    {
+      "event": "scene 27",
+      "planned": 83.545,
+      "frame": 2506,
+      "actual_seconds": 83.53333333333333,
+      "nearest_beat": 83.545,
+      "error_ms": 11.667
+    }
+  ],
+  "max_error_ms": 32.0,
+  "music_sha256": "fb7011120593d903885b778c43ac76728201a64c0e92a1d584555506daec878e",
+  "music_loudness": {
+    "integrated_lufs": -14.3,
+    "true_peak_dbfs": -2.9
+  },
+  "outputs": [
+    {
+      "file": "ghost-letters-trailer-16x9.mp4",
+      "bytes": 9821580,
+      "duration": 94.78,
+      "dimensions": [
+        1920,
+        1080
+      ],
+      "fps": "30/1",
+      "video_codec": "h264",
+      "pixel_format": "yuv420p",
+      "audio_bitrate": "193578",
+      "faststart": true,
+      "black_tail": true,
+      "integrated_lufs": -14.3,
+      "true_peak_dbfs": -2.9
+    },
+    {
+      "file": "ghost-letters-trailer-9x16.mp4",
+      "bytes": 10122194,
+      "duration": 94.78,
+      "dimensions": [
+        1080,
+        1920
+      ],
+      "fps": "30/1",
+      "video_codec": "h264",
+      "pixel_format": "yuv420p",
+      "audio_bitrate": "193578",
+      "faststart": true,
+      "black_tail": true,
+      "integrated_lufs": -14.3,
+      "true_peak_dbfs": -2.9
+    }
+  ]
+}
