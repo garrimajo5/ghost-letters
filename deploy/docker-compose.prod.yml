@@ -38,8 +38,10 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - default
-      - edge
+      default: {}
+      # API starts before Caddy; automatic allocation could take Caddy's trusted IP.
+      edge:
+        ipv4_address: 172.29.214.3
 
   caddy:
     image: caddy:2-alpine
