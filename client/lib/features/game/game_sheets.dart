@@ -13,6 +13,7 @@ import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
+import 'chat_card_text.dart';
 
 /// Пометки на карте поля: счётчики ✕ и ✓ и «считаю истинной».
 class MarkSheet extends StatefulWidget {
@@ -603,6 +604,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                     final author = screen.rosterOf(m.authorId);
                     final quotable = m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
                     final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
+                    final inlineParts = ChatCardText.parse(m, screen.view?.board ?? [], screen.view?.hints ?? []);
+                    final inlineCards = m.isVoice ? <String>{} : inlineParts.map((p) => p.cardId).whereType<String>().toSet();
                     if (m.authorId == null) {
                       return Center(
                         child: Container(
@@ -636,12 +639,13 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           if (m.isVoice)
                             _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
                           else if ((m.text ?? '').isNotEmpty)
-                            Text(m.text!, style: const TextStyle(fontSize: 14, height: 1.4)),
-                          if (m.cardIds.isNotEmpty)
+                            ChatCardText(message: m, parts: inlineParts),
+                          if (m.cardIds.any((id) => !inlineCards.contains(id)))
                             Padding(
                               padding: const EdgeInsets.only(top: 6),
                               child: Wrap(spacing: 6, runSpacing: 6, children: [
                                 for (var i = 0; i < m.cardIds.length; i++)
+                                  if (!inlineCards.contains(m.cardIds[i]))
                                   GestureDetector(
                                     key: Key('chat-card-${m.id}-$i'),
                                     onTap: () => showCardZoom(context, m.cardIds[i], caption: m.noteFor(i)),

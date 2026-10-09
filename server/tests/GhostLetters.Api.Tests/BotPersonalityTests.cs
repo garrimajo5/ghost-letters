@@ -230,7 +230,7 @@ public sealed class BotPersonalityTests
         tags.Similarity("cage", "bloom", attention, 0).Should().Be(0);
         tags.Similarity("cage", "prison", attention, 0).Should().BeGreaterThan(0);
         tags.Similarity("cage", "bloom", attention, 1).Should().BeGreaterThan(tags.Similarity("cage", "prison", attention, 1));
-        tags.Explain("cage", "bloom", attention, 1).Should().Contain("по детали: розы");
+        tags.Explain("cage", "bloom", attention, 1).Should().Contain("по деталям: розы");
     }
 
     [Fact]
@@ -247,8 +247,8 @@ public sealed class BotPersonalityTests
         BotPlayer.Evidence(view, tags, Mind(broad), "knife").Should().BeGreaterThan(BotPlayer.Evidence(view, tags, Mind(broad), "rose"));
         BotPlayer.Evidence(view, tags, Mind(picky), "rose").Should().BeGreaterThan(BotPlayer.Evidence(view, tags, Mind(picky), "knife"));
         var line = BotPlayer.Say(view, new Random(1), tags, Mind(picky))!.Value;
-        line.Text.Should().Contain("по детали: цветок").And.Contain("Подсказка р.1 №1");
-        tags.Explain("sword", "rose", broad.Attention, 0).Should().NotContain("по детали");
+        line.Text.Should().Contain("по деталям: цветок").And.Contain("Подсказка р.1 №1");
+        tags.Explain("sword", "rose", broad.Attention, 0).Should().NotContain("по деталям");
     }
 
     [Fact]
