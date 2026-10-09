@@ -180,7 +180,7 @@ public sealed class LobbyService(
             var name = BotNames.FirstOrDefault(n => !bots.Contains(n) && !cabinet.Contains(n)) ?? $"Бот {bots.Count + 1}";
             var existing = await db.Users
                 .Where(u => u.IsBot && u.Nickname == name && !db.BotProfiles.Any(b => b.UserId == u.Id))
-                .OrderBy(u => u.CreatedAt)
+                .OrderBy(u => u.CreatedAt).ThenBy(u => u.Id)
                 .Select(u => (Guid?)u.Id)
                 .FirstOrDefaultAsync(ct);
             if (existing is { } known)
