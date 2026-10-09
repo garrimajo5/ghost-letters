@@ -17,15 +17,16 @@ public sealed record BotSpectra(
     double Risk,
     double Compromise,
     double Variability,
-    double Strictness = 0.5)
+    double Strictness = 0.5,
+    double Details = 0.25)
 {
     public static BotSpectra From(BotPersonality p) =>
-        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness);
+        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness, p.Details);
 
     public BotPersonality ToPersonality() => new BotPersonality
     {
         Meaning = Meaning, Shape = Shape, Color = Color, Negative = Negative,
-        Memory = Memory, Risk = Risk, Compromise = Compromise, Variability = Variability, Strictness = Strictness,
+        Memory = Memory, Risk = Risk, Compromise = Compromise, Variability = Variability, Strictness = Strictness, Details = Details,
     }.Clamped();
 }
 
@@ -165,7 +166,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
     public static BotPersonality Personality(BotProfile p) => new BotPersonality
     {
         Meaning = p.Meaning, Shape = p.Shape, Color = p.Color, Negative = p.Negative,
-        Memory = p.Memory, Risk = p.Risk, Compromise = p.Compromise, Variability = p.Variability, Strictness = p.Strictness,
+        Memory = p.Memory, Risk = p.Risk, Compromise = p.Compromise, Variability = p.Variability, Strictness = p.Strictness, Details = p.Details,
     }.Clamped();
 
     private static void Apply(BotProfile profile, SaveBotRequest request, DateTimeOffset now)
@@ -180,6 +181,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
         profile.Compromise = p.Compromise;
         profile.Variability = p.Variability;
         profile.Strictness = p.Strictness;
+        profile.Details = p.Details;
         var about = (request.About ?? string.Empty).Trim();
         profile.About = about.Length > 300 ? about[..300] : about;
         profile.Enabled = request.Enabled;

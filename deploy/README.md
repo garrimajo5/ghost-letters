@@ -44,7 +44,7 @@ Workflow **Release server image** собирает образ при каждо�
 curl -fsSL https://get.docker.com | sh
 mkdir -p ~/ghost-letters && cd ~/ghost-letters
 # скопируйте сюда из репозитория: deploy/docker-compose.prod.yml, deploy/Caddyfile, deploy/.env.example
-# и client/assets/cards/cards.json + tags.json (теги картинок для ботов; например, scp с вашего компьютера)
+# и client/assets/cards/cards.json + tags.json + details.json (признаки картинок для ботов)
 cp .env.example .env && nano .env          # домен, пароль базы, ключ JWT
 echo <токен> | docker login ghcr.io -u garrimajo5 --password-stdin
 docker compose -f docker-compose.prod.yml up -d
@@ -66,6 +66,20 @@ docker compose -f docker-compose.prod.yml up -d api
 flutter run --dart-define=API_URL=https://<домен>
 flutter build apk --release --dart-define=API_URL=https://<домен>
 ```
+
+## Публикация Android
+
+Workflow `Release Android` публикует `/download/ghost-letters.apk` и сведения о версии.
+При наличии секретов `ANDROID_KEYSTORE_*` используется заданный ключ. Без них, если
+настроены `DEPLOY_HOST` и `DEPLOY_SSH_KEY`, первая публикация создаёт постоянный ключ
+в `/opt/ghost-letters/android-signing/` на сервере. Следующие сборки используют тот же ключ.
+Каталог закрыт правами 700, файлы — 600; он находится вне папки веб-сервера.
+
+Сохраните этот каталог в защищённой резервной копии вместе с базой. Если APK уже существует,
+а ключ отсутствует, workflow останавливается: нужно восстановить исходный ключ, а не создавать новый.
+Незавершённый каталог `android-signing.pending` также требует проверки перед повтором.
+PR проверяет сборку и не создаёт ключей на сервере; публикация выполняется после слияния в main.
+При отсутствии APK страница загрузки сообщает об этом и предлагает веб-версию.
 
 ## Резервная копия базы
 

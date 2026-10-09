@@ -52,7 +52,7 @@ public sealed class BotStrictnessTests
         var view = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(2, "coin", true)]);
         var said = BotPlayer.Say(view, new Random(3), Tags, Mind(p));
         said.Should().NotBeNull();
-        return said!.Value.Notes.Count(n => n == "проверял эту");
+        return said!.Value.Notes.Count(n => n.StartsWith("проверял эту", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class BotStrictnessTests
         var reader = View(Phase.Discussion, [], Role.Detective,
             letters: [new MyLetterView(2, "coin", true)], hints: [new HintGroupView(2, ["coin"])]);
         var said = BotPlayer.Say(reader, new Random(3), tags, Mind(personality))!.Value;
-        var checkedCards = said.Cards.Where((_, i) => said.Notes[i] == "проверял эту");
+        var checkedCards = said.Cards.Where((_, i) => said.Notes[i].StartsWith("проверял эту", StringComparison.Ordinal));
         checkedCards.Should().Equal("ring");
         BotPlayer.Evidence(reader, tags, Mind(personality), "ring").Should().BeGreaterThan(0);
         BotPlayer.Evidence(reader, tags, Mind(personality), "wallet").Should().Be(0);

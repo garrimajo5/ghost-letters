@@ -18,7 +18,7 @@ public sealed record BotPersonality
     /// <summary>Выводы из того, что НЕ открыли: 0 — «не достали и ладно», 1 — «не достали — точно не оно».</summary>
     public double Negative { get; init; } = 0.5;
 
-    /// <summary>Память о прошлых партиях с этими людьми: 0 — каждая игра с чистого листа, 1 — «был Убийцей — значит и сейчас».</summary>
+    /// <summary>Память о прошлых партиях с этими людьми: 0 — только текущая игра, 1 — все завершённые партии; свежие воспоминания сильнее.</summary>
     public double Memory { get; init; } = 0.3;
 
     /// <summary>Риск: 0 — никогда не врёт и не выдаёт себя, 1 — блефует и обвиняет в лоб.</summary>
@@ -32,6 +32,9 @@ public sealed record BotPersonality
     /// 1 — «выложил деньги — проверил только деньги, ничего лишнего».
     /// </summary>
     public double Strictness { get; init; } = 0.5;
+
+    /// <summary>0 — только общий образ; 1 — мелкие детали важнее общего образа.</summary>
+    public double Details { get; init; } = 0.25;
 
     /// <summary>Изменчивость: 0 — всегда одинаковый, 1 — от партии к партии другой.</summary>
     public double Variability { get; init; } = 0.2;
@@ -62,6 +65,7 @@ public sealed record BotPersonality
         Risk = Clamp(Risk),
         Compromise = Clamp(Compromise),
         Strictness = Clamp(Strictness),
+        Details = Clamp(Details),
         Variability = Clamp(Variability),
     };
 
@@ -88,10 +92,11 @@ public sealed record BotPersonality
             Shape = Drift(p.Shape),
             Color = Drift(p.Color),
             Negative = Drift(p.Negative),
-            Memory = Drift(p.Memory),
+            Memory = p.Memory is 0 or 1 ? p.Memory : Drift(p.Memory),
             Risk = Drift(p.Risk),
             Compromise = Drift(p.Compromise),
             Strictness = Drift(p.Strictness),
+            Details = p.Details is 0 or 1 ? p.Details : Drift(p.Details),
         };
     }
 
@@ -99,13 +104,34 @@ public sealed record BotPersonality
 }
 
 /// <summary>Что бот помнит о соигроке по прошлым партиям с ним: сколько игр и кем тот был.</summary>
-public sealed record PlayerHistory(int Games, int KillerTeam, int Informed)
+public sealed record PlayerHistory(int Games, int KillerTeam, int Informed,
+    double? RecentGames = null, double? RecentKillerTeam = null, double? RecentInformed = null)
 {
     /// <summary>Как часто был в команде Убийцы, со сглаживанием (без игр — средняя доля ~0.25).</summary>
-    public double KillerRate => (KillerTeam + 0.5) / (Games + 2.0);
+    public double KillerRate => ((RecentKillerTeam ?? KillerTeam) + 0.5) / ((RecentGames ?? Games) + 2.0);
 
     /// <summary>Как часто был Свидетелем или Экспертом.</summary>
-    public double InformedRate => (Informed + 0.3) / (Games + 2.0);
+    public double InformedRate => ((RecentInformed ?? Informed) + 0.3) / ((RecentGames ?? Games) + 2.0);
+}
+
+public sealed record RememberedPlayer(Guid GameId, Guid UserId, string Role, DateTimeOffset FinishedAt);
+
+public static class BotMemory
+{
+    /// <summary>Окно памяти растёт до всей истории; каждые 20 более свежих игр вес уменьшается вдвое.</summary>
+    public static IReadOnlyDictionary<Guid, PlayerHistory> Recall(IEnumerable<RememberedPlayer> past, double memory)
+    {
+        if (memory <= 0) return new Dictionary<Guid, PlayerHistory>();
+        var games = past.GroupBy(p => p.GameId).OrderByDescending(g => g.First().FinishedAt).ThenBy(g => g.Key);
+        var limit = memory >= 1 ? int.MaxValue : (int)Math.Min(int.MaxValue, 1 + 20 * memory / (1 - memory));
+        var weighted = games.Take(limit).SelectMany((g, index) => g.Select(p =>
+            (Player: p, Weight: Math.Max(1e-12, Math.Pow(0.5, index / 20.0))))).ToList();
+        return weighted.GroupBy(x => x.Player.UserId).ToDictionary(g => g.Key, g => new PlayerHistory(
+            g.Count(), g.Count(x => x.Player.Role is "Killer" or "Accomplice"),
+            g.Count(x => x.Player.Role is "Witness" or "Expert"), g.Sum(x => x.Weight),
+            g.Where(x => x.Player.Role is "Killer" or "Accomplice").Sum(x => x.Weight),
+            g.Where(x => x.Player.Role is "Witness" or "Expert").Sum(x => x.Weight)));
+    }
 }
 
 /// <summary>
@@ -143,29 +169,23 @@ public static class AccusationReader
             return [];
         }
 
-        var lower = text.ToLowerInvariant();
-        double strength = lower.Contains("убийц") ? 1
-            : lower.Contains("чёрн") || lower.Contains("черн") || lower.Contains("сообщник") || lower.Contains("подозр") ? 0.6
-            : lower.Contains("присмотр") || lower.Contains("не верю") ? 0.4
-            : 0;
-        if (strength == 0 || lower.Contains("не убийц"))
-        {
-            return [];
-        }
-
         var found = new List<Accusation>();
-        foreach (var (id, name) in names)
+        // Обращение к союзнику в предыдущем предложении не является обвинением.
+        foreach (var sentence in System.Text.RegularExpressions.Regex.Split(text.ToLowerInvariant(), @"[.!?\n]+"))
         {
-            if (id == author)
+            double strength = sentence.Contains("убийц") ? 1
+                : sentence.Contains("чёрн") || sentence.Contains("черн") || sentence.Contains("сообщник") || sentence.Contains("подозр") ? 0.6
+                : sentence.Contains("присмотр") || sentence.Contains("не верю") ? 0.4 : 0;
+            if (strength == 0 || sentence.Contains("не убийц") || sentence.Contains("не подозреваю")) continue;
+            foreach (var (id, name) in names)
             {
-                continue;
-            }
-
-            var full = name.ToLowerInvariant();
-            var bare = full.StartsWith("бот ", StringComparison.Ordinal) ? full[4..] : full;
-            if (bare.Length >= 2 && (lower.Contains(full) || lower.Contains(bare)))
-            {
-                found.Add(new Accusation(author, id, strength));
+                if (id == author) continue;
+                var full = name.ToLowerInvariant();
+                var bare = full.StartsWith("бот ", StringComparison.Ordinal) ? full[4..] : full;
+                if (bare.Length < 2) continue;
+                var pattern = @"(?<![\p{L}\p{N}])" + System.Text.RegularExpressions.Regex.Escape(bare) + @"(?![\p{L}\p{N}])";
+                if (System.Text.RegularExpressions.Regex.IsMatch(sentence, pattern))
+                    found.Add(new Accusation(author, id, strength));
             }
         }
 
@@ -174,7 +194,7 @@ public static class AccusationReader
 }
 
 /// <summary>Мнение из чата: автор показал карту поля с подписью («думаю, эта», «проверял эту»).</summary>
-public sealed record ChatOpinion(Guid Author, string CardId, double Strength);
+public sealed record ChatOpinion(Guid Author, string CardId, double Strength, bool IsCheck = false);
 
 /// <summary>Готовые характеры — кабинет предлагает создать их одной кнопкой.</summary>
 public static class BotPresets

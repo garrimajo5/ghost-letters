@@ -220,4 +220,94 @@ public sealed class BotPersonalityTests
         framed.Should().BeGreaterThan(15, "рисковый Убийца переводит стрелки на обвинителя");
         calm.Should().Be(0, "осторожный не привлекает внимания");
     }
+
+    [Fact]
+    public void DetailAlreadyPresentInOldTags_IsNotDoubleCountedAsMainSubject()
+    {
+        var tags = CardTags.Parse("""{"cage":["cage","flower"],"bloom":["flower","plant"],"prison":["cage","metal"]}""")
+            .WithDetails("""{"cage":[{"tag":"flower","weight":0.4,"label":"розы у основания"}]}""");
+        var attention = (Meaning: 1.0, Shape: 0.0, Color: 0.0);
+        tags.Similarity("cage", "bloom", attention, 0).Should().Be(0);
+        tags.Similarity("cage", "prison", attention, 0).Should().BeGreaterThan(0);
+        tags.Similarity("cage", "bloom", attention, 1).Should().BeGreaterThan(tags.Similarity("cage", "prison", attention, 1));
+        tags.Explain("cage", "bloom", attention, 1).Should().Contain("по детали: розы");
+    }
+
+    [Fact]
+    public void Details_ChangeEvidenceAndExplainTheActualFeature()
+    {
+        var tags = Tags.WithDetails("""
+            {"sword":[{"tag":"flower","weight":0.3,"label":"цветок на рукояти"}],
+             "knife":[{"tag":"hole","weight":0.8,"label":"отверстие"}],
+             "rose":[{"tag":"flower","weight":0.9,"label":"цветок"}]}
+            """);
+        var broad = new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Details = 0, Strictness = 0 };
+        var picky = broad with { Details = 1 };
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
+        BotPlayer.Evidence(view, tags, Mind(broad), "knife").Should().BeGreaterThan(BotPlayer.Evidence(view, tags, Mind(broad), "rose"));
+        BotPlayer.Evidence(view, tags, Mind(picky), "rose").Should().BeGreaterThan(BotPlayer.Evidence(view, tags, Mind(picky), "knife"));
+        var line = BotPlayer.Say(view, new Random(1), tags, Mind(picky))!.Value;
+        line.Text.Should().Contain("по детали: цветок").And.Contain("Подсказка р.1 №1");
+        tags.Explain("sword", "rose", broad.Attention, 0).Should().NotContain("по детали");
+    }
+
+    [Fact]
+    public void StructuredSpeech_ExplainsChecksAndUncertainty_WithinChatLimits()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective,
+            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["tulip"])]);
+        var line = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 1 }))!.Value;
+        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("исключаю")
+            .And.Contain("не доказательство").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
+        line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
+        line.Cards.Count.Should().BeLessThanOrEqualTo(ChatService.MaxCards);
+        line.Notes.Should().HaveSameCount(line.Cards);
+        line.Notes.Should().OnlyContain(n => n.Length <= ChatService.MaxNoteLength);
+        var shrug = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 0 }))!.Value;
+        shrug.Text.Should().Contain("не считаю это исключением");
+    }
+
+    [Fact]
+    public void Reply_AddressesLikelyAllyAndNamesBehaviouralReasonForSuspect()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"]) ]);
+        var mind = Mind(new BotPersonality { Risk = 1, Strictness = 1, Memory = 0 },
+            [new ChatOpinion(Ann, "knife", 1), new ChatOpinion(Bob, "rose", 1)]);
+        var reply = BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value;
+        reply.Text.Should().Contain("Аня,").And.Contain("пока считаю тебя мирным")
+            .And.Contain("Бот Боб из чёрных").And.Contain("хуже объясняет").And.Contain("голосовать против");
+        AccusationReader.Read(Me, reply.Text, Names).Should().ContainSingle().Which.Target.Should().Be(Bob);
+        BotPlayer.Reply(view with { Me = view.Me! with { Role = Role.Ghost } }, new Random(0), Tags, mind).Should().BeNull();
+        BotPlayer.Reply(view with { Hints = [] }, new Random(0), Tags, mind).Should().BeNull("без улик не объявляем мирным");
+    }
+
+    [Fact]
+    public void CheckingCard_IsNotAdviceOrSuspiciousBehaviour()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"]) ]);
+        var mind = Mind(new BotPersonality { Risk = 1, Strictness = 1, Memory = 0 },
+            [new ChatOpinion(Ann, "knife", 1), new ChatOpinion(Bob, "rose", 1, IsCheck: true)]);
+        BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value.Text.Should().NotContain("Боб");
+    }
+
+    [Fact]
+    public void Memory_ZeroIsBlank_OneRetainsAll_RecentGamesWeighMore()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var past = Enumerable.Range(0, 80).Select(i => new RememberedPlayer(Guid.NewGuid(), Bob,
+            i < 40 ? "Killer" : "Detective", now.AddDays(-i))).ToList();
+        BotMemory.Recall(past, 0).Should().BeEmpty();
+        var all = BotMemory.Recall(past, 1)[Bob];
+        all.Games.Should().Be(80);
+        all.KillerRate.Should().BeGreaterThan(0.6);
+        BotMemory.Recall(past, 0.1)[Bob].Games.Should().BeLessThan(80);
+        var reversed = past.Select((p, i) => p with { FinishedAt = now.AddDays(i) });
+        BotMemory.Recall(reversed, 1)[Bob].KillerRate.Should().BeLessThan(all.KillerRate);
+        for (var i = 0; i < 20; i++)
+        {
+            var p = new BotPersonality { Memory = 0, Details = 0, Variability = 1 }.ForGame(Guid.NewGuid(), Me);
+            p.Memory.Should().Be(0);
+            p.Details.Should().Be(0);
+        }
+    }
 }

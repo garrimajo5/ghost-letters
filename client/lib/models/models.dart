@@ -871,6 +871,7 @@ class BotSpectra {
     this.compromise = 0.5,
     this.variability = 0.2,
     this.strictness = 0.5,
+    this.details = 0.25,
   });
 
   factory BotSpectra.fromJson(Json j) {
@@ -885,6 +886,7 @@ class BotSpectra {
       compromise: v('compromise', 0.5),
       variability: v('variability', 0.2),
       strictness: v('strictness', 0.5),
+      details: v('details', 0.25),
     );
   }
 
@@ -899,6 +901,7 @@ class BotSpectra {
 
   /// Строгость ассоциаций: 0 — одним письмом проверяет всё связанное, 1 — ровно одну карту.
   final double strictness;
+  final double details;
 
   BotSpectra copyWith({
     double? meaning,
@@ -910,6 +913,7 @@ class BotSpectra {
     double? compromise,
     double? variability,
     double? strictness,
+    double? details,
   }) =>
       BotSpectra(
         meaning: meaning ?? this.meaning,
@@ -921,6 +925,7 @@ class BotSpectra {
         compromise: compromise ?? this.compromise,
         variability: variability ?? this.variability,
         strictness: strictness ?? this.strictness,
+        details: details ?? this.details,
       );
 
   /// Доли внимания в процентах (сумма 100).
@@ -941,6 +946,7 @@ class BotSpectra {
         'risk': risk,
         'compromise': compromise,
         'strictness': strictness,
+        'details': details,
         'variability': variability,
       };
 }

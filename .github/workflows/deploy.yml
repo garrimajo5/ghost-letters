@@ -57,7 +57,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
           scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile \
-            client/assets/cards/cards.json client/assets/cards/tags.json "$SSH_USER@$HOST:$APP_DIR/"
+            client/assets/cards/cards.json client/assets/cards/tags.json client/assets/cards/details.json "$SSH_USER@$HOST:$APP_DIR/"
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR/www/download"
           scp -i ~/.ssh/deploy deploy/www/download/index.html "$SSH_USER@$HOST:$APP_DIR/www/download/index.html"
 

@@ -25,6 +25,8 @@ public sealed class BotProfile
     /// <summary>Строгость ассоциаций: сколько карт поля бот «проверяет» одним письмом.</summary>
     public double Strictness { get; set; } = 0.5;
 
+    public double Details { get; set; } = 0.25;
+
     public double Variability { get; set; } = 0.2;
 
     /// <summary>Выключенного бота не предлагают в лобби, но его история и рейтинг сохраняются.</summary>

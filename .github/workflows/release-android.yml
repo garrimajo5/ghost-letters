@@ -9,7 +9,7 @@ name: Release Android
 #   ANDROID_KEY_ALIAS         — алиас ключа (например upload)
 #   ANDROID_KEY_PASSWORD      — пароль ключа
 # Переменная репозитория API_URL — адрес сервера, например https://ghost.example.com.
-# Без секретов сборка всё равно пройдёт, но с отладочной подписью (для проверки, не для магазина).
+# PR собирается с отладочной подписью; релиз без Android-секретов использует постоянный ключ на сервере.
 #
 # Раздача друзьям: подписанный APK выкладывается на сервер — https://<домен>/download/ghost-letters.apk
 # (нужны секреты подписи и DEPLOY_SSH_KEY, переменная DEPLOY_HOST). Это происходит при каждом
@@ -18,10 +18,10 @@ on:
   push:
     tags: ['v*']
     branches: [main]
-    paths: ['client/**', '.github/workflows/release-android.yml']
+    paths: ['client/**', 'deploy/android-signing.sh', '.github/workflows/release-android.yml']
   # Проверка самого workflow в PR, где он меняется (собирается без секретов).
   pull_request:
-    paths: ['.github/workflows/release-android.yml']
+    paths: ['deploy/android-signing.sh', '.github/workflows/release-android.yml']
   workflow_dispatch:
     inputs:
       api_url:
@@ -30,6 +30,11 @@ on:
 
 permissions:
   contents: write
+
+# Initial key creation and publication must not race with another release.
+concurrency:
+  group: android-release-${{ github.event_name == 'pull_request' && github.ref || 'production' }}
+  cancel-in-progress: false
 
 jobs:
   android:
@@ -59,12 +64,28 @@ jobs:
           STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
         run: |
           if [ -z "$KEYSTORE" ]; then
-            echo "::warning::Секретов подписи нет — релиз подписан отладочным ключом"
-            echo "signed=false" >> "$GITHUB_OUTPUT"
+            if [ "$IS_PR" == 'true' ]; then
+              echo "signed=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ -z "$HOST" ] || [ -z "$DEPLOY_KEY" ]; then
+              echo "::error::Для публикации APK нужны секреты Android-подписи или DEPLOY_HOST и DEPLOY_SSH_KEY"
+              exit 1
+            fi
+            mkdir -p ~/.ssh && chmod 700 ~/.ssh
+            printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/android-deploy && chmod 600 ~/.ssh/android-deploy
+            ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
+            SSH_KEY_FILE=~/.ssh/android-deploy bash ../deploy/android-signing.sh
+            echo "signed=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          test -n "$STORE_PASSWORD" && test -n "$KEY_ALIAS" && test -n "$KEY_PASSWORD"
           echo "signed=true" >> "$GITHUB_OUTPUT"
           echo "$KEYSTORE" | base64 -d > android/app/upload.jks
           cat > android/key.properties <<PROPS
@@ -85,8 +106,10 @@ jobs:
 
       - name: Build
         env:
-          API_URL: ${{ github.event.inputs.api_url || vars.API_URL || (vars.DEPLOY_HOST && format('https://{0}.sslip.io', vars.DEPLOY_HOST)) }}
+          API_URL: ${{ github.event.inputs.api_url || vars.API_URL || (vars.DEPLOY_DOMAIN && format('https://{0}', vars.DEPLOY_DOMAIN)) }}
+          HOST: ${{ vars.DEPLOY_HOST }}
         run: |
+          if [ -z "$API_URL" ] && [ -n "$HOST" ]; then API_URL="https://${HOST//./-}.sslip.io"; fi
           args="--release --build-name=${{ steps.version.outputs.name }} --build-number=${{ steps.version.outputs.code }}"
           # Версия видна в приложении и сравнивается с /download/version.json для «Вышла новая версия».
           args="$args --dart-define=APP_VERSION=${{ steps.version.outputs.name }} --dart-define=APP_BUILD=${{ steps.version.outputs.code }} --dart-define=APP_BUILD_DATE=${{ steps.version.outputs.date }}"
@@ -122,8 +145,8 @@ jobs:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           if [ -z "$HOST" ] || [ -z "$KEY" ]; then
-            echo "::warning::DEPLOY_HOST/DEPLOY_SSH_KEY не заданы — APK не выложен на сервер"
-            exit 0
+            echo "::error::DEPLOY_HOST/DEPLOY_SSH_KEY не заданы — APK не выложен на сервер"
+            exit 1
           fi
           mkdir -p ~/.ssh && printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 /// «Стол крупно»: поле и подсказки во весь экран, приближение пальцами и кнопками.
-Future<TestApp> _open(WidgetTester tester) async {
-  tester.view.physicalSize = const Size(1080, 2400);
-  tester.view.devicePixelRatio = 2.625;
+Future<TestApp> _open(WidgetTester tester, {bool desktop = false}) async {
+  tester.view.physicalSize = desktop ? const Size(1440, 900) : const Size(1080, 2400);
+  tester.view.devicePixelRatio = desktop ? 1 : 2.625;
   addTearDown(tester.view.reset);
   final app = await TestApp.create(user: watson);
   addTearDown(app.container.dispose);
@@ -25,6 +26,38 @@ double _scale(WidgetTester tester) =>
     tester.widget<InteractiveViewer>(find.byKey(const Key('board-zoom'))).transformationController!.value.getMaxScaleOnAxis();
 
 void main() {
+  testWidgets('на компьютере кнопка увеличивает видимый размер карты', (tester) async {
+    await _open(tester, desktop: true);
+    await tester.tap(find.byKey(const Key('zoom-board')));
+    await tester.pumpAndSettle();
+    final card = find.byKey(const Key('board-0-0'));
+    double width() => tester.getTopRight(card).dx - tester.getTopLeft(card).dx;
+    final before = width();
+    await tester.tap(find.byKey(const Key('zoom-in')));
+    await tester.pumpAndSettle();
+    expect(width(), closeTo(before * 1.5, 0.1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('мышь и тачпад увеличивают поле, сброс возвращает исходный масштаб', (tester) async {
+    await _open(tester, desktop: true);
+    await tester.tap(find.byKey(const Key('zoom-board')));
+    await tester.pumpAndSettle();
+    final start = _scale(tester);
+    for (final kind in [PointerDeviceKind.mouse, PointerDeviceKind.trackpad]) {
+      final before = _scale(tester);
+      await tester.sendEventToBinding(PointerScrollEvent(
+        position: tester.getCenter(find.byKey(const Key('board-0-0'))),
+        scrollDelta: const Offset(0, -60),
+        kind: kind,
+      ));
+      await tester.pumpAndSettle();
+      expect(_scale(tester), greaterThan(before), reason: '$kind должен приближать');
+    }
+    await tester.tap(find.byKey(const Key('zoom-reset')));
+    await tester.pumpAndSettle();
+    expect(_scale(tester), start);
+  });
   testWidgets('стол крупно: открывается, приближается и закрывается', (tester) async {
     await _open(tester);
 
