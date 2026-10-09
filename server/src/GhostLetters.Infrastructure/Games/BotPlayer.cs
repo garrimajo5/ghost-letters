@@ -581,7 +581,8 @@ public static class BotPlayer
             var votes = view.Finale?.Votes ?? [];
             return candidates
                 .OrderByDescending(c => votes.Count(v => v.Voter == c && v.Suspect is { } s && team.Contains(s)) * 2
-                                        + RowAccuracy(c) + 2 * PastInformed(c) + 3 * AccusedTeam(c, team) + Noise())
+                                        + RowAccuracy(c) + 2 * PastInformed(c) + 3 * AccusedTeam(c, team)
+                                        + (ClaimedHuntRole(c) is null ? 0 : 4) + Noise())
                 .First();
         }
 
@@ -590,9 +591,12 @@ public static class BotPlayer
             Classic ? 0 : mind!.AccusationList.Where(a => a.Author == player && team.Contains(a.Target)).Sum(a => a.Strength);
 
         /// <summary>Тот, кто почти всегда голосовал за истинные карты, похож на Эксперта.</summary>
+        private Role? ClaimedHuntRole(Guid target) => mind?.RoleClaims is { } claims
+            && claims.TryGetValue(target, out var role) && view.HuntRoles?.Contains(role) == true ? role : null;
+
         public Role HuntGuess(Guid target) => view.HuntRoles is [var only]
             ? only
-            : RowAccuracy(target) >= 0.75 ? Role.Expert : Role.Witness;
+            : ClaimedHuntRole(target) ?? (RowAccuracy(target) >= 0.75 ? Role.Expert : Role.Witness);
 
         public Guid? RandomOther()
         {

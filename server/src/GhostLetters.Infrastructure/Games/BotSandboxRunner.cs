@@ -88,8 +88,7 @@ public static class BotSandboxRunner
             state.Truth = state.Board.Select(_ => 0).ToList();
             state.Phase = Phase.Hunt; state.Round = state.TotalRounds; state.Solved = true;
             var witness = state.Players.Single(p => p.Role == Role.Witness);
-            var killer = state.Players.Single(p => p.Role == Role.Killer);
-            Say(witness.Id, $"Я Свидетель. Убийца — {names[killer.Id]}.", [], []);
+            Say(witness.Id, "Я Свидетель.", [], []);
         }
         Capture("Начальное состояние");
         for (var step = 0; status == "completed" && state.Result is null && step < MaxSteps; step++)
@@ -155,6 +154,7 @@ public static class BotSandboxRunner
         var accusations = parsedAccusations.Where(a => a.Author != seat.Id)
             .GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
         return new(seat.Personality, new Dictionary<Guid, PlayerHistory>(), opinions, names, accusations,
-            BotService.Breadth(others.Select(m => (m.Author, m.Notes))));
+            BotService.Breadth(others.Select(m => (m.Author, m.Notes))),
+            RoleClaims: PublicRoleClaims.Read(others.Select(m => (m.Author, m.Text))));
     }
 }
