@@ -213,7 +213,6 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Where(m => m.Notes.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)))
             .GroupBy(m => m.Author)
             .ToDictionary(g => g.Key, g => g.Average(m => (double)m.Notes.Count(n => n.StartsWith("проверял", StringComparison.Ordinal))));
-    }
 
     private static CommandRequest Request(GameCommand command, int version) => new(
         command.GetType().Name,
