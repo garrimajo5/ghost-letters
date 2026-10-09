@@ -16,7 +16,8 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                 table: "bot_profiles",
                 type: "double precision",
                 nullable: false,
-                defaultValue: 0.0);
+                // Уже созданные боты получают середину шкалы — «проверял» по 3 карты, как до появления спектра.
+                defaultValue: 0.5);
         }
 
         /// <inheritdoc />
