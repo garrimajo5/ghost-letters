@@ -40,8 +40,15 @@ class Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorFromHex(color),
         shape: BoxShape.circle,
-        border: Border.all(color: ringColor ?? AppColors.bg, width: ringColor == null ? 0 : (size > 60 ? 3 : 2)),
       ),
+      // Draw the ring over the full-size photo. A background border also adds
+      // rectangular padding, exposing strips and letting the photo cover the ring.
+      foregroundDecoration: ringColor == null
+          ? null
+          : BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: ringColor, width: size > 60 ? 3 : 2),
+            ),
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
       child: photoBytes != null
@@ -345,7 +352,7 @@ class GhostBadge extends StatelessWidget {
           boxShadow: const [BoxShadow(color: Color(0x66A9D4EA), blurRadius: 4)],
         ),
         padding: EdgeInsets.all(size * 0.14),
-        child: CustomPaint(painter: const GhostPainter()),
+        child: const CustomPaint(painter: GhostPainter()),
       );
 }
 
@@ -383,3 +390,4 @@ class GhostPainter extends CustomPainter {
   @override
   bool shouldRepaint(GhostPainter old) => old.color != color || old.eyes != eyes;
 }
+
