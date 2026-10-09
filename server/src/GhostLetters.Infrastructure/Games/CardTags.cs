@@ -86,10 +86,10 @@ public sealed class CardTags
         var other = DetailsOf(b);
         foreach (var d in _details.GetValueOrDefault(a) ?? [])
             if (details > 0 && (other.ContainsKey(d.Tag) || Of(b).Contains(d.Tag)))
-                reasons.Add((details * Math.Min(other.GetValueOrDefault(d.Tag, d.Weight), d.Weight), "по детали: " + d.Label));
+                reasons.Add((details * Math.Min(other.GetValueOrDefault(d.Tag, d.Weight), d.Weight), "по деталям: " + d.Label));
         foreach (var d in _details.GetValueOrDefault(b) ?? [])
             if (details > 0 && Of(a).Contains(d.Tag))
-                reasons.Add((details * d.Weight, "по детали: " + d.Label));
+                reasons.Add((details * d.Weight, "по деталям: " + d.Label));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
     }

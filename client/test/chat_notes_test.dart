@@ -54,7 +54,7 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('под картами в сообщении подписи: кидал эту, проверял эту', (tester) async {
+  testWidgets('письмо встроено в текст, остальные вложения сохраняют подписи', (tester) async {
     tester.view.physicalSize = const Size(1200, 3000);
     tester.view.devicePixelRatio = 1.5;
     addTearDown(tester.view.reset);
@@ -81,7 +81,8 @@ void main() {
     await tester.tap(find.byTooltip('Чат'));
     await tester.pumpAndSettle();
 
-    expect(find.text('кидал эту'), findsOneWidget);
+    expect(find.byKey(const Key('chat-inline-m2-1')), findsOneWidget);
+    expect(find.byKey(const Key('chat-card-m2-0')), findsNothing);
     expect(find.text('проверял эту'), findsNWidgets(2));
     await finish(tester);
   });
