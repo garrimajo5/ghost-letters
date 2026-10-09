@@ -64,6 +64,10 @@ public static class BotPlayer
     public static double Evidence(PlayerView view, CardTags tags, BotMind? mind, string card) =>
         view.Me is { } me ? new Brain(view, me, new Random(0), tags, mind).Evidence(card) : 0;
 
+    public static (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Reply(
+        PlayerView view, Random rng, CardTags tags, BotMind? mind) =>
+        view.Me is { Role: not Role.Ghost } me ? new Brain(view, me, rng, tags, mind).Reply() : null;
+
     /// <summary>
     /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты; если отправлял письмо —
     /// показывает его («кидал эту») и карты поля, которые им проверял (их может быть несколько).
@@ -88,7 +92,7 @@ public static class BotPlayer
         private BotPersonality P => mind?.Personality ?? BotPersonality.Default;
 
         /// <summary>Похожесть карт глазами этого бота: внимание к смыслу, форме и цвету.</summary>
-        private double Sim(string a, string b) => Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention);
+        private double Sim(string a, string b) => Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details);
 
         /// <summary>Насколько «не открыли моё письмо» отталкивает от похожих карт.</summary>
         private double NegativeWeight => Classic ? 0.6 : 1.6 * P.Negative;
@@ -179,10 +183,11 @@ public static class BotPlayer
             }
 
             double sum = 0;
-            foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id))
+            foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id && !o.IsCheck))
             {
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
                 trust *= 1 - PastSuspicion(o.Author) * (1 - P.Compromise);
+                trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 sum += o.Strength * trust;
             }
 
@@ -223,7 +228,7 @@ public static class BotPlayer
             }
 
             var count = 0.0;
-            foreach (var o in mind!.Opinions.Where(o => o.Author == id))
+            foreach (var o in mind!.Opinions.Where(o => o.Author == id && !o.IsCheck && o.Strength != 0))
             {
                 var (row, column) = Position(o.CardId);
                 if (row < 0)
@@ -233,14 +238,16 @@ public static class BotPlayer
 
                 if (Truth is { } truth && (me.Role == Role.Expert || KillerTeam))
                 {
-                    count += truth[row] == column ? 0 : o.Strength;
+                    var supportsTruth = truth[row] == column;
+                    if (supportsTruth != (o.Strength > 0)) count += Math.Abs(o.Strength);
                     continue;
                 }
 
                 var best = view.Board[row].Cards.Max(Evidence);
-                if (best - Evidence(o.CardId) > 0.15)
+                if ((o.Strength > 0 && best - Evidence(o.CardId) > 0.15) ||
+                    (o.Strength < 0 && best > 0.15 && best - Evidence(o.CardId) < 0.01))
                 {
-                    count += o.Strength * 0.6;
+                    count += Math.Abs(o.Strength) * 0.6;
                 }
             }
 
@@ -264,7 +271,45 @@ public static class BotPlayer
         }
 
         /// <summary>Итоговое подозрение к игроку: память, чужие обвинения и странные советы в чате.</summary>
-        private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) + 0.5 * ChatContrarian(id);
+        private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) +
+            (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id);
+
+        private string CardName(string card)
+        {
+            var (r, c) = Position(card);
+            if (r < 0) return "письмо";
+            var category = view.Board[r].Category switch {
+                Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" };
+            return $"{category} {c + 1}";
+        }
+
+        private string Connection(string from, string to) => tags.Explain(from, to, P.Attention, Classic ? 0 : P.Details);
+
+        private string BehaviourReason(Guid id) => ChatContrarian(id) > 0
+            ? "его версия хуже объясняет открытые подсказки, чем соседние карты"
+            : Contrarian(id) > 0 ? "его голоса расходятся с моим чтением подсказок"
+            : "пока опираюсь на подозрения стола и прошлые встречи, прямой улики нет";
+
+        public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Reply()
+        {
+            if (Classic) return null;
+            var candidates = view.Players.Where(p => p.Id != me.Id && !p.IsGhost).ToList();
+            var ally = candidates.Where(p => Known(p.Id) is not { } role || !role.IsKillerTeam())
+                .Select(p => (Player: p, Opinion: mind!.Opinions.FirstOrDefault(o => o.Author == p.Id && !o.IsCheck &&
+                    o.Strength > 0 && Evidence(o.CardId) > 0.1)))
+                .Where(x => x.Opinion is not null && ChatContrarian(x.Player.Id) == 0 && Suspicion(x.Player.Id) < 0.6)
+                .OrderByDescending(x => Evidence(x.Opinion!.CardId)).FirstOrDefault();
+            if (ally.Opinion is null || NameOf(ally.Player.Id) is not { } name) return null;
+            var card = ally.Opinion.CardId;
+            var text = $"{name}, твоя версия «{CardName(card)}» сходится с подсказками; пока считаю тебя мирным. ";
+            var suspect = candidates.Where(p => p.Id != ally.Player.Id && (Known(p.Id) is null || Known(p.Id)!.Value.IsKillerTeam()))
+                .OrderByDescending(p => Suspicion(p.Id)).FirstOrDefault();
+            if (suspect is not null && Suspicion(suspect.Id) >= 1.3 - 0.9 * P.Risk && NameOf(suspect.Id) is { } target)
+                text += $"Подозреваю, что {target} из чёрных: {BehaviourReason(suspect.Id)}. Предлагаю вместе голосовать против него.";
+            else
+                text += $"Предлагаю поддержать «{CardName(card)}». Какие ещё улики подтверждают нашу версию?";
+            return (text, new[] { card }, new[] { "думаю, эта" });
+        }
 
         /// <summary>Своя оценка карт ряда, смешанная с мнением стола в доле компромисса.</summary>
         private double Blend(int row, int column, IReadOnlyList<int> columns)
@@ -279,7 +324,7 @@ public static class BotPlayer
             }
 
             var i = columns.ToList().IndexOf(column);
-            var c = Classic ? 0 : P.Compromise * (social.Max() > 0 ? 1 : 0);
+            var c = Classic ? 0 : P.Compromise * (social.Any(s => Math.Abs(s) > 1e-9) ? 1 : 0);
             return (1 - c) * Norm(own[i], own) + c * Norm(social[i], social);
         }
 
@@ -370,7 +415,7 @@ public static class BotPlayer
                 // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
                 // Память добавляет подозрение тем, кто часто бывал Убийцей в прошлых партиях с ботом.
                 // Подозрения: память о прошлых партиях, обвинения стола и странные советы в чате.
-                return candidates.OrderByDescending(c => Contrarian(c) + rng.NextDouble() * 0.5 + Suspicion(c)).First();
+                return candidates.OrderByDescending(c => rng.NextDouble() * 0.5 + Suspicion(c)).First();
             }
             else
             {
@@ -649,12 +694,12 @@ public static class BotPlayer
 
             if (top.s > 2)
             {
-                return $" Думаю, Убийца — {who}.";
+                return $" Думаю, Убийца — {who}: {BehaviourReason(top.Id)}.";
             }
 
             return PastSuspicion(top.Id) > 0.25 && rng.Next(2) == 0
                 ? $" Подозреваю {who}: уже бывал Убийцей."
-                : $" Подозреваю, что {who} из чёрных.";
+                : $" Подозреваю, что {who} из чёрных: {BehaviourReason(top.Id)}.";
         }
 
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
@@ -699,7 +744,26 @@ public static class BotPlayer
                     $"Пока не ясно. Проверил бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
-            var opinion = Tone(lines[rng.Next(lines.Length)]) + Accusation();
+            var opinion = "Версия: " + Tone(lines[rng.Next(lines.Length)]);
+            var links = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
+                .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
+                .Select(h => $"Подсказка р.{h.Round} №{h.Number} → {Where(target, column)} ({Connection(h.Id, card)}).");
+            opinion += "\n" + string.Join("\n", links);
+            if (!links.Any()) opinion += "Связь с открытыми уликами слабая — это только предположение.";
+            if (!Classic && view.Board.Count > 1)
+            {
+                var version = new List<string>();
+                for (var r = 0; r < view.Board.Count; r++)
+                {
+                    var options = Enumerable.Range(0, view.Board[r].Cards.Count)
+                        .Where(c => !KillerTeam || Truth is null || Truth[r] != c).ToList();
+                    if (options.Count == 0) continue;
+                    var best = BestColumn(r, options);
+                    if (Evidence(Card(r, best)) > 0.05) version.Add(Where(r, best));
+                }
+                if (version.Count > 1) opinion += "\nСвязная версия: " + string.Join("; ", version) + ".";
+            }
+            opinion += Accusation();
             if (claimCard is null)
             {
                 return (opinion, new List<string> { card }, new List<string> { "думаю, эта" });
@@ -712,7 +776,7 @@ public static class BotPlayer
             foreach (var (r, c) in checkedCards)
             {
                 cards.Add(Card(r, c));
-                notes.Add("проверял эту");
+                notes.Add(!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту");
             }
 
             if (!cards.Contains(card) && cards.Count < ChatService.MaxCards)
@@ -721,8 +785,20 @@ public static class BotPlayer
                 notes.Add("думаю, эта");
             }
 
-            var checkedText = checkedCards.Count == 0 ? "" : $" Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.";
-            return ($"{claimText}{checkedText} {opinion}", cards, notes);
+            var checkedText = checkedCards.Count == 0 ? "Проверял: явной связи с полем нет." :
+                $"Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.\n" +
+                string.Join("\n", checkedCards.Select(x => $"• {Where(x.Row, x.Column)} — {Connection(claimCard, Card(x.Row, x.Column))}."));
+            var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
+            var conclusion = vanished && checkedCards.Count > 0
+                ? NegativeWeight > 0 ? "Письмо исчезло: исключаю эти карты из основной версии, но это не доказательство."
+                    : "Письмо исчезло, но я не считаю это исключением карт."
+                : claimText.Contains("открыл", StringComparison.Ordinal) ? "Открытие письма усиливает эти связи." : "Пока жду результат проверки.";
+            // Лимит чата соблюдаем по законченным строкам, не обрывая объяснение посреди слова.
+            var sections = new[] { claimText, checkedText, conclusion, opinion };
+            var text = string.Join("\n", sections);
+            if (text.Length > ChatService.MaxTextLength)
+                text = string.Join("\n", new[] { claimText, checkedText, conclusion, $"Версия: {Where(target, column)}." });
+            return (text, cards, notes);
         }
 
         /// <summary>

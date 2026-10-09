@@ -33,7 +33,7 @@
 
   <section id="android">
     <h2>Android</h2>
-    <a class="btn" id="apk" href="ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
+    <a class="btn" id="apk" href="/download/ghost-letters.apk" download>СКАЧАТЬ ПРИЛОЖЕНИЕ</a>
     <div class="note" id="apk-note"></div>
     <p class="small" id="version">Актуальная версия: загружаю…</p>
     <ol>
@@ -65,12 +65,24 @@
     iphone.parentNode.insertBefore(iphone, document.getElementById('android'));
     iphone.classList.add('here');
   }
+  var available = null;
+  fetch('/download/ghost-letters.apk', { method: 'HEAD', cache: 'no-store' })
+    .then(function (r) {
+      available = r.ok;
+      if (!available) {
+        note.textContent = 'Android-версия ещё готовится. Пока можно играть в браузере — откройте игру ниже.';
+        note.classList.add('show');
+      }
+    }).catch(function () {});
   document.getElementById('apk').addEventListener('click', function (e) {
     if (ios) {
       e.preventDefault();
       note.textContent = 'Это файл для Android — на iPhone его не установить. Для iPhone используйте «Открыть игру» выше.';
+    } else if (available === false) {
+      e.preventDefault();
+      note.textContent = 'Android-версия ещё готовится. Обновите страницу чуть позже или играйте в браузере.';
     } else {
-      note.textContent = 'Загрузка началась. Когда закончится — откройте файл из уведомления или папки «Загрузки» и нажмите «Установить».';
+      note.textContent = 'Браузер начнёт загрузку файла. Затем откройте его из папки «Загрузки» и нажмите «Установить».';
     }
     note.classList.add('show');
   });
@@ -81,7 +93,7 @@
     var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
     return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear() + ', ' + hm;
   }
-  fetch('version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+  fetch('/download/version.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
     .then(function (v) {
       var el = document.getElementById('version');
       if (!v) { el.textContent = 'Версия для Android ещё не выложена'; return; }

@@ -61,6 +61,12 @@ void main() {
     expect(find.text('Строгость ассоциаций'), findsOneWidget);
     await tester.drag(find.byKey(const Key('spectrum-strictness')), const Offset(-600, 0));
     await tester.pumpAndSettle();
+    await reveal(tester, 'spectrum-memory');
+    await tester.drag(find.byKey(const Key('spectrum-memory')), const Offset(-600, 0));
+    await tester.pumpAndSettle();
+    await reveal(tester, 'spectrum-details');
+    await tester.drag(find.byKey(const Key('spectrum-details')), const Offset(600, 0));
+    await tester.pumpAndSettle();
     await reveal(tester, 'bot-save');
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
@@ -69,6 +75,9 @@ void main() {
     expect(saved[1], 'Холмс');
     expect((saved[2] as BotSpectra).risk, 1.0);
     expect((saved[2] as BotSpectra).strictness, 0.0);
+    expect((saved[2] as BotSpectra).memory, 0.0);
+    expect((saved[2] as BotSpectra).details, 1.0);
+    expect(BotSpectra.fromJson((saved[2] as BotSpectra).toJson()).details, 1.0);
     expect((saved[2] as BotSpectra).toJson()['strictness'], 0.0, reason: 'уходит на сервер');
     expect(find.text('Бот Холмс'), findsOneWidget, reason: 'вернулись в кабинет, список обновлён');
   });

@@ -130,8 +130,16 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return false;
         }
 
-        var said = await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.AuthorId == botId && m.Round == state.Round, ct);
-        if (said || BotPlayer.Say(view, rng, tags, mind) is not { } line)
+        var said = await db.ChatMessages.Where(m => m.GameId == state.Id && m.AuthorId == botId &&
+                m.Round == state.Round && m.Channel == ChatChannels.Public)
+            .OrderByDescending(m => m.CreatedAt).ToListAsync(ct);
+        if (said.Count >= 2) return false;
+        // Одно объяснение и один содержательный ответ после чужой реплики, без бесконечного эха.
+        if (said.Count > 0 && !await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.Round == state.Round &&
+            m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId && m.CreatedAt > said[0].CreatedAt, ct))
+            return false;
+        var speech = said.Count == 0 ? BotPlayer.Say(view, rng, tags, mind) : BotPlayer.Reply(view, rng, tags, mind);
+        if (speech is not { } line)
         {
             return false;
         }
@@ -163,22 +171,18 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var personality = BotAdminService.Personality(profile).ForGame(state.Id, botId);
         var others = state.Players.Select(p => p.Id).Where(id => id != botId).ToList();
 
-        var past = await (from mine in db.GamePlayers.AsNoTracking()
+        var past = personality.Memory <= 0 ? [] : await (from mine in db.GamePlayers.AsNoTracking()
                           join g in db.Games.AsNoTracking() on mine.GameId equals g.Id
                           join other in db.GamePlayers.AsNoTracking() on mine.GameId equals other.GameId
                           where mine.UserId == botId && g.Id != state.Id && g.Status == GameStatuses.Finished
                                 && others.Contains(other.UserId)
-                          select new { other.UserId, other.Role })
+                          select new RememberedPlayer(g.Id, other.UserId, other.Role, g.FinishedAt ?? g.StartedAt))
             .ToListAsync(ct);
-        var history = past.GroupBy(x => x.UserId).ToDictionary(
-            gr => gr.Key,
-            gr => new PlayerHistory(
-                gr.Count(),
-                gr.Count(x => x.Role is nameof(Role.Killer) or nameof(Role.Accomplice)),
-                gr.Count(x => x.Role is nameof(Role.Witness) or nameof(Role.Expert))));
+        var history = BotMemory.Recall(past, personality.Memory);
 
         var messages = await db.ChatMessages.AsNoTracking()
             .Where(m => m.GameId == state.Id && m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId)
+            .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
@@ -193,7 +197,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                     continue;
                 }
 
-                opinions.Add(new ChatOpinion(m.AuthorId!.Value, m.CardIds[i], note.StartsWith("проверял", StringComparison.Ordinal) ? 0.5 : 1));
+                // Проверяемая карта ещё не является гипотезой автора. Отрицание — против карты.
+                var checking = note.StartsWith("проверял", StringComparison.Ordinal) && !note.Contains("думаю", StringComparison.Ordinal);
+                var negative = note.StartsWith("исключ", StringComparison.OrdinalIgnoreCase) || note.StartsWith("не эта", StringComparison.OrdinalIgnoreCase);
+                opinions.Add(new ChatOpinion(m.AuthorId!.Value, m.CardIds[i], negative ? -1 : 1, checking));
             }
         }
 
@@ -201,7 +208,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
         // Обвинения из чата (боты и люди): «Убийца — Олег», «Подозреваю, что Маша из чёрных».
         var accusations = messages.SelectMany(m => AccusationReader.Read(m.AuthorId!.Value, m.Text, names)).ToList();
-        return new BotMind(personality, history, opinions, names, accusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))));
+        // Повторение одной версии не делает её весомее. Последнее мнение заменяет прежнее.
+        var latestOpinions = opinions.GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
+        var latestAccusations = accusations.GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
+        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))));
     }
 
     /// <summary>

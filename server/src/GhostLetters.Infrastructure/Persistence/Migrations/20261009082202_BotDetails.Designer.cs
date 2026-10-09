@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using GhostLetters.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GhostLetters.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GhostLettersDbContext))]
-    partial class GhostLettersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009082202_BotDetails")]
+    partial class BotDetails
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

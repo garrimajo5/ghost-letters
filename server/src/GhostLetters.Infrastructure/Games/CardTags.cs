@@ -10,6 +10,8 @@ namespace GhostLetters.Infrastructure.Games;
 /// </summary>
 public sealed class CardTags
 {
+    public sealed record Detail(string Tag, double Weight, string Label);
+    private IReadOnlyDictionary<string, List<Detail>> _details = new Dictionary<string, List<Detail>>();
     public static readonly CardTags Empty = new(new Dictionary<string, HashSet<string>>());
 
     private readonly IReadOnlyDictionary<string, HashSet<string>> _tags;
@@ -19,6 +21,73 @@ public sealed class CardTags
     public int Count => _tags.Count;
 
     public IReadOnlyCollection<string> Of(string cardId) => _tags.TryGetValue(cardId, out var t) ? t : [];
+
+    public CardTags WithDetails(string json)
+    {
+        var raw = JsonSerializer.Deserialize<Dictionary<string, List<Detail>>>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        if (raw.Values.SelectMany(v => v).Any(d => string.IsNullOrWhiteSpace(d.Tag) ||
+            string.IsNullOrWhiteSpace(d.Label) || !double.IsFinite(d.Weight) || d.Weight <= 0 || d.Weight > 1))
+        {
+            throw new FormatException("Деталям нужны тег, подпись и вес от 0 до 1.");
+        }
+
+        return new CardTags(_tags) { _details = raw };
+    }
+
+    private Dictionary<string, double> DetailsOf(string card) =>
+        (_details.GetValueOrDefault(card) ?? []).GroupBy(d => d.Tag)
+        .ToDictionary(g => g.Key, g => g.Max(d => d.Weight));
+
+    public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention, double details)
+    {
+        var whole = Similarity(a, b, attention);
+        if (details <= 0 || a == b) return whole;
+        var x = DetailsOf(a);
+        var y = DetailsOf(b);
+        if (x.Count == 0 && y.Count == 0) return whole;
+        // Мелкая роза на клетке может связываться и с главным предметом «роза» на другой карте.
+        foreach (var t in x.Keys.Union(y.Keys).ToList())
+        {
+            if (Of(a).Contains(t)) x[t] = Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t));
+            if (Of(b).Contains(t)) y[t] = Math.Max(y.GetValueOrDefault(t), x.GetValueOrDefault(t));
+        }
+        // Неразмеченная карта без известных связей не штрафуется за отсутствие разметки.
+        if (x.Count == 0 || y.Count == 0) return whole;
+        var union = x.Keys.Union(y.Keys).Sum(t => Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t)));
+        var shared = x.Keys.Intersect(y.Keys).Sum(t => Math.Min(x[t], y[t]));
+        var focus = Math.Clamp(details, 0, 1);
+        return (1 - focus) * whole + focus * shared / union;
+    }
+
+    /// <summary>Причины из тех же признаков, по которым бот действительно сравнил карты.</summary>
+    public string Explain(string a, string b, (double Meaning, double Shape, double Color) attention, double details)
+    {
+        var da = _details.GetValueOrDefault(a) ?? [];
+        var db = _details.GetValueOrDefault(b) ?? [];
+        if ((da.Count == 0 || db.Count == 0) && !da.Any(d => Of(b).Contains(d.Tag)) && !db.Any(d => Of(a).Contains(d.Tag)))
+            details = 0; // Same fallback to the main image as Similarity.
+        var reasons = new List<(double Score, string Text)>();
+        var common = Of(a).Intersect(Of(b)).ToList();
+        foreach (var (group, weight, label) in new[] {
+            (0, attention.Meaning, "по смыслу: общий предмет или тема"),
+            (1, attention.Shape, "по форме: похожий силуэт"),
+            (2, attention.Color, "по цвету: общая палитра") })
+        {
+            if (common.Any(t => Group(t) == group) && weight > 0 && details < 1)
+                reasons.Add((weight * (1 - details) * common.Count(t => Group(t) == group) /
+                    Of(a).Union(Of(b)).Count(t => Group(t) == group), label));
+        }
+        var other = DetailsOf(b);
+        foreach (var d in _details.GetValueOrDefault(a) ?? [])
+            if (details > 0 && (other.ContainsKey(d.Tag) || Of(b).Contains(d.Tag)))
+                reasons.Add((details * Math.Min(other.GetValueOrDefault(d.Tag, d.Weight), d.Weight), "по детали: " + d.Label));
+        foreach (var d in _details.GetValueOrDefault(b) ?? [])
+            if (details > 0 && Of(a).Contains(d.Tag))
+                reasons.Add((details * d.Weight, "по детали: " + d.Label));
+        return reasons.Count == 0 ? "явной связи не вижу" :
+            string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
+    }
 
     /// <summary>Цвета и форма (shape-*) — визуальные теги: они тоже связывают карты, но вдвое слабее смысла.</summary>
     private static readonly HashSet<string> Colors =
@@ -107,6 +176,8 @@ public sealed class CardTags
         }
 
         var tags = Parse(File.ReadAllText(path));
+        var detailsPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "details.json");
+        if (File.Exists(detailsPath)) tags = tags.WithDetails(File.ReadAllText(detailsPath));
         logger.LogInformation("Теги карт: {Count} из {Path}", tags.Count, path);
         return tags;
     }

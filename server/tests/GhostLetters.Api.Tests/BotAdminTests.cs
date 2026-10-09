@@ -4,6 +4,7 @@ using System.Text.Json;
 using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Bots;
 using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Persistence.Entities;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,45 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
     {
         meaning = 0.6, shape = 0.2, color = 0.2, negative = 0.7, memory = 0.4, risk, compromise = 0.3, variability = 0.1,
     };
+
+    [Fact]
+    public async Task Mind_RemembersOnlyFinishedSharedGames_AndReadsOnlyLatestPublicOpinions()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Лида");
+        MakeAdmin(admin);
+        var spectra = BotSpectra.From(new BotPersonality { Memory = 1, Variability = 0 });
+        var bot = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Память", spectra });
+        var botId = bot.Id("id");
+        var state = GameEngine.Create(Guid.NewGuid(), [botId, admin.Id], new GameSettings(),
+            Enumerable.Range(1, 300).Select(i => $"c{i:000}").ToList(), 7);
+        var card = state.Board[0].Cards[0];
+        var now = DateTimeOffset.UtcNow;
+        await _factory.WithDbAsync(async db =>
+        {
+            // Three finished shared games, one unfinished, one without the bot, and the current game.
+            for (var i = 0; i < 6; i++)
+            {
+                var id = i == 5 ? state.Id : Guid.NewGuid();
+                db.Games.Add(new Game { Id = id, StartedAt = now.AddDays(-i),
+                    FinishedAt = i is 3 or 5 ? null : now.AddDays(-i),
+                    Status = i is 3 or 5 ? GameStatuses.Active : GameStatuses.Finished });
+                if (i != 4) db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = botId, Seat = 0, Role = "Detective" });
+                db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = admin.Id, Seat = 1, Role = i == 0 ? "Killer" : "Detective" });
+            }
+            for (var i = 0; i < 3; i++)
+                db.ChatMessages.Add(new ChatMessage { Id = Guid.NewGuid(), GameId = state.Id, AuthorId = admin.Id,
+                    Channel = i == 2 ? ChatChannels.KillerTeam : ChatChannels.Public, Round = 1,
+                    CreatedAt = now.AddSeconds(i), CardIds = [card], CardNotes = [i == 1 ? "не эта" : "думаю, эта"] });
+            return await db.SaveChangesAsync();
+        });
+        var mind = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
+        mind.History[admin.Id].Games.Should().Be(3);
+        mind.Opinions.Should().ContainSingle().Which.Strength.Should().Be(-1, "повтор заменён, приватный чат недоступен");
+        await admin.PutAsync($"/api/v1/admin/bots/{botId}", new { nickname = "Память", spectra = spectra with { Memory = 0, Variability = 1 } });
+        var blank = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
+        blank.History.Should().BeEmpty();
+        blank.Opinions.Should().ContainSingle("события текущей партии помним даже при памяти 0");
+    }
 
     [Fact]
     public async Task NotAdmin_CannotOpenCabinet()
@@ -111,14 +151,18 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
         // The old request has no strictness field.
         var created = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Холмс", spectra = Spectra() });
         created.GetProperty("spectra").GetProperty("strictness").GetDouble().Should().Be(0.5);
+        created.GetProperty("spectra").GetProperty("details").GetDouble().Should().Be(0.25);
         var id = created.Id("id");
-        var changed = BotSpectra.From(new BotPersonality { Strictness = 0.95 });
+        var changed = BotSpectra.From(new BotPersonality { Strictness = 0.95, Details = 0.9, Memory = 1 });
         await admin.PutAsync($"/api/v1/admin/bots/{id}", new { nickname = "Холмс", spectra = changed, enabled = true });
 
         // Read through a fresh request, so this verifies the saved database value.
         var savedList = await admin.GetAsync("/api/v1/admin/bots");
         savedList.EnumerateArray().Single(b => b.Id("id") == id)
             .GetProperty("spectra").GetProperty("strictness").GetDouble().Should().Be(0.95);
+        var spectra = savedList.EnumerateArray().Single(b => b.Id("id") == id).GetProperty("spectra");
+        spectra.GetProperty("details").GetDouble().Should().Be(0.9);
+        spectra.GetProperty("memory").GetDouble().Should().Be(1);
     }
 
     [Fact]

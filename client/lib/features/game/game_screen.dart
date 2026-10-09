@@ -1187,11 +1187,16 @@ class _ZoomedTableState extends State<_ZoomedTable> {
     final fit = _fit ?? 1;
     final scale = _controller.value.getMaxScaleOnAxis();
     final next = (scale * factor).clamp(fit, 5.0);
-    final k = next / scale;
     final c = _viewport.center(Offset.zero);
-    _controller.value = Matrix4.translationValues(c.dx * (1 - k), c.dy * (1 - k), 0)
-      ..multiply(Matrix4.diagonal3Values(k, k, k))
-      ..multiply(_controller.value);
+    final scene = _controller.toScene(c);
+    // Keep the same point under the centre; rebuild instead of accumulating
+    // matrix multiplications. InteractiveViewer expects uniform XYZ scale.
+    _controller.value = Matrix4.identity()
+      ..setEntry(0, 0, next)
+      ..setEntry(1, 1, next)
+      ..setEntry(2, 2, next)
+      ..setEntry(0, 3, c.dx - scene.dx * next)
+      ..setEntry(1, 3, c.dy - scene.dy * next);
   }
 
   @override
@@ -1209,6 +1214,15 @@ class _ZoomedTableState extends State<_ZoomedTable> {
               ),
               IconButton(key: const Key('zoom-out'), tooltip: 'Отдалить', icon: const Icon(Icons.zoom_out), onPressed: () => _zoomBy(1 / 1.5)),
               IconButton(key: const Key('zoom-in'), tooltip: 'Приблизить', icon: const Icon(Icons.zoom_in), onPressed: () => _zoomBy(1.5)),
+              IconButton(
+                key: const Key('zoom-reset'),
+                tooltip: 'Исходный масштаб',
+                icon: const Icon(Icons.fit_screen),
+                onPressed: () {
+                  final fit = _fit ?? 1;
+                  _controller.value = Matrix4.diagonal3Values(fit, fit, fit);
+                },
+              ),
               IconButton(
                 key: const Key('zoom-close'),
                 tooltip: 'Закрыть',
@@ -1239,6 +1253,8 @@ class _ZoomedTableState extends State<_ZoomedTable> {
               return InteractiveViewer(
                 key: const Key('board-zoom'),
                 transformationController: _controller,
+                alignment: Alignment.topLeft,
+                trackpadScrollCausesScale: true,
                 constrained: false,
                 minScale: fit,
                 maxScale: 5,
