@@ -65,9 +65,11 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
         var game = GameHarness.Existing(_factory, [host], id, lobby.Str("code"), gameId);
         var driver = new GameDriver(game);
         var botMoves = 0;
+        var deadlines = new HashSet<DateTimeOffset?>();
 
         for (var i = 0; i < 2000 && (await game.StateAsync()).Status == "active"; i++)
         {
+            deadlines.Add(await _factory.WithDbAsync(db => db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => g.PhaseDeadline).SingleAsync()));
             var moved = await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
             botMoves += moved;
             if (moved == 0 && !await driver.StepAsync())
@@ -78,6 +80,7 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
         }
 
         (await game.StateAsync()).Status.Should().Be("finished");
+        deadlines.Should().Equal(new DateTimeOffset?[] { null }, "один человек с ботами — без таймеров, боты ждут");
         var reopened = await host.GetAsync($"/api/v1/lobbies/{lobby.Str("code")}");
         reopened.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("isBot").GetBoolean())
             .Should().OnlyContain(m => m.GetProperty("isReady").GetBoolean(), "боты готовы к реваншу");

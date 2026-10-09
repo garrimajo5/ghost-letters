@@ -323,6 +323,10 @@ public sealed class BotBrainTests
         BotService.WaitsForTeam(state, killer.Id, onlyKiller, now.AddSeconds(60), now).Should().BeTrue("живой Сообщник ещё не подсказал");
         BotService.WaitsForTeam(state, killer.Id, onlyKiller, now.AddSeconds(20), now).Should().BeFalse("время на исходе");
         BotService.WaitsForTeam(state, killer.Id, onlyKiller, null, now).Should().BeFalse("без таймера не ждём");
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, null, now, soloSince: now.AddSeconds(-30))
+            .Should().BeTrue("один человек с ботами: таймера нет, Убийца ждёт живого Сообщника");
+        BotService.WaitsForTeam(state, killer.Id, onlyKiller, null, now, soloSince: now - BotService.SoloTeamWait - TimeSpan.FromSeconds(1))
+            .Should().BeFalse("Сообщник молчит дольше двух минут — Убийца решает сам");
         BotService.WaitsForTeam(state, killer.Id, new HashSet<Guid> { killer.Id, accomplice.Id }, now.AddSeconds(60), now)
             .Should().BeFalse("Сообщник — тоже бот");
 

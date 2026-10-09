@@ -33,6 +33,7 @@ class Spectrum {
 }
 
 const spectra = [
+  Spectrum('strictness', 'Строгость ассоциаций', 'одной уликой проверил и оружие, и всё про воду', 'выложил деньги — проверил только деньги'),
   Spectrum('negative', 'Выводы из неоткрытого', 'не достали — и ладно', 'не достали — точно не оно'),
   Spectrum('memory', 'Память о прошлых играх', 'каждая игра с чистого листа', 'был Убийцей — значит, и сейчас'),
   Spectrum('risk', 'Риск', 'не врёт и не выдаёт себя', 'блефует и обвиняет в лоб'),
@@ -41,6 +42,7 @@ const spectra = [
 ];
 
 double spectrumValue(BotSpectra s, String key) => switch (key) {
+      'strictness' => s.strictness,
       'negative' => s.negative,
       'memory' => s.memory,
       'risk' => s.risk,
@@ -49,6 +51,7 @@ double spectrumValue(BotSpectra s, String key) => switch (key) {
     };
 
 BotSpectra withSpectrum(BotSpectra s, String key, double v) => switch (key) {
+      'strictness' => s.copyWith(strictness: v),
       'negative' => s.copyWith(negative: v),
       'memory' => s.copyWith(memory: v),
       'risk' => s.copyWith(risk: v),

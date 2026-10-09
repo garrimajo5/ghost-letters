@@ -1,7 +1,7 @@
 namespace GhostLetters.Infrastructure.Bots;
 
 /// <summary>
-/// Характер бота — шесть спектров (все 0…1). Задаётся админом в кабинете ботов, на каждую партию
+/// Характер бота — спектры (все 0…1). Задаётся админом в кабинете ботов, на каждую партию
 /// чуть «плывёт» в пределах изменчивости.
 /// </summary>
 public sealed record BotPersonality
@@ -26,6 +26,12 @@ public sealed record BotPersonality
 
     /// <summary>Компромисс: 0 — не слушает даже Эксперта, 1 — договаривается даже с Убийцей.</summary>
     public double Compromise { get; init; } = 0.5;
+
+    /// <summary>
+    /// Строгость ассоциаций: 0 — «одной уликой проверил и оружие, и всё, что связано с водой»,
+    /// 1 — «выложил деньги — проверил только деньги, ничего лишнего».
+    /// </summary>
+    public double Strictness { get; init; } = 0.5;
 
     /// <summary>Изменчивость: 0 — всегда одинаковый, 1 — от партии к партии другой.</summary>
     public double Variability { get; init; } = 0.2;
@@ -55,8 +61,12 @@ public sealed record BotPersonality
         Memory = Clamp(Memory),
         Risk = Clamp(Risk),
         Compromise = Clamp(Compromise),
+        Strictness = Clamp(Strictness),
         Variability = Clamp(Variability),
     };
+
+    /// <summary>Сколько карт поля проверяет одно письмо: строгий — 1, широкий — до 4 (середина — 3, как раньше).</summary>
+    public int CheckBreadth => 1 + (int)Math.Round(3 * (1 - Clamp(Strictness)));
 
     /// <summary>
     /// Характер на конкретную партию: каждый спектр сдвигается на случайную величину до ±0.35 × изменчивость
@@ -81,6 +91,7 @@ public sealed record BotPersonality
             Memory = Drift(p.Memory),
             Risk = Drift(p.Risk),
             Compromise = Drift(p.Compromise),
+            Strictness = Drift(p.Strictness),
         };
     }
 
@@ -105,8 +116,15 @@ public sealed record BotMind(
     IReadOnlyDictionary<Guid, PlayerHistory> History,
     IReadOnlyList<ChatOpinion> Opinions,
     IReadOnlyDictionary<Guid, string> Names,
-    IReadOnlyList<Accusation>? Accusations = null)
+    IReadOnlyList<Accusation>? Accusations = null,
+    IReadOnlyDictionary<Guid, double>? Breadth = null)
 {
+    /// <summary>
+    /// Сколько карт поля игроки в среднем «проверяют» одним письмом — по их словам в чате («проверял эту»).
+    /// Никто не рассказывал — 3. Призрак так понимает, насколько строго стол читает подсказки.
+    /// </summary>
+    public double TableBreadth => Breadth is { Count: > 0 } b ? b.Values.Average() : 3;
+
     public static readonly BotMind Neutral = new(BotPersonality.Default, new Dictionary<Guid, PlayerHistory>(), [], new Dictionary<Guid, string>());
 
     public IReadOnlyList<Accusation> AccusationList => Accusations ?? [];
@@ -163,17 +181,17 @@ public static class BotPresets
 {
     public static readonly IReadOnlyList<(string Name, string Color, string About, BotPersonality P)> All =
     [
-        ("Пуаро", "#5C7C99", "Смысл прежде всего, упрям, мало врёт.",
-            new BotPersonality { Meaning = 0.8, Shape = 0.1, Color = 0.1, Negative = 0.7, Memory = 0.4, Risk = 0.25, Compromise = 0.2, Variability = 0.1 }),
+        ("Пуаро", "#5C7C99", "Смысл прежде всего, упрям, мало врёт, письмом проверяет одну карту.",
+            new BotPersonality { Meaning = 0.8, Shape = 0.1, Color = 0.1, Negative = 0.7, Memory = 0.4, Risk = 0.25, Compromise = 0.2, Strictness = 0.85, Variability = 0.1 }),
         ("Марпл", "#B370D9", "Помнит всех и всё, верит людям.",
-            new BotPersonality { Meaning = 0.5, Shape = 0.2, Color = 0.3, Negative = 0.5, Memory = 0.9, Risk = 0.3, Compromise = 0.7, Variability = 0.15 }),
-        ("Коломбо", "#E57F4F", "Смотрит на форму, обвиняет в лоб, рискует.",
-            new BotPersonality { Meaning = 0.3, Shape = 0.5, Color = 0.2, Negative = 0.4, Memory = 0.5, Risk = 0.85, Compromise = 0.4, Variability = 0.3 }),
+            new BotPersonality { Meaning = 0.5, Shape = 0.2, Color = 0.3, Negative = 0.5, Memory = 0.9, Risk = 0.3, Compromise = 0.7, Strictness = 0.45, Variability = 0.15 }),
+        ("Коломбо", "#E57F4F", "Смотрит на форму, обвиняет в лоб, рискует, видит связь во всём.",
+            new BotPersonality { Meaning = 0.3, Shape = 0.5, Color = 0.2, Negative = 0.4, Memory = 0.5, Risk = 0.85, Compromise = 0.4, Strictness = 0.15, Variability = 0.3 }),
         ("Ватсон", "#4AA3DF", "Слушает большинство, не делает выводов из исчезнувшего.",
-            new BotPersonality { Meaning = 0.45, Shape = 0.25, Color = 0.3, Negative = 0.15, Memory = 0.2, Risk = 0.35, Compromise = 0.9, Variability = 0.2 }),
-        ("Фандорин", "#F2A541", "Видит цвета, холодный расчёт, каждый раз немного другой.",
-            new BotPersonality { Meaning = 0.3, Shape = 0.2, Color = 0.5, Negative = 0.85, Memory = 0.3, Risk = 0.5, Compromise = 0.3, Variability = 0.6 }),
+            new BotPersonality { Meaning = 0.45, Shape = 0.25, Color = 0.3, Negative = 0.15, Memory = 0.2, Risk = 0.35, Compromise = 0.9, Strictness = 0.4, Variability = 0.2 }),
+        ("Фандорин", "#F2A541", "Видит цвета, холодный расчёт, строг к ассоциациям, каждый раз немного другой.",
+            new BotPersonality { Meaning = 0.3, Shape = 0.2, Color = 0.5, Negative = 0.85, Memory = 0.3, Risk = 0.5, Compromise = 0.3, Strictness = 0.9, Variability = 0.6 }),
         ("Жеглов", "#3D6A99", "Блефует на любой роли, никому не верит.",
-            new BotPersonality { Meaning = 0.6, Shape = 0.2, Color = 0.2, Negative = 0.5, Memory = 0.7, Risk = 0.95, Compromise = 0.05, Variability = 0.4 }),
+            new BotPersonality { Meaning = 0.6, Shape = 0.2, Color = 0.2, Negative = 0.5, Memory = 0.7, Risk = 0.95, Compromise = 0.05, Strictness = 0.3, Variability = 0.4 }),
     ];
 }

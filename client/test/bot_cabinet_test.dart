@@ -49,6 +49,11 @@ void main() {
     await tester.scrollUntilVisible(find.byKey(const Key('spectrum-risk')), 200, scrollable: list);
     await tester.drag(find.byKey(const Key('spectrum-risk')), const Offset(600, 0));
     await tester.pumpAndSettle();
+    // Строгость ассоциаций влево до конца — «одной уликой проверил всё связанное».
+    await tester.scrollUntilVisible(find.byKey(const Key('spectrum-strictness')), -200, scrollable: list);
+    expect(find.text('Строгость ассоциаций'), findsOneWidget);
+    await tester.drag(find.byKey(const Key('spectrum-strictness')), const Offset(-600, 0));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
@@ -56,6 +61,8 @@ void main() {
     final saved = app.api.named('saveBot').single.$2;
     expect(saved[1], 'Холмс');
     expect((saved[2] as BotSpectra).risk, 1.0);
+    expect((saved[2] as BotSpectra).strictness, 0.0);
+    expect((saved[2] as BotSpectra).toJson()['strictness'], 0.0, reason: 'уходит на сервер');
     expect(find.text('Бот Холмс'), findsOneWidget, reason: 'вернулись в кабинет, список обновлён');
   });
 

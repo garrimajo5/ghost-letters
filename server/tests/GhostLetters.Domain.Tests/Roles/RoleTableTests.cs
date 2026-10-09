@@ -136,6 +136,48 @@ public class RoleTableTests
     }
 
     [Fact]
+    public void ExtraAccomplice_SixPlayers_GhostKillerAccompliceAndThreeDetectives()
+    {
+        var roles = RoleTable.Compose(6, new RoleOptions(ExtraAccomplices: 1));
+
+        roles.Should().BeEquivalentTo(new[] { Role.Ghost, Role.Killer, Role.Accomplice, Role.Detective, Role.Detective, Role.Detective });
+    }
+
+    [Theory]
+    [InlineData(8, 1, 2)]
+    [InlineData(10, 1, 3)]
+    [InlineData(12, 2, 4)]
+    public void ExtraAccomplices_AddToTableAccomplices(int players, int extra, int accomplices)
+    {
+        var roles = RoleTable.Compose(players, new RoleOptions(ExtraAccomplices: extra));
+
+        roles.Count(r => r == Role.Accomplice).Should().Be(accomplices);
+        roles.Should().HaveCount(players);
+    }
+
+    [Theory]
+    [InlineData(4, 1)]
+    [InlineData(5, 1)]
+    [InlineData(7, 1)]
+    [InlineData(6, 2)]
+    [InlineData(8, 3)]
+    [InlineData(8, -1)]
+    public void ExtraAccomplices_KillerTeamMustStayMinority(int players, int extra)
+    {
+        var act = () => RoleTable.Compose(players, new RoleOptions(ExtraAccomplices: extra));
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ExtraAccomplice_WithImitatorReplacingAccomplice()
+    {
+        var roles = RoleTable.Compose(6, new RoleOptions(ExtraAccomplices: 1, Imitator: ImitatorMode.ReplaceAccomplice));
+
+        roles.Should().Contain(Role.Imitator).And.NotContain(Role.Accomplice);
+    }
+
+    [Fact]
     public void Teams_AreClassifiedCorrectly()
     {
         Role.Killer.IsKillerTeam().Should().BeTrue();

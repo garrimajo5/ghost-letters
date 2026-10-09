@@ -60,6 +60,10 @@ public static class BotPlayer
         };
     }
 
+    /// <summary>Насколько подсказки указывают на карту глазами этого бота (для тестов и отладки).</summary>
+    public static double Evidence(PlayerView view, CardTags tags, BotMind? mind, string card) =>
+        view.Me is { } me ? new Brain(view, me, new Random(0), tags, mind).Evidence(card) : 0;
+
     /// <summary>
     /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты; если отправлял письмо —
     /// показывает его («кидал эту») и карты поля, которые им проверял (их может быть несколько).
@@ -100,6 +104,49 @@ public static class BotPlayer
         private double LieChance => Classic ? 0.6 : 0.1 + 0.8 * P.Risk;
 
         private double FakeChance => Classic ? 1 : 0.25 + 0.75 * P.Risk;
+
+        /// <summary>Сколько карт поля бот «проверяет» одним письмом и читает за одной подсказкой (строгий — 1, широкий — 4).</summary>
+        private int MyBreadth => Classic ? 3 : P.CheckBreadth;
+
+        /// <summary>Место карты среди карт поля по похожести на письмо (0 — самая похожая).</summary>
+        private int Rank(string letter, string card)
+        {
+            var s = Sim(letter, card);
+            return view.Board.SelectMany(r => r.Cards).Count(c => c != card && c != letter && Sim(letter, c) > s);
+        }
+
+        /// <summary>
+        /// Сколько подсказка говорит о карте. Строгий читает подсказку только как «одну из самых похожих карт»:
+        /// всё, что дальше его ширины, почти не в счёт; широкий видит связь со многим.
+        /// </summary>
+        private double HintWeight(string hint, string card)
+        {
+            var s = Sim(hint, card);
+            if (Classic || s <= 0)
+            {
+                return s;
+            }
+
+            return Rank(hint, card) < MyBreadth ? s : s * (1 - P.Strictness);
+        }
+
+        /// <summary>
+        /// Призрак: насколько письмо укажет на истинную улику. Призрак-бот слушает обсуждение — знает, сколько карт
+        /// стол «проверяет» одним письмом. Если истинная улика не среди стольких самых похожих карт поля,
+        /// игроки её за письмом не увидят — письмо почти бесполезно.
+        /// </summary>
+        private double GhostScore(string letter, IReadOnlyList<int> truth)
+        {
+            var truthCards = TruthCards(truth);
+            var best = Best(letter, truthCards);
+            if (Classic)
+            {
+                return best;
+            }
+
+            var breadth = Math.Max(1, (int)Math.Round(mind!.TableBreadth));
+            return truthCards.Any(t => Sim(letter, t) > 0 && Rank(letter, t) < breadth) ? best : best * 0.4;
+        }
 
         private Role? Known(Guid id) => view.Players.FirstOrDefault(p => p.Id == id)?.KnownRole;
 
@@ -242,7 +289,7 @@ public static class BotPlayer
         /// <summary>Насколько подсказки указывают на карту: сходство с открытыми письмами минус сходство с моими исчезнувшими.</summary>
         public double Evidence(string card)
         {
-            var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => Sim(h, card));
+            var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Sim(l.CardId, card));
             return hints - NegativeWeight * vanished;
         }
@@ -344,7 +391,7 @@ public static class BotPlayer
                 return rng.Next(2) == 0 ? null : me.Hand[rng.Next(me.Hand.Count)];
             }
 
-            var (card, score) = me.Hand.Select(h => (h, Best(h, TruthCards(truth)))).MaxBy(x => x.Item2 + Noise());
+            var (card, score) = me.Hand.Select(h => (h, GhostScore(h, truth))).MaxBy(x => x.Item2 + Noise());
             return score >= ClueThreshold ? card : null;
         }
 
@@ -358,7 +405,7 @@ public static class BotPlayer
             }
 
             // Открываем все письма, похожие на истинные улики (их может быть сколько угодно — или ни одного).
-            var scored = mailbox.Select(l => (l, s: Best(l, TruthCards(truth)) + Noise())).OrderByDescending(x => x.s).ToList();
+            var scored = mailbox.Select(l => (l, s: GhostScore(l, truth) + Noise())).OrderByDescending(x => x.s).ToList();
             var good = scored.Where(x => x.s >= RevealThreshold).Select(x => x.l).ToList();
             if (good.Count == 0 && scored[0].s >= RevealFallback && rng.Next(3) > 0)
             {
@@ -390,7 +437,10 @@ public static class BotPlayer
                 target = Card(row, Truth is { } t && me.Role == Role.Expert ? t[row] : BestColumn(row, null));
             }
 
-            return me.Hand.OrderByDescending(h => Sim(h, target) + Noise()).Take(count).ToList();
+            // Строгий выбирает письмо, похожее на цель и ни на что больше на поле, — чтобы проверить ровно её.
+            var board = view.Board.SelectMany(r => r.Cards).Where(c => c != target).ToList();
+            double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - 0.6 * P.Strictness * Best(h, board);
+            return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
         }
 
         public string? CardToDiscard()
@@ -670,14 +720,17 @@ public static class BotPlayer
             return ($"{claimText}{checkedText} {opinion}", cards, notes);
         }
 
-        /// <summary>Карты поля, на которые похоже письмо: до трёх самых похожих (без тегов — ни одной).</summary>
+        /// <summary>
+        /// Карты поля, на которые похоже письмо: столько самых похожих, какова ширина бота
+        /// (строгий — одна, широкий — до четырёх; без характера — три; без тегов — ни одной).
+        /// </summary>
         private List<(int Row, int Column)> Checked(string letter) =>
             Enumerable.Range(0, view.Board.Count)
                 .SelectMany(r => Enumerable.Range(0, view.Board[r].Cards.Count).Select(c => (Row: r, Column: c)))
                 .Select(x => (x, s: Sim(letter, Card(x.Row, x.Column))))
                 .Where(x => x.s > 0 && Card(x.x.Row, x.x.Column) != letter)
                 .OrderByDescending(x => x.s)
-                .Take(3)
+                .Take(Math.Min(MyBreadth, ChatService.MaxCards - 1))
                 .Select(x => x.x)
                 .ToList();
 

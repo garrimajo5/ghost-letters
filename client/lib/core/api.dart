@@ -215,6 +215,7 @@ class Api {
       'expert': roles.useExpert,
       'blackmailer': roles.useBlackmailer,
       'imitator': roles.toJson()['imitator'],
+      'accomplices': roles.extraAccomplices,
     }) as Json;
     return RolesPreview(
       cooperative: r['cooperative'] as bool,

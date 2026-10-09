@@ -120,6 +120,24 @@ class _SettingsSheetState extends State<SettingsSheet> {
               ],
             ),
           ),
+          ListTile(
+            key: const Key('extra-accomplices'),
+            title: Text('Сообщники вместо детективов', style: TextStyle(color: _rulesLocked || !roles.killerEnabled ? AppColors.dim : null)),
+            subtitle: const Text('Например, 6 игроков: Призрак, Убийца, Сообщник и 3 Детектива. Команда Убийцы должна быть меньше остальных.'),
+            trailing: StepperControl(
+              value: roles.extraAccomplices,
+              enabled: !_rulesLocked && roles.killerEnabled,
+              valueKey: const Key('extra-accomplices-value'),
+              minusKey: const Key('extra-accomplices-minus'),
+              plusKey: const Key('extra-accomplices-plus'),
+              onMinus: _rulesLocked || !roles.killerEnabled || roles.extraAccomplices <= 0
+                  ? null
+                  : () => setState(() => s = s.copyWith(roles: roles.copyWith(extraAccomplices: roles.extraAccomplices - 1))),
+              onPlus: _rulesLocked || !roles.killerEnabled || roles.extraAccomplices >= 2
+                  ? null
+                  : () => setState(() => s = s.copyWith(roles: roles.copyWith(extraAccomplices: roles.extraAccomplices + 1))),
+            ),
+          ),
           const Divider(),
           Text('ОБСУЖДЕНИЕ И ТЕМП', style: sectionLabel(size: 13)),
           const SizedBox(height: 8),

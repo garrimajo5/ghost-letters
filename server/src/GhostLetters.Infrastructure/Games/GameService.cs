@@ -204,7 +204,8 @@ public sealed class GameService(
 
             var now = time.GetUtcNow();
             var settings = GameJson.Deserialize<LobbySettings>(game.Settings);
-            GameStore.Write(game, state, settings, now, phaseChanged: GameStore.StepKey(state) != before);
+            var solo = await GameStore.IsSoloAsync(db, state.Players.Select(p => p.Id).ToList(), ct);
+            GameStore.Write(game, state, settings, now, phaseChanged: GameStore.StepKey(state) != before, solo);
             await recorder.RecordAsync(game, state, hadResult, phaseBefore, now, ct);
 
             var seq = await db.GameEvents.Where(e => e.GameId == gameId).MaxAsync(e => (long?)e.Seq, ct) ?? 0;

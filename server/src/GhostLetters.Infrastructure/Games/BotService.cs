@@ -14,8 +14,14 @@ using Microsoft.Extensions.Logging;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
-public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags tags, ILogger<BotService> logger)
+public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags tags, ILogger<BotService> logger, TimeProvider time)
 {
+    /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
+    public static readonly TimeSpan SoloTeamWait = TimeSpan.FromMinutes(2);
+
+    /// <summary>Когда партия последний раз сдвинулась (версия) — для ожидания без таймера.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (int Version, DateTimeOffset Since)> Changed = new();
+
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>
     public async Task<int> TickAsync(CancellationToken ct)
     {
@@ -28,15 +34,25 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .ToListAsync(ct);
 
         var moves = 0;
+        var active = rows.Select(r => r.GameId).ToHashSet();
+        foreach (var gone in Changed.Keys.Where(k => !active.Contains(k)).ToList())
+        {
+            Changed.TryRemove(gone, out _);
+        }
+
         foreach (var game in rows.GroupBy(r => r.GameId))
         {
             var row = await db.Games.AsNoTracking().FirstAsync(g => g.Id == game.Key, ct);
             var state = GameStore.Read(row);
             var rng = new Random(HashCode.Combine(state.Seed, state.Version));
             var bots = game.Select(r => r.UserId).ToHashSet();
+            var now = time.GetUtcNow();
+            var since = Changed.AddOrUpdate(game.Key, _ => (state.Version, now), (_, old) => old.Version == state.Version ? old : (state.Version, now)).Since;
+            // Один человек с ботами — таймеров нет, боты ждут человека.
+            var solo = state.Players.Count - bots.Count <= 1;
             foreach (var botId in bots.OrderBy(_ => rng.Next()))
             {
-                if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, DateTimeOffset.UtcNow))
+                if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
                 {
                     continue;
                 }
@@ -54,17 +70,21 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
     /// <summary>
     /// Бот-Убийца ночью и на охоте даёт живым Сообщникам время подсказать: ждёт, пока все не подскажут
-    /// или до конца фазы не останется 30 секунд. Без таймера не ждёт.
+    /// или до конца фазы не останется 30 секунд. Без таймера — только в партии одного человека с ботами
+    /// (<paramref name="soloSince"/> — когда партия последний раз сдвинулась): ждёт до <see cref="SoloTeamWait"/>.
     /// </summary>
-    public static bool WaitsForTeam(GameState state, Guid botId, IReadOnlySet<Guid> bots, DateTimeOffset? deadline, DateTimeOffset now)
+    public static bool WaitsForTeam(GameState state, Guid botId, IReadOnlySet<Guid> bots, DateTimeOffset? deadline, DateTimeOffset now,
+        DateTimeOffset? soloSince = null)
     {
-        if (deadline is null || !GameEngine.TeamSuggestPhase(state) || state.Player(botId).Role != Role.Killer)
+        if (!GameEngine.TeamSuggestPhase(state) || state.Player(botId).Role != Role.Killer)
         {
             return false;
         }
 
         var pending = state.Players.Any(p => p.Role == Role.Accomplice && !bots.Contains(p.Id) && !state.TeamSuggestions.ContainsKey(p.Id));
-        return pending && deadline.Value - now > TimeSpan.FromSeconds(30);
+        return deadline is { } d
+            ? pending && d - now > TimeSpan.FromSeconds(30)
+            : pending && soloSince is { } since && now - since < SoloTeamWait;
     }
 
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
@@ -181,7 +201,18 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
         // Обвинения из чата (боты и люди): «Убийца — Олег», «Подозреваю, что Маша из чёрных».
         var accusations = messages.SelectMany(m => AccusationReader.Read(m.AuthorId!.Value, m.Text, names)).ToList();
-        return new BotMind(personality, history, opinions, names, accusations);
+        return new BotMind(personality, history, opinions, names, accusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))));
+    }
+
+    /// <summary>
+    /// Насколько широко каждый читает письма: в сообщениях, где автор показал своё письмо («кидал эту»),
+    /// сколько карт поля он отметил «проверял эту» — в среднем по его сообщениям.
+    /// </summary>
+    public static IReadOnlyDictionary<Guid, double> Breadth(IEnumerable<(Guid Author, IReadOnlyList<string> Notes)> messages) =>
+        messages
+            .Where(m => m.Notes.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)))
+            .GroupBy(m => m.Author)
+            .ToDictionary(g => g.Key, g => g.Average(m => (double)m.Notes.Count(n => n.StartsWith("проверял", StringComparison.Ordinal))));
     }
 
     private static CommandRequest Request(GameCommand command, int version) => new(

@@ -37,6 +37,16 @@ public class SmokeTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PreviewRoles_SixPlayersWithAccomplice()
+    {
+        var body = await _client.GetFromJsonAsync<JsonElement>("/api/v1/rules/roles?players=6&accomplices=1");
+
+        body.GetProperty("roles").EnumerateArray().Select(r => r.GetString()).Should()
+            .BeEquivalentTo(new[] { "Ghost", "Killer", "Accomplice", "Detective", "Detective", "Detective" });
+        (await _client.GetAsync("/api/v1/rules/roles?players=5&accomplices=1")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task PreviewRoles_InvalidImitator_ReturnsProblem()
     {
         var response = await _client.GetAsync("/api/v1/rules/roles?players=4&imitator=ReplaceDetective");
