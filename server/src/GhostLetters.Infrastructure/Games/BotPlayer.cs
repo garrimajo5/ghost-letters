@@ -196,7 +196,7 @@ public static class BotPlayer
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
                 trust *= 1 - PastSuspicion(o.Author) * (1 - P.Compromise);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
-                sum += o.Strength * trust;
+                sum += o.Strength * trust * mind.TrustMultiplier(o.Author);
             }
 
             return sum;
@@ -218,7 +218,7 @@ public static class BotPlayer
             {
                 var trust = Known(a.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? 0.3 * P.Compromise : 1;
                 trust *= 1 - PastSuspicion(a.Author) * (1 - P.Compromise);
-                sum += a.Strength * trust;
+                sum += a.Strength * trust * mind.TrustMultiplier(a.Author);
             }
 
             return sum * (0.05 + 0.95 * P.Compromise);
@@ -280,7 +280,7 @@ public static class BotPlayer
 
         /// <summary>Итоговое подозрение к игроку: память, чужие обвинения и странные советы в чате.</summary>
         private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) +
-            (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id);
+            (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id) - .25 * (mind?.AffinityBias(id) ?? 0);
 
         private string CardName(string card)
         {

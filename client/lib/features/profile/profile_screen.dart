@@ -9,6 +9,7 @@ import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'avatar_crop.dart';
+import '../bots/bot_relationships.dart';
 
 final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, id) => ref.read(apiProvider).profile(id));
 
@@ -120,6 +121,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 10),
           Center(child: Text(p.user.nickname.toUpperCase(), style: heading(26, spacing: 1.5))),
+          if (p.isBot) BotRelationships(botId: userId),
           const SizedBox(height: 18),
           Panel(
             padding: const EdgeInsets.symmetric(vertical: 14),

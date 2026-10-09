@@ -25,6 +25,20 @@ public sealed class BotFinalDiscussionTests
         new(Me, Role.Detective, [], []), null, 0, null, null, null, null, [], [nameof(ReadyNextRound)], null);
 
     [Fact]
+    public void AffinityChangesWhoTheBotContacts_ZeroInfluenceKeepsSeatOrder()
+    {
+        var bob = Guid.NewGuid();
+        var view = View with { Players = [.. View.Players, new(bob, 3, false, null, false, 0)] };
+        var mind = Mind with { Names = new Dictionary<Guid, string>(Mind.Names) { [bob] = "Борис" },
+            Affinities = new Dictionary<Guid, int> { [Ann] = -50, [bob] = 70 },
+            Personality = Mind.Personality with { Social = new() { Influence = 1 } } };
+        List<DiscussionLine> lines = [new(Me, "Моя версия", ["knife", "boat"], DateTimeOffset.UtcNow)];
+        BotDiscussion.Compose(view, Tags, mind, lines, new Random(1))!.Value.Text.Should().StartWith("Борис,");
+        mind = mind with { Personality = mind.Personality with { Social = new() { Influence = 0 } } };
+        BotDiscussion.Compose(view, Tags, mind, lines, new Random(1))!.Value.Text.Should().StartWith("Аня,");
+    }
+
+    [Fact]
     public void FullVersionUsesEarlyClues_AndExplainsEveryRow()
     {
         var view = View;

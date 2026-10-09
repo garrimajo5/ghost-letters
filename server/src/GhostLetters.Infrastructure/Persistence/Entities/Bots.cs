@@ -6,6 +6,8 @@ public sealed class BotProfile
     public Guid UserId { get; set; }
 
     /// <summary>Пара слов о характере — видна хосту при выборе бота в лобби.</summary>
+    public string Social { get; set; } = "{}";
+
     public string About { get; set; } = string.Empty;
 
     public double Meaning { get; set; } = 0.5;

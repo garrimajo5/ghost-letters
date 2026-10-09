@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<GameRecorder>();
         services.AddScoped<BotService>();
         services.AddScoped<Bots.BotAdminService>();
+        services.AddScoped<Bots.BotRelationshipService>();
         services.AddSingleton(sp => CardTags.FromConfiguration(
             sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<CardTags>()));
         services.AddScoped<ChatService>();

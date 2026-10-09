@@ -11,7 +11,7 @@ namespace GhostLetters.Infrastructure.Games;
 /// Переносит итоги партии в таблицы для профиля: голоса, статистику, рейтинг, лайки, ачивки.
 /// Вызывается в той же транзакции, что и ход, поэтому итоги не теряются и не дублируются.
 /// </summary>
-public sealed class GameRecorder(GhostLettersDbContext db)
+public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastructure.Bots.BotRelationshipService relationships)
 {
     public const int EloK = 32;
 
@@ -33,6 +33,7 @@ public sealed class GameRecorder(GhostLettersDbContext db)
         if (phaseBefore != Phase.Finished && state.Phase == Phase.Finished)
         {
             RecordAwards(game.Id, state, now);
+            await relationships.RecordAsync(state, now, ct);
         }
     }
 

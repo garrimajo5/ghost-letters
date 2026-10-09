@@ -53,6 +53,9 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
 
     public DbSet<RatingHistory> RatingHistoryRecords => Set<RatingHistory>();
 
+    public DbSet<BotRelationship> BotRelationships => Set<BotRelationship>();
+    public DbSet<BotRelationshipGame> BotRelationshipGames => Set<BotRelationshipGame>();
+
     public DbSet<BotProfile> BotProfiles => Set<BotProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -300,6 +303,21 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             UserFk(e, x => x.UserId);
         });
 
+        b.Entity<BotRelationship>(e =>
+        {
+            e.ToTable("bot_relationships");
+            e.HasKey(x => new { x.BotId, x.PlayerId });
+            e.Property(x => x.Components).HasColumnType("jsonb");
+            UserFk(e, x => x.BotId);
+            UserFk(e, x => x.PlayerId);
+        });
+        b.Entity<BotRelationshipGame>(e =>
+        {
+            e.ToTable("bot_relationship_games");
+            e.HasKey(x => new { x.GameId, x.BotId });
+            GameFk(e, x => x.GameId);
+            UserFk(e, x => x.BotId);
+        });
         b.Entity<BotProfile>(e =>
         {
             e.ToTable("bot_profiles");
