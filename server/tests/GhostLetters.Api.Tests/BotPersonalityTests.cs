@@ -125,6 +125,35 @@ public sealed class BotPersonalityTests
         Lies(1).Should().BeGreaterThan(45, "рисковый врёт почти всегда");
     }
 
+    [Theory]
+    [InlineData(1.0)]
+    [InlineData(-1.0)]
+    public void DistrustedCardAdviceIsIgnoredRatherThanInverted(double strength)
+    {
+        var view = View(Phase.Discussion, [], Role.Detective);
+        var baseline = Mind(new BotPersonality { Memory = 1, Compromise = 0.1 },
+            history: new Dictionary<Guid, PlayerHistory> { [Ann] = new(100, 100, 0) });
+        var withAdvice = baseline with { Opinions = [new(Ann, "knife", strength)] };
+        foreach (var seed in Enumerable.Range(0, 30))
+            BotPlayer.Plan(view, Tags, withAdvice, new Random(seed)).Should().Equal(
+                BotPlayer.Plan(view, Tags, baseline, new Random(seed)), "полностью утраченное доверие не инвертирует смысл совета");
+    }
+
+    [Fact]
+    public void DistrustedAccusationDoesNotBecomeAnAlibi()
+    {
+        var other = Guid.NewGuid();
+        var view = View(Phase.Voting, [nameof(CastVote)], Role.Detective,
+            finale: new(new(4, VoteStageKind.Killer, -1, 1, [], [Bob, other]), 5, null, [], [], [], null, null, null, [], []));
+        view = view with { Players = [.. view.Players, new(other, 4, false, null, false, 0)] };
+        var baseline = Mind(new BotPersonality { Memory = 1, Compromise = 0.1 },
+            history: new Dictionary<Guid, PlayerHistory> { [Ann] = new(100, 100, 0) });
+        var accused = baseline with { Accusations = [new(Ann, Bob, 1)] };
+        foreach (var seed in Enumerable.Range(0, 30))
+            BotPlayer.Decide(view, new Random(seed), Tags, accused).Should().Be(
+                BotPlayer.Decide(view, new Random(seed), Tags, baseline), "слова ненадёжного автора не доказывают невиновность обвинённого");
+    }
+
     [Fact]
     public void Risk_WitnessAccusesKillerByName()
     {

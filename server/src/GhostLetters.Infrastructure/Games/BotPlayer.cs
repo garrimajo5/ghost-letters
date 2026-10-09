@@ -181,11 +181,14 @@ public static class BotPlayer
         private string? NameOf(Guid id) => mind?.Names.GetValueOrDefault(id);
 
         /// <summary>
-        /// Память: насколько игрок подозрителен по прошлым партиям с этим ботом (0 — как все, до +1).
+        /// Память: насколько игрок подозрителен по прошлым партиям с этим ботом (0 — как все, до +1.5).
         /// Доля партий в команде Убийцы сверх средней (~25%), умноженная на спектр памяти.
         /// </summary>
         private double PastSuspicion(Guid id) =>
             Classic || mind!.History.GetValueOrDefault(id) is not { Games: > 0 } h ? 0 : P.Memory * Math.Max(0, h.KillerRate - 0.25) * 2;
+
+        // PastSuspicion can exceed one. Distrust may discard a statement, never reverse its meaning.
+        private double HistoryTrust(Guid id) => Math.Clamp(1 - PastSuspicion(id) * (1 - P.Compromise), 0, 1);
 
         private double PastInformed(Guid id) =>
             Classic || mind!.History.GetValueOrDefault(id) is not { Games: > 0 } h ? 0 : P.Memory * Math.Max(0, h.InformedRate - 0.15) * 2;
@@ -205,7 +208,7 @@ public static class BotPlayer
             foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id && !o.IsCheck))
             {
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
-                trust *= 1 - PastSuspicion(o.Author) * (1 - P.Compromise);
+                trust *= HistoryTrust(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 sum += o.Strength * trust * mind.TrustMultiplier(o.Author);
             }
@@ -228,7 +231,7 @@ public static class BotPlayer
             foreach (var a in mind!.AccusationList.Where(a => a.Target == id && a.Author != me.Id))
             {
                 var trust = Known(a.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? 0.3 * P.Compromise : 1;
-                trust *= 1 - PastSuspicion(a.Author) * (1 - P.Compromise);
+                trust *= HistoryTrust(a.Author);
                 sum += a.Strength * trust * mind.TrustMultiplier(a.Author);
             }
 
