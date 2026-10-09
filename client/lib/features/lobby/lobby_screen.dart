@@ -228,9 +228,26 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(children: [
                   Stack(clipBehavior: Clip.none, children: [
-                    p.isBot
-                        ? CircleAvatar(radius: 20, backgroundColor: colorFromHex(p.avatarColor), child: const Icon(Icons.smart_toy_outlined, color: Colors.white))
-                        : Avatar(nickname: p.nickname, color: p.avatarColor, photoId: p.avatarId, highlight: p.userId == me.id),
+                    Avatar(
+                      nickname: p.isBot ? p.nickname.replaceFirst(RegExp(r'^Бот\s+'), '') : p.nickname,
+                      color: p.avatarColor,
+                      photoId: p.avatarId,
+                      highlight: p.userId == me.id,
+                    ),
+                    if (p.isBot)
+                      Positioned(
+                        right: -3,
+                        bottom: -3,
+                        child: Tooltip(
+                          message: 'Бот',
+                          child: Container(
+                            key: Key('lobby-bot-badge-${p.userId}'),
+                            padding: const EdgeInsets.all(3),
+                            decoration: const BoxDecoration(color: AppColors.bg, shape: BoxShape.circle),
+                            child: const Icon(Icons.smart_toy_outlined, size: 12, color: AppColors.amber),
+                          ),
+                        ),
+                      ),
                     if (lobby.settings.ghostUserId == p.userId)
                       Positioned(left: -6, bottom: -4, child: GhostBadge(key: Key('lobby-ghost-badge-${p.userId}'))),
                   ]),
