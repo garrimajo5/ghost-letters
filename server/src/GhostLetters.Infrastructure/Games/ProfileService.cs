@@ -74,7 +74,14 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         var rows = await (
                 from s in db.Stats.AsNoTracking()
                 join u in db.Users.AsNoTracking() on s.UserId equals u.Id
-                where s.Games > 0 && (bots || !u.IsBot)
+                // Старые боты и кабинет могут содержать одноимённые аккаунты.
+                // Показываем профиль кабинета, иначе самого раннего бота (как при
+                // добавлении в лобби). Статистика разных аккаунтов не складывается.
+                where s.Games > 0 && (!u.IsBot || (bots && u.Id == db.Users
+                    .Where(b => b.IsBot && b.Nickname == u.Nickname)
+                    .OrderByDescending(b => db.BotProfiles.Any(p => p.UserId == b.Id))
+                    .ThenBy(b => b.CreatedAt).ThenBy(b => b.Id)
+                    .Select(b => b.Id).First()))
                 orderby s.Rating descending, s.Wins descending, u.Nickname
                 select new { u, s.Rating, s.Games, s.Wins })
             .Take(Math.Clamp(limit, 1, 100))

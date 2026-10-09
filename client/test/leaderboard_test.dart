@@ -27,5 +27,8 @@ void main() {
     expect(app.api.named('leaderboard').last.$2[0], isTrue);
     expect(find.text('Бот Лестрейд'), findsOneWidget);
     expect(find.textContaining('· бот'), findsOneWidget);
+    expect(find.byKey(const Key('avatar-photo-bot-portrait')), findsOneWidget);
+    expect(find.byIcon(Icons.smart_toy_outlined), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }
