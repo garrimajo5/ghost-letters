@@ -63,6 +63,10 @@ public sealed record LobbySettings
     /// <summary>ozon — автоматически подбирать поле, раунды и роли по составу. null — ручные/классические настройки.</summary>
     public string? RulesPreset { get; init; }
 
+    /// <summary>Display snapshot of the selected preset; shared with lobby members, independent of private preset storage.</summary>
+    public string? PresetName { get; init; }
+    public bool PresetModified { get; init; }
+
     public LobbySettings ResolveForPlayers(int players)
     {
         if (RulesPreset != "ozon") return this;
@@ -122,6 +126,8 @@ public sealed record LobbySettings
     /// <summary>Проверка без числа игроков: оно известно только при старте.</summary>
     public void Validate()
     {
+        if (PresetName is not null && (string.IsNullOrWhiteSpace(PresetName) || PresetName.Length > 40))
+            throw AppException.Validation("Название пресета — от 1 до 40 символов.");
         if (RulesPreset is not (null or "ozon")) throw AppException.Validation("Неизвестный пресет правил.");
         if (Tempo is not (Tempos.Live or Tempos.TurnBased))
         {
