@@ -1,0 +1,31 @@
+{
+  "sources": [
+    {
+      "file": "01C_two_voices_v5.mp3",
+      "title": "1C — Два голоса",
+      "sha256": "2cf59d972e063cb86a2ca2b007a33c25629044230c4bf8827fd8ae7de4964b29",
+      "seconds": 48.0
+    },
+    {
+      "file": "02C_far_voices_v5.mp3",
+      "title": "2C — Далёкие голоса",
+      "sha256": "191005f5d63b702adebd6f09a24ac136e16c850a5d9a36f7ce38cadd24b1dc62",
+      "seconds": 48.0
+    }
+  ],
+  "order": [
+    "1C",
+    "2C",
+    "repeat"
+  ],
+  "crossfade_seconds": 5,
+  "duration_seconds": 86.0,
+  "integrated_lufs": -23.94,
+  "true_peak_dbfs": -9.43,
+  "encoding": "Stereo MP3, 128 kbps, 44100 Hz",
+  "asset_bytes": 1377218,
+  "asset_sha256": "72b2a10fe70c670722ba2e8810676e937dd22be8246a4cac0bf3faf23f421f0a",
+  "pcm_loop_jump": 0.00045559857971966267,
+  "decoded_loop_jump": 0.0002740968484431505,
+  "tool": "client/tools/audio_review/build_game_music.py"
+}

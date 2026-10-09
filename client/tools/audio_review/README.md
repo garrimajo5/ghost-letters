@@ -10,4 +10,12 @@ Run `python create_previews.py`, then `python create_revision3.py`. The latter c
 
 ## Music loop and loudness
 
-`menu.mp3` is cut into a seamless loop: `python make_loop.py menu_source.mp3 menu_loop.wav 3.68 161.634` finds the phase near the given points where the end sounds like the start and crossfades 2.5 s there. Both music tracks are then normalized to about -23.5 LUFS so the menu and the game sound equally loud: `ffmpeg -i menu_loop.wav -af volume=-7.9dB -b:a 96k menu.mp3`, `ffmpeg -i game_old.mp3 -af volume=4.5dB -b:a 96k game.mp3`.
+`menu.mp3` is cut into a seamless loop: `python make_loop.py menu_source.mp3 menu_loop.wav 3.68 161.634` finds the phase near the given points where the end sounds like the start and crossfades 2.5 s there. The menu is normalized to about -23.5 LUFS: `ffmpeg -i menu_loop.wav -af volume=-7.9dB -b:a 96k menu.mp3`.
+
+## Approved game music: 1C and 2C
+
+The exact approved MP3 recordings are in `sources/`. They were composed by `create_variants5.py` (which uses `create_revision4.py` and `create_previews.py`); instrument requirements and licensing are as above. Synthesized vocals do not use recorded voices.
+
+Run `python build_game_music.py` with NumPy and FFmpeg installed, or pass `--ffmpeg /path/to/ffmpeg`. This rebuilds only `assets/audio/music/game.mp3` and its `game.source.json` provenance record. The 86-second circular arrangement uses 5-second equal-power crossfades in both directions. It starts five seconds into 1C; its beginning is heard during the crossfade at the end. Constant gain targets the existing quiet music level without changing the melodies. The script verifies decoding, duration, loudness, peak levels and the 2 MB size limit.
+
+The game already selects `game.mp3` on `/game/` routes. It retains the existing background pause, voice ducking, settings and fades between menu/game scenes. Do not run the historical `generate_audio.py` over the approved assets.
