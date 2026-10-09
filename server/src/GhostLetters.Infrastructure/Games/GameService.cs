@@ -22,8 +22,8 @@ public sealed record GameSnapshot(PlayerView View, DateTimeOffset? Deadline, IRe
 
 public sealed record GameEventDto(long Seq, int Version, string Type, Guid? Actor, string? Detail, DateTimeOffset At);
 
-/// <summary>Кто смотрит партию: игрок со своей проекцией или экран стола.</summary>
-public sealed record Viewer(Guid UserId, bool IsTable);
+/// <summary>Игрок со своей проекцией либо наблюдатель (зритель или экран стола).</summary>
+public sealed record Viewer(Guid UserId, bool IsObserver);
 
 /// <summary>
 /// Сервис партии: команды по очереди (блокировка на партию + версия в БД),
@@ -47,19 +47,19 @@ public sealed class GameService(
                    ?? throw AppException.NotFound("Партия не найдена.");
         if (await db.GamePlayers.AnyAsync(p => p.GameId == gameId && p.UserId == userId, ct))
         {
-            return new Viewer(userId, IsTable: false);
+            return new Viewer(userId, IsObserver: false);
         }
 
-        var table = game.LobbyId is { } lobbyId && await db.LobbyMembers.AnyAsync(
-            m => m.LobbyId == lobbyId && m.UserId == userId && m.JoinMode == JoinModes.Table, ct);
-        return table ? new Viewer(userId, IsTable: true) : throw AppException.Forbidden("Вы не участвуете в этой партии.");
+        var observer = game.LobbyId is { } lobbyId && await db.LobbyMembers.AnyAsync(
+            m => m.LobbyId == lobbyId && m.UserId == userId && (m.JoinMode == JoinModes.Table || m.JoinMode == JoinModes.Spectator), ct);
+        return observer ? new Viewer(userId, IsObserver: true) : throw AppException.Forbidden("Вы не участвуете в этой партии.");
     }
 
     public async Task<PlayerView> GetViewAsync(Guid gameId, Guid userId, CancellationToken ct)
     {
         var viewer = await RequireViewerAsync(gameId, userId, ct);
         var game = await db.Games.AsNoTracking().FirstAsync(g => g.Id == gameId, ct);
-        return GameProjection.For(GameStore.Read(game), viewer.IsTable ? null : userId);
+        return GameProjection.For(GameStore.Read(game), viewer.IsObserver ? null : userId);
     }
 
     public async Task<GameSnapshot> SnapshotAsync(Guid gameId, Guid userId, CancellationToken ct)
@@ -73,7 +73,7 @@ public sealed class GameService(
                 orderby p.Seat
                 select new RosterEntry(u.Id, u.Nickname, u.AvatarColor, p.Seat, u.AvatarMediaId))
             .ToListAsync(ct);
-        return new GameSnapshot(GameProjection.For(GameStore.Read(game), viewer.IsTable ? null : userId), game.PhaseDeadline,
+        return new GameSnapshot(GameProjection.For(GameStore.Read(game), viewer.IsObserver ? null : userId), game.PhaseDeadline,
             roster, game.LobbyId);
     }
 
@@ -84,7 +84,7 @@ public sealed class GameService(
     public async Task<IReadOnlyList<GameEventDto>> GetEventsAsync(Guid gameId, Guid userId, long after, CancellationToken ct)
     {
         var viewer = await RequireViewerAsync(gameId, userId, ct);
-        var me = viewer.IsTable ? (Guid?)null : userId;
+        var me = viewer.IsObserver ? (Guid?)null : userId;
         var rows = await db.GameEvents.AsNoTracking()
             .Where(e => e.GameId == gameId && e.Seq > after && (e.VisibleTo == null || e.VisibleTo == me))
             .OrderBy(e => e.Seq).Take(500).ToListAsync(ct);
@@ -103,9 +103,9 @@ public sealed class GameService(
 
         var command = GameJson.ParseCommand(request.Type, request.Payload);
         var viewer = await RequireViewerAsync(gameId, userId, ct);
-        if (viewer.IsTable)
+        if (viewer.IsObserver)
         {
-            throw AppException.Forbidden("Экран стола не делает ходов.");
+            throw AppException.Forbidden("Зритель не делает ходов.");
         }
 
         return await WithGameAsync<CommandResult>(gameId, ct, async (game, state) =>

@@ -16,6 +16,7 @@ import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
 import '../bots/bots_admin_screen.dart';
+import 'watch_games_sheet.dart';
 
 final myGamesProvider = FutureProvider.autoDispose<List<MyGame>>((ref) => ref.read(apiProvider).myGames(status: 'active'));
 
@@ -29,7 +30,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _code = TextEditingController();
-  bool _asTable = false;
+  String _joinMode = 'player';
   Timer? _refresh;
   late final AppLifecycleListener _lifecycle;
 
@@ -55,10 +56,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (lobby != null && mounted) context.go('/lobby/${lobby.id}');
   }
 
-  Future<void> _join() async {
-    final code = _code.text.trim().toUpperCase();
+  Future<void> _join({String? watchCode}) async {
+    final code = (watchCode ?? _code.text).trim().toUpperCase();
     if (code.length != 6) return;
-    final lobby = await runAction(context, () => ref.read(apiProvider).joinLobby(code, table: _asTable));
+    final lobby = await runAction(context, () => ref.read(apiProvider).joinLobby(code,
+        table: watchCode == null && _joinMode == 'table', spectator: watchCode != null || _joinMode == 'spectator'));
     if (lobby == null || !mounted) return;
     if (lobby.currentGameId != null && lobby.status == 'in_game') {
       context.go('/game/${lobby.currentGameId}');
@@ -171,12 +173,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: const Text('ВОЙТИ'),
                 ),
               ]),
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _asTable,
-                onChanged: (v) => setState(() => _asTable = v ?? false),
-                title: const Text('Как экран стола'),
-                subtitle: const Text('Общий экран для игры за одним столом — без тайной информации'),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: const Key('join-mode'),
+                initialValue: _joinMode,
+                decoration: const InputDecoration(labelText: 'Как подключиться'),
+                items: const [
+                  DropdownMenuItem(value: 'player', child: Text('Игрок')),
+                  DropdownMenuItem(value: 'spectator', child: Text('Зритель')),
+                  DropdownMenuItem(value: 'table', child: Text('Экран стола')),
+                ],
+                onChanged: (v) => setState(() => _joinMode = v ?? 'player'),
+              ),
+              if (_joinMode != 'player')
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('Только публичная информация и общий чат. Можно войти и во время партии.',
+                      style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                ),
+              TextButton.icon(
+                key: const Key('watch-games'),
+                onPressed: () async {
+                  final code = await showModalBottomSheet<String>(
+                    context: context, isScrollControlled: true,
+                    builder: (_) => const WatchGamesSheet(),
+                  );
+                  if (code != null && mounted) await _join(watchCode: code);
+                },
+                icon: const Icon(Icons.visibility_outlined),
+                label: const Text('Смотреть идущие партии'),
               ),
             ];
             final gamesList = <Widget>[

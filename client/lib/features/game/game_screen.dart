@@ -477,7 +477,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final width = MediaQuery.sizeOf(context).width;
     // Телефон боком: игроки колонкой слева, поле по высоте экрана, ход партии и рука справа.
     final landscape = v.me != null && v.phase != 'RoleReveal' && isCompactLandscape(context);
-    final wide = v.me != null && width >= wideFrom && !(v.phase == 'RoleReveal') && !landscape;
+    final wide = width >= wideFrom && !(v.phase == 'RoleReveal') && !landscape;
     chatDocked = wide && width >= dockChatFrom;
     return Scaffold(
       backgroundColor: night ? AppColors.night : AppColors.bg,
@@ -688,8 +688,13 @@ class _Header extends StatelessWidget {
         PopupMenuButton<String>(
           tooltip: 'Меню партии',
           icon: const Icon(Icons.more_horiz, color: AppColors.muted),
-          onSelected: (value) {
+          onSelected: (value) async {
             switch (value) {
+              case 'leave-viewing':
+                await runAction(context, () async {
+                  await screen.ref.read(apiProvider).leaveLobby(screen.lobbyId!);
+                  if (context.mounted) context.go('/');
+                });
               case 'home':
                 context.go('/');
               case 'audio':
@@ -701,6 +706,8 @@ class _Header extends StatelessWidget {
             }
           },
           itemBuilder: (_) => [
+            if (v.me == null && screen.lobbyId != null)
+              const PopupMenuItem(value: 'leave-viewing', child: Text('Завершить просмотр')),
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),

@@ -57,9 +57,9 @@ public sealed class ChatService(
         }
 
         var viewer = await games.RequireViewerAsync(gameId, userId, ct);
-        if (viewer.IsTable)
+        if (viewer.IsObserver)
         {
-            throw AppException.Forbidden("Экран стола не пишет в чат.");
+            throw AppException.Forbidden("Зритель не пишет в чат.");
         }
 
         var state = await LoadStateAsync(gameId, ct);
@@ -129,7 +129,7 @@ public sealed class ChatService(
     {
         var viewer = await games.RequireViewerAsync(gameId, userId, ct);
         var state = await LoadStateAsync(gameId, ct);
-        var channels = viewer.IsTable ? new List<string> { ChatChannels.Public } : VisibleChannels(state, state.Player(userId));
+        var channels = viewer.IsObserver ? new List<string> { ChatChannels.Public } : VisibleChannels(state, state.Player(userId));
         if (channel is not null)
         {
             channels = channels.Where(c => c == channel).ToList();
@@ -251,7 +251,7 @@ public sealed class ChatService(
         {
             var viewer = await games.RequireViewerAsync(gameId, userId, ct);
             var state = await LoadStateAsync(gameId, ct);
-            return viewer.IsTable ? [ChatChannels.Public] : VisibleChannels(state, state.Player(userId));
+            return viewer.IsObserver ? [ChatChannels.Public] : VisibleChannels(state, state.Player(userId));
         }
         catch (AppException)
         {

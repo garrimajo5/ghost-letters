@@ -207,6 +207,21 @@ class LobbySettings {
 
 // ---------- Лобби ----------
 
+class WatchableGame {
+  const WatchableGame({required this.code, required this.title, required this.gameId, required this.phase, required this.players});
+
+  factory WatchableGame.fromJson(Json j) => WatchableGame(
+        code: j['code'] as String, title: j['title'] as String, gameId: j['gameId'] as String,
+        phase: j['phase'] as String, players: j['players'] as int,
+      );
+
+  final String code;
+  final String title;
+  final String gameId;
+  final String phase;
+  final int players;
+}
+
 class LobbyMember {
   const LobbyMember({
     required this.userId,
@@ -240,6 +255,8 @@ class LobbyMember {
   final bool isBot;
 
   bool get isTable => mode == 'table';
+  bool get isSpectator => mode == 'spectator';
+  bool get isPlayer => mode == 'player';
 }
 
 class Lobby {
@@ -274,7 +291,7 @@ class Lobby {
   final String? currentGameId;
   final List<LobbyMember> members;
 
-  List<LobbyMember> get players => members.where((m) => !m.isTable).toList();
+  List<LobbyMember> get players => members.where((m) => m.isPlayer).toList();
 }
 
 // ---------- Партия ----------

@@ -31,11 +31,13 @@ public sealed class PlayHub(LobbyService lobbies, GameService games, ChatService
 
     public Task UnsubscribeLobby(Guid lobbyId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, LobbyGroup(lobbyId));
 
-    /// <summary>Подписка на партию. Игрок получает свою проекцию через Clients.User, экран стола — через группу.</summary>
+    public Task UnsubscribeGame(Guid gameId) => Groups.RemoveFromGroupAsync(Context.ConnectionId, TableGroup(gameId));
+
+    /// <summary>Игрок получает личную проекцию через Clients.User; зритель и экран стола — публичную через группу.</summary>
     public Task<GameSnapshot> SubscribeGame(Guid gameId) => Guard(async () =>
     {
         var viewer = await games.RequireViewerAsync(gameId, UserId, Context.ConnectionAborted);
-        if (viewer.IsTable)
+        if (viewer.IsObserver)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, TableGroup(gameId));
         }
