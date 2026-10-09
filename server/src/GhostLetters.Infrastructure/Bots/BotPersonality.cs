@@ -152,7 +152,8 @@ public sealed record BotMind(
     IReadOnlyDictionary<Guid, string> Names,
     IReadOnlyList<Accusation>? Accusations = null,
     IReadOnlyDictionary<Guid, double>? Breadth = null,
-    IReadOnlyDictionary<Guid, int>? Affinities = null)
+    IReadOnlyDictionary<Guid, int>? Affinities = null,
+    IReadOnlyDictionary<Guid, GhostLetters.Domain.Roles.Role>? RoleClaims = null)
 {
     public double AffinityBias(Guid id) => Math.Clamp(Affinities?.GetValueOrDefault(id) ?? 0, -100, 100) / 100.0 * Personality.Social.Influence;
 
