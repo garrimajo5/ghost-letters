@@ -144,4 +144,36 @@ public sealed class BotStrictnessTests
 
     private static int? Brainless(PlayerView view, BotPersonality p) =>
         ((CastVote)BotPlayer.Decide(view, new Random(2), Tags, Mind(p))!).Column;
+
+    [Fact]
+    public void EqualSimilarity_StrictReaderAndGhostAgreeOnTheOneCheckedCard()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["coin"] = ["coin", "money", "silver"],
+            ["ring"] = ["money", "ring"],
+            ["wallet"] = ["money", "wallet"],
+            ["boat"] = ["water"],
+        });
+        var personality = new BotPersonality { Strictness = 1, Meaning = 1, Shape = 0, Color = 0 };
+        var reader = View(Phase.Discussion, [], Role.Detective,
+            letters: [new MyLetterView(2, "coin", true)], hints: [new HintGroupView(2, ["coin"])]);
+        var said = BotPlayer.Say(reader, new Random(3), tags, Mind(personality))!.Value;
+        var checkedCards = said.Cards.Where((_, i) => said.Notes[i] == "проверял эту");
+        checkedCards.Should().Equal("ring");
+        BotPlayer.Evidence(reader, tags, Mind(personality), "ring").Should().BeGreaterThan(0);
+        BotPlayer.Evidence(reader, tags, Mind(personality), "wallet").Should().Be(0);
+
+        // Wallet ties with ring, but lies beyond a one-card reader's actual choice.
+        var ghost = View(Phase.GhostPick, [nameof(RevealHints)], Role.Ghost,
+            truth: [1, 1], mailbox: ["coin"]);
+        var narrow = new Dictionary<Guid, double> { [Ann] = 1 };
+        var wide = new Dictionary<Guid, double> { [Ann] = 3 };
+        // A cautious Ghost hides a weak clue that points to the wrong tied card.
+        var cautious = personality with { Risk = 0, Variability = 0 };
+        var forNarrow = (RevealHints)BotPlayer.Decide(ghost, new Random(1), tags, Mind(cautious, narrow))!;
+        var forWide = (RevealHints)BotPlayer.Decide(ghost, new Random(1), tags, Mind(cautious, wide))!;
+        forNarrow.CardIds.Should().BeEmpty();
+        forWide.CardIds.Should().Equal("coin");
+    }
 }

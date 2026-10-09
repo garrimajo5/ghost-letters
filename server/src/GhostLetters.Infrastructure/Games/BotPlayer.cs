@@ -111,8 +111,13 @@ public static class BotPlayer
         /// <summary>Место карты среди карт поля по похожести на письмо (0 — самая похожая).</summary>
         private int Rank(string letter, string card)
         {
-            var s = Sim(letter, card);
-            return view.Board.SelectMany(r => r.Cards).Count(c => c != card && c != letter && Sim(letter, c) > s);
+            // Match Checked's stable ordering, including ties. Otherwise a strict
+            // reader checks the first card but the Ghost expects every tied card.
+            return view.Board.SelectMany(r => r.Cards)
+                .Where(c => c != letter)
+                .OrderByDescending(c => Sim(letter, c))
+                .TakeWhile(c => c != card)
+                .Count();
         }
 
         /// <summary>

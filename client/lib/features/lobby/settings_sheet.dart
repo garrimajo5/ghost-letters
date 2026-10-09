@@ -108,23 +108,26 @@ class _SettingsSheetState extends State<SettingsSheet> {
             value: roles.useBlackmailer,
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(roles: roles.copyWith(useBlackmailer: v))),
           ),
-          ListTile(
+          _RoleSettingTile(
             title: const Text('Подражатель (с 5 игроков)'),
-            trailing: DropdownButton<ImitatorMode>(
+            controlWidth: 220,
+            control: DropdownButton<ImitatorMode>(
+              isExpanded: true,
               value: roles.imitator,
               onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(roles: roles.copyWith(imitator: v))),
               items: const [
                 DropdownMenuItem(value: ImitatorMode.none, child: Text('Нет')),
-                DropdownMenuItem(value: ImitatorMode.replaceDetective, child: Text('Вместо детектива')),
-                DropdownMenuItem(value: ImitatorMode.replaceAccomplice, child: Text('Вместо сообщника')),
+                DropdownMenuItem(value: ImitatorMode.replaceDetective, child: Text('Вместо детектива', overflow: TextOverflow.ellipsis)),
+                DropdownMenuItem(value: ImitatorMode.replaceAccomplice, child: Text('Вместо сообщника', overflow: TextOverflow.ellipsis)),
               ],
             ),
           ),
-          ListTile(
+          _RoleSettingTile(
             key: const Key('extra-accomplices'),
             title: Text('Сообщники вместо детективов', style: TextStyle(color: _rulesLocked || !roles.killerEnabled ? AppColors.dim : null)),
             subtitle: const Text('Например, 6 игроков: Призрак, Убийца, Сообщник и 3 Детектива. Команда Убийцы должна быть меньше остальных.'),
-            trailing: StepperControl(
+            controlWidth: 144,
+            control: StepperControl(
               value: roles.extraAccomplices,
               enabled: !_rulesLocked && roles.killerEnabled,
               valueKey: const Key('extra-accomplices-value'),
@@ -193,6 +196,34 @@ class _SettingsSheetState extends State<SettingsSheet> {
       ),
     );
   }
+}
+
+class _RoleSettingTile extends StatelessWidget {
+  const _RoleSettingTile({super.key, required this.title, this.subtitle, required this.control, required this.controlWidth});
+
+  final Widget title;
+  final Widget? subtitle;
+  final Widget control;
+  final double controlWidth;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, constraints) {
+        if (constraints.maxWidth < 400) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              DefaultTextStyle.merge(style: Theme.of(context).textTheme.bodyLarge, child: title),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                DefaultTextStyle.merge(style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.muted), child: subtitle!),
+              ],
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: control),
+            ]),
+          );
+        }
+        return ListTile(title: title, subtitle: subtitle, trailing: SizedBox(width: controlWidth, child: control));
+      });
 }
 
 class _Stepper extends StatelessWidget {

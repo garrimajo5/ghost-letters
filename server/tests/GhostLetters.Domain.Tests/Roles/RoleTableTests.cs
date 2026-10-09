@@ -177,6 +177,17 @@ public class RoleTableTests
         roles.Should().Contain(Role.Imitator).And.NotContain(Role.Accomplice);
     }
 
+    [Theory]
+    [InlineData(2, true, -1)]
+    [InlineData(3, true, 3)]
+    [InlineData(6, false, -1)]
+    [InlineData(6, false, 3)]
+    public void ExtraAccomplices_InvalidCountIsRejectedInCooperativeToo(int players, bool killer, int extra)
+    {
+        var act = () => RoleTable.Compose(players, new RoleOptions(KillerEnabled: killer, ExtraAccomplices: extra));
+        act.Should().Throw<ArgumentException>();
+    }
+
     [Fact]
     public void Teams_AreClassifiedCorrectly()
     {

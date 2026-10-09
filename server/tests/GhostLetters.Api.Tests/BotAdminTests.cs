@@ -104,6 +104,24 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Strictness_OldClientDefaultsToMiddle_AndUpdatesArePersisted()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        MakeAdmin(admin);
+        // The old request has no strictness field.
+        var created = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Холмс", spectra = Spectra() });
+        created.GetProperty("spectra").GetProperty("strictness").GetDouble().Should().Be(0.5);
+        var id = created.Id("id");
+        var changed = BotSpectra.From(new BotPersonality { Strictness = 0.95 });
+        await admin.PutAsync($"/api/v1/admin/bots/{id}", new { nickname = "Холмс", spectra = changed, enabled = true });
+
+        // Read through a fresh request, so this verifies the saved database value.
+        var savedList = await admin.GetAsync("/api/v1/admin/bots");
+        savedList.EnumerateArray().Single(b => b.Id("id") == id)
+            .GetProperty("spectra").GetProperty("strictness").GetDouble().Should().Be(0.95);
+    }
+
+    [Fact]
     public async Task Admin_SetsAndRemovesBotAvatar_OthersCannot()
     {
         var admin = await TestPlayer.LoginAsync(_factory, "Админ");

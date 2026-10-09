@@ -24,13 +24,14 @@ public static class RoleTable
                 $"Игроков должно быть от {MinPlayers} до {MaxPlayers}.");
         }
 
+        var extra = ExtraAccomplices(options);
         if (!options.KillerEnabled || players < MinCompetitivePlayers)
         {
             return Build(players, accomplices: 0, witness: false, expert: false, blackmailer: false,
                 imitator: false, killer: false);
         }
 
-        var accomplices = (players >= 10 ? 2 : players >= 7 ? 1 : 0) + ExtraAccomplices(options);
+        var accomplices = (players >= 10 ? 2 : players >= 7 ? 1 : 0) + extra;
         var witness = options.UseWitness && players >= 7;
         var expert = options.UseExpert && players >= 10;
         var blackmailer = options.UseBlackmailer && players >= MinBlackmailerPlayers;

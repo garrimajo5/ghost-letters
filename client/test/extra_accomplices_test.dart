@@ -6,9 +6,15 @@ import 'package:ghost_letters/models/models.dart';
 
 /// Настройки лобби: Сообщник вместо Детектива (6 игроков: Призрак, Убийца, Сообщник, 3 Детектива).
 void main() {
-  Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps) async {
-    tester.view.physicalSize = const Size(1200, 4000);
-    tester.view.devicePixelRatio = 1.5;
+  Future<void> reveal(WidgetTester tester, Finder target, {double delta = 200}) async {
+    await tester.scrollUntilVisible(target, delta, scrollable: find.byType(Scrollable).last);
+    await tester.ensureVisible(target);
+    await tester.pumpAndSettle();
+  }
+
+  Future<LobbySettings?> edit(WidgetTester tester, LobbySettings initial, Future<void> Function() steps, {double width = 800}) async {
+    tester.view.physicalSize = Size(width, 915);
+    tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     LobbySettings? result;
     await tester.pumpWidget(MaterialApp(
@@ -27,7 +33,7 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     await steps();
-    await tester.ensureVisible(find.text('Сохранить'));
+    await reveal(tester, find.text('Сохранить'));
     await tester.tap(find.text('Сохранить'));
     await tester.pumpAndSettle();
     return result;
@@ -37,7 +43,7 @@ void main() {
 
   testWidgets('хост добавляет Сообщника вместо Детектива', (tester) async {
     final result = await edit(tester, const LobbySettings(), () async {
-      await tester.ensureVisible(find.byKey(const Key('extra-accomplices')));
+      await reveal(tester, find.byKey(const Key('extra-accomplices')));
       expect(value(tester), '0');
       await tester.tap(find.byKey(const Key('extra-accomplices-plus')));
       await tester.pump();
@@ -49,7 +55,7 @@ void main() {
 
   testWidgets('не больше двух; без Убийцы — выключено', (tester) async {
     await edit(tester, const LobbySettings(), () async {
-      await tester.ensureVisible(find.byKey(const Key('extra-accomplices')));
+      await reveal(tester, find.byKey(const Key('extra-accomplices')));
       await tester.tap(find.byKey(const Key('extra-accomplices-plus')));
       await tester.pump();
       await tester.tap(find.byKey(const Key('extra-accomplices-plus')));
@@ -57,6 +63,7 @@ void main() {
       expect(value(tester), '2');
       expect(tester.widget<IconButton>(find.byKey(const Key('extra-accomplices-plus'))).onPressed, isNull);
 
+      await reveal(tester, find.widgetWithText(SwitchListTile, 'Убийца'), delta: -200);
       await tester.tap(find.widgetWithText(SwitchListTile, 'Убийца'));
       await tester.pump();
       expect(tester.widget<IconButton>(find.byKey(const Key('extra-accomplices-minus'))).onPressed, isNull);
@@ -67,4 +74,17 @@ void main() {
     expect(RoleOptions.fromJson(const {'killerEnabled': true}).extraAccomplices, 0);
     expect(RoleOptions.fromJson(const RoleOptions(extraAccomplices: 2).toJson()).extraAccomplices, 2);
   });
+
+  for (final width in [320.0, 1000.0]) {
+    testWidgets('счётчик Сообщников доступен при ширине $width', (tester) async {
+      final result = await edit(tester, const LobbySettings(), () async {
+        await reveal(tester, find.byKey(const Key('extra-accomplices')));
+        await tester.tap(find.byKey(const Key('extra-accomplices-plus')));
+        await tester.pumpAndSettle();
+        expect(value(tester), '1');
+        expect(tester.takeException(), isNull);
+      }, width: width);
+      expect(result?.roles.extraAccomplices, 1);
+    });
+  }
 }
