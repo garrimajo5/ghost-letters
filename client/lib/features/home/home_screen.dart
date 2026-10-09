@@ -133,8 +133,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ));
                       if (confirmed != true || !context.mounted) return;
                       await runAction(context, () async {
-                        await ref.read(apiProvider).logout();
-                        await ref.read(realtimeProvider).disconnect();
+                        final api = ref.read(apiProvider);
+                        final realtime = ref.read(realtimeProvider);
+                        await api.logout();
+                        await realtime.disconnect();
                       });
                     }
                   },

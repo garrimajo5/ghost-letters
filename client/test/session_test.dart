@@ -112,4 +112,26 @@ void main() {
 
     expect(tester.widget<TextField>(find.byKey(const Key('nickname'))).controller!.text, watson.nickname);
   });
+
+  test('выход отзывает refresh на сервере и забывает идентификатор регистрации', () async {
+    final server = FakeServer({'/auth/logout': (o) => (204, null)});
+    final container = await containerWith({
+      'session': jsonEncode({'user': host.toJson(), 'accessToken': 'a', 'refreshToken': 'r', 'server': AppConfig.apiUrl}),
+      'device_id': 'old-device',
+    }, server);
+    await container.read(apiProvider).logout();
+    expect(server.requests.single.data, {'refreshToken': 'r'});
+    expect(container.read(sessionProvider).isSignedIn, isFalse);
+    expect(container.read(sessionProvider.notifier).deviceId, isNot('old-device'));
+  });
+
+  test('при недоступном сервере выход не притворяется успешным и сохраняет сессию', () async {
+    final server = FakeServer({'/auth/logout': (o) => (503, null)});
+    final container = await containerWith({
+      'session': jsonEncode({'user': host.toJson(), 'accessToken': 'a', 'refreshToken': 'r', 'server': AppConfig.apiUrl}),
+    }, server);
+    await expectLater(container.read(apiProvider).logout(), throwsA(isA<ApiError>()));
+    expect(container.read(sessionProvider).isSignedIn, isTrue);
+    expect(container.read(sessionProvider).refreshToken, 'r');
+  });
 }
