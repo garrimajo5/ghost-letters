@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/models/models.dart';
+import 'package:ghost_letters/widgets/common.dart';
 
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 const bot = User(id: 'b1', nickname: 'Бот Пуаро', avatarColor: '#5C7C99');
 
-Lobby lobbyWithBot() => Lobby.fromJson({
+Lobby lobbyWithBot({String? avatarId}) => Lobby.fromJson({
       'id': 'l1',
       'code': 'ABC234',
       'title': 'Стол Призрачный',
@@ -15,10 +16,32 @@ Lobby lobbyWithBot() => Lobby.fromJson({
       'status': 'open',
       'settings': const LobbySettings().toJson(),
       'currentGameId': null,
-      'members': [member(host), member(bot, seat: 1, ready: true, bot: true)],
+      'members': [member(host), {...member(bot, seat: 1, ready: true, bot: true), 'avatarId': avatarId}],
     });
 
 void main() {
+  testWidgets('аватарка бота и метка видны в узком лобби', (tester) async {
+    tester.view.physicalSize = const Size(360, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final app = await TestApp.create(user: host);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    app.realtime.lobby = lobbyWithBot(avatarId: 'bot-portrait');
+    app.go('/lobby/l1');
+    await tester.pumpAndSettle();
+
+    final portrait = find.byWidgetPredicate((w) => w is Avatar && w.photoId == 'bot-portrait');
+    expect(portrait, findsOneWidget);
+    expect(tester.widget<Avatar>(portrait).nickname, 'Пуаро');
+    expect(find.byKey(const Key('avatar-photo-bot-portrait')), findsOneWidget);
+    expect(find.byKey(const Key('lobby-bot-badge-b1')), findsOneWidget);
+    expect(find.byKey(Key('lobby-bot-badge-${host.id}')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('хост добавляет бота — бот в списке и сразу готов', (tester) async {
     final app = await TestApp.create(user: host);
     addTearDown(app.container.dispose);
