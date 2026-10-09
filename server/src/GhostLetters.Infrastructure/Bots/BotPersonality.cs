@@ -36,6 +36,9 @@ public sealed record BotPersonality
     /// <summary>0 — только общий образ; 1 — мелкие детали важнее общего образа.</summary>
     public double Details { get; init; } = 0.25;
 
+    /// <summary>0 — только основные смыслы (вес 1); 1 — учитывает и второстепенные, с их весами.</summary>
+    public double SecondaryMeanings { get; init; } = 0.35;
+
     /// <summary>Изменчивость: 0 — всегда одинаковый, 1 — от партии к партии другой.</summary>
     public double Variability { get; init; } = 0.2;
 
@@ -68,6 +71,7 @@ public sealed record BotPersonality
         Compromise = Clamp(Compromise),
         Strictness = Clamp(Strictness),
         Details = Clamp(Details),
+        SecondaryMeanings = Clamp(SecondaryMeanings),
         Variability = Clamp(Variability),
         Social = Social.Clamped(),
     };
@@ -100,6 +104,7 @@ public sealed record BotPersonality
             Compromise = Drift(p.Compromise),
             Strictness = Drift(p.Strictness),
             Details = p.Details is 0 or 1 ? p.Details : Drift(p.Details),
+            SecondaryMeanings = p.SecondaryMeanings is 0 or 1 ? p.SecondaryMeanings : Drift(p.SecondaryMeanings),
         };
     }
 
@@ -210,11 +215,11 @@ public static class BotPresets
     public static readonly IReadOnlyList<(string Name, string Color, string About, BotPersonality P)> All =
     [
         ("Пуаро", "#5C7C99", "Смысл прежде всего, упрям, мало врёт, письмом проверяет одну карту.",
-            new BotPersonality { Meaning = 0.8, Shape = 0.1, Color = 0.1, Negative = 0.7, Memory = 0.4, Risk = 0.25, Compromise = 0.2, Strictness = 0.85, Variability = 0.1 }),
+            new BotPersonality { SecondaryMeanings = 0.15, Meaning = 0.8, Shape = 0.1, Color = 0.1, Negative = 0.7, Memory = 0.4, Risk = 0.25, Compromise = 0.2, Strictness = 0.85, Variability = 0.1 }),
         ("Марпл", "#B370D9", "Помнит всех и всё, верит людям.",
-            new BotPersonality { Meaning = 0.5, Shape = 0.2, Color = 0.3, Negative = 0.5, Memory = 0.9, Risk = 0.3, Compromise = 0.7, Strictness = 0.45, Variability = 0.15 }),
+            new BotPersonality { SecondaryMeanings = 0.65, Meaning = 0.5, Shape = 0.2, Color = 0.3, Negative = 0.5, Memory = 0.9, Risk = 0.3, Compromise = 0.7, Strictness = 0.45, Variability = 0.15 }),
         ("Коломбо", "#E57F4F", "Смотрит на форму, обвиняет в лоб, рискует, видит связь во всём.",
-            new BotPersonality { Meaning = 0.3, Shape = 0.5, Color = 0.2, Negative = 0.4, Memory = 0.5, Risk = 0.85, Compromise = 0.4, Strictness = 0.15, Variability = 0.3 }),
+            new BotPersonality { SecondaryMeanings = 0.85, Meaning = 0.3, Shape = 0.5, Color = 0.2, Negative = 0.4, Memory = 0.5, Risk = 0.85, Compromise = 0.4, Strictness = 0.15, Variability = 0.3 }),
         ("Ватсон", "#4AA3DF", "Слушает большинство, не делает выводов из исчезнувшего.",
             new BotPersonality { Meaning = 0.45, Shape = 0.25, Color = 0.3, Negative = 0.15, Memory = 0.2, Risk = 0.35, Compromise = 0.9, Strictness = 0.4, Variability = 0.2 }),
         ("Фандорин", "#F2A541", "Видит цвета, холодный расчёт, строг к ассоциациям, каждый раз немного другой.",

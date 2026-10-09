@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
+import '../models/admin_cards.dart';
 import 'config.dart';
 import 'session.dart';
 
@@ -249,6 +250,11 @@ class Api {
 
   /// Админ ли я (кабинет ботов).
   Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
+
+  Future<AdminCardPage> adminCards({String query = '', String setCode = '', bool? active, int page = 0}) async =>
+      AdminCardPage.fromJson(await get('/admin/cards', query: {'query': query, 'setCode': setCode, if (active != null) 'active': active, 'page': page}) as Json);
+
+  Future<AdminCard> saveCard(AdminCard card) async => AdminCard.fromJson(await put('/admin/cards/${card.id}', card.toJson()) as Json);
 
   Future<List<BotInfo>> adminBots() async =>
       ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();

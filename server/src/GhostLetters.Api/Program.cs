@@ -99,6 +99,7 @@ api.MapLobbies();
 api.MapGames();
 api.MapSocial();
 api.MapBots();
+api.MapCards();
 app.MapHub<PlayHub>(PlayHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
 await app.Services.MigrateDatabaseAsync(app.Configuration);

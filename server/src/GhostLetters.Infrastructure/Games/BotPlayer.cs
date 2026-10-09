@@ -100,7 +100,7 @@ public static class BotPlayer
         private BotPersonality P => mind?.Personality ?? BotPersonality.Default;
 
         /// <summary>Похожесть карт глазами этого бота: внимание к смыслу, форме и цвету.</summary>
-        private double Sim(string a, string b) => Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details);
+        private double Sim(string a, string b) => Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details, P.SecondaryMeanings);
 
         /// <summary>Насколько «не открыли моё письмо» отталкивает от похожих карт.</summary>
         private double NegativeWeight => Classic ? 0.6 : 1.6 * P.Negative;
@@ -291,7 +291,7 @@ public static class BotPlayer
             return $"{category} {c + 1}";
         }
 
-        private string Connection(string from, string to) => tags.Explain(from, to, P.Attention, Classic ? 0 : P.Details);
+        private string Connection(string from, string to) => tags.Explain(from, to, P.Attention, Classic ? 0 : P.Details, P.SecondaryMeanings);
 
         private string BehaviourReason(Guid id) => ChatContrarian(id) > 0
             ? "его версия хуже объясняет открытые подсказки, чем соседние карты"

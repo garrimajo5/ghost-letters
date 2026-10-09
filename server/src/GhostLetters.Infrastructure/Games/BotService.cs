@@ -14,8 +14,9 @@ using Microsoft.Extensions.Logging;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
-public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags tags, ILogger<BotService> logger, TimeProvider time)
+public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time)
 {
+    private CardTags tags = baselineTags;
     /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
     public static readonly TimeSpan SoloTeamWait = TimeSpan.FromMinutes(2);
 
@@ -39,6 +40,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         {
             Changed.TryRemove(gone, out _);
         }
+
+        if (rows.Count == 0) return 0;
+        tags = await tagStore.LoadAsync(ct);
 
         foreach (var game in rows.GroupBy(r => r.GameId))
         {

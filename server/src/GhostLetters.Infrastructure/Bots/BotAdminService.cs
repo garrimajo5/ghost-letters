@@ -20,14 +20,16 @@ public sealed record BotSpectra(
     double Variability,
     double Strictness = 0.5,
     double Details = 0.25,
-    BotSocialTraits? Social = null)
+    BotSocialTraits? Social = null,
+    double SecondaryMeanings = 0.35)
 {
     public static BotSpectra From(BotPersonality p) =>
-        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness, p.Details, p.Social);
+        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness, p.Details, p.Social, p.SecondaryMeanings);
 
     public BotPersonality ToPersonality() => new BotPersonality
     {
         Social = Social ?? new(),
+        SecondaryMeanings = SecondaryMeanings,
         Meaning = Meaning, Shape = Shape, Color = Color, Negative = Negative,
         Memory = Memory, Risk = Risk, Compromise = Compromise, Variability = Variability, Strictness = Strictness, Details = Details,
     }.Clamped();
@@ -64,7 +66,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
     {
         if (!IsAdmin(userId))
         {
-            throw AppException.Forbidden("Кабинет ботов — только для администратора.");
+            throw AppException.Forbidden("Кабинет доступен только администратору.");
         }
     }
 
@@ -170,7 +172,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
     {
         Social = p.Social == "{}" ? BotSocialTraits.ForBot(p.UserId) : JsonSerializer.Deserialize<BotSocialTraits>(p.Social) ?? BotSocialTraits.ForBot(p.UserId),
         Meaning = p.Meaning, Shape = p.Shape, Color = p.Color, Negative = p.Negative,
-        Memory = p.Memory, Risk = p.Risk, Compromise = p.Compromise, Variability = p.Variability, Strictness = p.Strictness, Details = p.Details,
+        Memory = p.Memory, Risk = p.Risk, Compromise = p.Compromise, Variability = p.Variability, Strictness = p.Strictness, Details = p.Details, SecondaryMeanings = p.SecondaryMeanings,
     }.Clamped();
 
     private static void Apply(BotProfile profile, SaveBotRequest request, DateTimeOffset now)
@@ -187,6 +189,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
         profile.Variability = p.Variability;
         profile.Strictness = p.Strictness;
         profile.Details = p.Details;
+        profile.SecondaryMeanings = p.SecondaryMeanings;
         var about = (request.About ?? string.Empty).Trim();
         profile.About = about.Length > 300 ? about[..300] : about;
         profile.Enabled = request.Enabled;

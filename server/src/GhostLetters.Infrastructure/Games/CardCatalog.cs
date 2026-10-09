@@ -66,9 +66,10 @@ public sealed class CardCatalog(GhostLettersDbContext db, IConfiguration configu
                         ?? throw new InvalidOperationException($"Набора {set.Code} нет в каталоге.");
             var keys = set.Cards.Select(c => c.Id).Distinct().ToList();
             var known = await db.Cards.Where(c => keys.Contains(c.ImageKey)).ToListAsync(ct);
-            foreach (var card in known.Where(c => c.SetId != setId))
+            foreach (var card in known.Where(c => c.SetId != setId && !c.SetManuallyAssigned))
             {
                 card.SetId = setId;
+                card.MetadataVersion++;
                 moved++;
             }
 
@@ -82,7 +83,7 @@ public sealed class CardCatalog(GhostLettersDbContext db, IConfiguration configu
 
     private async Task<int> AddMissingAsync(Guid setId, IReadOnlyList<string> keys, CancellationToken ct)
     {
-        var existing = (await db.Cards.Where(c => c.SetId == setId).Select(c => c.ImageKey).ToListAsync(ct)).ToHashSet();
+        var existing = (await db.Cards.Where(c => keys.Contains(c.ImageKey)).Select(c => c.ImageKey).ToListAsync(ct)).ToHashSet();
         var fresh = keys.Where(k => !existing.Contains(k)).Distinct().ToList();
         db.Cards.AddRange(fresh.Select(k => new Card { Id = Guid.NewGuid(), SetId = setId, ImageKey = k }));
         await db.SaveChangesAsync(ct);

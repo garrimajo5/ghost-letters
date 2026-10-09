@@ -39,6 +39,36 @@ public sealed class CardCatalogTests(PostgresFixture postgres)
         (await catalog.DeckAsync(LobbySettings.AllCardSets, default)).Should().HaveCount(4);
     }
 
+    [Fact]
+    public async Task RestartPreservesManualSetAndInactiveState_WithoutSeedDuplicates()
+    {
+        await using var db = await FreshDatabaseAsync();
+        var dir = Directory.CreateTempSubdirectory();
+        var path = Path.Combine(dir.FullName, "cards.json");
+        try
+        {
+            await File.WriteAllTextAsync(path, """
+                {"version":1,"sets":[{"code":"original","cards":[{"id":"orig_0001","file":"a"}]}]}
+                """);
+            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Cards:SeedOriginalCount"] = "1" }).Build();
+            var catalog = new CardCatalog(db, config, NullLogger<CardCatalog>.Instance);
+            await catalog.ImportManifestAsync(path, default);
+            var card = await db.Cards.SingleAsync();
+            card.SetId = await db.CardSets.Where(s => s.Code == "mirror").Select(s => s.Id).SingleAsync();
+            card.SetManuallyAssigned = true;
+            card.IsActive = false;
+            await db.SaveChangesAsync();
+            db.ChangeTracker.Clear();
+            await catalog.ImportManifestAsync(path, default);
+            await catalog.EnsureSeededAsync(default);
+            (await db.Cards.CountAsync()).Should().Be(1);
+            var saved = await db.Cards.AsNoTracking().SingleAsync();
+            saved.SetId.Should().Be(card.SetId);
+            saved.IsActive.Should().BeFalse();
+        }
+        finally { dir.Delete(true); }
+    }
+
     private async Task<GhostLettersDbContext> FreshDatabaseAsync()
     {
         var name = "catalog_" + Guid.NewGuid().ToString("N");

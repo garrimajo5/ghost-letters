@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'api.dart';
 
 /// Набор карт из assets/cards/cards.json (тот же манифест, что импортирует сервер).
 class CardSetInfo {
@@ -26,5 +27,12 @@ List<CardSetInfo> parseCardCatalog(String raw) {
 
 /// Каталог всех карт: для выбора «любой карты из набора».
 final cardCatalogProvider = FutureProvider<List<CardSetInfo>>(
-  (ref) async => parseCardCatalog(await rootBundle.loadString('assets/cards/cards.json')),
+  (ref) async {
+    try {
+      final sets = await ref.read(apiProvider).get('/cards/sets') as List;
+      return sets.map((s) => CardSetInfo(code: s['code'] as String, title: s['title'] as String, cards: (s['cards'] as List).cast<String>())).toList();
+    } on ApiError {
+      return parseCardCatalog(await rootBundle.loadString('assets/cards/cards.json'));
+    }
+  },
 );

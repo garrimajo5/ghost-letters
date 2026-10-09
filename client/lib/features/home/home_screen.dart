@@ -118,6 +118,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       context.push('/history');
                     } else if (v == 'bots') {
                       context.push('/admin/bots');
+                    } else if (v == 'cards') {
+                      context.push('/admin/cards');
                     } else if (v == 'leaderboard') {
                       context.push('/leaderboard');
                     } else if (v == 'profile') {
@@ -143,6 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'presets', child: Text('Мои пресеты настроек')),
                     if (isAdmin) const PopupMenuItem(value: 'bots', child: Text('Боты (кабинет)')),
+                    if (isAdmin) const PopupMenuItem(value: 'cards', child: Text('Карточки (кабинет)')),
                     const PopupMenuItem(value: 'history', child: Text('История партий')),
                     const PopupMenuItem(value: 'leaderboard', child: Text('Рейтинг игроков')),
                     const PopupMenuItem(value: 'rules', child: Text('Правила')),
