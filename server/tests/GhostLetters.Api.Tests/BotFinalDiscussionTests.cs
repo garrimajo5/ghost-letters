@@ -96,6 +96,65 @@ public sealed class BotFinalDiscussionTests
     }
 
     [Fact]
+    public void TextRowTakesPriorityOverWholeVersionAttachment()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var question = new DiscussionLine(Ann, "Бот Я, что думаешь о месте?", ["rose", "cat"], now.AddSeconds(1));
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Версия", [], now), question], new Random(1))!.Value;
+        line.Text.Should().Contain("Сейчас выберу место 1").And.Contain("не согласен");
+        line.Cards[0].Should().Be("boat");
+    }
+
+    [Theory]
+    [InlineData("Почему по мотиву так?", Category.Motive, "мотив")]
+    [InlineData("Что думаешь о месте?", Category.Place, "место")]
+    [InlineData("Какая карта места убедительнее?", Category.Place, "место")]
+    [InlineData("По способу что выбираешь?", Category.Method, "способ")]
+    [InlineData("Что со способом?", Category.Method, "способ")]
+    [InlineData("Какую карту тайны поддерживаешь?", Category.Secret, "тайна")]
+    [InlineData("С ТАЙНОЙ определился?", Category.Secret, "тайна")]
+    public void CardlessQuestionsUnderstandRowInflections(string text, Category category, string label)
+    {
+        var view = View with { Board = [new(Category.Motive, ["knife", "rose"]), new(category, ["boat", "cat"])] };
+        if (category == Category.Motive) view = view with { Board = [new(Category.Place, ["knife", "rose"]), new(category, ["boat", "cat"])] };
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(view, Tags, Mind,
+            [new(Me, "Версия", [], now), new(Ann, "Бот Я, " + text, [], now.AddSeconds(1))], new Random(1))!.Value;
+        line.Text.Should().Contain($"Сейчас выберу {label} 1");
+        line.Cards[0].Should().Be("boat", "выделяем ответ по запрошенному ряду, а не первый ряд");
+    }
+
+    [Theory]
+    [InlineData("Что думаешь?", false)]
+    [InlineData("По мотиву и месту согласен?", false)]
+    [InlineData("Что думаешь?", true)]
+    [InlineData("Ты уже определился с местностью?", false)]
+    public void AmbiguousQuestionGetsOneClarificationWithoutInventedCard(string question, bool attachVersion)
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> messages = [new(Me, "Версия", [], now),
+            new(Ann, "Бот Я, " + question, attachVersion ? ["rose", "cat"] : [], now.AddSeconds(1))];
+        var line = BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))!.Value;
+        line.Text.Should().Contain("уточню").And.NotContain("мотив 1");
+        line.Cards.Should().BeEmpty();
+        messages.Add(new(Me, line.Text, line.Cards, now.AddSeconds(2)));
+        BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))?.Text.Should().NotContain("уточню");
+        messages.Add(new(Ann, "Бот Я, про место?", [], now.AddSeconds(3)));
+        BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))!.Value.Text.Should().Contain("Сейчас выберу место 1");
+    }
+
+    [Fact]
+    public void WholeVersionQuestionGetsEveryRowInsteadOfArbitraryFirstOne()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Версия", [], now), new(Ann, "Бот Я, какая у тебя версия?", [], now.AddSeconds(1))], new Random(1))!.Value;
+        line.Text.Should().Contain("по всей версии").And.Contain("мотив 1").And.Contain("место 1");
+        line.Cards.Should().Equal("knife", "boat");
+    }
+
+    [Fact]
     public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber()
     {
         var now = DateTimeOffset.UtcNow;

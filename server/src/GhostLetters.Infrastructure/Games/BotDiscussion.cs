@@ -1,6 +1,7 @@
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Bots;
+using System.Text.RegularExpressions;
 
 namespace GhostLetters.Infrastructure.Games;
 
@@ -11,6 +12,28 @@ public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<stri
 public static class BotDiscussion
 {
     public const int MaxMessages = 6;
+
+    private static readonly IReadOnlyDictionary<Category, Regex> RowWords = new Dictionary<Category, Regex>
+    {
+        [Category.Motive] = Words(@"\bмотив(?:а|у|ом|е|ы|ов|ам|ами|ах)?\b"),
+        [Category.Place] = Words(@"\bмест(?:о|а|у|ом|е)\b"),
+        [Category.Method] = Words(@"\bспособ(?:а|у|ом|е|ы|ов|ам|ами|ах)?\b"),
+        [Category.Secret] = Words(@"\bтайн(?:а|ы|е|у|ой|ою|ам|ами|ах)?\b"),
+    };
+
+    private static Regex Words(string pattern) => new(pattern,
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
+
+    /// <summary>Explicit row words take precedence over attached cards, which may contain the whole version.</summary>
+    private static int? FocusRow(PlayerView view, DiscussionLine message)
+    {
+        var mentioned = Enumerable.Range(0, view.Board.Count)
+            .Where(r => RowWords.TryGetValue(view.Board[r].Category, out var words) && words.IsMatch(message.Text)).ToList();
+        if (mentioned.Count > 0) return mentioned.Count == 1 ? mentioned[0] : null;
+        var attached = Enumerable.Range(0, view.Board.Count)
+            .Where(r => message.Cards.Any(view.Board[r].Cards.Contains)).ToList();
+        return attached.Count == 1 ? attached[0] : null;
+    }
 
     public static bool ShouldWait(Guid botId, IReadOnlyList<DiscussionLine> messages, DateTimeOffset now)
     {
@@ -66,7 +89,7 @@ public static class BotDiscussion
         var question = messages.LastOrDefault(m => m.Author != me.Id && m.Text.Contains('?') &&
             (Addressed(m) || (m.Text.Contains("Кто", StringComparison.OrdinalIgnoreCase) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase))) &&
             !own.Any(o => o.At > m.At && o.Text.StartsWith(Name(m.Author) + ",", StringComparison.OrdinalIgnoreCase) &&
-                o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase)));
+                (o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) || o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase))));
         var answer = fresh.LastOrDefault(m => Addressed(m) && !m.Text.Contains('?'));
         var incoming = question ?? answer;
         if (incoming is not null)
@@ -74,14 +97,22 @@ public static class BotDiscussion
             if (question is not null && question.Cards.Count == 0 &&
                 (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase)))
                 return Line($"{Name(incoming.Author)}, отвечаю про подозрения.{suspicion}");
-            var row = incoming.Cards.Select(c => Enumerable.Range(0, view.Board.Count)
-                .FirstOrDefault(r => view.Board[r].Cards.Contains(c), -1)).FirstOrDefault(r => r >= 0, 0);
+            var focus = FocusRow(view, incoming);
+            if (focus is null)
+            {
+                if (question is null || incoming.Text.Contains("верси", StringComparison.OrdinalIgnoreCase) ||
+                    incoming.Text.Contains("всем ряд", StringComparison.OrdinalIgnoreCase))
+                    return Line(Summary($"{Name(incoming.Author)}, отвечаю по всей версии; вот мой выбор и основания:"));
+                // Do not invent the subject of a vague question or attach an arbitrary first-row card.
+                return ($"{Name(incoming.Author)}, уточню: ты спрашиваешь про какой ряд? Назови его или приложи карту — сравним улики.", [], []);
+            }
+            var row = focus.Value;
             var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
             var comparison = offered is null ? "вот мой текущий выбор" : offered == view.Board[row].Cards[plan[row]] ? "здесь наши версии совпадают" : "здесь я пока не согласен";
             var text = $"{Name(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
                 $"Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
                 "Остальные ряды моей версии — на прикреплённых картах." + suspicion;
-            return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Name(incoming.Author)}, сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
+            return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Name(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
         }
         if (!own.Any(m => m.Text.Contains('?')))
         {
