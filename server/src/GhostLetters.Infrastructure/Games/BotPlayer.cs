@@ -93,6 +93,11 @@ public static class BotPlayer
 
     private sealed class Brain(PlayerView view, MeView me, Random rng, CardTags tags, BotMind? mind)
     {
+        // One immutable role projection per decision: never share scores between players or turns.
+        private readonly Dictionary<(string, string), double> _similarities = new();
+        private readonly Dictionary<string, double> _evidence = new();
+        private readonly Dictionary<string, Dictionary<string, int>> _ranks = new();
+
         // ---------- Характер ----------
         // Без характера (mind == null) бот играет «классически» — как до появления индивидуальностей.
         private bool Classic => mind is null;
@@ -100,7 +105,11 @@ public static class BotPlayer
         private BotPersonality P => mind?.Personality ?? BotPersonality.Default;
 
         /// <summary>Похожесть карт глазами этого бота: внимание к смыслу, форме и цвету.</summary>
-        private double Sim(string a, string b) => Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details, P.SecondaryMeanings);
+        private double Sim(string a, string b)
+        {
+            if (_similarities.TryGetValue((a, b), out var score)) return score;
+            return _similarities[(a, b)] = Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details, P.SecondaryMeanings);
+        }
 
         /// <summary>Насколько «не открыли моё письмо» отталкивает от похожих карт.</summary>
         private double NegativeWeight => Classic ? 0.6 : 1.6 * P.Negative;
@@ -125,11 +134,13 @@ public static class BotPlayer
         {
             // Match Checked's stable ordering, including ties. Otherwise a strict
             // reader checks the first card but the Ghost expects every tied card.
-            return view.Board.SelectMany(r => r.Cards)
-                .Where(c => c != letter)
-                .OrderByDescending(c => Sim(letter, c))
-                .TakeWhile(c => c != card)
-                .Count();
+            if (!_ranks.TryGetValue(letter, out var ranks))
+            {
+                ranks = view.Board.SelectMany(r => r.Cards).Where(c => c != letter)
+                    .OrderByDescending(c => Sim(letter, c)).Select((c, i) => (c, i)).ToDictionary(x => x.c, x => x.i);
+                _ranks[letter] = ranks;
+            }
+            return ranks.GetValueOrDefault(card, ranks.Count);
         }
 
         /// <summary>
@@ -347,9 +358,10 @@ public static class BotPlayer
         /// <summary>Насколько подсказки указывают на карту: сходство с открытыми письмами минус сходство с моими исчезнувшими.</summary>
         public double Evidence(string card)
         {
+            if (_evidence.TryGetValue(card, out var score)) return score;
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Sim(l.CardId, card));
-            return hints - NegativeWeight * vanished;
+            return _evidence[card] = hints - NegativeWeight * vanished;
         }
 
         /// <summary>Лучший столбец ряда по подсказкам (среди кандидатов, если заданы).</summary>

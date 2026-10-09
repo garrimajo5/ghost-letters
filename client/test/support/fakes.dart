@@ -24,6 +24,21 @@ typedef Call = (String, List<Object?>);
 class FakeApi extends Api {
   FakeApi(super.ref);
 
+  List<Json> sandboxList = [];
+  Json sandboxResult = {};
+  Json sandboxReplayResult = {};
+  Json sandboxStepResult = {};
+  @override
+  Future<List<Json>> sandboxRuns() async => _record('sandboxRuns', [], () => sandboxList);
+  @override
+  Future<Json> runSandbox(String scenario, int seed) async => _record('runSandbox', [scenario, seed], () => sandboxResult);
+  @override
+  Future<Json> sandboxReplay(String id) async => _record('sandboxReplay', [id], () => sandboxReplayResult);
+  @override
+  Future<Json> sandboxStep(String id, int step, {String? viewer, bool reveal = false}) async => _record('sandboxStep', [id, step, viewer, reveal], () => sandboxStepResult);
+  @override
+  Future<void> deleteSandbox(String id) async { _record('deleteSandbox', [id], () => true); }
+
   final calls = <Call>[];
   List<AdminCard> cards = [];
   final cardSets = const [AdminCardSet('original', 'Оригинальный'), AdminCardSet('mirror', 'Зеркало истины')];

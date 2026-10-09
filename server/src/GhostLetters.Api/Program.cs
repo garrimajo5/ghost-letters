@@ -63,6 +63,7 @@ app.UseRateLimiter();
 
 var api = app.MapGroup("/api/v1");
 
+api.MapSandbox();
 api.MapGet("/version", () => Results.Ok(new { name = ApplicationInfo.Name, api = ApplicationInfo.ApiVersion }))
     .WithName("GetVersion");
 

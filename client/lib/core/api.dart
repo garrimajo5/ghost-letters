@@ -249,6 +249,13 @@ class Api {
       ((await get('/bots')) as List).map((e) => BotCard.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
   /// Админ ли я (кабинет ботов).
+  Future<List<Json>> sandboxRuns() async => ((await get('/admin/sandbox')) as List).cast<Json>();
+  Future<Json> runSandbox(String scenario, int seed) async => await _call(() => _dio.post<dynamic>('/admin/sandbox', data: {'scenario': scenario, 'seed': seed}, options: Options(receiveTimeout: const Duration(seconds: 45)))) as Json;
+  Future<Json> sandboxReplay(String id) async => await get('/admin/sandbox/$id') as Json;
+  Future<Json> sandboxStep(String id, int step, {String? viewer, bool reveal = false}) async =>
+      await get('/admin/sandbox/$id/steps/$step', query: {if (viewer != null) 'viewer': viewer, 'reveal': reveal}) as Json;
+  Future<void> deleteSandbox(String id) async => _call(() => _dio.delete<dynamic>('/admin/sandbox/$id'));
+
   Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
 
   Future<AdminCardPage> adminCards({String query = '', String setCode = '', bool? active, int page = 0}) async =>
