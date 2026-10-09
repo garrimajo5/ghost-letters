@@ -175,6 +175,15 @@ public sealed record Accusation(Guid Author, Guid Target, double Strength);
 /// <summary>Разбор обвинений в тексте чата — и бота, и человека: имя игрока рядом со словами-подозрениями.</summary>
 public static class AccusationReader
 {
+    private static readonly System.Text.RegularExpressions.Regex Clauses = new(
+        @"[.!?\n;]+|,\s*(?:а|но|зато)\s+",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
+    private static readonly System.Text.RegularExpressions.Regex Denial = new(
+        @"\bне\s+(?:считаю|думаю|полагаю|уверен|уверена|подозреваю)\b|" +
+        @"\bне\s+верю\s*,?\s*что\b|" +
+        @"\bне\s+(?:убийц\p{L}*|сообщник\p{L}*|подозрительн\p{L}*|(?:из\s+)?ч[её]рн\p{L}*)\b",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
+
     public static IReadOnlyList<Accusation> Read(Guid author, string? text, IReadOnlyDictionary<Guid, string> names)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -184,12 +193,14 @@ public static class AccusationReader
 
         var found = new List<Accusation>();
         // Обращение к союзнику в предыдущем предложении не является обвинением.
-        foreach (var sentence in System.Text.RegularExpressions.Regex.Split(text.ToLowerInvariant(), @"[.!?\n]+"))
+        foreach (var sentence in Clauses.Split(text.ToLowerInvariant()))
         {
             double strength = sentence.Contains("убийц") ? 1
                 : sentence.Contains("чёрн") || sentence.Contains("черн") || sentence.Contains("сообщник") || sentence.Contains("подозр") ? 0.6
                 : sentence.Contains("присмотр") || sentence.Contains("не верю") ? 0.4 : 0;
-            if (strength == 0 || sentence.Contains("не убийц") || sentence.Contains("не подозреваю")) continue;
+            // Negation belongs to its clause, not to a separate accusation after "но"/"а".
+            // "Не верю Бобу" is distrust, while "не верю, что Боб убийца" denies the accusation.
+            if (strength == 0 || Denial.IsMatch(sentence)) continue;
             foreach (var (id, name) in names)
             {
                 if (id == author) continue;
