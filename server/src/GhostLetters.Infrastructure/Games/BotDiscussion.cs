@@ -24,11 +24,14 @@ public static class BotDiscussion
     private static Regex Words(string pattern) => new(pattern,
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking);
 
+    private static List<int> MentionedRows(PlayerView view, DiscussionLine message) =>
+        Enumerable.Range(0, view.Board.Count)
+            .Where(r => RowWords.TryGetValue(view.Board[r].Category, out var words) && words.IsMatch(message.Text)).ToList();
+
     /// <summary>Explicit row words take precedence over attached cards, which may contain the whole version.</summary>
     private static int? FocusRow(PlayerView view, DiscussionLine message)
     {
-        var mentioned = Enumerable.Range(0, view.Board.Count)
-            .Where(r => RowWords.TryGetValue(view.Board[r].Category, out var words) && words.IsMatch(message.Text)).ToList();
+        var mentioned = MentionedRows(view, message);
         if (mentioned.Count > 0) return mentioned.Count == 1 ? mentioned[0] : null;
         var attached = Enumerable.Range(0, view.Board.Count)
             .Where(r => message.Cards.Any(view.Board[r].Cards.Contains)).ToList();
@@ -102,6 +105,25 @@ public static class BotDiscussion
             if (question is not null && question.Cards.Count == 0 &&
                 (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase)))
                 return Line($"{Name(incoming.Author)}, отвечаю про подозрения.{suspicion}");
+            var mentioned = MentionedRows(view, incoming);
+            if (question is not null && mentioned.Count > 1)
+            {
+                // A direct question may name several rows. Answer each once, without
+                // turning a whole-version attachment into a request about unrelated rows.
+                var prefix = $"{Name(incoming.Author)}, отвечаю по названным рядам:";
+                var lines = mentioned.Select(row =>
+                {
+                    var chosen = view.Board[row].Cards[plan[row]];
+                    var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
+                    var agreement = offered is null ? "мой выбор" : offered == chosen ? "наши версии совпадают" : "пока не согласен";
+                    return $"• {Where(row, plan[row])} — {agreement}. {Argument(row)}.";
+                });
+                var response = prefix + "\n" + string.Join("\n", lines);
+                if (response.Length > ChatService.MaxTextLength)
+                    response = prefix + "\n" + string.Join("; ", mentioned.Select(row => Where(row, plan[row])));
+                var selected = mentioned.Select(row => view.Board[row].Cards[plan[row]]).Take(ChatService.MaxCards).ToList();
+                return (response, selected, selected.Select(_ => "думаю, эта").ToList());
+            }
             var focus = FocusRow(view, incoming);
             if (focus is null)
             {
