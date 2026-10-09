@@ -345,7 +345,7 @@ class GhostBadge extends StatelessWidget {
           boxShadow: const [BoxShadow(color: Color(0x66A9D4EA), blurRadius: 4)],
         ),
         padding: EdgeInsets.all(size * 0.14),
-        child: CustomPaint(painter: const GhostPainter()),
+        child: const CustomPaint(painter: GhostPainter()),
       );
 }
 

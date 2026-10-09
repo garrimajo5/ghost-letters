@@ -1,32 +1,47 @@
-# Audio licenses
+# Audio sources and licenses
 
-All files below are original procedural compositions and synthesized effects created for **Ghost Letters** (2026). No external recordings, samples, soundfonts or melodies were used.
+Reviewed effects replace the first synthesized palette; their original preview filenames and SHA-256 hashes are listed in [reviewed-sfx.json](reviewed-sfx.json). The menu uses the Suno track supplied by the project owner.
 
-To the extent copyright or related rights exist, these audio files and their generation source are dedicated to the public domain under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/). Commercial use, modification, redistribution and use in applications are permitted without attribution.
+## Current music
 
-Source for every file: [generate_audio.py](../../tools/generate_audio.py) ([repository source](https://github.com/garrimajo5/ghost-letters/blob/feat/client-audio/client/tools/generate_audio.py)). Reproduce with Python, numpy and imageio-ffmpeg as documented in that source.
-
-| File | Description | License |
+| File | Source | License |
 | --- | --- | --- |
-| music/menu.mp3 | 48 s, candlelit mystery / music-box motif and soft drone | CC0-1.0 |
-| music/game.mp3 | 48 s, restrained tension / low drone, sparse bells, quiet clock | CC0-1.0 |
-| sfx/phase.mp3 | Phase change | CC0-1.0 |
-| sfx/yourTurn.mp3 | Your turn | CC0-1.0 |
-| sfx/letterSent.mp3 | Your letter submitted | CC0-1.0 |
-| sfx/reveal.mp3 | Hints or letter revealed | CC0-1.0 |
-| sfx/vanish.mp3 | Letter vanished | CC0-1.0 |
-| sfx/chat.mp3 | Unread live chat | CC0-1.0 |
-| sfx/tick.mp3 | Last ten seconds | CC0-1.0 |
-| sfx/timeUp.mp3 | Discussion timer ended | CC0-1.0 |
-| sfx/vote.mp3 | Your vote accepted | CC0-1.0 |
-| sfx/correct.mp3 | Correct row result | CC0-1.0 |
-| sfx/incorrect.mp3 | Incorrect row result | CC0-1.0 |
-| sfx/victory.mp3 | You won | CC0-1.0 |
-| sfx/defeat.mp3 | You lost | CC0-1.0 |
+| music/menu.mp3 | [Untitled by garrimajo5 on Suno](https://suno.com/s/45xEtZbI4p8SxEA4), owner-supplied Untitled.wav | Owner-supplied for this project; subject to applicable Suno terms, not CC0 |
+| music/game.mp3 | Original 48-second game composition; [initial generator](../../tools/generate_audio.py) | CC0-1.0 |
 
-Music uses periodic source waveforms with wrapped reverb tails and MP3 gapless metadata; no silence is intentionally inserted at the loop boundary. Music is stereo 96 kbps, effects mono 64 kbps. Each music track is below 2 MB, each effect below 100 KB.
+The owner explicitly requested inclusion of the menu track and supplied the WAV. No public-domain or blanket commercial-use license is claimed for it. Rights under the creator's Suno plan have not been independently verified. This track is an explicit owner-selected exception to the original CC0 asset selection. The complete 179.8935-second recording is encoded as stereo MP3 at 80 kbps (1,799,620 bytes), without trimming. It repeats through the existing music player; the recording has not been edited into a seamless musical loop. Source and asset hashes are in [menu.source.json](music/menu.source.json).
 
-## Controls
+## Reviewed action effects
 
-Open **Звук и музыка** from the home screen speaker button or the game menu (available to every player). Music and effects have independent switches and volume sliders, saved only on this device. Defaults: music on at 18%, effects on at 45%. Playback unlocks on the first pointer or keyboard gesture, pauses in the background, and music ducks during voice playback/recording.
+Sources: [preview score v2](../../tools/audio_review/create_previews.py) and [revised victory score v3](../../tools/audio_review/create_revision3.py). These are original compositions, not downloaded songs.
+
+| File | Event / sound | License |
+| --- | --- | --- |
+| sfx/phase.mp3 | Phase change; soft chime | CC0-1.0, original synthesis |
+| sfx/yourTurn.mp3 | Your turn; rising piano | Original composition, GeneralUser GS instruments |
+| sfx/letterSent.mp3 | Own letter submitted; paper and click | CC0-1.0, original synthesis |
+| sfx/reveal.mp3 | Hints or letter revealed; airy chime | CC0-1.0, original synthesis |
+| sfx/vanish.mp3 | Letter vanished; fading air | CC0-1.0, original synthesis |
+| sfx/chat.mp3 | New live message with chat closed | CC0-1.0, original synthesis |
+| sfx/tick.mp3 | Last ten seconds of discussion | CC0-1.0, original synthesis |
+| sfx/timeUp.mp3 | Discussion deadline reached | CC0-1.0, original synthesis |
+| sfx/vote.mp3 | Own vote accepted | CC0-1.0, original synthesis |
+| sfx/correct.mp3 | Correct row; rising piano | Original composition, GeneralUser GS instruments |
+| sfx/incorrect.mp3 | Incorrect row; falling piano | Original composition, GeneralUser GS instruments |
+| sfx/victory.mp3 | Cheerful major-key victory; piano and pizzicato | Original composition, GeneralUser GS instruments |
+| sfx/defeat.mp3 | Defeat; piano and strings | Original composition, GeneralUser GS instruments |
+
+CC0 items and their original synthesis code are dedicated, to the extent any rights exist, under [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
+
+Sample-based effects use GeneralUser GS 2.0.3 by S. Christian Collins. [Author/source](https://github.com/mrbumpy409/GeneralUser-GS), [full instrument license](GENERALUSER-GS-LICENSE.txt). GeneralUser GS License v2.0 permits private and commercial music creation. The rendered effects may be used in this application; the SoundFont bank is not included. Its license remains applicable to the instrument samples; those samples are not re-licensed as CC0.
+
+[Reproduction instructions](../../tools/audio_review/README.md). The historical generator creates the initial palette, so it should not overwrite these reviewed effects.
+
+Effects are stereo MP3 at 128 kbps, all below 100 KB. Music is stereo MP3, each below 2 MB. Settings default to music at 18% and effects at 45%.
+
+## Controls and behavior
+
+Open **Звук и музыка** with the home screen speaker button or the game menu (available to every player). Music and effects have independent switches and volume sliders, saved only on this device. Playback unlocks on the first pointer/keyboard gesture, music pauses in the background and ducks during voice playback or recording.
+
+Game cues use differences between live snapshots, with one prioritized cue per change. Initial loads, duplicate snapshots and reconnect baselines remain silent.
 
