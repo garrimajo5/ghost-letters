@@ -7,13 +7,14 @@ import '../../models/models.dart';
 import '../../widgets/common.dart';
 
 class PresetsSheet extends ConsumerStatefulWidget {
-  const PresetsSheet({super.key, required this.current, this.players});
+  const PresetsSheet({super.key, required this.current, this.players, this.applyImmediately = false});
   final LobbySettings current;
   final int? players;
+  final bool applyImmediately;
 
-  static Future<LobbySettings?> show(BuildContext context, LobbySettings current, int? players) =>
+  static Future<LobbySettings?> show(BuildContext context, LobbySettings current, int? players, {bool applyImmediately = false}) =>
       showModalBottomSheet<LobbySettings>(context: context, isScrollControlled: true, useSafeArea: true,
-          builder: (_) => PresetsSheet(current: current, players: players));
+          builder: (_) => PresetsSheet(current: current, players: players, applyImmediately: applyImmediately));
 
   @override
   ConsumerState<PresetsSheet> createState() => _PresetsSheetState();
@@ -64,14 +65,16 @@ class _PresetsSheetState extends ConsumerState<PresetsSheet> {
   Widget build(BuildContext context) => SizedBox(
     height: MediaQuery.sizeOf(context).height * 0.8,
     child: Column(children: [
-      const ListTile(title: Text('Пресеты настроек'), subtitle: Text('Личные пресеты сохраняются в вашем аккаунте. Применение не меняет лобби до нажатия «Сохранить».')),
+      ListTile(title: const Text('Пресеты настроек'), subtitle: Text(widget.applyImmediately
+          ? 'Выберите пресет — настройки лобби сразу изменятся для всех игроков.'
+          : 'Личные пресеты сохраняются в вашем аккаунте. Применение не меняет лобби до нажатия «Сохранить».')),
       Expanded(child: ListView(children: [
         ListTile(key: const Key('preset-classic'), title: const Text('Классика'),
           subtitle: const Text('Исходные правила игры: 5 карт в ряду, раунды и роли по стандартной таблице.'),
-          onTap: _busy ? null : () => _apply(const LobbySettings())),
+          onTap: _busy ? null : () => _apply(const LobbySettings(presetName: 'Классика'))),
         ListTile(key: const Key('preset-ozon'), title: const Text('Озон'),
           subtitle: const Text('3–11 игроков · 4 ряда · поле, раунды и роли по таблице Озона. На четверых Убийцы может не быть.'),
-          onTap: _busy ? null : () => _apply(const LobbySettings(rulesPreset: 'ozon'))),
+          onTap: _busy ? null : () => _apply(const LobbySettings(rulesPreset: 'ozon', presetName: 'Озон'))),
         const Divider(),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: OutlinedButton.icon(
           key: const Key('save-new-preset'), onPressed: _busy ? null : () => _save(),
@@ -82,7 +85,7 @@ class _PresetsSheetState extends ConsumerState<PresetsSheet> {
           if (snapshot.data!.isEmpty) return const ListTile(title: Text('Личных пресетов пока нет'));
           return Column(children: [for (final preset in snapshot.data!) ListTile(
             key: Key('preset-${preset.id}'), title: Text(preset.name),
-            subtitle: const Text('Личный пресет'), onTap: _busy ? null : () => _apply(preset.settings),
+            subtitle: const Text('Личный пресет'), onTap: _busy ? null : () => _apply(preset.settings.copyWith(presetName: preset.name)),
             trailing: PopupMenuButton<String>(enabled: !_busy, onSelected: (action) {
               if (action == 'delete') {
                 _delete(preset);

@@ -115,6 +115,8 @@ class RoleOptions {
 class LobbySettings {
   const LobbySettings({
     this.rulesPreset,
+    this.presetName,
+    this.presetModified = false,
     this.useSecretRow = true,
     this.columns = 5,
     this.rounds,
@@ -131,6 +133,8 @@ class LobbySettings {
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
         rulesPreset: j['rulesPreset'] as String?,
+        presetName: j['presetName'] as String?,
+        presetModified: j['presetModified'] as bool? ?? false,
         useSecretRow: j['useSecretRow'] as bool? ?? true,
         columns: (j['columns'] as num?)?.toInt() ?? 5,
         rounds: (j['rounds'] as num?)?.toInt(),
@@ -149,6 +153,25 @@ class LobbySettings {
 
   final bool useSecretRow;
   final String? rulesPreset;
+  final String? presetName;
+  final bool presetModified;
+
+  String get presetLabel {
+    final name = presetName ?? (rulesPreset == 'ozon' ? 'Озон' : _isClassic ? 'Классика' : 'Свои настройки');
+    return presetModified ? '$name · изменён' : name;
+  }
+
+  bool get _isClassic {
+    const defaults = LobbySettings();
+    const defaultTimers = {'roleReveal': 30, 'night': 60, 'firstClue': 60, 'mailbox': 60,
+      'ghostPick': 90, 'refill': 30, 'speakerTurn': 60, 'freeDiscussion': 180,
+      'voting': 60, 'voteTie': 60, 'finale': 90, 'awards': 90};
+    return useSecretRow && columns == 5 && rounds == null && handSize == 5 && ranked &&
+        discussion == 'Radio' && tempo == 'live' && turnHours == 24 &&
+        roles.toJson().entries.every((e) => defaults.roles.toJson()[e.key] == e.value) &&
+        cardSets.toSet().length == 4 && cardSets.every(defaults.cardSets.contains) &&
+        timers.entries.every((e) => defaultTimers[e.key] == e.value);
+  }
 
   /// Шаблон остаётся адаптивным до старта; сервер повторяет расчёт по итоговому составу.
   LobbySettings resolveForPlayers(int players) {
@@ -180,6 +203,7 @@ class LobbySettings {
   int timer(String key, int fallback) => timers[key] ?? fallback;
 
   LobbySettings copyWith({
+    String? presetName,
     bool? useSecretRow,
     int? columns,
     int? rounds,
@@ -195,6 +219,10 @@ class LobbySettings {
     bool? ranked,
   }) =>
       LobbySettings(
+        presetName: presetName ?? this.presetName ?? (rulesPreset == 'ozon' ? 'Озон' : _isClassic ? 'Классика' : null),
+        presetModified: presetName != null ? false : presetModified || useSecretRow != null || columns != null ||
+            rounds != null || clearRounds || roles != null || discussion != null || tempo != null ||
+            turnHours != null || timers != null || cardSets != null || ranked != null,
         // Ручная правка правил превращает шаблон в обычные настройки. Темп,
         // таймеры, наборы, рейтинг и назначение Призрака не меняют таблицу Озона.
         rulesPreset: useSecretRow != null || columns != null || rounds != null || clearRounds || roles != null ? null : rulesPreset,
@@ -214,6 +242,8 @@ class LobbySettings {
 
   Json toJson() => {
         'rulesPreset': rulesPreset,
+        'presetName': presetName,
+        'presetModified': presetModified,
         'useSecretRow': useSecretRow,
         'columns': columns,
         'rounds': rounds,

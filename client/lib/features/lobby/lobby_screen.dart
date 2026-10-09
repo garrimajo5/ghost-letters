@@ -15,6 +15,7 @@ import '../../widgets/common.dart';
 import '../../widgets/connection_banner.dart';
 import '../game/game_state.dart';
 import 'settings_sheet.dart';
+import 'presets_sheet.dart';
 
 /// Лобби: код для друзей, участники, готовность, настройки и старт (хост).
 class LobbyScreen extends ConsumerStatefulWidget {
@@ -68,6 +69,12 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Future<void> _apply(Future<Lobby> Function(Api api) action) async {
     final lobby = await runAction(context, () => action(ref.read(apiProvider)));
     if (lobby != null && mounted) setState(() => _lobby = lobby);
+  }
+
+  Future<void> _openPresets(Lobby lobby, int players) async {
+    final chosen = await PresetsSheet.show(context, lobby.settings, players, applyImmediately: true);
+    if (chosen == null || !mounted) return;
+    await _apply((api) => api.saveSettings(lobby.id, chosen.copyWith(ghostUserId: lobby.settings.ghostUserId)));
   }
 
   /// Выбор бота: из кабинета (с характером) или случайный. Если кабинет пуст — сразу случайный.
@@ -212,6 +219,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             members: players,
             inGame: lobby.status == 'in_game',
             onChange: isHost ? (next) => _apply((api) => api.saveSettings(lobby.id, next)) : null,
+            onOpenPresets: isHost ? () => _openPresets(lobby, players.length) : null,
             onOpenSheet: isHost ? () => _openSettings(lobby, players.length) : null,
           ),
     ];
@@ -425,6 +433,7 @@ class _SettingsSummary extends StatelessWidget {
     required this.members,
     this.onChange,
     this.onOpenSheet,
+    this.onOpenPresets,
     this.inGame = false,
   });
 
@@ -439,6 +448,7 @@ class _SettingsSummary extends StatelessWidget {
 
   /// Полные настройки (наборы карт, таймеры) — лист настроек.
   final VoidCallback? onOpenSheet;
+  final VoidCallback? onOpenPresets;
 
   /// Партия идёт: менять можно только раунды, обсуждение и темп.
   final bool inGame;
@@ -448,8 +458,7 @@ class _SettingsSummary extends StatelessWidget {
     final r = settings.roles;
     final ghost = members.where((p) => p.userId == settings.ghostUserId).map((p) => p.nickname).firstOrNull;
     final chips = <Widget>[
-      if (settings.rulesPreset == 'ozon')
-        _chip(context, 'preset', 'Озон · по составу', rules: true, opensSheet: true),
+      _chip(context, 'preset', 'Пресет: ${settings.presetLabel}', rules: true, opensSheet: true),
       _chip(context, 'ranked', settings.ranked ? 'рейтинговая' : 'обычная', rules: true, choices: [
         ('Рейтинговая — меняет рейтинг', (s) => s.copyWith(ranked: true)),
         ('Обычная — без рейтинга', (s) => s.copyWith(ranked: false)),
@@ -497,7 +506,7 @@ class _SettingsSummary extends StatelessWidget {
         border: editable ? Border.all(color: AppColors.border) : null,
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text(text, style: TextStyle(fontSize: 12, color: editable ? AppColors.text : AppColors.muted)),
+        Flexible(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: editable ? AppColors.text : AppColors.muted))),
         if (editable) ...[
           const SizedBox(width: 2),
           const Icon(Icons.arrow_drop_down, size: 16, color: AppColors.muted),
@@ -506,7 +515,7 @@ class _SettingsSummary extends StatelessWidget {
     );
     if (!editable) return KeyedSubtree(key: Key('chip-$id'), child: body);
     if (opensSheet) {
-      return InkWell(key: Key('chip-$id'), borderRadius: BorderRadius.circular(99), onTap: onOpenSheet, child: body);
+      return InkWell(key: Key('chip-$id'), borderRadius: BorderRadius.circular(99), onTap: id == 'preset' ? onOpenPresets : onOpenSheet, child: body);
     }
     return PopupMenuButton<int>(
       key: Key('chip-$id'),

@@ -38,6 +38,24 @@ public sealed class SettingsPresetTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task SelectedPresetNameIsSharedAndPersistsAfterReload()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var guest = await TestPlayer.LoginAsync(_factory, "Гость");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings() });
+        var id = lobby.Id("id");
+        var code = lobby.Str("code");
+        await guest.PostAsync($"/api/v1/lobbies/{code}/join", new { });
+        var settings = new LobbySettings { PresetName = "Наш вечер", Columns = 6 };
+        await host.PutAsync($"/api/v1/lobbies/{id}/settings", settings);
+        (await guest.GetAsync($"/api/v1/lobbies/{code}")).GetProperty("settings").Str("presetName").Should().Be("Наш вечер");
+        await guest.PutAsync($"/api/v1/lobbies/{id}/settings", settings, HttpStatusCode.Forbidden);
+        await host.PutAsync($"/api/v1/lobbies/{id}/settings", settings with { PresetModified = true, Columns = 7 });
+        (await host.GetAsync($"/api/v1/lobbies/{code}")).GetProperty("settings").GetProperty("presetModified").GetBoolean().Should().BeTrue();
+        await host.PutAsync($"/api/v1/lobbies/{id}/settings", settings with { PresetName = new string('x', 41) }, HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task PersonalPresets_PersistAndOnlyOwnerCanChangeThem()
     {
         var owner = await TestPlayer.LoginAsync(_factory, "Автор");
