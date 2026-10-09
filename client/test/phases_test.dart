@@ -186,6 +186,24 @@ void main() {
     expect(lastCommand(app)[1], {'columns': [3, 1]});
   });
 
+  testWidgets('Убийца снимает выбор повторным нажатием и выбирает снова', (tester) async {
+    final app = await openGame(tester, phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'));
+    FilledButton button() => tester.widget<FilledButton>(find.byKey(const Key('cta')));
+    for (final key in ['board-0-0', 'board-1-1']) {
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+    expect(button().onPressed, isNotNull);
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(button().onPressed, isNull);
+    await tester.tap(find.byKey(const Key('board-0-2')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(button().onPressed, isNotNull);
+    await tapCta(tester);
+    expect(lastCommand(app)[1], {'columns': [2, 1]});
+  });
+
   testWidgets('голосование по ряду: только карты-кандидаты, голос несёт столбец', (tester) async {
     final app = await openGame(tester, phaseSnapshot('Voting', const ['CastVote']));
 

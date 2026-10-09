@@ -545,21 +545,32 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
       for (final row in v.board) ...row.cards,
       for (final h in v.hints) ...h.cards,
       ...?v.me?.hand,
+      for (final letter in v.me?.letters ?? <MyLetter>[]) letter.cardId,
+      for (final message in widget.screen.chat)
+        if (message.channel == 'public' || (_channel == 'killer_team' && message.channel == 'killer_team')) ...message.cardIds,
     }.toList();
     final picked = await showModalBottomSheet<String>(
       context: context,
-      builder: (context) => GridView.count(
-        crossAxisCount: 6,
+      builder: (context) => GridView.builder(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 6,
+          mainAxisSpacing: 4,
+          crossAxisSpacing: 4,
+        ),
         padding: const EdgeInsets.all(8),
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-        children: [
-          for (final c in options)
-            GestureDetector(onTap: () => Navigator.pop(context, c), child: CardImage(cardId: c, size: 56)),
-        ],
+        itemCount: options.length,
+        itemBuilder: (context, index) => LayoutBuilder(builder: (context, constraints) {
+          final card = options[index];
+          return GestureDetector(
+            key: Key('mention-card-$card'),
+            onTap: () => Navigator.pop(context, card),
+            onLongPress: () => showCardZoom(context, card),
+            child: CardImage(cardId: card, size: constraints.maxWidth),
+          );
+        }),
       ),
     );
-    if (picked != null && !_cards.contains(picked) && _cards.length < 5) setState(() => _cards.add(picked));
+    if (mounted && picked != null && !_cards.contains(picked) && _cards.length < 5) setState(() => _cards.add(picked));
   }
 
   @override

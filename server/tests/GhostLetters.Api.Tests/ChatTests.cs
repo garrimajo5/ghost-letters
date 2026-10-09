@@ -61,6 +61,25 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PubliclyShownCardCanBeMentionedAgain_ButHiddenAndTeamCardsCannot()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 7);
+        await new GameDriver(game).RunUntilAsync(p => p == "Mailbox");
+        var detective = await game.WithRoleAsync("Detective");
+        var killer = await game.WithRoleAsync("Killer");
+        var card = (await detective.ViewAsync(game.GameId)).GetProperty("me").GetProperty("hand")[0].GetString()!;
+        var secret = (await killer.ViewAsync(game.GameId)).GetProperty("me").GetProperty("hand")[0].GetString()!;
+        await killer.PostAsync(Chat(game), new { text = "Чужая скрытая", cardIds = new[] { card } }, HttpStatusCode.BadRequest);
+        await detective.PostAsync(Chat(game), new { text = "Говорю, что кидал эту", cardIds = new[] { card }, cardNotes = new[] { "кидал эту" } });
+        _factory.Time.Advance(TimeSpan.FromSeconds(1));
+        var repeated = await killer.PostAsync(Chat(game), new { text = "Обсудим твоё письмо", cardIds = new[] { card } });
+        repeated.GetProperty("cardIds")[0].GetString().Should().Be(card);
+        _factory.Time.Advance(TimeSpan.FromSeconds(1));
+        await killer.PostAsync(Chat(game), new { channel = "killer_team", text = "Только команде", cardIds = new[] { secret } });
+        await detective.PostAsync(Chat(game), new { text = "Приватная карта", cardIds = new[] { secret } }, HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task CardNotes_AreStoredUnderCards()
     {
         var game = await GameHarness.StartAsync(_factory, players: 4);
