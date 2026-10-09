@@ -7,6 +7,8 @@ namespace GhostLetters.Infrastructure.Persistence;
 /// <summary>Контекст БД. Имена таблиц и колонок — snake_case, JSON — jsonb, время — timestamptz.</summary>
 public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext> options) : DbContext(options)
 {
+    public DbSet<SandboxRun> SandboxRuns => Set<SandboxRun>();
+
     public DbSet<User> Users => Set<User>();
     public DbSet<SettingsPreset> SettingsPresets => Set<SettingsPreset>();
 
@@ -328,6 +330,15 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             e.HasKey(x => new { x.GameId, x.BotId });
             GameFk(e, x => x.GameId);
             UserFk(e, x => x.BotId);
+        });
+        b.Entity<SandboxRun>(e =>
+        {
+            e.ToTable("sandbox_runs");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.CreatedAt);
+            e.Property(x => x.Scenario).HasMaxLength(32);
+            e.Property(x => x.Summary).HasColumnType("jsonb");
+            e.Property(x => x.Report).HasColumnType("jsonb");
         });
         b.Entity<BotProfile>(e =>
         {

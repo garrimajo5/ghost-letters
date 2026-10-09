@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using GhostLetters.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GhostLetters.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GhostLettersDbContext))]
-    partial class GhostLettersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009142626_BotSandbox")]
+    partial class BotSandbox
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -166,10 +169,6 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("risk");
 
-                    b.Property<double>("SecondaryMeanings")
-                        .HasColumnType("double precision")
-                        .HasColumnName("secondary_meanings");
-
                     b.Property<double>("Shape")
                         .HasColumnType("double precision")
                         .HasColumnName("shape");
@@ -259,10 +258,6 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("Annotations")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("annotations");
-
                     b.Property<string>("ImageKey")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -273,18 +268,9 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
-                    b.Property<int>("MetadataVersion")
-                        .IsConcurrencyToken()
-                        .HasColumnType("integer")
-                        .HasColumnName("metadata_version");
-
                     b.Property<Guid>("SetId")
                         .HasColumnType("uuid")
                         .HasColumnName("set_id");
-
-                    b.Property<bool>("SetManuallyAssigned")
-                        .HasColumnType("boolean")
-                        .HasColumnName("set_manually_assigned");
 
                     b.Property<string>("Title")
                         .HasMaxLength(64)

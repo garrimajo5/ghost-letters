@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<GameService>();
         services.AddScoped<GameRecorder>();
         services.AddScoped<BotService>();
+        services.AddScoped<BotSandboxService>();
+        services.AddSingleton<SandboxGate>();
         services.AddScoped<Bots.BotAdminService>();
         services.AddScoped<Bots.BotRelationshipService>();
         services.AddSingleton(sp => CardTags.FromConfiguration(
