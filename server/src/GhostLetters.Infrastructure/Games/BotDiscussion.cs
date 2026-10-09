@@ -59,10 +59,10 @@ public static class BotDiscussion
         {
             var card = view.Board[row].Cards[plan[row]];
             var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .OrderByDescending(h => tags.Similarity(h.Id, card, mind.Personality.Attention, mind.Personality.Details)).FirstOrDefault();
-            if (hint.Id is null || tags.Similarity(hint.Id, card, mind.Personality.Attention, mind.Personality.Details) <= 0)
+                .OrderByDescending(h => tags.Similarity(h.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings)).FirstOrDefault();
+            if (hint.Id is null || tags.Similarity(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings) <= 0)
                 return "связь с открытыми уликами слабая, пока предположение";
-            var reason = tags.Explain(hint.Id, card, mind.Personality.Attention, mind.Personality.Details);
+            var reason = tags.Explain(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings);
             return $"Подсказка р.{hint.Round} №{hint.Number}: {(reason.Length <= 120 ? reason : "сходство изображений")}";
         }
         (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line(string text, int? focus = null) =>

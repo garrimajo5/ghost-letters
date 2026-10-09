@@ -12,6 +12,8 @@ public sealed class CardTags
 {
     public sealed record Detail(string Tag, double Weight, string Label);
     private IReadOnlyDictionary<string, List<Detail>> _details = new Dictionary<string, List<Detail>>();
+    private IReadOnlyDictionary<string, IReadOnlyList<Detail>> _meanings = new Dictionary<string, IReadOnlyList<Detail>>();
+    private IReadOnlyDictionary<string, Dictionary<string, double>> _meaningWeights = new Dictionary<string, Dictionary<string, double>>();
     public static readonly CardTags Empty = new(new Dictionary<string, HashSet<string>>());
 
     private readonly IReadOnlyDictionary<string, HashSet<string>> _tags;
@@ -21,6 +23,33 @@ public sealed class CardTags
     public int Count => _tags.Count;
 
     public IReadOnlyCollection<string> Of(string cardId) => _tags.TryGetValue(cardId, out var t) ? t : [];
+
+    public CardAnnotation AnnotationOf(string card) => new(Of(card).Where(t => Group(t) != 0).Order().ToList(),
+        _meanings.GetValueOrDefault(card) ?? Of(card).Where(t => Group(t) == 0).Order().Select(t => new Detail(t, 1, t)).ToList(),
+        _details.GetValueOrDefault(card) ?? []);
+
+    public CardTags WithAnnotations(IReadOnlyDictionary<string, CardAnnotation> annotations)
+    {
+        var tags = _tags.ToDictionary(e => e.Key, e => e.Value);
+        var details = _details.ToDictionary(e => e.Key, e => e.Value);
+        var meanings = _meanings.ToDictionary(e => e.Key, e => e.Value);
+        var weights = _meaningWeights.ToDictionary(e => e.Key, e => e.Value);
+        foreach (var (key, value) in annotations)
+        {
+            tags[key] = value.Tags.Concat(value.Meanings.Select(m => m.Tag)).ToHashSet();
+            details[key] = value.Details.ToList(); meanings[key] = value.Meanings;
+            weights[key] = value.Meanings.ToDictionary(m => m.Tag, m => m.Weight);
+        }
+        return new CardTags(tags) { _details = details, _meanings = meanings, _meaningWeights = weights };
+    }
+
+    private double Salience(string card, string tag, double secondary)
+    {
+        var weight = _meaningWeights.GetValueOrDefault(card)?.GetValueOrDefault(tag, 1) ?? 1;
+        return weight >= 1 ? 1 : weight * Math.Clamp(secondary, 0, 1);
+    }
+
+    private IReadOnlyCollection<string> Visible(string card, double secondary) => Of(card).Where(t => Salience(card, t, secondary) > 0).ToList();
 
     public CardTags WithDetails(string json)
     {
@@ -44,9 +73,9 @@ public sealed class CardTags
         (_details.GetValueOrDefault(card) ?? []).GroupBy(d => d.Tag)
         .ToDictionary(g => g.Key, g => g.Max(d => d.Weight));
 
-    public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention, double details)
+    public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention, double details, double secondaryMeanings = 0.35)
     {
-        var whole = Similarity(a, b, attention);
+        var whole = MainSimilarity(a, b, attention, secondaryMeanings);
         if (details <= 0 || a == b) return whole;
         var x = DetailsOf(a);
         var y = DetailsOf(b);
@@ -54,8 +83,8 @@ public sealed class CardTags
         // Мелкая роза на клетке может связываться и с главным предметом «роза» на другой карте.
         foreach (var t in x.Keys.Union(y.Keys).ToList())
         {
-            if (Of(a).Contains(t)) x[t] = Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t));
-            if (Of(b).Contains(t)) y[t] = Math.Max(y.GetValueOrDefault(t), x.GetValueOrDefault(t));
+            if (Visible(a, secondaryMeanings).Contains(t)) x[t] = Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t));
+            if (Visible(b, secondaryMeanings).Contains(t)) y[t] = Math.Max(y.GetValueOrDefault(t), x.GetValueOrDefault(t));
         }
         // Неразмеченная карта без известных связей не штрафуется за отсутствие разметки.
         if (x.Count == 0 || y.Count == 0) return whole;
@@ -66,29 +95,37 @@ public sealed class CardTags
     }
 
     /// <summary>Причины из тех же признаков, по которым бот действительно сравнил карты.</summary>
-    public string Explain(string a, string b, (double Meaning, double Shape, double Color) attention, double details)
+    public string Explain(string a, string b, (double Meaning, double Shape, double Color) attention, double details, double secondaryMeanings = 0.35)
     {
+        var va = Visible(a, secondaryMeanings);
+        var vb = Visible(b, secondaryMeanings);
         var da = _details.GetValueOrDefault(a) ?? [];
         var db = _details.GetValueOrDefault(b) ?? [];
-        if ((da.Count == 0 || db.Count == 0) && !da.Any(d => Of(b).Contains(d.Tag)) && !db.Any(d => Of(a).Contains(d.Tag)))
+        if ((da.Count == 0 || db.Count == 0) && !da.Any(d => vb.Contains(d.Tag)) && !db.Any(d => va.Contains(d.Tag)))
             details = 0; // Same fallback to the main image as Similarity.
         var reasons = new List<(double Score, string Text)>();
-        var common = Of(a).Intersect(Of(b)).ToList();
+        var common = va.Intersect(vb).ToList();
         foreach (var (group, weight, label) in new[] {
             (0, attention.Meaning, "по смыслу: общий предмет или тема"),
             (1, attention.Shape, "по форме: похожий силуэт"),
             (2, attention.Color, "по цвету: общая палитра") })
         {
             if (common.Any(t => Group(t) == group) && weight > 0 && details < 1)
-                reasons.Add((weight * (1 - details) * common.Count(t => Group(t) == group) /
-                    Of(a).Union(Of(b)).Count(t => Group(t) == group), label));
+            {
+                var selected = common.Where(t => Group(t) == group)
+                    .OrderByDescending(t => Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings))).First();
+                var meaning = _meanings.GetValueOrDefault(a)?.FirstOrDefault(m => m.Tag == selected)
+                    ?? _meanings.GetValueOrDefault(b)?.FirstOrDefault(m => m.Tag == selected);
+                var text = group == 0 && meaning is not null ? "по смыслу: " + meaning.Label : label;
+                reasons.Add((weight * (1 - details) * Math.Min(Salience(a, selected, secondaryMeanings), Salience(b, selected, secondaryMeanings)), text));
+            }
         }
         var other = DetailsOf(b);
         foreach (var d in _details.GetValueOrDefault(a) ?? [])
-            if (details > 0 && (other.ContainsKey(d.Tag) || Of(b).Contains(d.Tag)))
+            if (details > 0 && (other.ContainsKey(d.Tag) || vb.Contains(d.Tag)))
                 reasons.Add((details * Math.Min(other.GetValueOrDefault(d.Tag, d.Weight), d.Weight), "по деталям: " + d.Label));
         foreach (var d in _details.GetValueOrDefault(b) ?? [])
-            if (details > 0 && Of(a).Contains(d.Tag))
+            if (details > 0 && va.Contains(d.Tag))
                 reasons.Add((details * d.Weight, "по деталям: " + d.Label));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
@@ -126,6 +163,9 @@ public sealed class CardTags
     /// Группы, которых нет ни у одной из двух карт, не участвуют — их доля делится между остальными.
     /// </summary>
     public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention)
+        => MainSimilarity(a, b, attention, 0.35);
+
+    private double MainSimilarity(string a, string b, (double Meaning, double Shape, double Color) attention, double secondary)
     {
         if (a == b)
         {
@@ -147,8 +187,12 @@ public sealed class CardTags
                 continue;
             }
 
-            var common = gx.Count(gy.Contains);
-            total += w * common / (gx.Count + gy.Count - common);
+            var union = gx.Union(gy).Sum(t => Math.Max(gx.Contains(t) ? Salience(a, t, secondary) : 0, gy.Contains(t) ? Salience(b, t, secondary) : 0));
+            if (union <= 0) continue;
+            var common = gx.Intersect(gy).Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary)));
+            var confidence = Math.Min(gx.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
+                gy.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
+            total += w * common / union * confidence;
             weight += w;
         }
 

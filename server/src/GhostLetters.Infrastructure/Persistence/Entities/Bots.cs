@@ -28,6 +28,7 @@ public sealed class BotProfile
     public double Strictness { get; set; } = 0.5;
 
     public double Details { get; set; } = 0.25;
+    public double SecondaryMeanings { get; set; } = 0.35;
 
     public double Variability { get; set; } = 0.2;
 

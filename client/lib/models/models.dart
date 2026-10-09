@@ -975,6 +975,7 @@ class BotSpectra {
     this.variability = 0.2,
     this.strictness = 0.5,
     this.details = 0.25,
+    this.secondaryMeanings = 0.35,
     this.social = const {},
   });
 
@@ -991,6 +992,7 @@ class BotSpectra {
       variability: v('variability', 0.2),
       strictness: v('strictness', 0.5),
       details: v('details', 0.25),
+      secondaryMeanings: v('secondaryMeanings', 0.35),
       social: (j['social'] as Map? ?? {}).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
     );
   }
@@ -1007,6 +1009,7 @@ class BotSpectra {
   /// Строгость ассоциаций: 0 — одним письмом проверяет всё связанное, 1 — ровно одну карту.
   final double strictness;
   final double details;
+  final double secondaryMeanings;
   final Map<String, double> social;
 
   BotSpectra copyWith({
@@ -1020,6 +1023,7 @@ class BotSpectra {
     double? variability,
     double? strictness,
     double? details,
+    double? secondaryMeanings,
     Map<String, double>? social,
   }) =>
       BotSpectra(
@@ -1033,6 +1037,7 @@ class BotSpectra {
         variability: variability ?? this.variability,
         strictness: strictness ?? this.strictness,
         details: details ?? this.details,
+        secondaryMeanings: secondaryMeanings ?? this.secondaryMeanings,
         social: social ?? this.social,
       );
 
@@ -1055,6 +1060,7 @@ class BotSpectra {
         'compromise': compromise,
         'strictness': strictness,
         'details': details,
+        'secondaryMeanings': secondaryMeanings,
         'social': social.isEmpty ? null : social,
         'variability': variability,
       };

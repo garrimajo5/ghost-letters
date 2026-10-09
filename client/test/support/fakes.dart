@@ -14,6 +14,7 @@ import 'package:ghost_letters/core/session.dart';
 import 'package:ghost_letters/core/sound.dart';
 import 'package:ghost_letters/features/profile/avatar_crop.dart';
 import 'package:ghost_letters/models/models.dart';
+import 'package:ghost_letters/models/admin_cards.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Запись вызова сервера: имя метода и аргументы.
@@ -24,6 +25,14 @@ class FakeApi extends Api {
   FakeApi(super.ref);
 
   final calls = <Call>[];
+  List<AdminCard> cards = [];
+  final cardSets = const [AdminCardSet('original', 'Оригинальный'), AdminCardSet('mirror', 'Зеркало истины')];
+  @override
+  Future<AdminCardPage> adminCards({String query = '', String setCode = '', bool? active, int page = 0}) async =>
+    _record('adminCards', [query, setCode, active, page], () => AdminCardPage(cards: cards, total: cards.length, sets: cardSets));
+  @override
+  Future<AdminCard> saveCard(AdminCard card) async => _record('saveCard', [card], () { cards = [card]; return card; });
+
   bool profileIsBot = false;
   List<BotRelationship> relationships = [];
 

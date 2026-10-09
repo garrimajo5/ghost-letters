@@ -32,6 +32,8 @@ public static class DependencyInjection
         services.AddScoped<AuthService>();
         services.AddScoped<UserService>();
         services.AddScoped<CardCatalog>();
+        services.AddScoped<CardAdminService>();
+        services.AddScoped<CardTagStore>();
         services.AddScoped<LobbyService>();
         services.AddScoped<SettingsPresetService>();
         services.AddScoped<GameService>();

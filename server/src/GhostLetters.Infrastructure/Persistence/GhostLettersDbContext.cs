@@ -132,6 +132,8 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
         b.Entity<Card>(e =>
         {
             e.ToTable("cards");
+            e.Property(x => x.Annotations).HasColumnType("jsonb");
+            e.Property(x => x.MetadataVersion).IsConcurrencyToken();
             e.Property(x => x.ImageKey).HasMaxLength(128);
             e.Property(x => x.Title).HasMaxLength(64);
             e.HasIndex(x => new { x.SetId, x.ImageKey }).IsUnique();
