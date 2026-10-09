@@ -147,6 +147,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final mine = lobby.members.where((m) => m.userId == me.id).firstOrNull;
     final players = lobby.players;
     final tables = lobby.members.where((m) => m.isTable).toList();
+    final spectators = lobby.members.where((m) => m.isSpectator).toList();
     final allReady = players.every((p) => p.userId == lobby.hostUserId || p.isReady);
 
     final readyCount = players.where((p) => p.userId == lobby.hostUserId || p.isReady).length;
@@ -163,7 +164,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             : null,
         child: Text(allReady ? 'НАЧАТЬ ПАРТИЮ' : 'Ждём готовности игроков'),
       );
-    } else if (mine != null && !mine.isTable) {
+    } else if (mine != null && mine.isPlayer) {
       bottom = mine.isReady
           ? OutlinedButton(
               key: const Key('ready'),
@@ -316,6 +317,11 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
               ),
             ]),
           ),
+          if (spectators.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text('Зрители: ${spectators.map((s) => s.nickname).join(', ')}', style: const TextStyle(color: AppColors.muted)),
+            ),
           if (bottom == null) ...[
             const SizedBox(height: 12),
             _RolesPreview(lobby: lobby, players: players.length),

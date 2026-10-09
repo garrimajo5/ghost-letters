@@ -165,7 +165,15 @@ class Realtime {
     return GameSnapshot.fromJson(Map<String, dynamic>.from(r! as Map));
   }
 
-  void forgetGame(String gameId) => _games.remove(gameId);
+  void forgetGame(String gameId) {
+    _games.remove(gameId);
+    final hub = _hub;
+    if (hub?.state == HubConnectionState.Connected) {
+      // Зритель перестаёт получать обновления покинутого стола. При обрыве
+      // подписка не восстановится, поскольку gameId уже удалён из _games.
+      unawaited(hub!.invoke('UnsubscribeGame', args: <Object>[gameId]).catchError((Object _) => null));
+    }
+  }
 
   Future<void> disconnect() async {
     _stopped = true;

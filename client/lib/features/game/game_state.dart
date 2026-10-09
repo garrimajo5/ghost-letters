@@ -90,7 +90,7 @@ int lettersPerPlayer(GameView view) => view.players.length == 2 ? 2 : 1;
 /// Что игроку нужно сделать сейчас — строка-подсказка над панелью действий.
 String actionHint(GameView v) {
   final me = v.me;
-  if (me == null) return 'Экран стола';
+  if (me == null) return 'Режим зрителя';
   if (v.allowedCommands.isEmpty || (v.allowedCommands.length == 1 && v.can('Like'))) {
     return switch (v.phase) {
       'Discussion' when v.isRadio => 'Слушаем говорящего',

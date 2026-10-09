@@ -32,7 +32,7 @@ void main() {
     final v = GameSnapshot.fromJson(json).view;
 
     expect(v.me, isNull);
-    expect(actionHint(v), 'Экран стола');
+    expect(actionHint(v), 'Режим зрителя');
   });
 
   test('настройки лобби: в JSON уходят все поля, перечисления строками', () {

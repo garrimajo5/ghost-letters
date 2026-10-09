@@ -10,6 +10,9 @@ public static class LobbyEndpoints
     {
         var lobbies = api.MapGroup("/lobbies").WithTags("Lobbies").RequireAuthorization();
 
+        lobbies.MapGet("/watchable", (HttpContext http, LobbyService service, CancellationToken ct) =>
+            service.WatchableAsync(http.User.UserId(), ct)).WithName("WatchableGames");
+
         lobbies.MapPost("", (CreateLobbyRequest request, HttpContext http, LobbyService service, CancellationToken ct) =>
             service.CreateAsync(http.User.UserId(), request, ct)).WithName("CreateLobby");
 

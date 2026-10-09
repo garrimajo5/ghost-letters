@@ -612,7 +612,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                   itemBuilder: (context, i) {
                     final m = messages[messages.length - 1 - i];
                     final author = screen.rosterOf(m.authorId);
-                    final quotable = m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
+                    final quotable = canWrite && m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
                     final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
                     final inlineParts = ChatCardText.parse(m, screen.view?.board ?? [], screen.view?.hints ?? []);
                     final inlineCards = m.isVoice ? <String>{} : inlineParts.map((p) => p.cardId).whereType<String>().toSet();
