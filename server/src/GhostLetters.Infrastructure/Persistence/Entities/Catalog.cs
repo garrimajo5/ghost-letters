@@ -27,6 +27,12 @@ public sealed class Card
     public string? Title { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    public bool SetManuallyAssigned { get; set; }
+
+    public string? Annotations { get; set; }
+
+    public int MetadataVersion { get; set; }
 }
 
 /// <summary>Номинация ачивки из каталога.</summary>
