@@ -25,6 +25,11 @@ public sealed class BotPublicRoleClaimTests
     [InlineData("«Я свидетель».")]
     [InlineData("Я свидетель, шучу.")]
     [InlineData("Он эксперт.")]
+    [InlineData("Аня сказала: «Слушайте. Я свидетель.»")]
+    [InlineData("Она написала: «\nЯ свидетель.\n»")]
+    [InlineData("Цитирую: \"Слушайте. Я эксперт.\"")]
+    [InlineData("Мне сказали: “Слушайте. Я эксперт.”")]
+    [InlineData("Он сказал «Стоп. Я свидетель.")]
     public void DoesNotTreatQuestionsQuotesOrConditionsAsClaims(string text) =>
         PublicRoleClaims.Read([(Guid.NewGuid(), text)]).Should().BeEmpty();
 
@@ -35,6 +40,21 @@ public sealed class BotPublicRoleClaimTests
         PublicRoleClaims.Read([(author, "Я свидетель."), (author, "Я не свидетель.")]).Should().BeEmpty();
         PublicRoleClaims.Read([(author, "Я свидетель."), (author, "Я эксперт."), (author, "Я не свидетель.")])
             [author].Should().Be(Role.Expert);
+    }
+
+    [Fact]
+    public void QuotedDenialDoesNotRetractAuthorsOwnClaim()
+    {
+        var author = Guid.NewGuid();
+        PublicRoleClaims.Read([(author, "Я свидетель."), (author, "Он ответил: «Стоп. Я не свидетель.»")])
+            [author].Should().Be(Role.Witness);
+    }
+
+    [Fact]
+    public void OwnStatementAfterQuoteIsStillRead()
+    {
+        var author = Guid.NewGuid();
+        PublicRoleClaims.Read([(author, "Он сказал «я свидетель». Я эксперт.")])[author].Should().Be(Role.Expert);
     }
 
     [Theory]
