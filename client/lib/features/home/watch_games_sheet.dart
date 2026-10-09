@@ -23,7 +23,7 @@ class _WatchGamesSheetState extends ConsumerState<WatchGamesSheet> {
     _games = ref.read(apiProvider).watchableGames();
   }
 
-  void _refresh() => setState(() => _games = ref.read(apiProvider).watchableGames());
+  void _refresh() => setState(() { _games = ref.read(apiProvider).watchableGames(); });
 
   @override
   Widget build(BuildContext context) => SafeArea(

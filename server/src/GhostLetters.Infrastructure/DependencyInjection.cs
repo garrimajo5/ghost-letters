@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<UserService>();
         services.AddScoped<CardCatalog>();
         services.AddScoped<LobbyService>();
+        services.AddScoped<SettingsPresetService>();
         services.AddScoped<GameService>();
         services.AddScoped<GameRecorder>();
         services.AddScoped<BotService>();

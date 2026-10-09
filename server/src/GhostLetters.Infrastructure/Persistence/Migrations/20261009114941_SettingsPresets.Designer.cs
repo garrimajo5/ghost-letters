@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using GhostLetters.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GhostLetters.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(GhostLettersDbContext))]
-    partial class GhostLettersDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261009114941_SettingsPresets")]
+    partial class SettingsPresets
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -170,11 +173,6 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("shape");
 
-                    b.Property<string>("Social")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("social");
-
                     b.Property<double>("Strictness")
                         .HasColumnType("double precision")
                         .HasColumnName("strictness");
@@ -191,61 +189,6 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasName("pk_bot_profiles");
 
                     b.ToTable("bot_profiles", "public");
-                });
-
-            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.BotRelationship", b =>
-                {
-                    b.Property<Guid>("BotId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("bot_id");
-
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("player_id");
-
-                    b.Property<string>("Components")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("components");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("integer")
-                        .HasColumnName("score");
-
-                    b.Property<int>("SharedGames")
-                        .HasColumnType("integer")
-                        .HasColumnName("shared_games");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("BotId", "PlayerId")
-                        .HasName("pk_bot_relationships");
-
-                    b.HasIndex("PlayerId")
-                        .HasDatabaseName("ix_bot_relationships_player_id");
-
-                    b.ToTable("bot_relationships", "public");
-                });
-
-            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.BotRelationshipGame", b =>
-                {
-                    b.Property<Guid>("GameId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("game_id");
-
-                    b.Property<Guid>("BotId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("bot_id");
-
-                    b.HasKey("GameId", "BotId")
-                        .HasName("pk_bot_relationship_games");
-
-                    b.HasIndex("BotId")
-                        .HasDatabaseName("ix_bot_relationship_games_bot_id");
-
-                    b.ToTable("bot_relationship_games", "public");
                 });
 
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.Card", b =>
@@ -1261,40 +1204,6 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_bot_profiles_users_user_id");
-                });
-
-            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.BotRelationship", b =>
-                {
-                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("BotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_bot_relationships_users_bot_id");
-
-                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_bot_relationships_users_player_id");
-                });
-
-            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.BotRelationshipGame", b =>
-                {
-                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("BotId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_bot_relationship_games_users_bot_id");
-
-                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.Game", null)
-                        .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_bot_relationship_games_games_game_id");
                 });
 
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.Card", b =>

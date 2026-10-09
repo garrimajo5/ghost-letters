@@ -63,6 +63,7 @@ class RoleOptions {
     this.useBlackmailer = false,
     this.imitator = ImitatorMode.none,
     this.extraAccomplices = 0,
+    this.randomKillerOmission = false,
   });
 
   factory RoleOptions.fromJson(Json j) => RoleOptions(
@@ -74,6 +75,7 @@ class RoleOptions {
             .firstWhere((e) => e.value == j['imitator'], orElse: () => const MapEntry(ImitatorMode.none, 'None'))
             .key,
         extraAccomplices: (j['extraAccomplices'] as num?)?.toInt() ?? 0,
+        randomKillerOmission: j['randomKillerOmission'] as bool? ?? false,
       );
 
   final bool killerEnabled;
@@ -84,9 +86,10 @@ class RoleOptions {
 
   /// Сколько Детективов заменить Сообщниками сверх таблицы правил (0–2).
   final int extraAccomplices;
+  final bool randomKillerOmission;
 
   RoleOptions copyWith(
-          {bool? killerEnabled, bool? useWitness, bool? useExpert, bool? useBlackmailer, ImitatorMode? imitator, int? extraAccomplices}) =>
+          {bool? killerEnabled, bool? useWitness, bool? useExpert, bool? useBlackmailer, ImitatorMode? imitator, int? extraAccomplices, bool? randomKillerOmission}) =>
       RoleOptions(
         killerEnabled: killerEnabled ?? this.killerEnabled,
         useWitness: useWitness ?? this.useWitness,
@@ -94,6 +97,7 @@ class RoleOptions {
         useBlackmailer: useBlackmailer ?? this.useBlackmailer,
         imitator: imitator ?? this.imitator,
         extraAccomplices: extraAccomplices ?? this.extraAccomplices,
+        randomKillerOmission: randomKillerOmission ?? (killerEnabled == false ? false : this.randomKillerOmission),
       );
 
   Json toJson() => {
@@ -103,12 +107,14 @@ class RoleOptions {
         'useBlackmailer': useBlackmailer,
         'imitator': _imitatorWire[imitator],
         'extraAccomplices': extraAccomplices,
+        'randomKillerOmission': randomKillerOmission,
       };
 }
 
 /// Настройки лобби. Таймеры храним как есть (секунды по фазам) и правим нужные.
 class LobbySettings {
   const LobbySettings({
+    this.rulesPreset,
     this.useSecretRow = true,
     this.columns = 5,
     this.rounds,
@@ -124,6 +130,7 @@ class LobbySettings {
   });
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
+        rulesPreset: j['rulesPreset'] as String?,
         useSecretRow: j['useSecretRow'] as bool? ?? true,
         columns: (j['columns'] as num?)?.toInt() ?? 5,
         rounds: (j['rounds'] as num?)?.toInt(),
@@ -141,6 +148,19 @@ class LobbySettings {
       );
 
   final bool useSecretRow;
+  final String? rulesPreset;
+
+  /// Шаблон остаётся адаптивным до старта; сервер повторяет расчёт по итоговому составу.
+  LobbySettings resolveForPlayers(int players) {
+    if (rulesPreset != 'ozon' || players < 3 || players > 11) return this;
+    return LobbySettings.fromJson({...toJson(),
+      'useSecretRow': true,
+      'columns': const [5, 9, 11].contains(players) ? 6 : 5,
+      'rounds': players == 3 ? 5 : (players <= 7 ? 4 : 3),
+      'roles': RoleOptions(killerEnabled: players >= 4, extraAccomplices: players == 6 ? 1 : 0,
+          randomKillerOmission: players == 4).toJson(),
+    });
+  }
   final int columns;
   final int? rounds;
   final int handSize;
@@ -175,6 +195,9 @@ class LobbySettings {
     bool? ranked,
   }) =>
       LobbySettings(
+        // Ручная правка правил превращает шаблон в обычные настройки. Темп,
+        // таймеры, наборы, рейтинг и назначение Призрака не меняют таблицу Озона.
+        rulesPreset: useSecretRow != null || columns != null || rounds != null || clearRounds || roles != null ? null : rulesPreset,
         useSecretRow: useSecretRow ?? this.useSecretRow,
         columns: columns ?? this.columns,
         rounds: clearRounds ? null : rounds ?? this.rounds,
@@ -190,6 +213,7 @@ class LobbySettings {
       );
 
   Json toJson() => {
+        'rulesPreset': rulesPreset,
         'useSecretRow': useSecretRow,
         'columns': columns,
         'rounds': rounds,
@@ -203,6 +227,15 @@ class LobbySettings {
         'ghostUserId': ghostUserId,
         'ranked': ranked,
       };
+}
+
+class SettingsPreset {
+  const SettingsPreset({required this.id, required this.name, required this.settings});
+  factory SettingsPreset.fromJson(Json j) => SettingsPreset(
+      id: j['id'] as String, name: j['name'] as String, settings: LobbySettings.fromJson(j['settings'] as Json));
+  final String id;
+  final String name;
+  final LobbySettings settings;
 }
 
 // ---------- Лобби ----------

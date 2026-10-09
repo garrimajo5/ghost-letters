@@ -63,6 +63,10 @@ void main() {
     await tester.tap(find.byKey(const Key('watch-games')));
     await tester.pumpAndSettle();
     expect(find.text('Чужой стол'), findsOneWidget);
+    await tester.tap(find.byTooltip('Обновить'));
+    await tester.pumpAndSettle();
+    expect(app.api.named('watchableGames'), hasLength(2));
+    expect(tester.takeException(), isNull);
     await tester.tap(find.byKey(const Key('watch-game-g1')));
     await tester.pumpAndSettle();
 

@@ -8,6 +8,7 @@ namespace GhostLetters.Infrastructure.Persistence;
 public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<SettingsPreset> SettingsPresets => Set<SettingsPreset>();
 
     public DbSet<AuthIdentity> AuthIdentities => Set<AuthIdentity>();
 
@@ -71,6 +72,14 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
 
     private static void ConfigureAccounts(ModelBuilder b)
     {
+        b.Entity<SettingsPreset>(e =>
+        {
+            e.ToTable("settings_presets");
+            e.Property(x => x.Name).HasMaxLength(40);
+            e.Property(x => x.Settings).HasColumnType("jsonb");
+            e.HasIndex(x => x.UserId);
+            UserFk(e, x => x.UserId);
+        });
         b.Entity<User>(e =>
         {
             e.ToTable("users");

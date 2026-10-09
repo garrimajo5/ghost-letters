@@ -366,6 +366,9 @@ class ActionPanel extends StatelessWidget {
       if (stage.attempt > 1) {
         widgets.add(Text('Переголосование №${stage.attempt - 1}', style: const TextStyle(color: AppColors.amber)));
       }
+      if (!stage.isRow && v.players.any((p) => p.isGhost && stage.candidateSuspects.contains(p.id))) {
+        widgets.add(const Text('Голос за Призрака означает «Убийцы нет».', style: TextStyle(color: AppColors.ice)));
+      }
 
       if (v.phase == 'VoteTie') {
         widgets.add(const SizedBox(height: 10));
@@ -417,7 +420,9 @@ class ActionPanel extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(o.kind == 'Row'
                     ? (o.column == null ? '${T.category(v.board[o.row].category)}: никто' : '${T.category(v.board[o.row].category)}: карта ${o.column! + 1}')
-                    : 'Арестован(а) ${screen.nick(o.suspect)}${o.revealedRole != null ? ' — ${T.role(o.revealedRole)}' : ''}'),
+                    : v.player(o.suspect ?? '')?.isGhost == true
+                        ? 'Выбрано: Убийцы нет'
+                        : 'Арестован(а) ${screen.nick(o.suspect)}${o.revealedRole != null ? ' — ${T.role(o.revealedRole)}' : ''}'),
                 if (o.byLot || _votersFor(o).isNotEmpty)
                   Text(
                     [if (o.byLot) 'жребий', _votersFor(o)].where((x) => x.isNotEmpty).join(' · '),
@@ -632,7 +637,7 @@ class ActionPanel extends StatelessWidget {
             Text(T.sides[result.side] ?? result.side, style: heading(20)),
             const SizedBox(height: 4),
             Text(
-              'Угадано рядов: ${result.correctRows} из ${v.board.length}${result.killerCaught ? ' · Убийца арестован' : ''}',
+              'Угадано рядов: ${result.correctRows} из ${v.board.length}${result.killerCaught ? (v.players.any((p) => p.knownRole == 'Killer') ? ' · Убийца арестован' : ' · Верно: Убийцы нет') : ''}',
               style: const TextStyle(color: AppColors.muted),
             ),
             if (result.imitatorWon) const Text('Подражатель добился ареста и тоже победил!'),

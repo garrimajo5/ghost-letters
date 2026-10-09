@@ -22,6 +22,12 @@ public static partial class GameEngine
 
         var rng = new Random(seed);
         var roles = RoleTable.Compose(playerIds.Count, settings.Roles).ToList();
+        // Озон на четверых: из [Убийца, Детектив, Детектив, Детектив]
+        // удаляется случайная роль, Призрак остаётся. Вероятность отсутствия Убийцы — 1/4.
+        if (settings.Roles.RandomKillerOmission && rng.Next(4) == 0)
+        {
+            roles[roles.IndexOf(Role.Killer)] = Role.Detective;
+        }
         Shuffle(roles, rng);
 
         // Хост заранее назначил Призрака — меняем его роль местами с выпавшей Призраку.
