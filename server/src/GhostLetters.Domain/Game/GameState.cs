@@ -115,8 +115,11 @@ public sealed partial class GameState
     public bool HasKiller => Players.Any(p => p.Role == Role.Killer);
 
     [JsonIgnore]
+    public DiscussionMode EffectiveDiscussion => Round >= TotalRounds ? DiscussionMode.FreeChat : Settings.Discussion;
+
+    [JsonIgnore]
     public Guid? CurrentSpeaker =>
-        Phase == Phase.Discussion && SpeakerIndex < SpeakingOrder.Count ? SpeakingOrder[SpeakerIndex] : null;
+        Phase == Phase.Discussion && EffectiveDiscussion == DiscussionMode.Radio && SpeakerIndex < SpeakingOrder.Count ? SpeakingOrder[SpeakerIndex] : null;
 
     public PlayerState Player(Guid id) =>
         Players.FirstOrDefault(p => p.Id == id)

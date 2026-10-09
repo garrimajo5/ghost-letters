@@ -64,6 +64,14 @@ public static class BotPlayer
     public static double Evidence(PlayerView view, CardTags tags, BotMind? mind, string card) =>
         view.Me is { } me ? new Brain(view, me, new Random(0), tags, mind).Evidence(card) : 0;
 
+    /// <summary>Версия по всем рядам: те же улики, характер и мнения, что при голосовании.</summary>
+    public static IReadOnlyList<int> Plan(PlayerView view, CardTags tags, BotMind? mind, Random rng) =>
+        view.Me is { } me ? view.Board.Select((row, r) => new Brain(view, me, rng, tags, mind)
+            .RowVote(new VoteStageView(0, VoteStageKind.Row, r, 1, Enumerable.Range(0, row.Cards.Count).ToList(), [])) ?? 0).ToList() : [];
+
+    public static string DiscussionSuspicion(PlayerView view, CardTags tags, BotMind mind, Random rng) =>
+        view.Me is { } me ? new Brain(view, me, rng, tags, mind).Accusation() : "";
+
     public static (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Reply(
         PlayerView view, Random rng, CardTags tags, BotMind? mind) =>
         view.Me is { Role: not Role.Ghost } me ? new Brain(view, me, rng, tags, mind).Reply() : null;
@@ -640,7 +648,7 @@ public static class BotPlayer
         /// осторожный молчит (иначе его вычислят на охоте). Детектив с сильной памятью
         /// вспоминает, кто часто бывал Убийцей.
         /// </summary>
-        private string Accusation()
+        public string Accusation()
         {
             if (Classic)
             {

@@ -77,7 +77,7 @@ public static class GameProjection
             state.Phase,
             state.Round,
             state.TotalRounds,
-            state.Settings.Discussion,
+            state.EffectiveDiscussion,
             state.Board.Select(r => new BoardRowView(r.Category, r.Cards.ToList())).ToList(),
             state.Hints.Select(h => new HintGroupView(h.Round, h.Cards.ToList())).ToList(),
             state.Vanished.Count,
@@ -180,7 +180,7 @@ public static class GameProjection
                 list.Add(nameof(Discard));
                 break;
             case Phase.Discussion when !ghost:
-                if (state.Settings.Discussion == DiscussionMode.Radio)
+                if (state.EffectiveDiscussion == DiscussionMode.Radio)
                 {
                     if (state.CurrentSpeaker == viewer.Id)
                     {

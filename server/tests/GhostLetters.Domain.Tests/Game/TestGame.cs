@@ -67,6 +67,11 @@ internal static class TestGame
 
     public static void TalkThrough(this GameState state)
     {
+        if (state.EffectiveDiscussion == DiscussionMode.FreeChat)
+        {
+            foreach (var player in state.Investigators.ToList()) state.Run(player, new ReadyNextRound());
+            return;
+        }
         while (state.Phase == Phase.Discussion && state.CurrentSpeaker is { } speaker)
         {
             state.Run(state.Player(speaker), new EndTurn());

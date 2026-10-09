@@ -17,7 +17,7 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
     [Fact]
     public async Task Radio_OnlySpeakerWrites_GhostSilent_KillerChannelPrivate()
     {
-        var game = await GameHarness.StartAsync(_factory, players: 7, new LobbySettings { Rounds = 1 });
+        var game = await GameHarness.StartAsync(_factory, players: 7, new LobbySettings { Rounds = 2 });
         var driver = new GameDriver(game);
         var ghost = await game.WithRoleAsync("Ghost");
         var killer = await game.WithRoleAsync("Killer");

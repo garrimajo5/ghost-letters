@@ -152,6 +152,11 @@ class _SettingsSheetState extends State<SettingsSheet> {
             selected: {s.discussion},
             onSelectionChanged: (v) => setState(() => s = s.copyWith(discussion: v.first)),
           ),
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('После последнего раунда — общее обсуждение. В живой игре времени вдвое больше, чем на свободное обсуждение.',
+                style: TextStyle(color: AppColors.muted, fontSize: 12)),
+          ),
           const SizedBox(height: 8),
           SegmentedButton<String>(
             segments: const [
