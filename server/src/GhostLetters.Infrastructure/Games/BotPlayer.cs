@@ -2,6 +2,9 @@ using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
 using GhostLetters.Infrastructure.Bots;
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GhostLetters.Infrastructure.Games;
 
@@ -97,6 +100,7 @@ public static class BotPlayer
         private readonly Dictionary<(string, string), double> _similarities = new();
         private readonly Dictionary<string, double> _evidence = new();
         private readonly Dictionary<string, Dictionary<string, int>> _ranks = new();
+        private readonly Dictionary<(int Row, int Column), ulong> _cardPreferences = new();
 
         // ---------- Характер ----------
         // Без характера (mind == null) бот играет «классически» — как до появления индивидуальностей.
@@ -355,6 +359,16 @@ public static class BotPlayer
 
         private double Noise() => rng.NextDouble() * 1e-6;
 
+        // Resolve exact ties consistently across discussion, voting and process restarts.
+        // Only public game/card identity and this bot's identity enter the preference.
+        private ulong CardPreference(int row, int column)
+        {
+            if (_cardPreferences.TryGetValue((row, column), out var preference)) return preference;
+            var key = $"card-tie-v1:{view.GameId:N}:{me.Id:N}:{row}:{Card(row, column)}";
+            return _cardPreferences[(row, column)] = BinaryPrimitives.ReadUInt64LittleEndian(
+                SHA256.HashData(Encoding.UTF8.GetBytes(key)));
+        }
+
         /// <summary>Насколько подсказки указывают на карту: сходство с открытыми письмами минус сходство с моими исчезнувшими.</summary>
         public double Evidence(string card)
         {
@@ -368,7 +382,7 @@ public static class BotPlayer
         public int BestColumn(int row, IReadOnlyList<int>? candidates)
         {
             var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
-            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Noise()).First();
+            return columns.OrderByDescending(c => Evidence(Card(row, c))).ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
         }
 
         public int? RowVote(VoteStageView stage)
@@ -394,7 +408,7 @@ public static class BotPlayer
                     var fakes = candidates.Where(c => c != real).ToList();
                     if (fakes.Count > 0)
                     {
-                        return fakes.OrderByDescending(c => Evidence(Card(stage.Row, c)) + Noise()).First();
+                        return fakes.OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
                     }
                 }
             }
@@ -404,7 +418,7 @@ public static class BotPlayer
                 return BestColumn(stage.Row, candidates);
             }
 
-            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates) + Noise()).First();
+            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
         }
 
         public Guid? SuspectVote(VoteStageView stage)
