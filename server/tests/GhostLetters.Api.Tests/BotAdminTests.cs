@@ -5,6 +5,7 @@ using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Bots;
 using GhostLetters.Infrastructure.Games;
 using GhostLetters.Infrastructure.Persistence.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,31 +41,41 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
             Enumerable.Range(1, 300).Select(i => $"c{i:000}").ToList(), 7);
         var card = state.Board[0].Cards[0];
         var now = DateTimeOffset.UtcNow;
-        await _factory.WithDbAsync(async db =>
+        var gameIds = Enumerable.Range(0, 6).Select(i => i == 5 ? state.Id : Guid.NewGuid()).ToList();
+        try
         {
-            // Three finished shared games, one unfinished, one without the bot, and the current game.
-            for (var i = 0; i < 6; i++)
+            await _factory.WithDbAsync(async db =>
             {
-                var id = i == 5 ? state.Id : Guid.NewGuid();
-                db.Games.Add(new Game { Id = id, StartedAt = now.AddDays(-i),
-                    FinishedAt = i is 3 or 5 ? null : now.AddDays(-i),
-                    Status = i is 3 or 5 ? GameStatuses.Active : GameStatuses.Finished });
-                if (i != 4) db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = botId, Seat = 0, Role = "Detective" });
-                db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = admin.Id, Seat = 1, Role = i == 0 ? "Killer" : "Detective" });
-            }
-            for (var i = 0; i < 3; i++)
-                db.ChatMessages.Add(new ChatMessage { Id = Guid.NewGuid(), GameId = state.Id, AuthorId = admin.Id,
-                    Channel = i == 2 ? ChatChannels.KillerTeam : ChatChannels.Public, Round = 1,
-                    CreatedAt = now.AddSeconds(i), CardIds = [card], CardNotes = [i == 1 ? "не эта" : "думаю, эта"] });
-            return await db.SaveChangesAsync();
-        });
-        var mind = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
-        mind.History[admin.Id].Games.Should().Be(3);
-        mind.Opinions.Should().ContainSingle().Which.Strength.Should().Be(-1, "повтор заменён, приватный чат недоступен");
-        await admin.PutAsync($"/api/v1/admin/bots/{botId}", new { nickname = "Память", spectra = spectra with { Memory = 0, Variability = 1 } });
-        var blank = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
-        blank.History.Should().BeEmpty();
-        blank.Opinions.Should().ContainSingle("события текущей партии помним даже при памяти 0");
+                // Three finished shared games, one unfinished, one without the bot, and the current game.
+                for (var i = 0; i < 6; i++)
+                {
+                    var id = gameIds[i];
+                    db.Games.Add(new Game { Id = id, StartedAt = now.AddDays(-i),
+                        FinishedAt = i is 3 or 5 ? null : now.AddDays(-i),
+                        Status = i is 3 or 5 ? GameStatuses.Active : GameStatuses.Finished });
+                    if (i != 4) db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = botId, Seat = 0, Role = "Detective" });
+                    db.GamePlayers.Add(new GamePlayer { GameId = id, UserId = admin.Id, Seat = 1, Role = i == 0 ? "Killer" : "Detective" });
+                }
+                for (var i = 0; i < 3; i++)
+                    db.ChatMessages.Add(new ChatMessage { Id = Guid.NewGuid(), GameId = state.Id, AuthorId = admin.Id,
+                        Channel = i == 2 ? ChatChannels.KillerTeam : ChatChannels.Public, Round = 1,
+                        CreatedAt = now.AddSeconds(i), CardIds = [card], CardNotes = [i == 1 ? "не эта" : "думаю, эта"] });
+                return await db.SaveChangesAsync();
+            });
+            var mind = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
+            mind.History[admin.Id].Games.Should().Be(3);
+            mind.Opinions.Should().ContainSingle().Which.Strength.Should().Be(-1, "повтор заменён, приватный чат недоступен");
+            await admin.PutAsync($"/api/v1/admin/bots/{botId}", new { nickname = "Память", spectra = spectra with { Memory = 0, Variability = 1 } });
+            var blank = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
+            blank.History.Should().BeEmpty();
+            blank.Opinions.Should().ContainSingle("события текущей партии помним даже при памяти 0");
+        }
+        finally
+        {
+            // Other integration tests tick every active game in the shared database.
+            // These history-only fixtures must never be picked up as live games.
+            await _factory.WithDbAsync(db => db.Games.Where(g => gameIds.Contains(g.Id)).ExecuteDeleteAsync());
+        }
     }
 
     [Fact]

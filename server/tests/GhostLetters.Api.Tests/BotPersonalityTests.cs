@@ -222,6 +222,18 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void DetailAlreadyPresentInOldTags_IsNotDoubleCountedAsMainSubject()
+    {
+        var tags = CardTags.Parse("""{"cage":["cage","flower"],"bloom":["flower","plant"],"prison":["cage","metal"]}""")
+            .WithDetails("""{"cage":[{"tag":"flower","weight":0.4,"label":"розы у основания"}]}""");
+        var attention = (Meaning: 1.0, Shape: 0.0, Color: 0.0);
+        tags.Similarity("cage", "bloom", attention, 0).Should().Be(0);
+        tags.Similarity("cage", "prison", attention, 0).Should().BeGreaterThan(0);
+        tags.Similarity("cage", "bloom", attention, 1).Should().BeGreaterThan(tags.Similarity("cage", "prison", attention, 1));
+        tags.Explain("cage", "bloom", attention, 1).Should().Contain("по детали: розы");
+    }
+
+    [Fact]
     public void Details_ChangeEvidenceAndExplainTheActualFeature()
     {
         var tags = Tags.WithDetails("""

@@ -32,7 +32,12 @@ public sealed class CardTags
             throw new FormatException("Деталям нужны тег, подпись и вес от 0 до 1.");
         }
 
-        return new CardTags(_tags) { _details = raw };
+        // Some older main tags already describe tiny objects (e.g. the roses on
+        // the cage). Once classified as a detail, do not also count them as the
+        // main subject: Details=0 must really ignore them.
+        var main = _tags.ToDictionary(e => e.Key, e => e.Value
+            .Except((raw.GetValueOrDefault(e.Key) ?? []).Select(d => d.Tag)).ToHashSet());
+        return new CardTags(main) { _details = raw };
     }
 
     private Dictionary<string, double> DetailsOf(string card) =>
