@@ -27,6 +27,22 @@ class FakeApi extends Api {
   Lobby? lobbyResult;
   GameSnapshot? snapshotResult;
   List<MyGame> games = const [];
+  final presetList = <SettingsPreset>[];
+
+  @override
+  Future<List<SettingsPreset>> settingsPresets() async => _record('settingsPresets', [], () => [...presetList]);
+
+  @override
+  Future<SettingsPreset> saveSettingsPreset(String id, String name, LobbySettings settings) async =>
+      _record('saveSettingsPreset', [id, name, settings], () {
+        presetList.removeWhere((p) => p.id == id);
+        final preset = SettingsPreset(id: id, name: name, settings: settings);
+        presetList.add(preset);
+        return preset;
+      });
+
+  @override
+  Future<void> deleteSettingsPreset(String id) async => _record('deleteSettingsPreset', [id], () => presetList.removeWhere((p) => p.id == id));
   ApiError? failWith;
 
   T _record<T>(String name, List<Object?> args, T Function() result) {

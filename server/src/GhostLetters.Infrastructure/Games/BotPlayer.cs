@@ -414,7 +414,8 @@ public static class BotPlayer
                     return killer;
                 }
 
-                var unknown = candidates.Where(c => Known(c) is null || Known(c)!.Value.IsKillerTeam()).ToList();
+                // Призрак в списке кандидатов означает «Убийцы нет» (Озон на четверых).
+                var unknown = candidates.Where(c => Known(c) is null || Known(c) == Role.Ghost || Known(c)!.Value.IsKillerTeam()).ToList();
                 if (unknown.Count > 0)
                 {
                     candidates = unknown;

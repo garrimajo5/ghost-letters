@@ -198,7 +198,7 @@ public static partial class GameEngine
             state.VoteStages.Add(new VoteStage { Kind = VoteStageKind.Row, Row = row, CandidateColumns = columns.ToList() });
         }
 
-        if (state.HasKiller)
+        if (state.HasKillerVote)
         {
             state.VoteStages.Add(KillerStage(state));
         }
@@ -210,7 +210,8 @@ public static partial class GameEngine
     private static VoteStage KillerStage(GameState state) => new()
     {
         Kind = VoteStageKind.Killer,
-        CandidateSuspects = state.Investigators.Where(p => !state.Arrested.Contains(p.Id)).Select(p => p.Id).ToList(),
+        CandidateSuspects = state.Players.Where(p =>
+            (p.Role != Role.Ghost || state.Settings.Roles.RandomKillerOmission) && !state.Arrested.Contains(p.Id)).Select(p => p.Id).ToList(),
     };
 
     private static void ApplyVote(GameState state, PlayerState voter, CastVote vote, List<GameEvent> events)
@@ -351,7 +352,7 @@ public static partial class GameEngine
     private static void ResolveArrest(GameState state, Guid suspectId, bool byLot, List<GameEvent> events)
     {
         var suspect = state.Player(suspectId);
-        state.Arrested.Add(suspect.Id);
+        if (suspect.Role != Role.Ghost) state.Arrested.Add(suspect.Id);
         var revealed = suspect.Role is Role.Killer or Role.Accomplice or Role.Imitator ? suspect.Role : (Role?)null;
         state.VoteOutcomes.Add(new VoteOutcome
         {
@@ -359,11 +360,12 @@ public static partial class GameEngine
             Kind = VoteStageKind.Killer,
             Row = -1,
             Suspect = suspect.Id,
-            Correct = suspect.Role == Role.Killer,
+            Correct = suspect.Role == Role.Killer ||
+                (suspect.Role == Role.Ghost && state.Settings.Roles.RandomKillerOmission && !state.HasKiller),
             ByLot = byLot,
             RevealedRole = revealed,
         });
-        events.Add(new GameEvent("Arrested", Detail: suspect.Id.ToString()));
+        events.Add(new GameEvent(suspect.Role == Role.Ghost ? "NoKillerChosen" : "Arrested", Detail: suspect.Id.ToString()));
 
         // Арестован Сообщник — доарест среди оставшихся.
         if (suspect.Role == Role.Accomplice)
@@ -391,7 +393,7 @@ public static partial class GameEngine
         var rows = state.VoteOutcomes.Where(o => o.Kind == VoteStageKind.Row).ToList();
         var correct = rows.Count(o => o.Correct);
         var killerCaught = state.VoteOutcomes.Any(o => o.Kind == VoteStageKind.Killer && o.Correct);
-        state.Solved = correct == state.Board.Count || (state.HasKiller && killerCaught && correct == state.Board.Count - 1);
+        state.Solved = correct == state.Board.Count || (state.HasKillerVote && killerCaught && correct == state.Board.Count - 1);
         events.Add(new GameEvent(state.Solved == true ? "CaseSolved" : "CaseUnsolved"));
         NextFinaleStep(state, events);
     }

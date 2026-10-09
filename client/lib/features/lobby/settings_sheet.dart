@@ -3,23 +3,25 @@ import 'package:flutter/material.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../game/game_state.dart';
+import 'presets_sheet.dart';
 
 /// Редактор настроек лобби. Во время партии меняются только раунды, режим обсуждения, темп и таймеры.
 class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({super.key, required this.initial, required this.inGame, this.players});
+  const SettingsSheet({super.key, required this.initial, required this.inGame, this.players, this.personal = false});
 
   final LobbySettings initial;
   final bool inGame;
+  final bool personal;
 
   /// Сколько игроков — чтобы показать число раундов по правилам.
   final int? players;
 
-  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial, {bool inGame = false, int? players}) =>
+  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial, {bool inGame = false, int? players, bool personal = false}) =>
       showModalBottomSheet<LobbySettings>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => SettingsSheet(initial: initial, inGame: inGame, players: players),
+        builder: (_) => SettingsSheet(initial: initial, inGame: inGame, players: players, personal: personal),
       );
 
   @override
@@ -53,7 +55,23 @@ class _SettingsSheetState extends State<SettingsSheet> {
         controller: scroll,
         padding: const EdgeInsets.all(16),
         children: [
-          Text(widget.inGame ? 'НАСТРОЙКИ ПАРТИИ' : 'НОВАЯ ИГРА', style: heading(22, spacing: 1.5)),
+          Text(widget.personal ? 'МОИ НАСТРОЙКИ' : widget.inGame ? 'НАСТРОЙКИ ПАРТИИ' : 'НОВАЯ ИГРА', style: heading(22, spacing: 1.5)),
+          if (widget.personal) const Text('Настройте параметры, затем откройте «Пресеты» и сохраните их как личный пресет.'),
+          if (!_rulesLocked)
+            OutlinedButton.icon(
+              key: const Key('settings-presets'),
+              icon: const Icon(Icons.bookmarks_outlined),
+              label: const Text('Пресеты: Классика, Озон, мои'),
+              onPressed: () async {
+                final chosen = await PresetsSheet.show(context, s, widget.players);
+                if (chosen != null && mounted) setState(() => s = chosen.copyWith(ghostUserId: widget.initial.ghostUserId));
+              },
+            ),
+          if (s.rulesPreset == 'ozon')
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text('Озон · 3–11 игроков. Поле, раунды и роли автоматически зависят от состава до старта. Ручная правка этих параметров отключает подбор.', style: TextStyle(color: AppColors.ice)),
+            ),
           if (_rulesLocked)
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -92,6 +110,16 @@ class _SettingsSheetState extends State<SettingsSheet> {
             subtitle: const Text('Без Убийцы — кооперативная игра'),
             value: roles.killerEnabled,
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(roles: roles.copyWith(killerEnabled: v))),
+          ),
+          SwitchListTile(
+            key: const Key('random-killer-omission'),
+            title: const Text('Случайно убрать одну роль'),
+            subtitle: const Text('Только 4 игрока: из Убийцы и трёх Детективов убирается случайная роль. Голос за Призрака означает «Убийцы нет».'),
+            value: roles.randomKillerOmission,
+            onChanged: _rulesLocked || (widget.players != null && widget.players != 4)
+                ? null
+                : (v) => setState(() => s = s.copyWith(roles: roles.copyWith(randomKillerOmission: v,
+                    killerEnabled: v ? true : null, extraAccomplices: v ? 0 : null))),
           ),
           SwitchListTile(
             title: const Text('Свидетель (с 7 игроков)'),
@@ -195,7 +223,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
             onPressed: () => Navigator.pop(context, s),
-            child: const Text('Сохранить'),
+            child: Text(widget.personal ? 'Закрыть' : 'Сохранить'),
           ),
         ],
       ),

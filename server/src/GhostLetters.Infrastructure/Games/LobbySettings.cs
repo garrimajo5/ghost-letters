@@ -60,6 +60,23 @@ public sealed record LobbySettings
 {
     public const int MaxTurnHours = 72;
 
+    /// <summary>ozon — автоматически подбирать поле, раунды и роли по составу. null — ручные/классические настройки.</summary>
+    public string? RulesPreset { get; init; }
+
+    public LobbySettings ResolveForPlayers(int players)
+    {
+        if (RulesPreset != "ozon") return this;
+        if (players is < 3 or > 11) throw AppException.Validation("Пресет «Озон» рассчитан на 3–11 игроков.");
+        return this with
+        {
+            UseSecretRow = true,
+            Columns = players is 5 or 9 or 11 ? 6 : 5,
+            Rounds = players == 3 ? 5 : players <= 7 ? 4 : 3,
+            Roles = new RoleOptions(KillerEnabled: players >= 4, ExtraAccomplices: players == 6 ? 1 : 0,
+                RandomKillerOmission: players == 4),
+        };
+    }
+
     public bool UseSecretRow { get; init; } = true;
 
     public int Columns { get; init; } = GameDefaults.DefaultColumns;
@@ -105,6 +122,7 @@ public sealed record LobbySettings
     /// <summary>Проверка без числа игроков: оно известно только при старте.</summary>
     public void Validate()
     {
+        if (RulesPreset is not (null or "ozon")) throw AppException.Validation("Неизвестный пресет правил.");
         if (Tempo is not (Tempos.Live or Tempos.TurnBased))
         {
             throw AppException.Validation("Темп — live или turn.");
