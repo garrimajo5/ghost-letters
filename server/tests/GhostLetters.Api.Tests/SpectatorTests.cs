@@ -129,7 +129,9 @@ public sealed class SpectatorTests(PostgresFixture postgres) : IAsyncLifetime
         foreach (var channel in new[] { "public", "killer_team" })
         {
             using var form = new MultipartFormDataContent();
-            var bytes = new ByteArrayContent(new byte[4096]);
+            var payload = new byte[4096];
+            payload[0] = 0xff; payload[1] = 0xf1;
+            var bytes = new ByteArrayContent(payload);
             bytes.Headers.ContentType = new MediaTypeHeaderValue("audio/aac");
             form.Add(bytes, "file", "voice.aac");
             form.Add(new StringContent("1000"), "durationMs");

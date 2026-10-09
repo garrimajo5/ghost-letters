@@ -17,9 +17,8 @@ class Session {
   final String? accessToken;
   final String? refreshToken;
 
-  /// Аккаунт на устройстве запомнен. Токенов может не быть (сервер сменился или сессия истекла) —
-  /// тогда API тихо входит заново тем же deviceId, без экрана ввода ника.
-  bool get isSignedIn => user != null;
+  /// Вход подтверждается сессией, а не идентификатором устройства.
+  bool get isSignedIn => user != null && refreshToken != null;
 
   bool get hasTokens => accessToken != null;
 }
@@ -41,7 +40,7 @@ class SessionController extends Notifier<Session> {
       final user = User.fromJson(Map<String, dynamic>.from(j['user'] as Map));
       // Токены другого сервера (например, локального) здесь не подойдут — помним только профиль.
       final server = j['server'] as String?;
-      if (server != null && server != AppConfig.apiUrl) return Session(user: user);
+      if (server != null && server != AppConfig.apiUrl) return const Session();
       return Session(
         user: user,
         accessToken: j['accessToken'] as String?,
@@ -68,6 +67,7 @@ class SessionController extends Notifier<Session> {
   /// Выход по кнопке: аккаунт забываем, но ник и цвет остаются подсказкой на экране входа.
   void signOut() {
     _prefs.remove(_kSession);
+    _prefs.remove(_kDevice);
     state = const Session();
   }
 

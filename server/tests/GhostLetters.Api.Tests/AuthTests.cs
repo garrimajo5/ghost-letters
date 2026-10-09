@@ -35,12 +35,14 @@ public sealed class AuthTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Guest_CreatesUser_AndSameDeviceReturnsSameUser()
+    public async Task Guest_CreatesUser_AndExistingDeviceRequiresSessionProof()
     {
         var device = NewDevice();
 
         var first = await LoginAsync(device, "Шерлок", "#3fb68b");
-        var second = await LoginAsync(device, "Другой ник", null);
+        (await _client.PostAsJsonAsync("/api/v1/auth/guest", new GuestLoginRequest(device, "Другой ник", null)))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var second = await LoginAsync(device, "Другой ник", null, first.RefreshToken);
 
         first.User.Nickname.Should().Be("Шерлок");
         first.User.AvatarColor.Should().Be("#3FB68B");
@@ -185,6 +187,16 @@ public sealed class AuthTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task LogoutOfRotatedTokenAlsoRevokesReplacement()
+    {
+        var login = await LoginAsync(NewDevice(), "Игрок", null);
+        var rotated = (await (await RefreshAsync(login.RefreshToken)).Content.ReadFromJsonAsync<AuthResponse>())!;
+        (await _client.PostAsJsonAsync("/api/v1/auth/logout", new RefreshRequest(login.RefreshToken)))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await RefreshAsync(rotated.RefreshToken)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task LinkCode_SecondDevice_LogsIntoSameAccount_Once()
     {
         var phone = await LoginAsync(NewDevice(), "Шерлок", null);
@@ -201,7 +213,7 @@ public sealed class AuthTests : IAsyncLifetime
         tablet.User.Id.Should().Be(phone.User.Id);
 
         // Дальше планшет входит как обычный гость — и это тот же игрок.
-        (await LoginAsync(tabletDevice, "Неважно", null)).User.Id.Should().Be(phone.User.Id);
+        (await LoginAsync(tabletDevice, "Неважно", null, tablet.RefreshToken)).User.Id.Should().Be(phone.User.Id);
 
         // Код одноразовый.
         var again = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(NewDevice(), code.Code));
@@ -218,7 +230,7 @@ public sealed class AuthTests : IAsyncLifetime
         var code = await CreateLinkCodeAsync(owner.AccessToken);
         var linked = await _client.PostAsJsonAsync("/api/v1/auth/link", new LinkLoginRequest(otherDevice, code.Code));
         linked.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await LoginAsync(otherDevice, "Случайный", null)).User.Id.Should().Be(owner.User.Id).And.NotBe(other.User.Id);
+        (await linked.Content.ReadFromJsonAsync<AuthResponse>())!.User.Id.Should().Be(owner.User.Id).And.NotBe(other.User.Id);
 
         var stale = await CreateLinkCodeAsync(owner.AccessToken);
         _factory.Time.Advance(TimeSpan.FromMinutes(11));
@@ -244,9 +256,9 @@ public sealed class AuthTests : IAsyncLifetime
 
     private static string NewDevice() => $"device-{Guid.NewGuid():N}";
 
-    private async Task<AuthResponse> LoginAsync(string device, string nickname, string? color)
+    private async Task<AuthResponse> LoginAsync(string device, string nickname, string? color, string? proof = null)
     {
-        var response = await _client.PostAsJsonAsync("/api/v1/auth/guest", new GuestLoginRequest(device, nickname, color));
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/guest", new GuestLoginRequest(device, nickname, color, proof));
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         return (await response.Content.ReadFromJsonAsync<AuthResponse>())!;
     }

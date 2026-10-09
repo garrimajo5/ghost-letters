@@ -3,6 +3,8 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using GhostLetters.Infrastructure.Auth;
 using GhostLetters.Infrastructure.Games;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GhostLetters.Api.Tests;
 
@@ -48,6 +50,20 @@ public sealed class AvatarTests(PostgresFixture postgres) : IAsyncLifetime
         removed.StatusCode.Should().Be(HttpStatusCode.OK);
         (await me.GetAsync("/api/v1/me")).GetProperty("avatarId").ValueKind.Should().Be(JsonValueKind.Null);
         (await anonymous.GetAsync($"/api/v1/avatars/{avatarId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CleanupRemovesReplacedAvatarButKeepsCurrentPortrait()
+    {
+        var me = await TestPlayer.LoginAsync(_factory, "Ирен");
+        var first = (await UploadAsync(me, Png, "image/png", HttpStatusCode.OK)).Id("avatarId");
+        var second = (await UploadAsync(me, Png, "image/png", HttpStatusCode.OK)).Id("avatarId");
+        var oldKey = await _factory.WithDbAsync(db => db.MediaFiles.Where(m => m.Id == first).Select(m => m.StorageKey).SingleAsync());
+        _factory.Time.Advance(TimeSpan.FromHours(25));
+        await _factory.WithServiceAsync<MediaLimits, int>(m => m.CleanupAsync(default));
+        (await _factory.WithDbAsync(db => db.MediaFiles.AnyAsync(m => m.Id == first))).Should().BeFalse();
+        _factory.Services.GetRequiredService<IMediaStorage>().Open(oldKey).Should().BeNull();
+        (await me.Client.GetAsync($"/api/v1/avatars/{second}")).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

@@ -89,7 +89,7 @@ public sealed class GameService(
             .Where(e => e.GameId == gameId && e.Seq > after && (e.VisibleTo == null || e.VisibleTo == me))
             .OrderBy(e => e.Seq).Take(500).ToListAsync(ct);
         return rows.Select(e => new GameEventDto(
-            e.Seq, e.Version, e.Type, e.ActorUserId, GameJson.Deserialize<EventPayload>(e.Payload).Detail, e.CreatedAt)).ToList();
+            e.Seq, e.Version, e.Type, PublicActor(e), GameJson.Deserialize<EventPayload>(e.Payload).Detail, e.CreatedAt)).ToList();
     }
 
     /// <summary>Команда игрока. Повтор с тем же clientCommandId возвращает прежнюю версию.</summary>
@@ -217,7 +217,7 @@ public sealed class GameService(
                 Seq = ++seq,
                 Version = state.Version,
                 Type = e.Type,
-                Payload = GameJson.Serialize(new EventPayload(e.Detail)),
+                Payload = GameJson.Serialize(new EventPayload(e.Detail, e.Actor, 1)),
                 ActorUserId = e.Actor ?? applied.Actor,
                 Visibility = e.OnlyFor is null ? EventVisibility.All : EventVisibility.User,
                 VisibleTo = e.OnlyFor,
@@ -265,5 +265,17 @@ public sealed class GameService(
 
     private sealed record Applied(IReadOnlyList<GameEvent> Events, Guid? Actor, string? ClientCommandId, string Source);
 
-    private sealed record EventPayload(string? Detail);
+    // ActorUserId also identifies the command for idempotency. Never expose that fallback.
+    // Old records have no explicit public actor: fail closed for system and unknown events.
+    private static Guid? PublicActor(GameEventRecord e)
+    {
+        var payload = GameJson.Deserialize<EventPayload>(e.Payload);
+        if (payload.Schema == 1) return payload.Actor;
+        return e.Type is "FloorGiven" or "HandRaised" or "HandLowered" or "ReadyNextRound"
+            or "TeamSuggested" or "RoleAcknowledged" or "FirstClue" or "LetterSent"
+            or "RadioTaken" or "HintsRevealed" or "HandKept" or "CardDiscarded" or "SpeakerChanged"
+            ? e.ActorUserId : null;
+    }
+
+    private sealed record EventPayload(string? Detail, Guid? Actor = null, int Schema = 0);
 }

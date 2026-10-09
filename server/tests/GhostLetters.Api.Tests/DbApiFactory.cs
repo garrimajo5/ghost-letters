@@ -22,6 +22,10 @@ public sealed class DbApiFactory(PostgresFixture postgres, Action<IWebHostBuilde
         builder.UseSetting("Cards:SeedOriginalCount", "300");
         builder.UseSetting("Games:TimersEnabled", "false");
         builder.UseSetting("RateLimit:AuthPerMinute", "100000");
+        builder.UseSetting("RateLimit:WritesPerMinute", "100000");
+        builder.UseSetting("RateLimit:ReadsPerMinute", "100000");
+        builder.UseSetting("RateLimit:UploadsPerMinute", "100000");
+        builder.UseSetting("RateLimit:HubCallsPerMinute", "100000");
         builder.UseSetting("Media:StoragePath", Path.Combine(Path.GetTempPath(), "ghost-letters-media", Guid.NewGuid().ToString("N")));
         builder.ConfigureServices(services =>
         {

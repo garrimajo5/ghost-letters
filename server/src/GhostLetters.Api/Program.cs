@@ -14,7 +14,12 @@ var builder = WebApplication.CreateBuilder(args);
 // Реалтайм регистрируется до инфраструктуры: она подставляет заглушку, только если уведомителя нет.
 builder.Services.AddSingleton<IRealtimeNotifier, HubNotifier>();
 builder.Services.AddSingleton<IUserIdProvider, SubUserIdProvider>();
-builder.Services.AddSignalR(o => o.EnableDetailedErrors = builder.Environment.IsDevelopment())
+builder.Services.AddSingleton<HubRateLimitFilter>();
+builder.Services.AddSignalR(o =>
+    {
+        o.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        o.AddFilter<HubRateLimitFilter>();
+    })
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -34,6 +39,12 @@ builder.Services.AddCors(o => o.AddPolicy("dev", p => p
 var app = builder.Build();
 
 app.UseExceptionHandler();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["Proxy:KnownProxies"])) app.UseForwardedHeaders();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    await next(context);
+});
 if (app.Environment.IsDevelopment())
 {
     app.UseCors("dev");
@@ -88,7 +99,7 @@ api.MapLobbies();
 api.MapGames();
 api.MapSocial();
 api.MapBots();
-app.MapHub<PlayHub>(PlayHub.Path);
+app.MapHub<PlayHub>(PlayHub.Path, options => options.CloseOnAuthenticationExpiration = true);
 
 await app.Services.MigrateDatabaseAsync(app.Configuration);
 await app.RunAsync();
