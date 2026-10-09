@@ -65,6 +65,9 @@ jobs:
       - name: Smoke
         run: python3 .github/scripts/compose_smoke.py http://localhost:8080
 
+      - name: Production proxy network and recovery
+        run: python3 .github/scripts/proxy_network_smoke.py
+
       - name: API logs on failure
         if: failure()
         run: |
