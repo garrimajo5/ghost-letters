@@ -19,6 +19,7 @@ class Realtime {
   final _lobbyUpdates = StreamController<Lobby>.broadcast();
   final _gameStarted = StreamController<({String lobbyId, String gameId})>.broadcast();
   final _views = StreamController<({GameView view, DateTime? deadline})>.broadcast();
+  final _snapshots = StreamController<GameSnapshot>.broadcast();
   final _chat = StreamController<ChatMessage>.broadcast();
   final _connected = StreamController<bool>.broadcast();
 
@@ -27,6 +28,9 @@ class Realtime {
   Stream<({String lobbyId, String gameId})> get gameStarted => _gameStarted.stream;
 
   Stream<({GameView view, DateTime? deadline})> get views => _views.stream;
+
+  /// Полный снимок при восстановлении подписки, включая состав игроков.
+  Stream<GameSnapshot> get snapshots => _snapshots.stream;
 
   Stream<ChatMessage> get chat => _chat.stream;
 
@@ -85,7 +89,7 @@ class Realtime {
     });
     hub.onreconnected(({connectionId}) async {
       _connected.add(true);
-      await _resubscribe(hub);
+      await resync();
     });
     hub.onreconnecting(({error}) => _connected.add(false));
     // Автоматические попытки кончились — пересоздаём подключение сами, пока есть подписки.
@@ -116,7 +120,11 @@ class Realtime {
   }
 
   /// Подписаться заново и разослать свежие снимки — например, после возврата приложения из фона.
-  Future<void> resync() async {
+  Future<void>? _resyncing;
+
+  Future<void> resync() => _resyncing ??= _resync().whenComplete(() => _resyncing = null);
+
+  Future<void> _resync() async {
     if (_lobbies.isEmpty && _games.isEmpty) return;
     await _resubscribe(await _connection());
   }
@@ -130,7 +138,7 @@ class Realtime {
       final r = await hub.invoke('SubscribeGame', args: <Object>[id]);
       if (r is Map) {
         final snap = GameSnapshot.fromJson(Map<String, dynamic>.from(r));
-        _views.add((view: snap.view, deadline: snap.deadline));
+        _snapshots.add(snap);
       }
     }
   }

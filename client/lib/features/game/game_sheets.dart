@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
 import '../../core/card_catalog.dart';
-import '../../core/realtime.dart';
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../core/voice.dart';
@@ -590,8 +589,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
               ),
             ),
           Expanded(
-            child: StreamBuilder<Object?>(
-              stream: ref.read(realtimeProvider).chat,
+            child: ListenableBuilder(
+              listenable: screen.chatChanges,
               builder: (context, _) {
                 final messages = screen.chat.where((m) => m.channel == _channel).toList();
                 return ListView.builder(
