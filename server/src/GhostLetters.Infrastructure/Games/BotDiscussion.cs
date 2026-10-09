@@ -84,9 +84,9 @@ public static class BotDiscussion
         if (own.Count == 0) return Line(Summary("Собрал версию по всем открытым уликам за партию:"));
 
         var fresh = messages.Where(m => m.Author != me.Id && m.At > own[^1].At).ToList();
-        var myName = Name(me.Id);
-        bool Addressed(DiscussionLine m) => m.Text.StartsWith(myName + ",", StringComparison.OrdinalIgnoreCase) ||
-            m.Text.StartsWith(myName.Replace("Бот ", "") + ",", StringComparison.OrdinalIgnoreCase);
+        bool Addresses(DiscussionLine m, Guid target) => m.Text.StartsWith(Name(target) + ",", StringComparison.OrdinalIgnoreCase) ||
+            m.Text.StartsWith(Name(target).Replace("Бот ", "") + ",", StringComparison.OrdinalIgnoreCase);
+        bool Addressed(DiscussionLine m) => Addresses(m, me.Id);
         // A question can arrive before this bot's opening summary. Do not lose it
         // merely because the summary was sent later; only an answer consumes it.
         var pending = messages.Where(m => m.Author != me.Id && m.Text.Contains('?') &&
@@ -101,7 +101,12 @@ public static class BotDiscussion
             if (answered is not null) pending.Remove(answered);
         }
         var question = pending.LastOrDefault();
-        var answer = fresh.LastOrDefault(m => Addressed(m) && !m.Text.Contains('?'));
+        // Acknowledge the first answer to an actual outgoing question, not replies to
+        // acknowledgements. Later public opinions still contribute to mind/plan.
+        var answer = fresh.LastOrDefault(m => Addressed(m) && !m.Text.Contains('?') &&
+            own.Any(q => q.Text.Contains('?') && q.At < m.At && Addresses(q, m.Author) &&
+                !messages.Any(previous => previous.Author == m.Author && previous.At > q.At && previous.At < m.At &&
+                    Addressed(previous) && !previous.Text.Contains('?'))));
         var incoming = question ?? answer;
         if (incoming is not null)
         {
