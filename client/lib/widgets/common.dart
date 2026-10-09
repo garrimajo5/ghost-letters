@@ -40,8 +40,15 @@ class Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorFromHex(color),
         shape: BoxShape.circle,
-        border: Border.all(color: ringColor ?? AppColors.bg, width: ringColor == null ? 0 : (size > 60 ? 3 : 2)),
       ),
+      // Draw the ring over the full-size photo. A background border also adds
+      // rectangular padding, exposing strips and letting the photo cover the ring.
+      foregroundDecoration: ringColor == null
+          ? null
+          : BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: ringColor, width: size > 60 ? 3 : 2),
+            ),
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
       child: photoBytes != null
