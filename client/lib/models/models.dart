@@ -62,6 +62,7 @@ class RoleOptions {
     this.useExpert = true,
     this.useBlackmailer = false,
     this.imitator = ImitatorMode.none,
+    this.extraAccomplices = 0,
   });
 
   factory RoleOptions.fromJson(Json j) => RoleOptions(
@@ -72,6 +73,7 @@ class RoleOptions {
         imitator: _imitatorWire.entries
             .firstWhere((e) => e.value == j['imitator'], orElse: () => const MapEntry(ImitatorMode.none, 'None'))
             .key,
+        extraAccomplices: (j['extraAccomplices'] as num?)?.toInt() ?? 0,
       );
 
   final bool killerEnabled;
@@ -80,13 +82,18 @@ class RoleOptions {
   final bool useBlackmailer;
   final ImitatorMode imitator;
 
-  RoleOptions copyWith({bool? killerEnabled, bool? useWitness, bool? useExpert, bool? useBlackmailer, ImitatorMode? imitator}) =>
+  /// Сколько Детективов заменить Сообщниками сверх таблицы правил (0–2).
+  final int extraAccomplices;
+
+  RoleOptions copyWith(
+          {bool? killerEnabled, bool? useWitness, bool? useExpert, bool? useBlackmailer, ImitatorMode? imitator, int? extraAccomplices}) =>
       RoleOptions(
         killerEnabled: killerEnabled ?? this.killerEnabled,
         useWitness: useWitness ?? this.useWitness,
         useExpert: useExpert ?? this.useExpert,
         useBlackmailer: useBlackmailer ?? this.useBlackmailer,
         imitator: imitator ?? this.imitator,
+        extraAccomplices: extraAccomplices ?? this.extraAccomplices,
       );
 
   Json toJson() => {
@@ -95,6 +102,7 @@ class RoleOptions {
         'useExpert': useExpert,
         'useBlackmailer': useBlackmailer,
         'imitator': _imitatorWire[imitator],
+        'extraAccomplices': extraAccomplices,
       };
 }
 
@@ -862,6 +870,7 @@ class BotSpectra {
     this.risk = 0.5,
     this.compromise = 0.5,
     this.variability = 0.2,
+    this.strictness = 0.5,
   });
 
   factory BotSpectra.fromJson(Json j) {
@@ -875,6 +884,7 @@ class BotSpectra {
       risk: v('risk', 0.5),
       compromise: v('compromise', 0.5),
       variability: v('variability', 0.2),
+      strictness: v('strictness', 0.5),
     );
   }
 
@@ -887,6 +897,9 @@ class BotSpectra {
   final double compromise;
   final double variability;
 
+  /// Строгость ассоциаций: 0 — одним письмом проверяет всё связанное, 1 — ровно одну карту.
+  final double strictness;
+
   BotSpectra copyWith({
     double? meaning,
     double? shape,
@@ -896,6 +909,7 @@ class BotSpectra {
     double? risk,
     double? compromise,
     double? variability,
+    double? strictness,
   }) =>
       BotSpectra(
         meaning: meaning ?? this.meaning,
@@ -906,6 +920,7 @@ class BotSpectra {
         risk: risk ?? this.risk,
         compromise: compromise ?? this.compromise,
         variability: variability ?? this.variability,
+        strictness: strictness ?? this.strictness,
       );
 
   /// Доли внимания в процентах (сумма 100).
@@ -925,6 +940,7 @@ class BotSpectra {
         'memory': memory,
         'risk': risk,
         'compromise': compromise,
+        'strictness': strictness,
         'variability': variability,
       };
 }

@@ -19,6 +19,14 @@ Future<TestApp> _start(WidgetTester tester, {required bool admin, User user = wa
 }
 
 void main() {
+  Future<void> reveal(WidgetTester tester, String key, {double delta = 200}) async {
+    final target = find.byKey(Key(key));
+    await tester.scrollUntilVisible(target, delta, scrollable: find.byType(Scrollable).last);
+    await tester.ensureVisible(target);
+    // A newly revealed control may still have its old layout before this pump.
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('не админ: пункта «Боты» в меню нет', (tester) async {
     await _start(tester, admin: false);
 
@@ -45,17 +53,23 @@ void main() {
     await tester.enterText(find.byKey(const Key('bot-name')), 'Холмс');
     expect(find.text('Смысл 50% · форма 25% · цвет 25%'), findsOneWidget);
     // Двигаем «Риск» до конца вправо — «блефует и обвиняет в лоб».
-    final list = find.byType(Scrollable).last;
-    await tester.scrollUntilVisible(find.byKey(const Key('spectrum-risk')), 200, scrollable: list);
+    await reveal(tester, 'spectrum-risk');
     await tester.drag(find.byKey(const Key('spectrum-risk')), const Offset(600, 0));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    // Строгость ассоциаций влево до конца — «одной уликой проверил всё связанное».
+    await reveal(tester, 'spectrum-strictness', delta: -200);
+    expect(find.text('Строгость ассоциаций'), findsOneWidget);
+    await tester.drag(find.byKey(const Key('spectrum-strictness')), const Offset(-600, 0));
+    await tester.pumpAndSettle();
+    await reveal(tester, 'bot-save');
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
 
     final saved = app.api.named('saveBot').single.$2;
     expect(saved[1], 'Холмс');
     expect((saved[2] as BotSpectra).risk, 1.0);
+    expect((saved[2] as BotSpectra).strictness, 0.0);
+    expect((saved[2] as BotSpectra).toJson()['strictness'], 0.0, reason: 'уходит на сервер');
     expect(find.text('Бот Холмс'), findsOneWidget, reason: 'вернулись в кабинет, список обновлён');
   });
 
@@ -98,8 +112,7 @@ void main() {
     expect(find.byKey(const Key('avatar-photo-local')), findsOneWidget, reason: 'превью до сохранения');
     expect(app.api.named('uploadBotAvatar'), isEmpty, reason: 'загружаем только по «Сохранить»');
 
-    final list = find.byType(Scrollable).last;
-    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await reveal(tester, 'bot-save');
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
     expect(app.api.named('uploadBotAvatar').single.$2, ['p1', 4, 'avatar.png']);
@@ -109,7 +122,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('bot-photo-remove')));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await reveal(tester, 'bot-save');
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
     expect(app.api.named('removeBotAvatar').single.$2, ['p1']);
@@ -126,8 +139,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('bot-name')), 'Холмс');
     await tester.tap(find.byKey(const Key('bot-photo-pick')));
     await tester.pumpAndSettle();
-    final list = find.byType(Scrollable).last;
-    await tester.scrollUntilVisible(find.byKey(const Key('bot-save')), 200, scrollable: list);
+    await reveal(tester, 'bot-save');
     await tester.tap(find.byKey(const Key('bot-save')));
     await tester.pumpAndSettle();
 

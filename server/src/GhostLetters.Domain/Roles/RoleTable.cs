@@ -4,6 +4,7 @@ namespace GhostLetters.Domain.Roles;
 /// Состав ролей по числу игроков — таблица из правил плюс опции лобби.
 /// 4–6: Призрак, Убийца, Детективы; 7–9: + Сообщник и Свидетель;
 /// 10–12: + второй Сообщник и Эксперт. 2–3 игрока — всегда кооператив.
+/// Хост может заменить Детективов Сообщниками (ExtraAccomplices), пока команда Убийцы меньше остальных.
 /// </summary>
 public static class RoleTable
 {
@@ -23,13 +24,14 @@ public static class RoleTable
                 $"Игроков должно быть от {MinPlayers} до {MaxPlayers}.");
         }
 
+        var extra = ExtraAccomplices(options);
         if (!options.KillerEnabled || players < MinCompetitivePlayers)
         {
             return Build(players, accomplices: 0, witness: false, expert: false, blackmailer: false,
                 imitator: false, killer: false);
         }
 
-        var accomplices = players >= 10 ? 2 : players >= 7 ? 1 : 0;
+        var accomplices = (players >= 10 ? 2 : players >= 7 ? 1 : 0) + extra;
         var witness = options.UseWitness && players >= 7;
         var expert = options.UseExpert && players >= 10;
         var blackmailer = options.UseBlackmailer && players >= MinBlackmailerPlayers;
@@ -59,6 +61,14 @@ public static class RoleTable
         }
 
         var composition = Build(players, accomplices, witness, expert, blackmailer, imitator, killer: true);
+        var killerTeam = composition.Count(r => r.IsKillerTeam());
+        if (options.ExtraAccomplices > 0 && killerTeam * 2 >= players - 1)
+        {
+            throw new ArgumentException(
+                $"Слишком много Сообщников: команда Убийцы ({killerTeam}) должна быть меньше остальных игроков без Призрака ({players - 1 - killerTeam}).",
+                nameof(options));
+        }
+
         if (composition.Count(r => r == Role.Detective) < 1)
         {
             throw new ArgumentException("Не осталось ни одного Детектива — уберите часть ролей.", nameof(options));
@@ -66,6 +76,11 @@ public static class RoleTable
 
         return composition;
     }
+
+    private static int ExtraAccomplices(RoleOptions options) =>
+        options.ExtraAccomplices is >= 0 and <= RoleOptions.MaxExtraAccomplices
+            ? options.ExtraAccomplices
+            : throw new ArgumentException($"Дополнительных Сообщников — от 0 до {RoleOptions.MaxExtraAccomplices}.", nameof(options));
 
     /// <summary>Кооператив — если в составе нет Убийцы.</summary>
     public static bool IsCooperative(IReadOnlyCollection<Role> roles) => !roles.Contains(Role.Killer);

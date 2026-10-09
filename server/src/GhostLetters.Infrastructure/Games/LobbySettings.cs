@@ -120,6 +120,11 @@ public sealed record LobbySettings
             throw AppException.Validation($"Таймеры фаз — от {PhaseTimers.Min} до {PhaseTimers.Max} секунд.");
         }
 
+        if (Roles is { ExtraAccomplices: < 0 or > RoleOptions.MaxExtraAccomplices })
+        {
+            throw AppException.Validation($"Сообщников вместо Детективов — от 0 до {RoleOptions.MaxExtraAccomplices}.");
+        }
+
         if (CardSets is null || CardSets.Count == 0)
         {
             throw AppException.Validation("Выберите хотя бы один набор карт.");

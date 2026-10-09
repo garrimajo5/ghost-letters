@@ -335,7 +335,8 @@ public sealed class LobbyService(
             Seed = state.Seed,
             StartedAt = now,
         };
-        GameStore.Write(game, state, settings, now, phaseChanged: true);
+        var solo = await GameStore.IsSoloAsync(db, players.Select(p => p.UserId).ToList(), ct);
+        GameStore.Write(game, state, settings, now, phaseChanged: true, solo);
         db.Games.Add(game);
         db.GamePlayers.AddRange(state.Players.Select(p => new GamePlayer
         {

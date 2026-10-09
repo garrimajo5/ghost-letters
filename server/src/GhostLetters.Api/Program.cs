@@ -56,14 +56,15 @@ api.MapGet("/version", () => Results.Ok(new { name = ApplicationInfo.Name, api =
     .WithName("GetVersion");
 
 // Предпросмотр состава ролей для экрана создания лобби.
-api.MapGet("/rules/roles", (int players, bool? killer, bool? witness, bool? expert, bool? blackmailer, ImitatorMode? imitator) =>
+api.MapGet("/rules/roles", (int players, bool? killer, bool? witness, bool? expert, bool? blackmailer, ImitatorMode? imitator, int? accomplices) =>
     {
         var options = new RoleOptions(
             KillerEnabled: killer ?? true,
             UseWitness: witness ?? true,
             UseExpert: expert ?? true,
             UseBlackmailer: blackmailer ?? false,
-            Imitator: imitator ?? ImitatorMode.None);
+            Imitator: imitator ?? ImitatorMode.None,
+            ExtraAccomplices: accomplices ?? 0);
         try
         {
             var roles = RoleTable.Compose(players, options);

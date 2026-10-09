@@ -22,6 +22,9 @@ public sealed class BotProfile
 
     public double Compromise { get; set; } = 0.5;
 
+    /// <summary>Строгость ассоциаций: сколько карт поля бот «проверяет» одним письмом.</summary>
+    public double Strictness { get; set; } = 0.5;
+
     public double Variability { get; set; } = 0.2;
 
     /// <summary>Выключенного бота не предлагают в лобби, но его история и рейтинг сохраняются.</summary>
