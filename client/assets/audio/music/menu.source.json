@@ -4,8 +4,14 @@
   "creator": "garrimajo5",
   "source_file": "Untitled.wav",
   "source_sha256": "6bfaa7dbdc86c7657079e102b3576aeb525ab3c4f08f7446b11394eacc21f516",
-  "duration_seconds": 179.8935,
-  "encoding": "MP3 stereo 80 kbps 44100 Hz; full track, no trimming",
-  "asset_sha256": "326b4bdc9d61e9a48402efa30aed67909e73d8a7c93ef7946885d69de3e73349",
-  "asset_bytes": 1799620
+  "duration_seconds": 157.96,
+  "encoding": "MP3 stereo 96 kbps 44100 Hz; seamless loop 6.18–164.13 s of the track (2.5 s crossfade where end ≈ start), normalized to -23.5 LUFS",
+  "asset_sha256": "ba22d62dd9b2bd5db855bb1ec117af314b6a293990649127d44a3cf652cd830c",
+  "asset_bytes": 1896221,
+  "loop": {
+    "start_seconds": 3.68,
+    "end_seconds": 161.634,
+    "crossfade_seconds": 2.5,
+    "tool": "client/tools/audio_review/make_loop.py"
+  }
 }
