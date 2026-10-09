@@ -96,6 +96,37 @@ public sealed class BotFinalDiscussionTests
     }
 
     [Fact]
+    public void DoesNotAcknowledgeAnAcknowledgementAgain()
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> lines = [new(Me, "Аня, что думаешь о месте?", ["boat"], now),
+            new(Ann, "Бот Я, выбираю место 1.", ["boat"], now.AddSeconds(1))];
+        var first = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value;
+        first.Text.Should().Contain("сверил твой ответ");
+        lines.Add(new(Me, first.Text, first.Cards, now.AddSeconds(2)));
+        lines.Add(new(Ann, "Бот Я, сверил твой ответ: место 1, согласен.", ["boat"], now.AddSeconds(3)));
+        var next = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1));
+        next?.Text.Should().NotContain("сверил твой ответ");
+        next?.Text.Should().NotContain("отвечаю по всей версии");
+        if (next is { } summary) lines.Add(new(Me, summary.Text, summary.Cards, now.AddSeconds(4)));
+        lines.Add(new(Ann, "Бот Я, почему выбрал место 1?", ["boat"], now.AddSeconds(5)));
+        BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value.Text
+            .Should().Contain("отвечаю про голосование", "новый вопрос после подтверждения всё равно заслуживает ответа");
+    }
+
+    [Fact]
+    public void UnsolicitedAddressIsNotAnAnswerToSomeoneElsesQuestion()
+    {
+        var bob = Guid.NewGuid();
+        var mind = Mind with { Names = new Dictionary<Guid, string>(Mind.Names) { [bob] = "Борис" } };
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> lines = [new(Me, "Борис, что думаешь о месте?", ["boat"], now),
+            new(Ann, "Бот Я, место 1.", ["boat"], now.AddSeconds(1))];
+        var next = BotDiscussion.Compose(View, Tags, mind, lines, new Random(1));
+        next?.Text.Should().NotContain("сверил твой ответ");
+    }
+
+    [Fact]
     public void TextRowTakesPriorityOverWholeVersionAttachment()
     {
         var now = DateTimeOffset.UtcNow;
@@ -127,7 +158,6 @@ public sealed class BotFinalDiscussionTests
 
     [Theory]
     [InlineData("Что думаешь?", false)]
-    [InlineData("По мотиву и месту согласен?", false)]
     [InlineData("Что думаешь?", true)]
     [InlineData("Ты уже определился с местностью?", false)]
     public void AmbiguousQuestionGetsOneClarificationWithoutInventedCard(string question, bool attachVersion)
@@ -142,6 +172,28 @@ public sealed class BotFinalDiscussionTests
         BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))?.Text.Should().NotContain("уточню");
         messages.Add(new(Ann, "Бот Я, про место?", [], now.AddSeconds(3)));
         BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))!.Value.Text.Should().Contain("Сейчас выберу место 1");
+    }
+
+    [Theory]
+    [InlineData("Что думаешь по мотиву и месту?")]
+    [InlineData("С мотивом согласен? А что с местом?")]
+    [InlineData("Какие улики связываешь с МЕСТОМ и МОТИВОМ?")]
+    public void ExplicitMultipleRowsGetOneAnswerWithReasonsAndOnlyRelevantCards(string text)
+    {
+        var view = View with { Board = [.. View.Board, new(Category.Secret, ["dog", "tulip"])] };
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> messages = [new(Me, "Версия", [], now),
+            new(Ann, "Бот Я, " + text, ["rose", "boat", "dog"], now.AddSeconds(1))];
+        var line = BotDiscussion.Compose(view, Tags, Mind, messages, new Random(1))!.Value;
+        line.Text.Should().StartWith("Аня, отвечаю").And.NotContain("уточню");
+        line.Text.Should().Contain("мотив 1").And.Contain("место 1").And.NotContain("тайна");
+        line.Text.Should().Contain("Подсказка р.0 №1").And.Contain("Подсказка р.1 №2");
+        line.Text.Should().Contain("не согласен").And.Contain("совпадают");
+        line.Cards.Should().Equal("knife", "boat");
+        line.Notes.Should().Equal("думаю, эта", "думаю, эта");
+        line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
+        messages.Add(new(Me, line.Text, line.Cards, now.AddSeconds(2)));
+        BotDiscussion.Compose(view, Tags, Mind, messages, new Random(1))?.Text.Should().NotContain("отвечаю по названным рядам");
     }
 
     [Fact]
