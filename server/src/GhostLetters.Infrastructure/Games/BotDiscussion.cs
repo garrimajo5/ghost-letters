@@ -12,6 +12,7 @@ public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<stri
 public static class BotDiscussion
 {
     public const int MaxMessages = 6;
+    private static readonly Regex Who = Words(@"\bкто\b");
 
     private static readonly IReadOnlyDictionary<Category, Regex> RowWords = new Dictionary<Category, Regex>
     {
@@ -87,10 +88,13 @@ public static class BotDiscussion
         var myName = Name(me.Id);
         bool Addressed(DiscussionLine m) => m.Text.StartsWith(myName + ",", StringComparison.OrdinalIgnoreCase) ||
             m.Text.StartsWith(myName.Replace("Бот ", "") + ",", StringComparison.OrdinalIgnoreCase);
+        bool AddressedElsewhere(DiscussionLine m) => mind.Names.Any(p => p.Key != me.Id &&
+            (m.Text.StartsWith(p.Value + ",", StringComparison.OrdinalIgnoreCase) ||
+             m.Text.StartsWith(p.Value.Replace("Бот ", "") + ",", StringComparison.OrdinalIgnoreCase)));
         // A question can arrive before this bot's opening summary. Do not lose it
         // merely because the summary was sent later; only an answer consumes it.
         var question = messages.LastOrDefault(m => m.Author != me.Id && m.Text.Contains('?') &&
-            (Addressed(m) || (m.Text.Contains("Кто", StringComparison.OrdinalIgnoreCase) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase))) &&
+            (Addressed(m) || (!AddressedElsewhere(m) && Who.IsMatch(m.Text) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase))) &&
             !own.Any(o => o.At > m.At && o.Text.StartsWith(Name(m.Author) + ",", StringComparison.OrdinalIgnoreCase) &&
                 (o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) || o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase))));
         var answer = fresh.LastOrDefault(m => Addressed(m) && !m.Text.Contains('?'));
