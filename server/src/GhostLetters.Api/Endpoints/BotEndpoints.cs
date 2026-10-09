@@ -11,7 +11,13 @@ public static class BotEndpoints
         api.MapGet("/bots", (BotAdminService bots, CancellationToken ct) => bots.PublicListAsync(ct))
             .RequireAuthorization().WithTags("Bots").WithName("ListBots");
 
+        api.MapGet("/bots/{id:guid}/relationships", (Guid id, BotRelationshipService relationships, CancellationToken ct) => relationships.PublicAsync(id, ct))
+            .RequireAuthorization().WithTags("Bots");
+
         var admin = api.MapGroup("/admin").WithTags("Admin").RequireAuthorization();
+
+        admin.MapGet("/bots/{id:guid}/relationships", (Guid id, HttpContext http, BotRelationshipService relationships, CancellationToken ct) =>
+            relationships.DetailsAsync(http.User.UserId(), id, ct));
 
         admin.MapGet("/me", (HttpContext http, BotAdminService bots) => new { isAdmin = bots.IsAdmin(http.User.UserId()) })
             .WithName("AdminMe");

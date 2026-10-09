@@ -52,6 +52,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('bot-name')), 'Холмс');
     expect(find.text('Смысл 50% · форма 25% · цвет 25%'), findsOneWidget);
+    await reveal(tester, 'spectrum-influence');
+    await tester.drag(find.byKey(const Key('spectrum-influence')), const Offset(-600, 0));
+    await tester.pumpAndSettle();
     // Двигаем «Риск» до конца вправо — «блефует и обвиняет в лоб».
     await reveal(tester, 'spectrum-risk');
     await tester.drag(find.byKey(const Key('spectrum-risk')), const Offset(600, 0));
@@ -74,6 +77,7 @@ void main() {
     final saved = app.api.named('saveBot').single.$2;
     expect(saved[1], 'Холмс');
     expect((saved[2] as BotSpectra).risk, 1.0);
+    expect((saved[2] as BotSpectra).social['influence'], 0.0);
     expect((saved[2] as BotSpectra).strictness, 0.0);
     expect((saved[2] as BotSpectra).memory, 0.0);
     expect((saved[2] as BotSpectra).details, 1.0);

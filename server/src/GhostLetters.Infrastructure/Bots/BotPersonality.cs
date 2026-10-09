@@ -39,6 +39,8 @@ public sealed record BotPersonality
     /// <summary>Изменчивость: 0 — всегда одинаковый, 1 — от партии к партии другой.</summary>
     public double Variability { get; init; } = 0.2;
 
+    public BotSocialTraits Social { get; init; } = new();
+
     public static readonly BotPersonality Default = new();
 
     /// <summary>Доли внимания (смысл, форма, цвет) с суммой 1.</summary>
@@ -67,6 +69,7 @@ public sealed record BotPersonality
         Strictness = Clamp(Strictness),
         Details = Clamp(Details),
         Variability = Clamp(Variability),
+        Social = Social.Clamped(),
     };
 
     /// <summary>Сколько карт поля проверяет одно письмо: строгий — 1, широкий — до 4 (середина — 3, как раньше).</summary>
@@ -143,8 +146,13 @@ public sealed record BotMind(
     IReadOnlyList<ChatOpinion> Opinions,
     IReadOnlyDictionary<Guid, string> Names,
     IReadOnlyList<Accusation>? Accusations = null,
-    IReadOnlyDictionary<Guid, double>? Breadth = null)
+    IReadOnlyDictionary<Guid, double>? Breadth = null,
+    IReadOnlyDictionary<Guid, int>? Affinities = null)
 {
+    public double AffinityBias(Guid id) => Math.Clamp(Affinities?.GetValueOrDefault(id) ?? 0, -100, 100) / 100.0 * Personality.Social.Influence;
+
+    public double TrustMultiplier(Guid id) => 1 + .5 * AffinityBias(id);
+
     /// <summary>
     /// Сколько карт поля игроки в среднем «проверяют» одним письмом — по их словам в чате («проверял эту»).
     /// Никто не рассказывал — 3. Призрак так понимает, насколько строго стол читает подсказки.

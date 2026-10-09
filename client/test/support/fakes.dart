@@ -24,6 +24,12 @@ class FakeApi extends Api {
   FakeApi(super.ref);
 
   final calls = <Call>[];
+  bool profileIsBot = false;
+  List<BotRelationship> relationships = [];
+
+  @override
+  Future<List<BotRelationship>> botRelationships(String id, {bool details = false}) async =>
+      _record('botRelationships', [id, details], () => relationships);
   Lobby? lobbyResult;
   GameSnapshot? snapshotResult;
   List<MyGame> games = const [];
@@ -65,6 +71,7 @@ class FakeApi extends Api {
 
   @override
   Future<Profile> profile(String userId) async => _record('profile', [userId], () => Profile(
+        isBot: profileIsBot,
         user: User(id: userId, nickname: userId == 'u2' ? 'Ватсон' : 'Игрок', avatarColor: '#3FB68B', avatarId: userId == 'u2' ? avatarId : null),
         games: 3,
         wins: 2,

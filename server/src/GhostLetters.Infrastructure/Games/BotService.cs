@@ -202,7 +202,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var profile = await db.BotProfiles.AsNoTracking().FirstOrDefaultAsync(b => b.UserId == botId, ct);
         if (profile is null)
         {
-            return null;
+            if (!await db.Users.AnyAsync(u => u.Id == botId && u.IsBot, ct)) return null;
+            profile = new BotProfile { UserId = botId };
         }
 
         var personality = BotAdminService.Personality(profile).ForGame(state.Id, botId);
@@ -248,7 +249,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         // Повторение одной версии не делает её весомее. Последнее мнение заменяет прежнее.
         var latestOpinions = opinions.GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
         var latestAccusations = accusations.GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
-        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))));
+        var affinities = await db.BotRelationships.AsNoTracking().Where(r => r.BotId == botId && others.Contains(r.PlayerId))
+            .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
+        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities);
     }
 
     /// <summary>

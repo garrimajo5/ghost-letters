@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'bot_relationships.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
@@ -187,7 +189,7 @@ class BotEditorScreen extends ConsumerStatefulWidget {
 class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
   late final _name = TextEditingController(text: widget.bot?.nickname.replaceFirst('Бот ', '') ?? '');
   late final _about = TextEditingController(text: widget.bot?.about ?? '');
-  late BotSpectra _s = widget.bot?.spectra ?? const BotSpectra();
+  late BotSpectra _s = widget.bot?.spectra ?? BotSpectra(social: {for (final s in socialTraits) s.key: s.initial});
   late String _color = widget.bot?.avatarColor ?? avatarPalette.first;
   late bool _enabled = widget.bot?.enabled ?? true;
   bool _busy = false;
@@ -341,6 +343,14 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
         _slider('meaning', 'Смысл', 'не замечает', 'главное — что изображено', _s.meaning, (v) => setState(() => _s = _s.copyWith(meaning: v))),
         _slider('shape', 'Форма', 'не замечает', 'длинное к длинному, круглое к круглому', _s.shape, (v) => setState(() => _s = _s.copyWith(shape: v))),
         _slider('color', 'Цвет', 'не замечает', 'красное к красному', _s.color, (v) => setState(() => _s = _s.copyWith(color: v))),
+        const Divider(height: 32),
+        Text('ОТНОШЕНИЯ С ИГРОКАМИ', style: sectionLabel(size: 13)),
+        const Text('Ожидания независимы от поведения самого бота. Эти настройки и причины симпатий видит только администратор.'),
+        if (widget.bot != null)
+          TextButton(onPressed: () => context.push('/profile/${widget.bot!.id}'), child: const Text('Посмотреть симпатии бота')),
+        for (final sp in socialTraits)
+          _slider(sp.key, sp.title, sp.low, sp.high, _s.social[sp.key] ?? sp.initial,
+            (v) => setState(() => _s = _s.copyWith(social: {for (final s in socialTraits) s.key: _s.social[s.key] ?? s.initial, sp.key: v}))),
         const Divider(height: 32),
         Text('ХАРАКТЕР', style: sectionLabel(size: 13)),
         for (final sp in spectra)

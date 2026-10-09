@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GhostLetters.Application;
 using GhostLetters.Infrastructure.Auth;
 using GhostLetters.Infrastructure.Persistence;
@@ -18,13 +19,15 @@ public sealed record BotSpectra(
     double Compromise,
     double Variability,
     double Strictness = 0.5,
-    double Details = 0.25)
+    double Details = 0.25,
+    BotSocialTraits? Social = null)
 {
     public static BotSpectra From(BotPersonality p) =>
-        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness, p.Details);
+        new(p.Meaning, p.Shape, p.Color, p.Negative, p.Memory, p.Risk, p.Compromise, p.Variability, p.Strictness, p.Details, p.Social);
 
     public BotPersonality ToPersonality() => new BotPersonality
     {
+        Social = Social ?? new(),
         Meaning = Meaning, Shape = Shape, Color = Color, Negative = Negative,
         Memory = Memory, Risk = Risk, Compromise = Compromise, Variability = Variability, Strictness = Strictness, Details = Details,
     }.Clamped();
@@ -147,7 +150,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
             var nickname = BotNickname(name);
             if (!existing.Contains(nickname))
             {
-                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p)), ct);
+                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p) with { Social = null }), ct);
             }
         }
 
@@ -165,6 +168,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
 
     public static BotPersonality Personality(BotProfile p) => new BotPersonality
     {
+        Social = p.Social == "{}" ? BotSocialTraits.ForBot(p.UserId) : JsonSerializer.Deserialize<BotSocialTraits>(p.Social) ?? BotSocialTraits.ForBot(p.UserId),
         Meaning = p.Meaning, Shape = p.Shape, Color = p.Color, Negative = p.Negative,
         Memory = p.Memory, Risk = p.Risk, Compromise = p.Compromise, Variability = p.Variability, Strictness = p.Strictness, Details = p.Details,
     }.Clamped();
@@ -172,6 +176,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
     private static void Apply(BotProfile profile, SaveBotRequest request, DateTimeOffset now)
     {
         var p = (request.Spectra ?? throw AppException.Validation("Нужны спектры характера.")).ToPersonality();
+        if (request.Spectra.Social is not null) profile.Social = JsonSerializer.Serialize(p.Social);
         profile.Meaning = p.Meaning;
         profile.Shape = p.Shape;
         profile.Color = p.Color;

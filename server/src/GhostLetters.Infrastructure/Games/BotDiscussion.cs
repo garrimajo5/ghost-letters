@@ -86,7 +86,10 @@ public static class BotDiscussion
         if (!own.Any(m => m.Text.Contains('?')))
         {
             var others = view.Players.Where(p => p.Id != me.Id && !p.IsGhost && mind.Names.ContainsKey(p.Id)).OrderBy(p => p.Seat).ToList();
-            var target = others.FirstOrDefault(p => p.Seat > view.Players.First(p => p.Id == me.Id).Seat) ?? others.FirstOrDefault();
+            var mySeat = view.Players.First(p => p.Id == me.Id).Seat;
+            var followAffinity = mind.Personality.Social.Influence > 0 && rng.NextDouble() < mind.Personality.Social.Influence;
+            var target = others.OrderByDescending(p => followAffinity ? mind.AffinityBias(p.Id) : 0)
+                .ThenBy(p => p.Seat > mySeat ? 0 : 1).ThenBy(p => p.Seat).FirstOrDefault();
             if (target is null) return null;
             var row = me.Id.GetHashCode() % view.Board.Count;
             row = Math.Abs(row);

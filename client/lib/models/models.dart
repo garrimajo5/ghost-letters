@@ -838,6 +838,7 @@ class Profile {
     required this.rating,
     required this.likes,
     required this.achievements,
+    this.isBot = false,
   });
 
   factory Profile.fromJson(Json j) {
@@ -848,6 +849,7 @@ class Profile {
       wins: (stats['wins'] as num).toInt(),
       rating: (stats['rating'] as num).toInt(),
       likes: (stats['likesReceived'] as num).toInt(),
+      isBot: j['isBot'] as bool? ?? false,
       achievements: _list(j['achievements'], (a) => (title: a['title'] as String, count: (a['count'] as num).toInt())),
     );
   }
@@ -858,6 +860,7 @@ class Profile {
   final int rating;
   final int likes;
   final List<({String title, int count})> achievements;
+  final bool isBot;
 }
 
 /// Код входа на другом устройстве.
@@ -910,6 +913,26 @@ class LeaderRow {
 }
 
 /// Характер бота: шесть спектров 0…1 (внимание к смыслу/форме/цвету — доли).
+class BotRelationship {
+  const BotRelationship({required this.player, required this.score, required this.attitude,
+    required this.sharedGames, required this.updatedAt, this.components});
+
+  factory BotRelationship.fromJson(Json j) {
+    final row = Map<String, dynamic>.from(j['relationship'] as Map? ?? j);
+    return BotRelationship(player: User.fromJson(Map<String, dynamic>.from(row['player'] as Map)),
+      score: (row['score'] as num).toInt(), attitude: row['attitude'] as String,
+      sharedGames: (row['sharedGames'] as num).toInt(), updatedAt: DateTime.parse(row['updatedAt'] as String),
+      components: (j['components'] as Map?)?.map((k, v) => MapEntry(k as String, (v as num).toDouble())));
+  }
+
+  final User player;
+  final int score;
+  final String attitude;
+  final int sharedGames;
+  final DateTime updatedAt;
+  final Map<String, double>? components;
+}
+
 class BotSpectra {
   const BotSpectra({
     this.meaning = 0.5,
@@ -922,6 +945,7 @@ class BotSpectra {
     this.variability = 0.2,
     this.strictness = 0.5,
     this.details = 0.25,
+    this.social = const {},
   });
 
   factory BotSpectra.fromJson(Json j) {
@@ -937,6 +961,7 @@ class BotSpectra {
       variability: v('variability', 0.2),
       strictness: v('strictness', 0.5),
       details: v('details', 0.25),
+      social: (j['social'] as Map? ?? {}).map((k, v) => MapEntry(k as String, (v as num).toDouble())),
     );
   }
 
@@ -952,6 +977,7 @@ class BotSpectra {
   /// Строгость ассоциаций: 0 — одним письмом проверяет всё связанное, 1 — ровно одну карту.
   final double strictness;
   final double details;
+  final Map<String, double> social;
 
   BotSpectra copyWith({
     double? meaning,
@@ -964,6 +990,7 @@ class BotSpectra {
     double? variability,
     double? strictness,
     double? details,
+    Map<String, double>? social,
   }) =>
       BotSpectra(
         meaning: meaning ?? this.meaning,
@@ -976,6 +1003,7 @@ class BotSpectra {
         variability: variability ?? this.variability,
         strictness: strictness ?? this.strictness,
         details: details ?? this.details,
+        social: social ?? this.social,
       );
 
   /// Доли внимания в процентах (сумма 100).
@@ -997,6 +1025,7 @@ class BotSpectra {
         'compromise': compromise,
         'strictness': strictness,
         'details': details,
+        'social': social.isEmpty ? null : social,
         'variability': variability,
       };
 }

@@ -204,6 +204,8 @@ public sealed class GameService(
 
             var now = time.GetUtcNow();
             var settings = GameJson.Deserialize<LobbySettings>(game.Settings);
+            await using var completionTransaction = state.Phase == Phase.Finished
+                ? await db.Database.BeginTransactionAsync(ct) : null;
             var solo = await GameStore.IsSoloAsync(db, state.Players.Select(p => p.Id).ToList(), ct);
             GameStore.Write(game, state, settings, now, phaseChanged: GameStore.StepKey(state) != before, solo);
             await recorder.RecordAsync(game, state, hadResult, phaseBefore, now, ct);
@@ -229,6 +231,7 @@ public sealed class GameService(
             try
             {
                 await db.SaveChangesAsync(ct);
+                if (completionTransaction is not null) await completionTransaction.CommitAsync(ct);
             }
             catch (DbUpdateConcurrencyException)
             {

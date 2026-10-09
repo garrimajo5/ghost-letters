@@ -199,6 +199,10 @@ class Api {
   Future<List<LeaderRow>> leaderboard({bool bots = false}) async =>
       ((await get('/leaderboard', query: {'limit': 100, 'bots': bots})) as List).map((e) => LeaderRow.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
+  Future<List<BotRelationship>> botRelationships(String id, {bool details = false}) async =>
+      (await get('${details ? '/admin' : ''}/bots/$id/relationships') as List)
+          .map((j) => BotRelationship.fromJson(Map<String, dynamic>.from(j as Map))).toList();
+
   Future<Profile> profile(String userId) async => Profile.fromJson(await get('/users/$userId/profile') as Json);
 
   Future<List<MyGame>> myGames({String? status}) async =>

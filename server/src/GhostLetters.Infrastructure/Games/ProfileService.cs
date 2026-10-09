@@ -12,7 +12,7 @@ public sealed record StatsDto(int Games, int Wins, int Rating, int LikesReceived
 
 public sealed record AchievementDto(string Code, string Title, int Count);
 
-public sealed record ProfileDto(UserDto User, StatsDto Stats, IReadOnlyList<AchievementDto> Achievements);
+public sealed record ProfileDto(UserDto User, StatsDto Stats, IReadOnlyList<AchievementDto> Achievements, bool IsBot = false);
 
 public sealed record LeaderboardRow(UserDto User, int Rating, int Games, int Wins, bool IsBot = false);
 
@@ -65,7 +65,7 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
             achievements
                 .OrderByDescending(a => a.Count).ThenBy(a => a.Code)
                 .Select(a => new AchievementDto(a.Code, titles.GetValueOrDefault(a.Code) ?? a.Code, a.Count))
-                .ToList());
+                .ToList(), user.IsBot);
     }
 
     /// <summary>Таблица лидеров; боты — по желанию (галочка «показать ботов»).</summary>
