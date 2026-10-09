@@ -1,6 +1,10 @@
 {
-  "duration": 94.78,
+  "duration": 98.494,
   "fps": 30,
+  "preview": {
+    "start": 28,
+    "end": 41
+  },
   "music": "music/trailer_music_1m35.mp3",
   "markers": "music/markers.json",
   "fonts": {
@@ -14,9 +18,9 @@
   ],
   "mailbox": "../client/assets/images/mailbox.webp",
   "envelope": "../client/assets/images/letter.webp",
-  "final_punch": 75.01,
-  "fade_to_black_start": 89.116,
-  "black_at": 93.5,
+  "final_punch": 78.724,
+  "fade_to_black_start": 92.83,
+  "black_at": 97.214,
   "scenes": [
     {
       "id": 1,
@@ -207,7 +211,7 @@
     {
       "id": 11,
       "start": 29.768,
-      "end": 33.44,
+      "end": 31.625,
       "kind": "screen",
       "assets": [
         "captures/C4.png"
@@ -215,30 +219,49 @@
     },
     {
       "id": 12,
-      "start": 33.44,
-      "end": 37.154,
-      "kind": "screen",
+      "start": 31.625,
+      "end": 33.44,
+      "kind": "city",
       "assets": [
-        "captures/C9.png"
+        "assets/city-night.png"
       ]
     },
     {
       "id": 13,
+      "start": 33.44,
+      "end": 37.154,
+      "kind": "screen",
+      "assets": [
+        "captures/C4-motion.mp4"
+      ]
+    },
+    {
+      "id": 14,
       "start": 37.154,
-      "end": 39.011,
+      "end": 40.868,
+      "kind": "screen",
+      "assets": [
+        "captures/C9.png"
+      ],
+      "flash": true
+    },
+    {
+      "id": 15,
+      "start": 40.868,
+      "end": 42.725,
       "kind": "screen",
       "assets": [
         "captures/C10.png"
       ],
       "steps": [
         {
-          "at": 37.154,
+          "at": 40.868,
           "assets": [
             "captures/C10.png"
           ]
         },
         {
-          "at": 38.0825,
+          "at": 41.7965,
           "assets": [
             "captures/C11-motion.mp4"
           ]
@@ -246,32 +269,32 @@
       ]
     },
     {
-      "id": 14,
-      "start": 39.011,
-      "end": 40.868,
+      "id": 16,
+      "start": 42.725,
+      "end": 44.582,
       "kind": "cards",
       "assets": [],
       "steps": [
         {
-          "at": 39.011,
+          "at": 42.725,
           "assets": [
             "../client/assets/cards/orig_0073.webp"
           ]
         },
         {
-          "at": 39.47525,
+          "at": 43.18925,
           "assets": [
             "../client/assets/cards/orig_0186.webp"
           ]
         },
         {
-          "at": 39.9395,
+          "at": 43.6535,
           "assets": [
             "../client/assets/cards/orig_0058.webp"
           ]
         },
         {
-          "at": 40.40375,
+          "at": 44.11775,
           "assets": [
             "../client/assets/cards/orig_0557.webp"
           ]
@@ -279,43 +302,43 @@
       ]
     },
     {
-      "id": 15,
-      "start": 40.868,
-      "end": 42.725,
+      "id": 17,
+      "start": 44.582,
+      "end": 46.439,
       "kind": "cards",
       "assets": [],
       "steps": [
         {
-          "at": 40.868,
+          "at": 44.582,
           "assets": [
             "../client/assets/cards/orig_0264.webp"
           ]
         },
         {
-          "at": 41.33225,
+          "at": 45.04625,
           "assets": [
             "../client/assets/cards/orig_0243.webp"
           ]
         },
         {
-          "at": 41.7965,
+          "at": 45.5105,
           "assets": [
             "../client/assets/cards/orig_0061.webp"
           ]
         },
         {
-          "at": 42.26075,
+          "at": 45.97475,
           "assets": [
             "../client/assets/cards/orig_0229.webp"
           ]
         }
       ],
-      "black_after": 42.26075
+      "black_after": 45.97475
     },
     {
-      "id": 16,
-      "start": 42.725,
-      "end": 46.439,
+      "id": 18,
+      "start": 46.439,
+      "end": 50.153,
       "kind": "screen",
       "assets": [
         "captures/C12-motion.mp4"
@@ -323,18 +346,18 @@
       "flash": true
     },
     {
-      "id": 17,
-      "start": 46.439,
-      "end": 50.153,
+      "id": 19,
+      "start": 50.153,
+      "end": 53.867,
       "kind": "screen",
       "assets": [
         "captures/C13.png"
       ]
     },
     {
-      "id": 18,
-      "start": 50.153,
-      "end": 53.867,
+      "id": 20,
+      "start": 53.867,
+      "end": 57.581,
       "kind": "cards",
       "assets": [
         "../client/assets/images/hunt.webp",
@@ -342,27 +365,27 @@
       ]
     },
     {
-      "id": 19,
-      "start": 53.867,
-      "end": 57.581,
+      "id": 21,
+      "start": 57.581,
+      "end": 61.295,
       "kind": "screen",
       "assets": [
         "captures/C15.png"
       ]
     },
     {
-      "id": 20,
-      "start": 57.581,
-      "end": 61.295,
+      "id": 22,
+      "start": 61.295,
+      "end": 65.009,
       "kind": "screen",
       "assets": [
         "captures/C2.png"
       ]
     },
     {
-      "id": 21,
-      "start": 61.295,
-      "end": 65.009,
+      "id": 23,
+      "start": 65.009,
+      "end": 68.723,
       "kind": "devices",
       "assets": [
         "captures/C16.png",
@@ -370,9 +393,9 @@
       ]
     },
     {
-      "id": 22,
-      "start": 65.009,
-      "end": 68.723,
+      "id": 24,
+      "start": 68.723,
+      "end": 72.437,
       "kind": "devices",
       "assets": [
         "captures/C18.png",
@@ -380,56 +403,56 @@
       ]
     },
     {
-      "id": 23,
-      "start": 68.723,
-      "end": 72.437,
+      "id": 25,
+      "start": 72.437,
+      "end": 76.151,
       "kind": "recap",
       "assets": [],
       "steps": [
         {
-          "at": 68.723,
+          "at": 72.437,
           "assets": [
             "captures/C4.png"
           ]
         },
         {
-          "at": 69.18725,
+          "at": 72.90125,
           "assets": [
             "captures/C8.png"
           ]
         },
         {
-          "at": 69.6515,
+          "at": 73.3655,
           "assets": [
             "captures/C9.png"
           ]
         },
         {
-          "at": 70.11575,
+          "at": 73.82975,
           "assets": [
             "captures/C11.png"
           ]
         },
         {
-          "at": 70.58,
+          "at": 74.294,
           "assets": [
             "captures/C12.png"
           ]
         },
         {
-          "at": 71.04425,
+          "at": 74.75825,
           "assets": [
             "captures/C14.png"
           ]
         },
         {
-          "at": 71.5085,
+          "at": 75.2225,
           "assets": [
             "captures/C15.png"
           ]
         },
         {
-          "at": 71.97275,
+          "at": 75.68675,
           "assets": [
             "../client/assets/images/role_ghost.webp"
           ]
@@ -437,31 +460,31 @@
       ]
     },
     {
-      "id": 24,
-      "start": 72.437,
-      "end": 74.26,
+      "id": 26,
+      "start": 76.151,
+      "end": 77.974,
       "kind": "breath",
       "assets": []
     },
     {
-      "id": 25,
-      "start": 74.26,
-      "end": 76.117,
+      "id": 27,
+      "start": 77.974,
+      "end": 79.831,
       "kind": "logo",
       "assets": [],
       "flash": true
     },
     {
-      "id": 26,
-      "start": 76.117,
-      "end": 83.545,
+      "id": 28,
+      "start": 79.831,
+      "end": 87.259,
       "kind": "logo",
       "assets": []
     },
     {
-      "id": 27,
-      "start": 83.545,
-      "end": 94.78,
+      "id": 29,
+      "start": 87.259,
+      "end": 98.494,
       "kind": "outro",
       "assets": []
     }
@@ -568,7 +591,7 @@
     },
     {
       "start": 29.768,
-      "end": 33.44,
+      "end": 31.625,
       "lines": [
         "СООБЩНИКИ ПОДСКАЗЫВАЮТ ЕМУ"
       ],
@@ -578,8 +601,28 @@
       ]
     },
     {
+      "start": 31.625,
+      "end": 33.44,
+      "lines": [
+        "ГОРОД ЗАСЫПАЕТ"
+      ],
+      "color": "#A9D4EA"
+    },
+    {
       "start": 33.44,
       "end": 37.154,
+      "lines": [
+        "УБИЙЦА ЗАГАДЫВАЕТ КАРТЫ"
+      ],
+      "vertical": [
+        "УБИЙЦА",
+        "ЗАГАДЫВАЕТ КАРТЫ"
+      ],
+      "color": "#E08A7E"
+    },
+    {
+      "start": 37.154,
+      "end": 40.868,
       "lines": [
         "ГОВОРИТЕ ГОЛОСОМ ИЛИ В ЧАТЕ"
       ],
@@ -589,36 +632,36 @@
       ]
     },
     {
-      "start": 37.154,
-      "end": 39.011,
+      "start": 40.868,
+      "end": 42.725,
       "lines": [
         "КТО ЛЖЁТ?"
       ]
     },
     {
-      "start": 41.33225,
-      "end": 43.18925,
+      "start": 45.04625,
+      "end": 46.90325,
       "lines": [
         "КТО УБИЙЦА?"
       ]
     },
     {
-      "start": 43.18925,
-      "end": 46.439,
+      "start": 46.90325,
+      "end": 50.153,
       "lines": [
         "ГОЛОСУЙТЕ ЗА УЛИКИ"
       ]
     },
     {
-      "start": 46.439,
-      "end": 50.153,
+      "start": 50.153,
+      "end": 53.867,
       "lines": [
         "АРЕСТУЙТЕ УБИЙЦУ"
       ]
     },
     {
-      "start": 50.153,
-      "end": 53.867,
+      "start": 53.867,
+      "end": 57.581,
       "lines": [
         "ИЛИ ОН ВЫЧИСЛИТ СВИДЕТЕЛЯ"
       ],
@@ -628,22 +671,22 @@
       ]
     },
     {
-      "start": 53.867,
-      "end": 57.581,
+      "start": 57.581,
+      "end": 61.295,
       "lines": [
         "ДЕЛО РАСКРЫТО?"
       ]
     },
     {
-      "start": 57.581,
-      "end": 59.438,
+      "start": 61.295,
+      "end": 63.152,
       "lines": [
         "ИГРАЙТЕ С ДРУЗЬЯМИ"
       ]
     },
     {
-      "start": 59.438,
-      "end": 61.295,
+      "start": 63.152,
+      "end": 65.009,
       "lines": [
         "…ИЛИ С БОТАМИ С ХАРАКТЕРОМ"
       ],
@@ -653,8 +696,8 @@
       ]
     },
     {
-      "start": 61.295,
-      "end": 65.009,
+      "start": 65.009,
+      "end": 68.723,
       "lines": [
         "РЕЙТИНГ И ДОСТИЖЕНИЯ"
       ],
@@ -664,8 +707,8 @@
       ]
     },
     {
-      "start": 65.009,
-      "end": 68.723,
+      "start": 68.723,
+      "end": 72.437,
       "lines": [
         "ТЕЛЕФОН, ПЛАНШЕТ, БРАУЗЕР"
       ],
@@ -675,15 +718,15 @@
       ]
     },
     {
-      "start": 72.437,
-      "end": 74.26,
+      "start": 76.151,
+      "end": 77.974,
       "lines": [
         "ПРИЗРАК ЗНАЕТ ПРАВДУ"
       ]
     },
     {
-      "start": 77.0455,
-      "end": 83.545,
+      "start": 80.7595,
+      "end": 87.259,
       "lines": [
         "ДЕТЕКТИВНАЯ ИГРА НА АССОЦИАЦИЯХ"
       ],
@@ -694,8 +737,8 @@
       "position": "bottom"
     },
     {
-      "start": 83.545,
-      "end": 93.5,
+      "start": 87.259,
+      "end": 97.214,
       "lines": [
         "СКОРО НА ANDROID И IPHONE"
       ],
@@ -718,6 +761,18 @@
       0,
       1,
       0.72
+    ],
+    "captures/C4-motion.mp4": [
+      0,
+      0.155,
+      1,
+      0.635
     ]
+  },
+  "music_edit": {
+    "at": 33.44,
+    "fade_out_start": 29.768,
+    "pause_seconds": 3.714,
+    "resume_declick_seconds": 0.008
   }
 }

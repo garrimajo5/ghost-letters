@@ -1,0 +1,8 @@
+Built-in imagegen. Use case: stylized-concept.
+Asset type: cinematic establishing shot for Ghost Letters detective board-game trailer.
+Primary request: the city falls asleep before the killer secretly chooses clue cards.
+Scene: empty early twentieth-century European town at midnight, a narrow cobblestone street, old steep-roofed houses and a distant mansion, thick blue mist, just a few faint warm amber windows, wet stone reflections, no people.
+Style: refined painterly dark-noir game illustration, subtle watercolor textures and realistic architecture, atmospheric and mysterious rather than horror.
+Palette: deep navy #0D1724, midnight #0A111B, foggy icy blue #A9D4EA, very restrained amber #E3A94B.
+Composition: cinematic 16:9 landscape 2048x1152, quiet dark upper sky for an overlaid caption, the street and distant mansion stay readable in the central portrait crop, natural depth and soft edges.
+Constraints: no text, no lettering, no logos, no borders, no watermark, no blood, no modern vehicles or electronics.

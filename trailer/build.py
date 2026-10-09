@@ -11,8 +11,9 @@ from pathlib import Path
 import subprocess
 import sys
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps, ImageEnhance
 import imageio_ffmpeg
+from music_edit import build_music, timeline_markers
 
 ROOT = Path(__file__).resolve().parent
 CFG = json.loads((ROOT / 'scenes.json').read_text(encoding='utf-8'))
@@ -90,7 +91,7 @@ def make_background(w,h):
     return base,tint
 
 def motion_files():
-    for c in [6,8,11,12]:
+    for c in [4,6,8,11,12]:
         frames=ROOT/f'captures/motion/C{c}/000.png'
         movie=ROOT/f'captures/C{c}-motion.mp4'
         if frames.exists() and (not movie.exists() or movie.stat().st_size==0 or frames.stat().st_mtime>movie.stat().st_mtime):
@@ -98,10 +99,13 @@ def motion_files():
 
 @functools.lru_cache(maxsize=5)
 def motion_reader(path,w,h):
-    dest=WORK/(Path(path).stem+f'-{w}x{h}-{int((ROOT/path).stat().st_mtime)}')
+    crop=CFG.get('asset_crops',{}).get(path)
+    crop_tag='-'.join(map(str,crop or []))
+    dest=WORK/(Path(path).stem+f'-{w}x{h}-{int((ROOT/path).stat().st_mtime)}-{crop_tag}')
     dest.mkdir(exist_ok=True)
     if not (dest/'047.png').exists():
-        run(['-i',ROOT/path,'-vf',f'fps=12,scale={w}:{h}:force_original_aspect_ratio=decrease','-start_number','0',dest/'%03d.png'])
+        crop_filter=f'crop=iw*{crop[2]-crop[0]}:ih*{crop[3]-crop[1]}:iw*{crop[0]}:ih*{crop[1]},' if crop else ''
+        run(['-i',ROOT/path,'-vf',crop_filter+f'fps=12,scale={w}:{h}:force_original_aspect_ratio=decrease','-start_number','0',dest/'%03d.png'])
     return dest
 
 def render_frame(t, scene, dims, bg, fog):
@@ -116,7 +120,18 @@ def render_frame(t, scene, dims, bg, fog):
         for step in scene['steps']:
             if t>=step['at']:active=step['assets']
     cy=h*.57 if vertical else h*.56
-    if kind in ('cards','rolefan','recap'):
+    if kind=='city':
+        # Wide establishing shot; portrait keeps the central mansion and street.
+        city_h=round(h*.74) if vertical else h
+        source=original(active[0])
+        assert max(w/source.width,city_h/source.height)*1.025<=1.6
+        image=ImageOps.fit(source,(w,city_h),R,centering=(.54,.5))
+        zoom=1+.025*ease(q)
+        image=image.resize((round(w*zoom),round(city_h*zoom)),Image.Resampling.BICUBIC)
+        image=ImageEnhance.Brightness(image).enhance(.9-.32*ease(q))
+        paste_center(canvas,image,w*.5,cy if vertical else h*.5,alpha=ease(local/.22))
+        canvas.alpha_composite(fog,(-200+int(55*math.sin(t*.14)),-100+int(30*math.cos(t*.09))))
+    elif kind in ('cards','rolefan','recap'):
         n=len(active)
         for i,path in enumerate(active):
             device=path.startswith('captures/')
@@ -144,9 +159,12 @@ def render_frame(t, scene, dims, bg, fog):
             if path.endswith('.mp4'):
                 # 12 fps native UI recording is played in time, never speed changed.
                 source=original(path.replace('-motion.mp4','.png'))
-                sc=min(mw/source.width,mh/source.height)
-                dest=motion_reader(path,int(source.width*sc),int(source.height*sc))
-                frame=min(47,int(local*12))
+                crop=CFG.get('asset_crops',{}).get(path)
+                sw,sh=source.size
+                if crop:sw,sh=sw*(crop[2]-crop[0]),sh*(crop[3]-crop[1])
+                sc=min(mw/sw,mh/sh)
+                dest=motion_reader(path,int(sw*sc),int(sh*sc))
+                frame=max(0,min(47,int(local*12)))
                 movieframe=Image.open(dest/f'{frame:03d}.png').convert('RGBA')
                 pad=Image.new('RGBA',(movieframe.width+16,movieframe.height+16),'#0A111B');pad.alpha_composite(movieframe,(8,8))
                 ImageDraw.Draw(pad).rounded_rectangle((0,0,pad.width-1,pad.height-1),radius=22,outline='#2B4260',width=3)
@@ -204,6 +222,13 @@ def render_frame(t, scene, dims, bg, fog):
         canvas=Image.blend(Image.new('RGBA',(w,h),'black'),canvas,alpha)
     return canvas.convert('RGB')
 
+def make_preview(output):
+    preview=CFG.get('preview')
+    if preview:
+        run(['-ss',preview['start'],'-i',output,'-t',preview['end']-preview['start'],
+             '-c:v','libx264','-preset','fast','-crf','21','-pix_fmt','yuv420p',
+             '-c:a','aac','-b:a','192k','-movflags','+faststart',OUT/'night-transition-preview.mp4'])
+
 def build(orientation):
     dims=(1920,1080) if orientation=='16x9' else (1080,1920)
     bg,fog=make_background(*dims)
@@ -220,10 +245,13 @@ def build(orientation):
     finally:proc.stdin.close()
     if proc.wait():raise RuntimeError('Video encoder failed')
     output=OUT/f'ghost-letters-trailer-{orientation}.mp4'
-    run(['-i',video,'-i',ROOT/CFG['music'],'-map','0:v','-map','1:a','-c:v','copy','-c:a','aac','-b:a','192k','-t',CFG['duration'],'-map_metadata','-1','-movflags','+faststart',output])
+    music=build_music(CFG,ROOT,WORK,FF)
+    run(['-i',video,'-i',music,'-map','0:v','-map','1:a','-c:v','copy','-c:a','aac','-b:a','192k','-t',CFG['duration'],'-map_metadata','-1','-movflags','+faststart',output])
     print(output,flush=True)
+    if orientation=='16x9':make_preview(output)
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--all',action='store_true');parser.add_argument('--format',default='16x9',choices=['16x9','9x16']);args=parser.parse_args()
     motion_files()
+    (OUT/'timeline_markers.json').write_text(json.dumps(timeline_markers(CFG,ROOT),ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     for orientation in (['16x9','9x16'] if args.all else [args.format]):build(orientation)

@@ -113,7 +113,6 @@ void main() {
       }
       if(c==2){await save('C2-lobby');await tester.drag(find.byType(Scrollable).first,const Offset(0,-430));await tester.pumpAndSettle();await tap(find.byKey(const Key('add-bot')));}
       if(c==3){await tap(find.byKey(const Key('role-card')));}
-      if(c==4){for(var r=0;r<4;r++){await tester.longPress(find.byKey(Key('board-$r-${[2,1,3,0][r]}')));await tester.pump(const Duration(milliseconds:400));}}
       if(c==7){await tap(find.byKey(const Key('mailbox-orig_0323')));await tap(find.byKey(const Key('mailbox-orig_0058')));}
       if(c==9){
         for(final m in [
@@ -127,10 +126,15 @@ void main() {
       if(c==11){await tap(find.byKey(const Key('zoom-board')));}
       if(c==13||c==14){await tap(find.byKey(const Key('player-u3')));}
       if(c==16){await tap(find.byKey(const Key('show-bots')));}
-      await save('C$c');
-      if([6,8,11,12].contains(c)) {
+      if(c!=4) await save('C$c');
+      if([4,6,8,11,12].contains(c)) {
         // Capture actual widget animation/state changes, not a simulated interface.
         for(var frame=0;frame<48;frame++) {
+          // Four real selections during the two-bar night interlude.
+          if(c==4&&[6,17,28,39].contains(frame)) {
+            final row=[6,17,28,39].indexOf(frame);
+            await tester.longPress(find.byKey(Key('board-$row-${[2,1,3,0][row]}')));
+          }
           if(frame==12){
             if(c==6) {await tap(find.byKey(const Key('hand-orig_0323')));}
             if(c==8) {final next=shot(8,version:43);app.realtime.viewsCtl.add((view:next.view,deadline:null));}
@@ -142,6 +146,7 @@ void main() {
           await save('motion/C$c/${frame.toString().padLeft(3,'0')}');
         }
       }
+      if(c==4) await save('C4');
       await tester.pumpWidget(const SizedBox());await tester.pump();app.container.dispose();
       expect(tester.takeException(),isNull);
     });
