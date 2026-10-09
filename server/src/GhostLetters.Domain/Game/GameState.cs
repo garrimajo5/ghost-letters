@@ -115,6 +115,9 @@ public sealed partial class GameState
     public bool HasKiller => Players.Any(p => p.Role == Role.Killer);
 
     [JsonIgnore]
+    public bool HasKillerVote => HasKiller || Settings.Roles.RandomKillerOmission;
+
+    [JsonIgnore]
     public DiscussionMode EffectiveDiscussion => Round >= TotalRounds ? DiscussionMode.FreeChat : Settings.Discussion;
 
     [JsonIgnore]

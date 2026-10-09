@@ -440,6 +440,8 @@ class _SettingsSummary extends StatelessWidget {
     final r = settings.roles;
     final ghost = members.where((p) => p.userId == settings.ghostUserId).map((p) => p.nickname).firstOrNull;
     final chips = <Widget>[
+      if (settings.rulesPreset == 'ozon')
+        _chip(context, 'preset', 'Озон · по составу', rules: true, opensSheet: true),
       _chip(context, 'ranked', settings.ranked ? 'рейтинговая' : 'обычная', rules: true, choices: [
         ('Рейтинговая — меняет рейтинг', (s) => s.copyWith(ranked: true)),
         ('Обычная — без рейтинга', (s) => s.copyWith(ranked: false)),
@@ -455,7 +457,7 @@ class _SettingsSummary extends StatelessWidget {
         ('По правилам${players >= 2 ? ' (${defaultRounds(players)})' : ''}', (s) => s.copyWith(clearRounds: true)),
         for (var n = 1; n <= 5; n++) ('$n', (s) => s.copyWith(rounds: n)),
       ]),
-      _chip(context, 'killer', r.killerEnabled ? 'с Убийцей' : 'кооператив', rules: true, choices: [
+      _chip(context, 'killer', r.randomKillerOmission ? 'Убийцы может не быть' : r.killerEnabled ? 'с Убийцей' : 'кооператив', rules: true, choices: [
         ('С Убийцей', (s) => s.copyWith(roles: s.roles.copyWith(killerEnabled: true))),
         ('Кооператив — без Убийцы', (s) => s.copyWith(roles: s.roles.copyWith(killerEnabled: false))),
       ]),
@@ -518,6 +520,16 @@ class _RolesPreview extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (players < 2) return const SizedBox.shrink();
+    if (lobby.settings.rulesPreset == 'ozon' && (players < 3 || players > 11)) {
+      return const Padding(padding: EdgeInsets.all(8), child: Text(
+        'Озон рассчитан на 3–11 игроков. Для другого состава выберите Классику или личный пресет.',
+        textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.amber)));
+    }
+    if (lobby.settings.roles.randomKillerOmission) {
+      return const Padding(padding: EdgeInsets.all(8), child: Text(
+        'Призрак + 3 случайные роли из Убийцы и трёх Детективов. Одна роль убрана тайно. Голос за Призрака — «Убийцы нет».',
+        textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.muted)));
+    }
     final preview = ref.watch(rolesPreviewProvider((players: players, roles: lobby.settings.roles)));
     return preview.when(
       loading: () => const SizedBox(height: 24),

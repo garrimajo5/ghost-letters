@@ -14,7 +14,8 @@ public sealed record RoleOptions(
     bool UseExpert = true,
     bool UseBlackmailer = false,
     ImitatorMode Imitator = ImitatorMode.None,
-    int ExtraAccomplices = 0)
+    int ExtraAccomplices = 0,
+    bool RandomKillerOmission = false)
 {
     public const int MaxExtraAccomplices = 2;
 

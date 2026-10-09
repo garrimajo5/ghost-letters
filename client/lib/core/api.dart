@@ -229,6 +229,15 @@ class Api {
 
   Future<Lobby> lobbyByCode(String code) async => Lobby.fromJson(await get('/lobbies/${code.toUpperCase()}') as Json);
 
+  Future<List<SettingsPreset>> settingsPresets() async =>
+      (await get('/me/settings-presets') as List).map((j) => SettingsPreset.fromJson(j as Json)).toList();
+
+  Future<SettingsPreset> saveSettingsPreset(String id, String name, LobbySettings settings) async =>
+      SettingsPreset.fromJson(await put('/me/settings-presets/$id', {'name': name, 'settings': settings.toJson()}) as Json);
+
+  Future<void> deleteSettingsPreset(String id) async => _call(() => _dio.delete<dynamic>('/me/settings-presets/$id'));
+
+
   Future<List<WatchableGame>> watchableGames() async =>
       (await get('/lobbies/watchable') as List).map((j) => WatchableGame.fromJson(j as Json)).toList();
 

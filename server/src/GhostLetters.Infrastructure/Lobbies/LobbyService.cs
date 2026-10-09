@@ -280,10 +280,13 @@ public sealed class LobbyService(
         if (lobby.Status == LobbyStatuses.InGame && lobby.CurrentGameId is { } gameId)
         {
             var current = GameJson.Deserialize<LobbySettings>(lobby.Settings);
+            if (settings.RulesPreset is not null && settings.RulesPreset != current.RulesPreset)
+                throw AppException.Conflict(AppException.Codes.GameInProgress, "Пресеты применяются до начала партии.");
             var rulesOnly = settings with
             {
                 Tempo = current.Tempo, TurnHours = current.TurnHours, Timers = current.Timers, Rounds = current.Rounds,
                 Discussion = current.Discussion,
+                RulesPreset = current.RulesPreset,
             };
             if (GameJson.Serialize(rulesOnly) != GameJson.Serialize(current))
             {
@@ -335,7 +338,9 @@ public sealed class LobbyService(
             throw AppException.Validation("Не все игроки готовы.");
         }
 
-        var settings = GameJson.Deserialize<LobbySettings>(lobby.Settings);
+        // Состав мог измениться после выбора пресета: окончательные правила фиксируются при старте.
+        var settings = GameJson.Deserialize<LobbySettings>(lobby.Settings).ResolveForPlayers(players.Count);
+        lobby.Settings = GameJson.Serialize(settings);
         var deck = await cards.DeckAsync(settings.CardSets, ct);
         var gameId = Guid.NewGuid();
         GameState state;
@@ -486,13 +491,18 @@ public sealed class LobbyService(
                 select new { m, u })
             .ToListAsync(ct);
 
+        var settings = GameJson.Deserialize<LobbySettings>(lobby.Settings);
+        var playerCount = members.Count(x => x.m.JoinMode == JoinModes.Player);
+        if (lobby.Status == LobbyStatuses.Open && settings.RulesPreset == "ozon" && playerCount is >= 3 and <= 11)
+            settings = settings.ResolveForPlayers(playerCount);
+
         return new LobbyDto(
             lobby.Id,
             lobby.Code,
             lobby.Title,
             lobby.HostUserId,
             lobby.Status,
-            GameJson.Deserialize<LobbySettings>(lobby.Settings),
+            settings,
             lobby.CurrentGameId,
             members
                 .OrderBy(x => x.m.JoinMode == JoinModes.Player ? 0 : 1).ThenBy(x => x.m.Seat)

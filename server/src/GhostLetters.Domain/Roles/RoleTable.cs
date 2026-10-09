@@ -25,6 +25,10 @@ public static class RoleTable
         }
 
         var extra = ExtraAccomplices(options);
+        if (options.RandomKillerOmission && (players != 4 || !options.KillerEnabled || extra != 0))
+        {
+            throw new ArgumentException("Случайное отсутствие Убийцы доступно только на четверых, без дополнительных Сообщников.", nameof(options));
+        }
         if (!options.KillerEnabled || players < MinCompetitivePlayers)
         {
             return Build(players, accomplices: 0, witness: false, expert: false, blackmailer: false,

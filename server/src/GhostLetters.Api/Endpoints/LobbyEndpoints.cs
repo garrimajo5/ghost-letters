@@ -9,6 +9,16 @@ public static class LobbyEndpoints
     public static RouteGroupBuilder MapLobbies(this RouteGroupBuilder api)
     {
         var lobbies = api.MapGroup("/lobbies").WithTags("Lobbies").RequireAuthorization();
+        var presets = api.MapGroup("/me/settings-presets").WithTags("Lobbies").RequireAuthorization();
+        presets.MapGet("", (HttpContext http, SettingsPresetService service, CancellationToken ct) =>
+            service.ListAsync(http.User.UserId(), ct));
+        presets.MapPut("/{id:guid}", (Guid id, SaveSettingsPresetRequest request, HttpContext http, SettingsPresetService service, CancellationToken ct) =>
+            service.SaveAsync(http.User.UserId(), id, request, ct));
+        presets.MapDelete("/{id:guid}", async (Guid id, HttpContext http, SettingsPresetService service, CancellationToken ct) =>
+        {
+            await service.DeleteAsync(http.User.UserId(), id, ct);
+            return Results.NoContent();
+        });
 
         lobbies.MapGet("/watchable", (HttpContext http, LobbyService service, CancellationToken ct) =>
             service.WatchableAsync(http.User.UserId(), ct)).WithName("WatchableGames");
