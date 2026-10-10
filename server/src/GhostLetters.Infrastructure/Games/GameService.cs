@@ -204,7 +204,9 @@ public sealed class GameService(
 
             var now = time.GetUtcNow();
             var settings = GameJson.Deserialize<LobbySettings>(game.Settings);
-            await using var completionTransaction = state.Phase == Phase.Finished
+            // После итога партии пишутся статистика, рейтинг и лайки — общие строки игроков, в том числе ботов,
+            // которые сидят в нескольких партиях сразу. Запись идёт в транзакции под блокировками GameRecorder.
+            await using var completionTransaction = state.Result is not null
                 ? await db.Database.BeginTransactionAsync(ct) : null;
             var solo = await GameStore.IsSoloAsync(db, state.Players.Select(p => p.Id).ToList(), ct);
             GameStore.Write(game, state, settings, now, phaseChanged: GameStore.StepKey(state) != before, solo);

@@ -47,47 +47,68 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             PhaseStarted.TryRemove(gone, out _);
         }
 
+        foreach (var key in PastGames.Keys.Where(k => !active.Contains(k.Game)).ToList())
+        {
+            PastGames.TryRemove(key, out _);
+        }
+
         if (rows.Count == 0) return 0;
         tags = await tagStore.LoadAsync(ct);
 
         foreach (var game in rows.GroupBy(r => r.GameId))
         {
-            var row = await db.Games.AsNoTracking().FirstAsync(g => g.Id == game.Key, ct);
-            var state = GameStore.Read(row);
-            var rng = new Random(HashCode.Combine(state.Seed, state.Version));
-            var bots = game.Select(r => r.UserId).ToHashSet();
-            var now = time.GetUtcNow();
-            var phaseSince = PhaseStarted.AddOrUpdate(game.Key, _ => (state.Phase, state.Round, now),
-                (_, old) => old.Phase == state.Phase && old.Round == state.Round ? old : (state.Phase, state.Round, now)).Since;
-            var since = Changed.AddOrUpdate(game.Key, _ => (state.Version, now), (_, old) => old.Version == state.Version ? old : (state.Version, now)).Since;
-            // Один человек с ботами — таймеров нет, боты ждут человека.
-            var solo = state.Players.Count - bots.Count <= 1;
-            foreach (var botId in bots.OrderBy(_ => rng.Next()))
+            try
             {
-                if (state.Phase == Phase.Night && state.Player(botId).Role.IsKillerTeam())
-                {
-                    if (now - phaseSince < TimeSpan.FromSeconds(8)) continue;
-                    if (await NightTalkAsync(state, botId, ct)) { moves++; break; }
-                    var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
-                        m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseSince)
-                        .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
-                    if (state.Player(botId).Role == Role.Killer && WaitForNight(botId, phaseSince, now, row.PhaseDeadline,
-                        recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct))) continue;
-                }
-                if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
-                {
-                    continue;
-                }
-
-                if (await TryMoveAsync(state, botId, rng, ct))
-                {
-                    moves++;
-                    break;
-                }
+                moves += await TickGameAsync(game.Key, game.Select(r => r.UserId).ToHashSet(), ct);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                // Одна сломанная партия не должна останавливать ботов в остальных: ошибка повторялась бы
+                // на каждом такте (случайность детерминирована), а партии после неё в списке стояли бы.
+                logger.LogError(e, "Ошибка хода бота в партии {GameId}", game.Key);
+                db.ChangeTracker.Clear();
             }
         }
 
         return moves;
+    }
+
+    /// <summary>Не больше одного хода бота в одной партии. Возвращает 1, если бот сходил.</summary>
+    private async Task<int> TickGameAsync(Guid gameId, HashSet<Guid> bots, CancellationToken ct)
+    {
+        var row = await db.Games.AsNoTracking().FirstAsync(g => g.Id == gameId, ct);
+        var state = GameStore.Read(row);
+        var rng = new Random(HashCode.Combine(state.Seed, state.Version));
+        var now = time.GetUtcNow();
+        var phaseSince = PhaseStarted.AddOrUpdate(gameId, _ => (state.Phase, state.Round, now),
+            (_, old) => old.Phase == state.Phase && old.Round == state.Round ? old : (state.Phase, state.Round, now)).Since;
+        var since = Changed.AddOrUpdate(gameId, _ => (state.Version, now), (_, old) => old.Version == state.Version ? old : (state.Version, now)).Since;
+        // Один человек с ботами — таймеров нет, боты ждут человека.
+        var solo = state.Players.Count - bots.Count <= 1;
+        foreach (var botId in bots.OrderBy(_ => rng.Next()))
+        {
+            if (state.Phase == Phase.Night && state.Player(botId).Role.IsKillerTeam())
+            {
+                if (now - phaseSince < TimeSpan.FromSeconds(8)) continue;
+                if (await NightTalkAsync(state, botId, ct)) { return 1; }
+                var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
+                    m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseSince)
+                    .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+                if (state.Player(botId).Role == Role.Killer && WaitForNight(botId, phaseSince, now, row.PhaseDeadline,
+                    recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct))) continue;
+            }
+            if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
+            {
+                continue;
+            }
+
+            if (await TryMoveAsync(state, botId, rng, ct))
+            {
+                return 1;
+            }
+        }
+
+        return 0;
     }
 
     /// <summary>
@@ -289,6 +310,34 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         BotDiscussion.SpeechTime(message.Text ?? "", message.MediaId is { } id
             ? await db.MediaFiles.Where(m => m.Id == id).Select(m => (int?)m.DurationMs).FirstOrDefaultAsync(ct) : null);
 
+    /// <summary>Сколько помним прошлые партии бота с этими игроками, прежде чем перечитать их из базы.</summary>
+    public static readonly TimeSpan MemoryCacheLifetime = TimeSpan.FromMinutes(10);
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Guid Game, Guid Bot), (DateTimeOffset At, List<RememberedPlayer> Past)> PastGames = new();
+
+    /// <summary>
+    /// Прошлые законченные партии бота с игроками этой партии. Запрос идёт по всей истории бота, а мнение
+    /// бота считается на каждом такте, поэтому результат держим в памяти на партию (обновляется раз в 10 минут).
+    /// </summary>
+    private async Task<List<RememberedPlayer>> PastGamesAsync(Guid gameId, Guid botId, List<Guid> others, CancellationToken ct)
+    {
+        var now = time.GetUtcNow();
+        if (PastGames.TryGetValue((gameId, botId), out var cached) && now - cached.At < MemoryCacheLifetime)
+        {
+            return cached.Past;
+        }
+
+        var past = await (from mine in db.GamePlayers.AsNoTracking()
+                          join g in db.Games.AsNoTracking() on mine.GameId equals g.Id
+                          join other in db.GamePlayers.AsNoTracking() on mine.GameId equals other.GameId
+                          where mine.UserId == botId && g.Id != gameId && g.Status == GameStatuses.Finished
+                                && others.Contains(other.UserId)
+                          select new RememberedPlayer(g.Id, other.UserId, other.Role, g.FinishedAt ?? g.StartedAt))
+            .ToListAsync(ct);
+        PastGames[(gameId, botId)] = (now, past);
+        return past;
+    }
+
     /// <summary>
     /// Характер бота на эту партию, его память о соигроках (только партии с ним) и мнения стола из чата.
     /// Бот без характера в кабинете — null: играет «классически».
@@ -305,13 +354,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var personality = BotAdminService.Personality(profile).ForGame(state.Id, botId);
         var others = state.Players.Select(p => p.Id).Where(id => id != botId).ToList();
 
-        var past = personality.Memory <= 0 ? [] : await (from mine in db.GamePlayers.AsNoTracking()
-                          join g in db.Games.AsNoTracking() on mine.GameId equals g.Id
-                          join other in db.GamePlayers.AsNoTracking() on mine.GameId equals other.GameId
-                          where mine.UserId == botId && g.Id != state.Id && g.Status == GameStatuses.Finished
-                                && others.Contains(other.UserId)
-                          select new RememberedPlayer(g.Id, other.UserId, other.Role, g.FinishedAt ?? g.StartedAt))
-            .ToListAsync(ct);
+        var past = personality.Memory <= 0 ? [] : await PastGamesAsync(state.Id, botId, others, ct);
         var history = BotMemory.Recall(past, personality.Memory);
 
         var canReadTeam = state.Player(botId).Role.IsKillerTeam();
