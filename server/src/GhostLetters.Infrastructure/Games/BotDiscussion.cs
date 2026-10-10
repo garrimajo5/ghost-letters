@@ -57,6 +57,17 @@ public static class BotDiscussion
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
         string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
+        string Revision(int row)
+        {
+            // Read only this bot's previous public choices. A multi-card comparison
+            // within one row does not establish a definite previous preference.
+            var previous = own.AsEnumerable().Reverse()
+                .Select(m => m.Cards.Where(view.Board[row].Cards.Contains).Distinct().ToList())
+                .FirstOrDefault(matches => matches.Count == 1);
+            if (previous is null || previous[0] == view.Board[row].Cards[plan[row]]) return "";
+            var column = view.Board[row].Cards.ToList().IndexOf(previous[0]);
+            return $"Пересмотрел выбор: {Where(row, column)} → {Where(row, plan[row])}. ";
+        }
         var suspicion = BotPlayer.DiscussionSuspicion(view, tags, mind, rng);
         if (string.IsNullOrWhiteSpace(suspicion)) suspicion = " По игрокам пока недостаточно оснований для уверенного обвинения.";
         string Argument(int row)
@@ -73,7 +84,7 @@ public static class BotDiscussion
             (text, focus is { } r ? cards.OrderByDescending(c => c == view.Board[r].Cards[plan[r]]).ToList() : cards,
                 cards.Select(_ => "думаю, эта").ToList());
         string Overview(string prefix) => prefix + "\n" + string.Join("\n", view.Board.Select((_, r) =>
-            $"• {Where(r, plan[r])} — {Argument(r)}.")) +
+            $"• {Revision(r)}{Where(r, plan[r])} — {Argument(r)}.")) +
             (me.Letters.Any(l => l.Revealed == false)
                 ? mind.Personality.Negative > 0
                     ? "\nУчёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке."
@@ -132,7 +143,7 @@ public static class BotDiscussion
                     var chosen = view.Board[row].Cards[plan[row]];
                     var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
                     var agreement = offered is null ? "мой выбор" : offered == chosen ? "наши версии совпадают" : "пока не согласен";
-                    return $"• {Where(row, plan[row])} — {agreement}. {Argument(row)}.";
+                    return $"• {Revision(row)}{Where(row, plan[row])} — {agreement}. {Argument(row)}.";
                 });
                 var response = prefix + "\n" + string.Join("\n", lines) + (asksSuspect ? suspicion : "");
                 if (response.Length > ChatService.MaxTextLength)
@@ -154,7 +165,7 @@ public static class BotDiscussion
             var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
             var comparison = offered is null ? "вот мой текущий выбор" : offered == view.Board[row].Cards[plan[row]] ? "здесь наши версии совпадают" : "здесь я пока не согласен";
             var text = $"{Name(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
-                $"Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
+                $"{Revision(row)}Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
                 "Остальные ряды моей версии — на прикреплённых картах." + suspicion;
             return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Name(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
         }
