@@ -108,7 +108,8 @@ void main() {
     ];
     final v = GameSnapshot.fromJson(j).view;
     final t = v.table.threads.single;
-    expect((t.id, t.author, t.sourceKind, t.isFor, t.reason, t.endorsedBy), (7, 'u3', 'Letter', false, 'цвет', ['u2']));
+    expect((t.id, t.author, t.sourceKind, t.isFor, t.reason), (7, 'u3', 'Letter', false, 'цвет'));
+    expect(t.endorsedBy, ['u2']);
     expect((v.table.pins.single.row, v.table.pins.single.column), (1, 4));
     expect(v.table.checks.single.card, 'orig_0001');
     expect(v.table.claims.single.round, 1);
