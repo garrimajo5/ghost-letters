@@ -44,11 +44,11 @@ void main() {
     await tester.pump();
     expect(shown(), text);
     final hints = find.byKey(const Key('dossier-bottom-hints'));
-    expect(tester.getTopLeft(hints).dy, greaterThan(600));
-    await tester.tap(find.text('Подсказки Призрака · все раунды'));
+    expect(hints, findsOneWidget);
+    await tester.ensureVisible(hints);
     await tester.pumpAndSettle();
-    expect(find.byKey(const Key('hint-orig_0100')).hitTestable(), findsOneWidget);
-    await tester.tap(find.text('Подсказки Призрака · все раунды'));
+    expect(find.byKey(const Key('hint-orig_0100')), findsOneWidget);
+    await tester.tap(find.text('Подсказки Призрака · по раундам'));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('hint-orig_0100')).hitTestable(), findsNothing);
     expect(tester.takeException(), isNull);
@@ -80,17 +80,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
       expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Подсказка поддерживает первую карту');
-      await tester.ensureVisible(find.byKey(const ValueKey('dossier-author-u3')));
-      await tester.tap(find.byKey(const ValueKey('dossier-author-u3')));
-      await tester.pumpAndSettle();
-      send('2', 'u2', 'Чужая версия');
+      expect(find.byKey(const ValueKey('dossier-author-u3')), findsNothing);
       send('3', 'u3', 'Секретная версия', channel: 'killer_team');
       await tester.pump();
-      expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Подсказка поддерживает первую карту');
       expect(find.text('Секретная версия'), findsNothing);
-      send('4', 'u3', 'Пересмотренная версия');
-      await tester.pump();
-      expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Пересмотренная версия');
+      final board = tester.getSize(find.byKey(const Key('board-0-0')));
+      final hint = tester.getSize(find.byKey(const Key('hint-orig_0100')));
+      expect(hint.width, closeTo(board.width, 1));
+      if (width >= 1440) expect(board.width, greaterThan(130));
       const captures = String.fromEnvironment('DOSSIER_SCREENSHOTS');
       if (captures.isNotEmpty) {
         await tester.pumpAndSettle();

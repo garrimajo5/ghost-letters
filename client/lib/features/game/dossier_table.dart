@@ -16,7 +16,6 @@ class _DossierTableState extends State<_DossierTable> {
   final _source = GlobalKey();
   final _cards = <String, GlobalKey>{};
   ChatMessage? _message;
-  String? _author;
   Timer? _timer;
   final _typed = ValueNotifier<int>(0);
   List<String> _letters = [];
@@ -31,7 +30,6 @@ class _DossierTableState extends State<_DossierTable> {
   List<ChatMessage> get messages => screen.chat.where((m) =>
       m.channel == 'public' && m.authorId != null &&
       (m.text?.isNotEmpty == true || m.cardIds.isNotEmpty || m.isVoice)).toList();
-  List<ChatMessage> get theories => messages.where((m) => m.cardIds.isNotEmpty).toList();
 
   @override
   void initState() {
@@ -43,10 +41,7 @@ class _DossierTableState extends State<_DossierTable> {
   void _changed({bool initial = false}) {
     final all = messages;
     final fresh = all.where((m) => _seen.add(m.id)).toList();
-    if (_author != null) {
-      final latest = theories.where((m) => m.authorId == _author).lastOrNull;
-      if (latest?.id != _message?.id) _show(latest, animate: false);
-    } else if (initial || fresh.length > 5) {
+    if (initial || fresh.length > 5) {
       _queue.clear();
       _show(all.lastOrNull, animate: false);
     } else {
@@ -94,6 +89,9 @@ class _DossierTableState extends State<_DossierTable> {
     _timer = Timer.periodic(const Duration(milliseconds: 35), (timer) {
       if (_typed.value < _letters.length) {
         _typed.value++;
+        if (_typed.value % 5 == 0 && _letters[_typed.value - 1].trim().isNotEmpty) {
+          screen.ref.read(soundProvider).play(Sfx.typing);
+        }
         final mentioned = _mentionAt.entries.where((e) => e.value <= _typed.value && !_mentioned.contains(e.key));
         if (mentioned.isNotEmpty) setState(() => _mentioned.addAll(mentioned.map((e) => e.key)));
         return;
@@ -122,13 +120,6 @@ class _DossierTableState extends State<_DossierTable> {
     _holdTicks = 0;
   }
 
-  void _select(String? author) {
-    _author = author;
-    _queue.clear();
-    _show(author == null ? messages.lastOrNull :
-        theories.where((m) => m.authorId == author).lastOrNull, animate: false);
-  }
-
   @override
   void dispose() {
     screen.chatChanges.removeListener(_changed);
@@ -144,22 +135,7 @@ class _DossierTableState extends State<_DossierTable> {
       context: context, isScrollControlled: true, useSafeArea: true,
       builder: (_) => TableTheorySheet(screen: screen, initialSource: source));
 
-  Widget _selector() => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(children: [
-      Padding(padding: const EdgeInsets.only(right: 8), child: ChoiceChip(
-        label: const Text('Сейчас говорят'), selected: _author == null,
-        onSelected: (_) => _select(null))),
-      for (final id in theories.map((m) => m.authorId!).toSet())
-        Padding(padding: const EdgeInsets.only(right: 8), child: ChoiceChip(
-          key: ValueKey('dossier-author-$id'),
-          avatar: Avatar(nickname: screen.nick(id), color: screen.colorOf(id),
-              photoId: screen.photoOf(id), size: 24),
-          label: Text(screen.nick(id)), selected: _author == id,
-          onSelected: (_) => _select(id))),
-    ]));
-
-  Widget _board() {
+  Widget _board(double size) {
     final m = _message;
     return CustomPaint(
       key: _canvas,
@@ -178,7 +154,7 @@ class _DossierTableState extends State<_DossierTable> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('УЛИКИ НА СТОЛЕ', style: sectionLabel()),
         const SizedBox(height: 12),
-        _Board(screen: screen, maxCard: 130, decorate: (id, child) {
+        _Board(screen: screen, maxCard: size, decorate: (id, child) {
           final index = m?.cardIds.indexOf(id) ?? -1;
           final active = index >= 0 && _shown(index);
           return Container(key: _cards.putIfAbsent(id, GlobalKey.new),
@@ -200,6 +176,7 @@ class _DossierTableState extends State<_DossierTable> {
                       size: 14, color: _color(index)),
                   ])))))]));
         }),
+        _roundHints(size),
         if (m != null && m.cardIds.isNotEmpty) Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Row(children: [
@@ -289,41 +266,53 @@ class _DossierTableState extends State<_DossierTable> {
       ExpansionTile(title: const Text('Мои письма'), children: [_MyLetters(screen: screen)]),
   ]);
 
+  Widget _roundHints(double size) => ExpansionTile(
+    key: const Key('dossier-bottom-hints'), initiallyExpanded: true,
+    title: const Text('Подсказки Призрака · по раундам'),
+    children: [SingleChildScrollView(scrollDirection: Axis.horizontal,
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (final hint in screen.view!.hints)
+          Padding(padding: const EdgeInsets.only(right: 16, bottom: 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(hint.round == 0 ? 'Первая зацепка' : 'Раунд ${hint.round}', style: sectionLabel()),
+              const SizedBox(height: 8),
+              if (hint.cards.isEmpty) SizedBox(width: size, height: size,
+                child: const Center(child: Text('Нет открытых улик')))
+              else Row(children: [for (final card in hint.cards)
+                Padding(padding: const EdgeInsets.only(right: 5), child: GestureDetector(
+                  key: Key('hint-$card'), onTap: () => showCardZoom(context, card),
+                  onLongPress: screen.view!.me == null ? null : () => HintSheet.show(context, screen, card, hint.round),
+                  child: CardImage(cardId: card, size: size))),
+              ]),
+            ])),
+      ]))]);
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(child: Column(children: [
       const ConnectionBanner(),
       _Header(screen: screen, deadline: screen._snap!.deadline),
       _PlayersStrip(screen: screen),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: _selector()),
       Expanded(child: LayoutBuilder(builder: (context, box) {
         final wide = box.maxWidth >= 1050;
-        final board = Padding(padding: const EdgeInsets.all(16), child: _board());
+        final boardWidth = box.maxWidth - (wide ? 380 : 0) - 32;
+        final columns = screen.view!.board.isEmpty ? 5 : screen.view!.board.first.cards.length;
+        var size = ((boardWidth - _Board.labelWidth - _Board.gap * columns) / columns).clamp(24.0, 260.0).floorToDouble();
+        if (size > 96) {
+          final label = (size * .55).clamp(_Board.labelWidth, 100.0).floorToDouble();
+          size = ((boardWidth - label - _Board.gap * columns) / columns).clamp(24.0, 260.0).floorToDouble();
+        }
+        final board = Padding(padding: const EdgeInsets.all(16), child: _board(size));
         if (!wide) {
           return ListView(controller: screen._scroll,
             children: [board, Padding(padding: const EdgeInsets.all(12), child: _dialogue()), _actions()]);
         }
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (box.maxWidth >= 1350) SizedBox(width: 170, child: ListView(
-            padding: const EdgeInsets.all(12), children: [
-              Text('ДОСЬЕ ПАРТИИ', style: sectionLabel()),
-              for (final id in theories.map((m) => m.authorId!).toSet())
-                ListTile(contentPadding: EdgeInsets.zero, title: Text(screen.nick(id)),
-                  subtitle: const Text('Публичная версия'), onTap: () => _select(id)),
-              TextButton(onPressed: screen.openChat, child: const Text('История разговора')),
-            ])),
           Expanded(child: SingleChildScrollView(child: board)),
-          SizedBox(width: 340, child: ListView(controller: screen._scroll,
+          SizedBox(width: 380, child: ListView(controller: screen._scroll,
             padding: const EdgeInsets.all(12), children: [_dialogue(), const SizedBox(height: 12), _actions()])),
         ]);
       })),
-      Material(color: AppColors.surface, child: ExpansionTile(
-        key: const Key('dossier-bottom-hints'),
-        title: const Text('Подсказки Призрака · все раунды'),
-        visualDensity: VisualDensity.compact,
-        children: [ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .22),
-          child: SingleChildScrollView(child: _Hints(screen: screen)))])),
       _Dock(screen: screen, compact: true),
     ])));
 }
