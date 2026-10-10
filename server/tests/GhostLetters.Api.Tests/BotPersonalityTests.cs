@@ -125,6 +125,35 @@ public sealed class BotPersonalityTests
         Lies(1).Should().BeGreaterThan(45, "рисковый врёт почти всегда");
     }
 
+    [Theory]
+    [InlineData(1.0)]
+    [InlineData(-1.0)]
+    public void DistrustedCardAdviceIsIgnoredRatherThanInverted(double strength)
+    {
+        var view = View(Phase.Discussion, [], Role.Detective);
+        var baseline = Mind(new BotPersonality { Memory = 1, Compromise = 0.1 },
+            history: new Dictionary<Guid, PlayerHistory> { [Ann] = new(100, 100, 0) });
+        var withAdvice = baseline with { Opinions = [new(Ann, "knife", strength)] };
+        foreach (var seed in Enumerable.Range(0, 30))
+            BotPlayer.Plan(view, Tags, withAdvice, new Random(seed)).Should().Equal(
+                BotPlayer.Plan(view, Tags, baseline, new Random(seed)), "полностью утраченное доверие не инвертирует смысл совета");
+    }
+
+    [Fact]
+    public void DistrustedAccusationDoesNotBecomeAnAlibi()
+    {
+        var other = Guid.NewGuid();
+        var view = View(Phase.Voting, [nameof(CastVote)], Role.Detective,
+            finale: new(new(4, VoteStageKind.Killer, -1, 1, [], [Bob, other]), 5, null, [], [], [], null, null, null, [], []));
+        view = view with { Players = [.. view.Players, new(other, 4, false, null, false, 0)] };
+        var baseline = Mind(new BotPersonality { Memory = 1, Compromise = 0.1 },
+            history: new Dictionary<Guid, PlayerHistory> { [Ann] = new(100, 100, 0) });
+        var accused = baseline with { Accusations = [new(Ann, Bob, 1)] };
+        foreach (var seed in Enumerable.Range(0, 30))
+            BotPlayer.Decide(view, new Random(seed), Tags, accused).Should().Be(
+                BotPlayer.Decide(view, new Random(seed), Tags, baseline), "слова ненадёжного автора не доказывают невиновность обвинённого");
+    }
+
     [Fact]
     public void Risk_WitnessAccusesKillerByName()
     {
@@ -257,14 +286,42 @@ public sealed class BotPersonalityTests
         var view = View(Phase.Discussion, [], Role.Detective,
             letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["tulip"])]);
         var line = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 1 }))!.Value;
-        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("исключаю")
-            .And.Contain("не доказательство").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
+        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("ослабляет")
+            .And.Contain("не исключает").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
         line.Cards.Count.Should().BeLessThanOrEqualTo(ChatService.MaxCards);
         line.Notes.Should().HaveSameCount(line.Cards);
         line.Notes.Should().OnlyContain(n => n.Length <= ChatService.MaxNoteLength);
         var shrug = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 0 }))!.Value;
         shrug.Text.Should().Contain("не считаю это исключением");
+    }
+
+    [Fact]
+    public void VanishedLetterWeakensButDoesNotExcludeCardSupportedByOtherClues()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective,
+            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["dagger"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Negative = 0.1, Compromise = 0 });
+        var withoutVanishing = view with { Me = view.Me! with { Letters = [] } };
+        BotPlayer.Evidence(view, Tags, mind, "knife").Should().BeLessThan(
+            BotPlayer.Evidence(withoutVanishing, Tags, mind, "knife"));
+        var line = BotPlayer.Say(view, new Random(3), Tags, mind)!.Value;
+        var index = line.Cards.ToList().IndexOf("knife");
+        index.Should().BeGreaterThanOrEqualTo(0);
+        line.Notes[index].Should().Contain("думаю, эта");
+        line.Text.Should().NotContain("исключаю эти карты").And.Contain("ослабляет");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ResolvedLetterWithoutKnownLinksDoesNotClaimToAwaitItsResult(bool revealed)
+    {
+        var view = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(2, "sword", revealed)]);
+        var line = BotPlayer.Say(view, new Random(3), CardTags.Empty, Mind(BotPersonality.Default))!.Value;
+        line.Text.Should().NotContain("жду результат").And.NotContain("усиливает эти связи")
+            .And.Contain("явных связей с картами поля я не вижу");
+        line.Notes.Should().Contain("кидал эту");
     }
 
     [Fact]
@@ -288,6 +345,22 @@ public sealed class BotPersonalityTests
         var mind = Mind(new BotPersonality { Risk = 1, Strictness = 1, Memory = 0 },
             [new ChatOpinion(Ann, "knife", 1), new ChatOpinion(Bob, "rose", 1, IsCheck: true)]);
         BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value.Text.Should().NotContain("Боб");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RejectingOneOfEquallySupportedCardsIsNotSuspicious(bool tied)
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["knife"] = ["weapon"], ["rose"] = [tied ? "weapon" : "flower"],
+            ["sword"] = ["weapon"], ["boat"] = ["water"], ["sea"] = ["water"] });
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword", "sea"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = 1, Strictness = 0.5, Memory = 0 },
+            [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", -1)]);
+        var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
+        if (tied) reply.Should().NotContain("Бот Боб из чёрных", "другая карта ряда объясняет улики столь же хорошо");
+        else reply.Should().Contain("Бот Боб из чёрных", "отрицание единственной хорошо поддержанной версии всё ещё учитывается");
     }
 
     [Fact]

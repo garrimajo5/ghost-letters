@@ -2,6 +2,9 @@ using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
 using GhostLetters.Infrastructure.Bots;
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace GhostLetters.Infrastructure.Games;
 
@@ -97,6 +100,7 @@ public static class BotPlayer
         private readonly Dictionary<(string, string), double> _similarities = new();
         private readonly Dictionary<string, double> _evidence = new();
         private readonly Dictionary<string, Dictionary<string, int>> _ranks = new();
+        private readonly Dictionary<(int Row, int Column), ulong> _cardPreferences = new();
 
         // ---------- Характер ----------
         // Без характера (mind == null) бот играет «классически» — как до появления индивидуальностей.
@@ -181,11 +185,14 @@ public static class BotPlayer
         private string? NameOf(Guid id) => mind?.Names.GetValueOrDefault(id);
 
         /// <summary>
-        /// Память: насколько игрок подозрителен по прошлым партиям с этим ботом (0 — как все, до +1).
+        /// Память: насколько игрок подозрителен по прошлым партиям с этим ботом (0 — как все, до +1.5).
         /// Доля партий в команде Убийцы сверх средней (~25%), умноженная на спектр памяти.
         /// </summary>
         private double PastSuspicion(Guid id) =>
             Classic || mind!.History.GetValueOrDefault(id) is not { Games: > 0 } h ? 0 : P.Memory * Math.Max(0, h.KillerRate - 0.25) * 2;
+
+        // PastSuspicion can exceed one. Distrust may discard a statement, never reverse its meaning.
+        private double HistoryTrust(Guid id) => Math.Clamp(1 - PastSuspicion(id) * (1 - P.Compromise), 0, 1);
 
         private double PastInformed(Guid id) =>
             Classic || mind!.History.GetValueOrDefault(id) is not { Games: > 0 } h ? 0 : P.Memory * Math.Max(0, h.InformedRate - 0.15) * 2;
@@ -205,7 +212,7 @@ public static class BotPlayer
             foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id && !o.IsCheck))
             {
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
-                trust *= 1 - PastSuspicion(o.Author) * (1 - P.Compromise);
+                trust *= HistoryTrust(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 sum += o.Strength * trust * mind.TrustMultiplier(o.Author);
             }
@@ -228,7 +235,7 @@ public static class BotPlayer
             foreach (var a in mind!.AccusationList.Where(a => a.Target == id && a.Author != me.Id))
             {
                 var trust = Known(a.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? 0.3 * P.Compromise : 1;
-                trust *= 1 - PastSuspicion(a.Author) * (1 - P.Compromise);
+                trust *= HistoryTrust(a.Author);
                 sum += a.Strength * trust * mind.TrustMultiplier(a.Author);
             }
 
@@ -263,8 +270,12 @@ public static class BotPlayer
                 }
 
                 var best = view.Board[row].Cards.Max(Evidence);
-                if ((o.Strength > 0 && best - Evidence(o.CardId) > 0.15) ||
-                    (o.Strength < 0 && best > 0.15 && best - Evidence(o.CardId) < 0.01))
+                var score = Evidence(o.CardId);
+                // Rejecting one of several equally plausible cards is legitimate disagreement.
+                // A negative opinion is evidence against its author only for a clear leader.
+                var rejectsClearLeader = o.Strength < 0 && score > 0.15 &&
+                    score - view.Board[row].Cards.Where(c => c != o.CardId).Select(Evidence).DefaultIfEmpty(0).Max() > 0.15;
+                if ((o.Strength > 0 && best - score > 0.15) || rejectsClearLeader)
                 {
                     count += Math.Abs(o.Strength) * 0.6;
                 }
@@ -355,6 +366,16 @@ public static class BotPlayer
 
         private double Noise() => rng.NextDouble() * 1e-6;
 
+        // Resolve exact ties consistently across discussion, voting and process restarts.
+        // Only public game/card identity and this bot's identity enter the preference.
+        private ulong CardPreference(int row, int column)
+        {
+            if (_cardPreferences.TryGetValue((row, column), out var preference)) return preference;
+            var key = $"card-tie-v1:{view.GameId:N}:{me.Id:N}:{row}:{Card(row, column)}";
+            return _cardPreferences[(row, column)] = BinaryPrimitives.ReadUInt64LittleEndian(
+                SHA256.HashData(Encoding.UTF8.GetBytes(key)));
+        }
+
         /// <summary>Насколько подсказки указывают на карту: сходство с открытыми письмами минус сходство с моими исчезнувшими.</summary>
         public double Evidence(string card)
         {
@@ -368,7 +389,7 @@ public static class BotPlayer
         public int BestColumn(int row, IReadOnlyList<int>? candidates)
         {
             var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
-            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Noise()).First();
+            return columns.OrderByDescending(c => Evidence(Card(row, c))).ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
         }
 
         public int? RowVote(VoteStageView stage)
@@ -394,7 +415,7 @@ public static class BotPlayer
                     var fakes = candidates.Where(c => c != real).ToList();
                     if (fakes.Count > 0)
                     {
-                        return fakes.OrderByDescending(c => Evidence(Card(stage.Row, c)) + Noise()).First();
+                        return fakes.OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
                     }
                 }
             }
@@ -404,7 +425,7 @@ public static class BotPlayer
                 return BestColumn(stage.Row, candidates);
             }
 
-            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates) + Noise()).First();
+            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
         }
 
         public Guid? SuspectVote(VoteStageView stage)
@@ -814,10 +835,13 @@ public static class BotPlayer
                 $"Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.\n" +
                 string.Join("\n", checkedCards.Select(x => $"• {Where(x.Row, x.Column)} — {Connection(claimCard, Card(x.Row, x.Column))}."));
             var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
-            var conclusion = vanished && checkedCards.Count > 0
-                ? NegativeWeight > 0 ? "Письмо исчезло: исключаю эти карты из основной версии, но это не доказательство."
-                    : "Письмо исчезло, но я не считаю это исключением карт."
-                : claimText.Contains("открыл", StringComparison.Ordinal) ? "Открытие письма усиливает эти связи." : "Пока жду результат проверки.";
+            var conclusion = vanished
+                ? checkedCards.Count == 0 ? "Письмо исчезло, но явных связей с картами поля я не вижу."
+                    : NegativeWeight > 0 ? "Письмо исчезло: это ослабляет эти версии, но не исключает карты — другие улики могут перевесить."
+                        : "Письмо исчезло, но я не считаю это исключением карт."
+                : claimText.Contains("открыл", StringComparison.Ordinal)
+                    ? checkedCards.Count > 0 ? "Открытие письма усиливает эти связи." : "Письмо открыто, но явных связей с картами поля я не вижу."
+                    : "Пока жду результат проверки.";
             // Лимит чата соблюдаем по законченным строкам, не обрывая объяснение посреди слова.
             var sections = new[] { claimText, checkedText, conclusion, opinion };
             var text = string.Join("\n", sections);
