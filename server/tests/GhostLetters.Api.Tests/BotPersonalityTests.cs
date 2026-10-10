@@ -318,6 +318,22 @@ public sealed class BotPersonalityTests
         BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value.Text.Should().NotContain("Боб");
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RejectingOneOfEquallySupportedCardsIsNotSuspicious(bool tied)
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["knife"] = ["weapon"], ["rose"] = [tied ? "weapon" : "flower"],
+            ["sword"] = ["weapon"], ["boat"] = ["water"], ["sea"] = ["water"] });
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword", "sea"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = 1, Strictness = 0.5, Memory = 0 },
+            [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", -1)]);
+        var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
+        if (tied) reply.Should().NotContain("Бот Боб из чёрных", "другая карта ряда объясняет улики столь же хорошо");
+        else reply.Should().Contain("Бот Боб из чёрных", "отрицание единственной хорошо поддержанной версии всё ещё учитывается");
+    }
+
     [Fact]
     public void Memory_ZeroIsBlank_OneRetainsAll_RecentGamesWeighMore()
     {

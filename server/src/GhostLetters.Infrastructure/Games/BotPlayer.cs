@@ -267,8 +267,12 @@ public static class BotPlayer
                 }
 
                 var best = view.Board[row].Cards.Max(Evidence);
-                if ((o.Strength > 0 && best - Evidence(o.CardId) > 0.15) ||
-                    (o.Strength < 0 && best > 0.15 && best - Evidence(o.CardId) < 0.01))
+                var score = Evidence(o.CardId);
+                // Rejecting one of several equally plausible cards is legitimate disagreement.
+                // A negative opinion is evidence against its author only for a clear leader.
+                var rejectsClearLeader = o.Strength < 0 && score > 0.15 &&
+                    score - view.Board[row].Cards.Where(c => c != o.CardId).Select(Evidence).DefaultIfEmpty(0).Max() > 0.15;
+                if ((o.Strength > 0 && best - score > 0.15) || rejectsClearLeader)
                 {
                     count += Math.Abs(o.Strength) * 0.6;
                 }
