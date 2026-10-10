@@ -36,7 +36,7 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
                 await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
             }
             var lines = await _factory.WithDbAsync(db => db.ChatMessages.AsNoTracking()
-                .Where(m => m.GameId == game.GameId && m.AuthorId != null && ids.Contains(m.AuthorId.Value))
+                .Where(m => m.GameId == game.GameId && m.Channel != ChatChannels.Table && m.AuthorId != null && ids.Contains(m.AuthorId.Value))
                 .OrderBy(m => m.CreatedAt).ToListAsync());
             lines.Should().Contain(m => m.Text!.Contains("по всем открытым уликам"));
             lines.Should().Contain(m => m.Text!.Contains("будешь голосовать?"));
@@ -46,7 +46,7 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
             var count = lines.Count;
             _factory.Time.Advance(TimeSpan.FromMinutes(3));
             await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
-            (await _factory.WithDbAsync(db => db.ChatMessages.CountAsync(m => m.GameId == game.GameId && m.AuthorId != null && ids.Contains(m.AuthorId.Value))))
+            (await _factory.WithDbAsync(db => db.ChatMessages.CountAsync(m => m.GameId == game.GameId && m.Channel != ChatChannels.Table && m.AuthorId != null && ids.Contains(m.AuthorId.Value))))
                 .Should().Be(count);
             (await game.StateAsync()).Phase.Should().Be("Discussion", "боты не завершают обсуждение без готовности людей");
         }
