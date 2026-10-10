@@ -224,13 +224,27 @@ public sealed class BotFinalDiscussionTests
         BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))?.Text.Should().NotContain("отвечаю про голосование");
     }
 
-    [Fact]
-    public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber(bool attachCards)
     {
         var now = DateTimeOffset.UtcNow;
         var line = BotDiscussion.Compose(View, Tags, Mind,
-            [new(Me, "Версия", ["knife"], now), new(Ann, "Бот Я, за кого будешь голосовать?", [], now.AddSeconds(15))], new Random(1))!.Value;
+            [new(Me, "Версия", ["knife"], now), new(Ann, "Бот Я, за кого будешь голосовать?", attachCards ? ["boat"] : [], now.AddSeconds(15))], new Random(1))!.Value;
         line.Text.Should().Contain("про подозрения").And.Contain("недостаточно оснований").And.NotContain("мотив 1");
+    }
+
+    [Theory]
+    [InlineData("Что думаешь о месте и за кого будешь голосовать?", "место 1")]
+    [InlineData("Что думаешь о мотиве и месте, кого подозреваешь?", "мотив 1")]
+    public void MixedQuestionAnswersRowsAndSuspicions(string question, string expected)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Версия", [], now), new(Ann, "Бот Я, " + question, [], now.AddSeconds(1))], new Random(1))!.Value;
+        line.Text.Should().Contain(expected).And.Contain("место 1").And.Contain("недостаточно оснований");
+        line.Cards.Should().Contain("boat");
     }
 
     [Theory]

@@ -112,10 +112,12 @@ public static class BotDiscussion
         var incoming = question ?? answer;
         if (incoming is not null)
         {
-            if (question is not null && question.Cards.Count == 0 &&
-                (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase)))
-                return Line($"{Name(incoming.Author)}, отвечаю про подозрения.{suspicion}");
             var mentioned = MentionedRows(view, incoming);
+            var asksSuspect = question is not null &&
+                (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase));
+            // Attachments supply context, not a replacement for an explicit question about players.
+            if (asksSuspect && mentioned.Count == 0)
+                return Line($"{Name(incoming.Author)}, отвечаю про подозрения.{suspicion}");
             if (question is not null && mentioned.Count > 1)
             {
                 // A direct question may name several rows. Answer each once, without
@@ -128,9 +130,10 @@ public static class BotDiscussion
                     var agreement = offered is null ? "мой выбор" : offered == chosen ? "наши версии совпадают" : "пока не согласен";
                     return $"• {Where(row, plan[row])} — {agreement}. {Argument(row)}.";
                 });
-                var response = prefix + "\n" + string.Join("\n", lines);
+                var response = prefix + "\n" + string.Join("\n", lines) + (asksSuspect ? suspicion : "");
                 if (response.Length > ChatService.MaxTextLength)
-                    response = prefix + "\n" + string.Join("; ", mentioned.Select(row => Where(row, plan[row])));
+                    response = prefix + "\n" + string.Join("; ", mentioned.Select(row => Where(row, plan[row]))) +
+                        (asksSuspect ? suspicion : "");
                 var selected = mentioned.Select(row => view.Board[row].Cards[plan[row]]).Take(ChatService.MaxCards).ToList();
                 return (response, selected, selected.Select(_ => "думаю, эта").ToList());
             }
