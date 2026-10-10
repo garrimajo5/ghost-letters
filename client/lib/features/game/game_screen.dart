@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api.dart';
+import '../../core/config.dart';
 import '../../core/sound.dart';
 import '../../core/sound_settings_sheet.dart';
 import '../../core/realtime.dart';
@@ -20,6 +21,8 @@ import 'game_sheets.dart';
 import 'game_state.dart';
 import 'game_audio.dart';
 import 'table_theory.dart';
+
+part 'dossier_table.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -478,6 +481,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
     final v = snap.view;
     if (zoomed) return _ZoomedTable(screen: this);
+    if (AppConfig.dossierDesign && v.phase != 'RoleReveal') {
+      chatDocked = false;
+      return _DossierTable(screen: this);
+    }
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final finale = isFinale(v);
     final panelFirst = v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
@@ -862,10 +869,11 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen, this.maxCard = 96});
+  const _Board({required this.screen, this.maxCard = 96, this.decorate});
 
   final GameScreenState screen;
   final double maxCard;
+  final Widget Function(String, Widget)? decorate;
 
   static const gap = 5.0;
   static const labelWidth = 46.0;
@@ -944,7 +952,7 @@ class _Board extends StatelessWidget {
                             HapticFeedback.selectionClick();
                             screen.saveMark(id, m.copyWith(believed: !m.believed));
                           },
-                    child: BoardCard(
+                    child: _decorate(v.board[r].cards[c], BoardCard(
                       cardId: v.board[r].cards[c],
                       size: size,
                       mark: screen.marks[v.board[r].cards[c]],
@@ -956,7 +964,7 @@ class _Board extends StatelessWidget {
                       voted: outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c),
                       dimmed: stage != null && stage.isRow && stage.row == r && !stage.candidateColumns.contains(c),
                       active: stage != null && stage.isRow && stage.row == r && stage.candidateColumns.contains(c),
-                    ),
+                    )),
                   ),
                 ),
             ]),
@@ -964,6 +972,8 @@ class _Board extends StatelessWidget {
       ]);
     });
   }
+
+  Widget _decorate(String id, Widget child) => decorate?.call(id, child) ?? child;
 }
 
 /// Карта поля с пометками: ✕ — красный бейдж слева, ✓ — зелёный справа, «считаю истинной» — зелёная рамка.
@@ -1403,10 +1413,11 @@ class _LandscapeTable extends StatelessWidget {
 }
 
 class _Dock extends StatelessWidget {
-  const _Dock({required this.screen, this.showChat = true});
+  const _Dock({required this.screen, this.showChat = true, this.compact = false});
 
   final GameScreenState screen;
   final bool showChat;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1440,7 +1451,12 @@ class _Dock extends StatelessWidget {
               ),
           ]),
           const SizedBox(height: 6),
-          _Hand(screen: screen),
+          if (compact && !v.can('SendLetter'))
+            Material(color: AppColors.bg, child: ExpansionTile(title: const Text('Показать руку'),
+              visualDensity: VisualDensity.compact,
+              children: [_Hand(screen: screen)]))
+          else
+            _Hand(screen: screen),
           const SizedBox(height: 8),
         ],
         Row(children: [

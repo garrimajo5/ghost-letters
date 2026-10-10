@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 /// Другой адрес: flutter run --dart-define=API_URL=http://192.168.1.10:8080
 /// Веб-версия без API_URL ходит на тот же адрес, с которого открыта страница.
 class AppConfig {
+  /// Opt-in client experiment; normal builds retain the existing interface.
+  static const dossierDesign = bool.fromEnvironment('DOSSIER_DESIGN');
   static const _env = String.fromEnvironment('API_URL');
 
   static String get apiUrl => _env.isNotEmpty ? _env : (kIsWeb ? Uri.base.origin : 'http://10.0.2.2:8080');

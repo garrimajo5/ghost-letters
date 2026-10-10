@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ghost_letters/core/config.dart';
 import 'package:ghost_letters/models/models.dart';
 
 import 'support/fakes.dart';
@@ -71,7 +72,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(app.api.named('joinLobby').single.$2, ['ABC234', false, true]);
-    expect(find.byKey(const Key('chat-docked')), findsOneWidget);
+    if (AppConfig.dossierDesign) {
+      expect(find.byKey(const Key('dossier-edit')), findsNothing);
+      await tester.tap(find.text('Весь разговор'));
+      await tester.pumpAndSettle();
+    } else {
+      expect(find.byKey(const Key('chat-docked')), findsOneWidget);
+    }
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Команда Убийцы'), findsNothing);
     expect(find.byKey(const Key('cta')), findsNothing);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/session.dart';
+import 'core/config.dart';
 import 'core/sound_scope.dart';
 import 'core/theme.dart';
 import 'features/auth/login_screen.dart';
@@ -58,6 +59,8 @@ class GhostLettersApp extends ConsumerWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.build(),
         routerConfig: ref.watch(routerProvider),
-        builder: (context, child) => SoundScope(router: ref.watch(routerProvider), child: child!),
+        builder: (context, child) => SoundScope(router: ref.watch(routerProvider),
+          child: AppConfig.dossierDesign ? Banner(message: 'ДОСЬЕ · ТЕСТ',
+            location: BannerLocation.topEnd, color: AppColors.amber, child: child!) : child!),
       );
 }
