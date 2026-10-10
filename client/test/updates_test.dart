@@ -32,7 +32,7 @@ void main() {
       await tester.tap(find.text('Что нового'));
       await tester.pumpAndSettle();
       expect(find.byType(UpdatesScreen), findsOneWidget);
-      expect(find.text('Версия 0.1.1'), findsOneWidget);
+      expect(find.text('Версия ${AppVersion.current.version}'), findsOneWidget);
       await tester.scrollUntilVisible(find.text('Версия 0.1.0'), 200,
           scrollable: find
               .descendant(

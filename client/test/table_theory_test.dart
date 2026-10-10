@@ -29,6 +29,57 @@ Future<TestApp> open(WidgetTester tester, double width,
 }
 
 void main() {
+  testWidgets(
+      'выбор автора показывает последнюю версию и не переключается на других',
+      (tester) async {
+    final app = await open(tester, 1440);
+    await tester.ensureVisible(find.byKey(const Key('show-table-theory')));
+    await tester.pumpAndSettle();
+    void send(String id, String author, String text, List<String> cards,
+        {String channel = 'public'}) {
+      app.realtime.chatCtl.add(ChatMessage(
+          id: id,
+          channel: channel,
+          authorId: author,
+          kind: 'text',
+          text: text,
+          cardIds: cards,
+          cardNotes: cards.map((_) => 'думаю, эта').toList(),
+          createdAt: DateTime.now(),
+          round: 4));
+    }
+
+    send('1', 'u3', 'Старая версия', ['orig_0001']);
+    send('2', 'u3', 'Новая версия', ['orig_0002', 'orig_0003']);
+    send('3', 'u2', 'Версия Ватсона', ['orig_0004']);
+    await tester.pump();
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('current-theory-selector')));
+    await tester.tap(find.byKey(const Key('current-theory-selector')));
+    await tester.pumpAndSettle();
+    expect(find.text('Марпл · раунд 4'), findsOneWidget);
+    await tester.tap(find.text('Марпл · раунд 4'));
+    await tester.pumpAndSettle();
+    final panel = find.byType(TableStatements);
+    expect(find.descendant(of: panel, matching: find.text('Новая версия')),
+        findsOneWidget);
+    expect(find.descendant(of: panel, matching: find.byType(CardImage)),
+        findsNWidgets(2));
+    send('4', 'u2', 'Посторонняя реплика', ['orig_0005']);
+    send('5', 'u3', 'Секретная версия', ['orig_0006'], channel: 'killer_team');
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.descendant(of: panel, matching: find.text('Новая версия')),
+        findsOneWidget);
+    send('6', 'u3', 'Пересмотрел версию', ['orig_0007']);
+    await tester.pumpAndSettle();
+    expect(
+        find.descendant(of: panel, matching: find.text('Пересмотрел версию')),
+        findsOneWidget);
+    expect(find.descendant(of: panel, matching: find.byType(CardImage)),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   for (final width in [320.0, 1440.0]) {
     testWidgets('версия на столе: связи и исключения, ширина $width',
         (tester) async {

@@ -1,7 +1,7 @@
 name: ghost_letters
 description: Письма призрака — клиент для Android и iPhone.
 publish_to: none
-version: 0.1.1+2
+version: 0.1.2+3
 
 environment:
   sdk: ^3.5.0
