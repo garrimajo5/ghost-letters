@@ -74,7 +74,11 @@ public static class BotDiscussion
                 cards.Select(_ => "думаю, эта").ToList());
         string Overview(string prefix) => prefix + "\n" + string.Join("\n", view.Board.Select((_, r) =>
             $"• {Where(r, plan[r])} — {Argument(r)}.")) +
-            (me.Letters.Any(l => l.Revealed == false) ? "\nУчёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке." : "");
+            (me.Letters.Any(l => l.Revealed == false)
+                ? mind.Personality.Negative > 0
+                    ? "\nУчёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке."
+                    : "\nИсчезновение своих писем не считаю доводом против карт: смотрю на другие улики."
+                : "");
         // Keep every row even with unusually long imported detail labels.
         string Summary(string prefix)
         {

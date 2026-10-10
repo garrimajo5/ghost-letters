@@ -65,6 +65,40 @@ public sealed class BotFinalDiscussionTests
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
     }
 
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(1.0)]
+    public void SummaryExplainsWhetherPersonalityUsesVanishedLetters(double negative)
+    {
+        var view = View with { Me = View.Me! with { Letters = [new(2, "sword", false)] } };
+        var mind = Mind with { Personality = Mind.Personality with { Negative = negative } };
+        var withLetter = BotPlayer.Evidence(view, Tags, mind, "knife");
+        var withoutLetter = BotPlayer.Evidence(View, Tags, mind, "knife");
+        var line = BotDiscussion.Compose(view, Tags, mind, [], new Random(1))!.Value;
+        if (negative == 0)
+        {
+            withLetter.Should().Be(withoutLetter);
+            line.Text.Should().NotContain("Учёл и свои исчезнувшие письма")
+                .And.Contain("Исчезновение своих писем не считаю доводом против карт");
+        }
+        else
+        {
+            withLetter.Should().BeLessThan(withoutLetter);
+            line.Text.Should().Contain("Учёл и свои исчезнувшие письма");
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(null)]
+    public void SummaryDoesNotInventVanishingForOpenedOrPendingLetter(bool? revealed)
+    {
+        var view = View with { Me = View.Me! with { Letters = [new(2, "sword", revealed)] } };
+        var mind = Mind with { Personality = Mind.Personality with { Negative = 0 } };
+        var line = BotDiscussion.Compose(view, Tags, mind, [], new Random(1))!.Value;
+        line.Text.Should().NotContain("исчезнувшие письма").And.NotContain("Исчезновение своих писем");
+    }
+
     [Fact]
     public void AsksNamedPlayer_AnswersSpecificRow_AndDoesNotAnswerSameQuestionTwice()
     {
