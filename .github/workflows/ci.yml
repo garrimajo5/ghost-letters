@@ -129,7 +129,12 @@ jobs:
 
       - name: Test Dossier table (DOSSIER_DESIGN build)
         # Тест «Досье» без флага пропускается; здесь он идёт в сборке с флагом, как на /download/dossier/.
-        run: flutter test --dart-define=DOSSIER_DESIGN=true test/dossier_test.dart
+        run: |
+          set +e
+          flutter test --dart-define=DOSSIER_DESIGN=true --file-reporter json:dossier-results.json test/dossier_test.dart
+          status=$?
+          python3 ../.github/scripts/flutter_annotations.py tests dossier-results.json
+          exit $status
 
   client-web:
     name: Client — web build & smoke
