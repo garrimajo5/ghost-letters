@@ -131,7 +131,6 @@ public static class BotPlayer
         private double RevealFallback => Classic ? 0.08 : 0.12 - 0.08 * P.Risk;
 
         /// <summary>Чёрные: как часто врут о своём письме, голосуют и пишут под ложную карту.</summary>
-        private double LieChance => Classic ? 0.6 : 0.1 + 0.8 * P.Risk;
 
         private double FakeChance => Classic ? 1 : 0.25 + 0.75 * P.Risk;
 
@@ -479,6 +478,7 @@ public static class BotPlayer
 
         public string? FirstClue()
         {
+            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, me.Hand).FirstOrDefault();
             if (Truth is not { } truth || me.Hand.Count == 0)
             {
                 return null;
@@ -496,6 +496,7 @@ public static class BotPlayer
         public IReadOnlyList<string> HintsToReveal()
         {
             var mailbox = view.MailboxForGhost ?? [];
+            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, mailbox);
             // Без тегов похожесть не оценить — открываем наугад от нуля до всех писем.
             if (Truth is not { } truth || mailbox.Count == 0 || tags.Count == 0)
             {
@@ -886,13 +887,6 @@ public static class BotPlayer
             if (letter is null)
             {
                 return ("", null);
-            }
-
-            var liar = me.Role is Role.Killer or Role.Accomplice or Role.Blackmailer or Role.Imitator;
-            var others = view.Hints.Where(h => h.Round == letter.Round).SelectMany(h => h.Cards).Where(c => c != letter.CardId).ToList();
-            if (liar && letter.Revealed != true && others.Count > 0 && (Classic ? rng.Next(5) < 3 : rng.NextDouble() < LieChance))
-            {
-                return ("Я отправлял вот эту — и она открылась!", others[rng.Next(others.Count)]);
             }
 
             return letter.Revealed switch

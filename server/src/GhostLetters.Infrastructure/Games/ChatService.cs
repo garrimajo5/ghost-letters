@@ -98,6 +98,16 @@ public sealed class ChatService(
         var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand).Concat(author.Discarded)
             .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId))
             .ToHashSet();
+        // The ghost may explain withheld letters only after the result is public.
+        if (state.Result is not null && author.Role == Role.Ghost)
+            known.UnionWith(state.Letters.Select(l => l.CardId));
+        if (cards.Count <= MaxCards && cards.Any(c => !known.Contains(c)))
+        {
+            var ownLetters = state.Letters.Where(l => l.From == userId).Select(l => l.CardId).ToList();
+            var marks = await db.CardMarks.AsNoTracking().Where(m => m.GameId == gameId && m.OwnerId == userId && ownLetters.Contains(m.CardId))
+                .Select(m => m.Sources).ToListAsync(ct);
+            known.UnionWith(marks.Select(m => NotesService.ReadSources(m)?.Claim).OfType<string>());
+        }
         if (cards.Count <= MaxCards && cards.Any(c => !known.Contains(c)))
         {
             // Повторять можно показанные карты, а не скрытые чужие письма.

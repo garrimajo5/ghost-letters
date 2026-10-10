@@ -174,6 +174,8 @@ public sealed class BotStrictnessTests
         var forNarrow = (RevealHints)BotPlayer.Decide(ghost, new Random(1), tags, Mind(cautious, narrow))!;
         var forWide = (RevealHints)BotPlayer.Decide(ghost, new Random(1), tags, Mind(cautious, wide))!;
         forNarrow.CardIds.Should().BeEmpty();
-        forWide.CardIds.Should().Equal("coin");
+        forWide.CardIds.Should().BeEmpty("осторожный Призрак теперь не открывает неоднозначную карту даже широкому столу");
+        var risky = (RevealHints)BotPlayer.Decide(ghost, new Random(1), tags, Mind(cautious with { Risk = 1 }, wide))!;
+        risky.CardIds.Should().Equal("coin");
     }
 }

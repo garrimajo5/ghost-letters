@@ -365,6 +365,8 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
     final ownLetters = <String>{
       for (final l in v.me?.letters ?? <MyLetter>[]) l.cardId,
       ...?v.me?.discarded,
+      for (final l in v.me?.letters ?? <MyLetter>[])
+        if (widget.screen.marks[l.cardId]?.claim case final claim?) claim,
       for (final m in widget.screen.chat)
         if (m.channel == 'public' && m.authorId == v.me?.id) ...m.cardIds,
     };
@@ -451,7 +453,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
               Text(_cards == 'ghost'
                   ? 'Открытые улики всех раундов.'
                   : _cards == 'own'
-                      ? 'Ваши письма, сброс и карты, которые вы показывали в чате.'
+                      ? 'Ваши письма, «что скажу», сброс и карты, которые вы показывали в чате.'
                       : 'Карты, показанные другими в общем чате. Это их заявления, а не подтверждение отправки.'),
               if (selectedCards.isEmpty)
                 const Padding(

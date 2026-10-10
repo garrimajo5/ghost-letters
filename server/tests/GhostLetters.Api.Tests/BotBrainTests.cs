@@ -223,8 +223,8 @@ public sealed class BotBrainTests
         honest.Text.Should().Contain("исчезла");
 
         var lies = Enumerable.Range(0, 30)
-            .Select(seed => BotPlayer.Say(WithLetter(Role.Killer, false), new Random(seed), Tags)!.Value)
-            .Count(l => l.Cards[0] is "sword" or "dog");
+            .Select(seed => BotLetterTactics.Compose(WithLetter(Role.Killer, false), GhostLetters.Infrastructure.Bots.BotMind.Neutral with { Personality = new() { Risk = 1 } }, [], new Random(seed)))
+            .Count(l => l is { } line && line.Cards[0] is "sword" or "dog");
         lies.Should().BeGreaterThan(5, "Убийца иногда выдаёт чужую открытую подсказку за своё письмо");
     }
 
