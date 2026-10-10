@@ -172,7 +172,16 @@ public sealed partial class AuthService(GhostLettersDbContext db, IOptions<JwtOp
         var user = await db.Users.SingleAsync(u => u.Id == link.UserId, ct);
         user.LastSeenAt = now;
         var tokens = Issue(user, now);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // Тот же код одновременно ввели на двух устройствах: код одноразовый, второй вход не проходит.
+            throw AppException.Validation("Код не подошёл или устарел. Получите новый на другом устройстве.");
+        }
+
         return new AuthResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, UserDto.From(user));
     }
 

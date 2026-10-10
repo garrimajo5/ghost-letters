@@ -71,6 +71,7 @@ public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastr
     {
         var result = state.Result!;
         var ids = state.Players.Select(p => p.Id).ToList();
+        await LockStatsAsync(ids, ct);
         var stats = await db.Stats.Where(s => ids.Contains(s.UserId)).ToDictionaryAsync(s => s.UserId, ct);
         foreach (var id in ids.Where(id => !stats.ContainsKey(id)))
         {
@@ -121,6 +122,24 @@ public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastr
         }
     }
 
+    /// <summary>
+    /// Один игрок (чаще всего бот из кабинета) может закончить несколько партий одновременно. Строку user_stats
+    /// читаем и меняем под блокировкой транзакции по игроку, иначе одна партия затрёт счёт другой.
+    /// Блокируем в одном порядке (по id), чтобы две партии не ждали друг друга по кругу.
+    /// </summary>
+    private async Task LockStatsAsync(IEnumerable<Guid> userIds, CancellationToken ct)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException("Статистику игроков пишут только внутри транзакции хода.");
+        }
+
+        foreach (var id in userIds.Distinct().Order())
+        {
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({id.ToString()}, 3))", ct);
+        }
+    }
+
     /// <summary>Лайки можно ставить и снимать до конца и после — таблица повторяет состояние партии.</summary>
     private async Task SyncLikesAsync(Guid gameId, GameState state, CancellationToken ct)
     {
@@ -137,6 +156,7 @@ public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastr
         db.Likes.AddRange(added.Select(a => new Persistence.Entities.Like { GameId = gameId, FromUserId = a.From, ToUserId = a.To }));
 
         var changed = removed.Select(r => r.ToUserId).Concat(added.Select(a => a.To)).Distinct().ToList();
+        await LockStatsAsync(changed, ct);
         var stats = await db.Stats.Where(s => changed.Contains(s.UserId)).ToListAsync(ct);
         foreach (var s in stats)
         {
