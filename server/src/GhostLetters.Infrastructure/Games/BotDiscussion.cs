@@ -91,10 +91,18 @@ public static class BotDiscussion
         bool AddressedElsewhere(DiscussionLine m) => mind.Names.Keys.Any(id => id != me.Id && Addresses(m, id));
         // A question can arrive before this bot's opening summary. Do not lose it
         // merely because the summary was sent later; only an answer consumes it.
-        var question = messages.LastOrDefault(m => m.Author != me.Id && m.Text.Contains('?') &&
-            (Addressed(m) || (!AddressedElsewhere(m) && Who.IsMatch(m.Text) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase))) &&
-            !own.Any(o => o.At > m.At && o.Text.StartsWith(Name(m.Author) + ",", StringComparison.OrdinalIgnoreCase) &&
-                (o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) || o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase))));
+        var pending = messages.Where(m => m.Author != me.Id && m.Text.Contains('?') &&
+            (Addressed(m) || (!AddressedElsewhere(m) && Who.IsMatch(m.Text) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase)))).ToList();
+        // Each reply consumes just the latest pending question from that player at
+        // the time of the reply, not every earlier question by the same author.
+        foreach (var response in own.Where(o => o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) ||
+                     o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase)))
+        {
+            var answered = pending.LastOrDefault(q => q.At < response.At &&
+                response.Text.StartsWith(Name(q.Author) + ",", StringComparison.OrdinalIgnoreCase));
+            if (answered is not null) pending.Remove(answered);
+        }
+        var question = pending.LastOrDefault();
         // Acknowledge the first answer to an actual outgoing question, not replies to
         // acknowledgements. Later public opinions still contribute to mind/plan.
         var answer = fresh.LastOrDefault(m => Addressed(m) && !m.Text.Contains('?') &&
