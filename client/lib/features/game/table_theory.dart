@@ -39,6 +39,7 @@ class TableStatements extends StatefulWidget {
 
 class _TableStatementsState extends State<TableStatements> {
   ChatMessage? _message;
+  String? _selectedAuthor;
   Timer? _timer;
   int _visible = 0;
   final _seen = <String>{};
@@ -60,6 +61,15 @@ class _TableStatementsState extends State<TableStatements> {
     final messages = _messages;
     final fresh = messages.where((m) => !_seen.contains(m.id)).toList();
     _seen.addAll(messages.map((m) => m.id));
+    if (_selectedAuthor != null) {
+      final selected =
+          messages.where((m) => m.authorId == _selectedAuthor).lastOrNull;
+      _queue.clear();
+      if (selected != null && selected.id != _message?.id) {
+        _show(selected, animate: false);
+      }
+      return;
+    }
     if (initial || fresh.length > 5) {
       if (messages.isNotEmpty) _show(messages.last, animate: false);
     } else {
@@ -134,18 +144,33 @@ class _TableStatementsState extends State<TableStatements> {
                             builder: (_) =>
                                 TableTheorySheet(screen: widget.screen))),
                   if (message != null)
-                    PopupMenuButton<ChatMessage>(
+                    PopupMenuButton<String>(
+                        key: const Key('current-theory-selector'),
                         tooltip: 'Версии игроков',
-                        itemBuilder: (_) => _messages.reversed
-                            .take(20)
-                            .map((m) => PopupMenuItem(
-                                value: m,
+                        itemBuilder: (_) {
+                          final latest = <String, ChatMessage>{};
+                          for (final m in _messages) {
+                            latest[m.authorId!] = m;
+                          }
+                          return [
+                            const PopupMenuItem(
+                                value: 'live',
+                                child: Text('Следить за обсуждением')),
+                            ...latest.entries.map((entry) => PopupMenuItem(
+                                value: entry.key,
                                 child: Text(
-                                    '${widget.screen.nick(m.authorId)} · раунд ${m.round}')))
-                            .toList(),
-                        onSelected: (m) {
+                                    '${widget.screen.nick(entry.key)} · раунд ${entry.value.round}')))
+                          ];
+                        },
+                        onSelected: (author) {
+                          _selectedAuthor = author == 'live' ? null : author;
                           _queue.clear();
-                          _show(m);
+                          _show(
+                              author == 'live'
+                                  ? _messages.last
+                                  : _messages
+                                      .lastWhere((m) => m.authorId == author),
+                              animate: false);
                         },
                         child: Padding(
                             padding: const EdgeInsets.all(8),
@@ -153,6 +178,8 @@ class _TableStatementsState extends State<TableStatements> {
                                 'Версия: ${widget.screen.nick(message.authorId)} ▾'))),
                 ]),
             if (message != null) ...[
+              if (message.text?.isNotEmpty == true)
+                Text(message.text!, key: const Key('current-theory-text')),
               const Text('Мнение игрока, не подтверждённая истина',
                   style: TextStyle(fontSize: 11)),
               const SizedBox(height: 6),

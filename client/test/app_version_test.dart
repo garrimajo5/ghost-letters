@@ -40,6 +40,6 @@ void main() {
     await tester.pumpWidget(app.widget);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Версия 0.1.1'), findsOneWidget);
+    expect(find.textContaining('Версия ${AppVersion.current.version}'), findsOneWidget);
   });
 }
