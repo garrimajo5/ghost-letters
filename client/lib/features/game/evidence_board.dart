@@ -228,13 +228,12 @@ mixin _EvidenceBoard on State<_DossierTable> {
       onTap: _intercepting ? () => _tapBoardCard(id) : null, child: w);
   }
 
-  /// Карта-улика под полем: подсказка или письмо. Нажатие берёт её в руку, двойное — увеличивает.
+  /// Карта-улика под полем: подсказка или письмо. Нажатие берёт её в руку (увеличить — в шторке нити).
   Widget _sourceCard(_ThreadSource source, double size, {VoidCallback? onLongPress, Key? key}) {
     final held = _held == source;
     final canHold = _canPost && !_pinsOnly;
     return GestureDetector(key: key,
       onTap: canHold ? () => _tapSource(source) : () => showCardZoom(context, source.card),
-      onDoubleTap: canHold ? () => showCardZoom(context, source.card) : null,
       onLongPress: onLongPress,
       child: AnimatedContainer(duration: const Duration(milliseconds: 150),
         transform: Matrix4.translationValues(0, held ? -4 : 0, 0),
@@ -401,9 +400,9 @@ class _ThreadSheetState extends State<_ThreadSheet> {
     return Padding(padding: EdgeInsets.fromLTRB(16, 18, 16, 24 + MediaQuery.viewInsetsOf(context).bottom),
       child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          CardImage(cardId: s.card, size: 52),
+          GestureDetector(onTap: () => showCardZoom(context, s.card), child: CardImage(cardId: s.card, size: 52)),
           const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward, color: AppColors.muted)),
-          CardImage(cardId: target, size: 52),
+          GestureDetector(onTap: () => showCardZoom(context, target), child: CardImage(cardId: target, size: 52)),
           const SizedBox(width: 10),
           Expanded(child: Text(title, style: const TextStyle(fontSize: 14, height: 1.35))),
         ]),
