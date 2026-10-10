@@ -230,6 +230,13 @@ class FakeApi extends Api {
   @override
   Future<List<ChatMessage>> chat(String gameId) async => chatLoad == null ? const [] : await chatLoad!();
 
+  @override
+  Future<ChatMessage> sendChat(String gameId, String text,
+      {String channel = 'public', List<String> cards = const [], List<String> cardNotes = const [], String? mediaId}) async =>
+      _record('sendChat', [gameId, text, channel, cards, cardNotes, mediaId], () => ChatMessage(
+        id: 'sent', channel: channel, authorId: 'u2', kind: 'text', text: text,
+        cardIds: cards, cardNotes: cardNotes, createdAt: DateTime.now(), round: 4));
+
   Future<List<ChatMessage>> Function()? chatLoad;
   Future<List<Json>> Function()? marksLoad;
   Future<List<Json>> Function()? notesLoad;

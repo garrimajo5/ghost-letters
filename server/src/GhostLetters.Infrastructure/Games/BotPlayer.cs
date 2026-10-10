@@ -219,7 +219,8 @@ public static class BotPlayer
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
                 trust *= HistoryTrust(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
-                sum += o.Strength * trust * mind.TrustMultiplier(o.Author);
+                var argument = o.SourceCard is null ? 1 : .5 + .5 * Sim(o.SourceCard, card);
+                sum += o.Strength * trust * mind.TrustMultiplier(o.Author) * argument;
             }
 
             return sum;
@@ -560,9 +561,14 @@ public static class BotPlayer
             var listen = ListensToTeam();
             return view.Board.Select((r, i) =>
         {
-            var offered = listen ? Team.Where(s => s.Columns is { } c && c.Count > i).Select(s => s.Columns![i]).ToList() : [];
+            var offered = listen ? Team.Where(s => s.Columns is { } c && c.Count > i)
+                .Select(s => (Column: s.Columns![i], Weight: mind?.TrustMultiplier(s.From) ?? 1)).ToList() : [];
+            if (listen && mind is not null)
+                offered.AddRange(mind.Opinions.Where(o => !o.IsCheck && o.Strength > 0 && r.Cards.Contains(o.CardId) &&
+                        Known(o.Author) is { } role && role.IsKillerTeam())
+                    .Select(o => (r.Cards.ToList().IndexOf(o.CardId), .5 * mind.TrustMultiplier(o.Author))));
             return offered.Count > 0
-                ? offered.GroupBy(c => c).OrderByDescending(g => g.Count()).ThenBy(_ => rng.Next()).First().Key
+                ? offered.GroupBy(c => c.Column).OrderByDescending(g => g.Sum(c => c.Weight)).ThenBy(_ => rng.Next()).First().Key
                 : rng.Next(r.Cards.Count);
         }).ToList();
         }
@@ -576,7 +582,8 @@ public static class BotPlayer
 
         /// <summary>Сообщник подсказывает один раз за фазу: ночью — случайные карты, на охоте — своего подозреваемого.</summary>
         /// <summary>Убийца слушает Сообщников с вероятностью по компромиссу (классический — всегда).</summary>
-        public bool ListensToTeam() => Classic || Team.Count == 0 || rng.NextDouble() < 0.3 + 0.7 * P.Compromise;
+        public bool ListensToTeam() => Classic || Team.Count == 0 || rng.NextDouble() < Math.Clamp(
+            .3 + .5 * P.Compromise + .2 * Team.Average(s => mind?.AffinityBias(s.From) ?? 0), .1, .95);
 
         public TeamSuggest? Suggestion()
         {

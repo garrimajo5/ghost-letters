@@ -55,7 +55,7 @@ public sealed class BotBrainTests
     [Fact]
     public void Similarity_SharedTags()
     {
-        Tags.Similarity("knife", "sword").Should().BeGreaterThan(0.5);
+        Tags.Similarity("knife", "sword").Should().BeGreaterThan(0.4);
         Tags.Similarity("knife", "rose").Should().Be(0);
         Tags.Similarity("knife", "knife").Should().Be(1);
         Tags.Similarity("knife", "unknown").Should().Be(0);

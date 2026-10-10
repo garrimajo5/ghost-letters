@@ -19,6 +19,7 @@ import 'action_panel.dart';
 import 'game_sheets.dart';
 import 'game_state.dart';
 import 'game_audio.dart';
+import 'table_theory.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -506,6 +507,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
                 Expanded(
                   child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 8, 16), children: [
                     _Board(screen: this, maxCard: 150),
+                    TableStatements(screen: this),
                   ]),
                 ),
                 SizedBox(
@@ -531,6 +533,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
                 ],
                 if (night) const _NightBanner(),
                 _Board(screen: this),
+                TableStatements(screen: this),
                 const SizedBox(height: 10),
                 _Hints(screen: this),
                 if (v.me != null && v.me!.letters.isNotEmpty && !finale) ...[
@@ -658,7 +661,7 @@ class _Header extends StatelessWidget {
               TextSpan(text: 'РАУНД ${v.round}'),
               TextSpan(text: ' / ${v.totalRounds}', style: const TextStyle(color: AppColors.dim)),
             ]),
-            style: heading(18, spacing: 1),
+            style: heading(MediaQuery.sizeOf(context).width < 360 ? 14 : 18, spacing: 1),
           )
         else
           Text('ПАРТИЯ', style: heading(18, spacing: 1)),
@@ -1171,6 +1174,7 @@ class _WideTable extends StatelessWidget {
             children: [
               if (night) const _NightBanner(),
               Center(child: _Board(screen: screen, maxCard: byHeight)),
+              TableStatements(screen: screen),
             ],
           );
         }),
@@ -1366,6 +1370,7 @@ class _LandscapeTable extends StatelessWidget {
             children: [
               if (night) const _NightBanner(),
               Center(child: _Board(screen: screen, maxCard: byHeight)),
+              TableStatements(screen: screen),
             ],
           ),
         ),

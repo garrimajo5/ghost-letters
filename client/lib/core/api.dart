@@ -306,11 +306,12 @@ class Api {
       ((await get('/games/$gameId/chat')) as List).map((e) => ChatMessage.fromJson(e as Json)).toList();
 
   Future<ChatMessage> sendChat(String gameId, String text,
-          {String channel = 'public', List<String> cards = const [], String? mediaId}) async =>
+          {String channel = 'public', List<String> cards = const [], List<String> cardNotes = const [], String? mediaId}) async =>
       ChatMessage.fromJson(await post('/games/$gameId/chat', {
         'channel': channel,
         'text': text.isEmpty ? null : text,
         'cardIds': cards,
+        'cardNotes': cardNotes,
         if (mediaId != null) 'mediaId': mediaId,
       }) as Json);
 

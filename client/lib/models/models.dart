@@ -803,7 +803,12 @@ class ChatMessage {
   /// Подписи под картами по порядку cardIds: «кидал эту», «проверял эту»…
   final List<String> cardNotes;
 
-  String? noteFor(int index) => index < cardNotes.length && cardNotes[index].isNotEmpty ? cardNotes[index] : null;
+  String? noteFor(int index) {
+    if (index >= cardNotes.length || cardNotes[index].isEmpty) return null;
+    final note = cardNotes[index];
+    return note.startsWith('думаю, эта:') || note.startsWith('исключаю:')
+        ? note.split(':').first : note;
+  }
 
   /// Голосовое: id файла на сервере и длительность.
   final String? mediaId;
