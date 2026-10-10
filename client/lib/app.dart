@@ -16,6 +16,7 @@ import 'features/leaderboard/leaderboard_screen.dart';
 import 'features/lobby/lobby_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/rules/rules_screen.dart';
+import 'features/updates/updates_screen.dart';
 
 /// Переходы: без сессии — на вход, после входа — на главную.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -38,6 +39,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/game/:id', builder: (_, s) => GameScreen(gameId: s.pathParameters['id']!)),
       GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
       GoRoute(path: '/rules', builder: (_, __) => const RulesScreen()),
+      GoRoute(path: '/updates', builder: (_, __) => const UpdatesScreen()),
       GoRoute(path: '/leaderboard', builder: (_, __) => const LeaderboardScreen()),
       GoRoute(path: '/admin/sandbox', builder: (_, __) => const SandboxScreen()),
       GoRoute(path: '/admin/bots', builder: (_, __) => const BotsAdminScreen()),

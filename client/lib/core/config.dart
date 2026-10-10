@@ -16,7 +16,7 @@ class AppConfig {
   static String get hub => '$apiUrl/hubs/play';
 
   /// Версия приложения: подставляется при сборке в CI (--dart-define), локально — «для разработки».
-  static const version = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0');
+  static const version = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.1');
   static const build = int.fromEnvironment('APP_BUILD');
   static const _buildDate = String.fromEnvironment('APP_BUILD_DATE');
 

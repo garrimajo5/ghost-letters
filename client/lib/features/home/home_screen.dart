@@ -112,6 +112,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onSelected: (v) async {
                     if (v == 'presets') {
                       await SettingsSheet.show(context, const LobbySettings(), personal: true);
+                    } else if (v == 'updates') {
+                      context.push('/updates');
                     } else if (v == 'rules') {
                       context.push('/rules');
                     } else if (v == 'history') {
@@ -152,6 +154,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const PopupMenuItem(value: 'history', child: Text('История партий')),
                     const PopupMenuItem(value: 'leaderboard', child: Text('Рейтинг игроков')),
                     const PopupMenuItem(value: 'rules', child: Text('Правила')),
+                    const PopupMenuItem(value: 'updates', child: Text('Что нового')),
                     const PopupMenuItem(value: 'profile', child: Text('Профиль и рейтинг')),
                     const PopupMenuItem(value: 'logout', child: Text('Выйти')),
                   ],

@@ -29,8 +29,10 @@ public sealed class BotSimulationTests
         int correct = 0, total = 0;
         for (var g = 0; g < games; g++)
         {
-            var ids = Enumerable.Range(0, 6).Select(_ => Guid.NewGuid()).ToList();
-            var state = GameEngine.Create(Guid.NewGuid(), ids, new GameSettings { Rounds = 4 }, deck, 1000 + g);
+            // Identity participates in stable tie-breaking: both variants must
+            // use the same identities, not a fresh random experiment each run.
+            var ids = Enumerable.Range(1, 6).Select(i => new Guid(i, 0, 0, new byte[8])).ToList();
+            var state = GameEngine.Create(new Guid(g + 100, 0, 0, new byte[8]), ids, new GameSettings { Rounds = 4 }, deck, 1000 + g);
             var rng = new Random(g);
             for (var step = 0; step < 3000 && state.Phase != Phase.Finished; step++)
             {
