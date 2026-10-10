@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ghost_letters/core/lobby_preferences.dart';
 import 'package:ghost_letters/models/models.dart';
 
 import 'support/fakes.dart';
@@ -47,6 +48,7 @@ void main() {
         expect(sent.presetName, 'Озон');
         expect(sent.ghostUserId, 'u1');
         expect(find.text('Пресет: Озон'), findsOneWidget);
+        expect(app.container.read(lobbyPreferencesProvider).read(host.id).rulesPreset, 'ozon');
         await tester.tap(find.byKey(const Key('chip-preset')));
         await tester.pumpAndSettle();
         app.api.lobbyResult = lobby(app.api.presetList.single.settings.copyWith(presetName: app.api.presetList.single.name));
@@ -54,9 +56,19 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Пресет: Очень длинное название пресета для друзей'), findsOneWidget);
         expect((app.api.named('saveSettings').last.$2[1] as LobbySettings).columns, 7);
+        app.go('/');
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('create-lobby')));
+        await tester.tap(find.byKey(const Key('create-lobby')));
+        await tester.pumpAndSettle();
+        final next = app.api.named('createLobby').single.$2[1] as LobbySettings;
+        expect(next.columns, 7);
+        expect(next.presetName, app.api.presetList.single.name);
+        expect(next.ghostUserId, isNull);
       } else {
         expect(find.text('Пресеты настроек'), findsNothing);
         expect(app.api.named('saveSettings'), isEmpty);
+        expect(app.container.read(lobbyPreferencesProvider).read(watson.id).presetLabel, 'Классика');
       }
       expect(tester.takeException(), isNull);
     });

@@ -137,7 +137,7 @@ class FakeApi extends Api {
       const RolesPreview(cooperative: true, rounds: 5, roles: ['Ghost', 'Detective']);
 
   @override
-  Future<Lobby> createLobby(String title, LobbySettings settings) async => _record('createLobby', [title], () => lobbyResult!);
+  Future<Lobby> createLobby(String title, LobbySettings settings) async => _record('createLobby', [title, settings], () => lobbyResult!);
 
   @override
   Future<Lobby> joinLobby(String code, {bool table = false, bool spectator = false}) async => _record('joinLobby', [code, table, if (spectator) spectator], () => lobbyResult!);

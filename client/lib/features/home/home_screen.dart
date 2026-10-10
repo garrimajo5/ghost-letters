@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api.dart';
+import '../../core/lobby_preferences.dart';
 import '../../core/sound_settings_sheet.dart';
 import '../../core/app_version.dart';
 import '../../core/config.dart';
@@ -54,7 +55,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _create() async {
     final user = ref.read(sessionProvider).user!;
-    final lobby = await runAction(context, () => ref.read(apiProvider).createLobby('Стол ${user.nickname}', const LobbySettings()));
+    final settings = ref.read(lobbyPreferencesProvider).read(user.id);
+    final lobby = await runAction(context, () => ref.read(apiProvider).createLobby('Стол ${user.nickname}', settings));
     if (lobby != null && mounted) context.go('/lobby/${lobby.id}');
   }
 
@@ -111,7 +113,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   icon: const Icon(Icons.more_horiz, color: AppColors.muted),
                   onSelected: (v) async {
                     if (v == 'presets') {
-                      await SettingsSheet.show(context, const LobbySettings(), personal: true);
+                      final preferences = ref.read(lobbyPreferencesProvider);
+                      final chosen = await SettingsSheet.show(context, preferences.read(user.id), personal: true);
+                      if (chosen != null) await preferences.save(user.id, chosen);
                     } else if (v == 'updates') {
                       context.push('/updates');
                     } else if (v == 'rules') {
