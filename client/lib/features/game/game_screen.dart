@@ -23,6 +23,7 @@ import 'game_audio.dart';
 import 'table_theory.dart';
 
 part 'dossier_table.dart';
+part 'evidence_board.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -322,6 +323,41 @@ class GameScreenState extends ConsumerState<GameScreen> {
       _audio.update(fresh.view, fresh.deadline);
       setState(() => _snap = fresh);
     }
+  }
+
+  /// Выложить изменения доски улик одним постом. TablePost нет в allowedCommands, поэтому при
+  /// конфликте версий повторяем, только если доску по-прежнему можно менять. Выбор хода не сбрасываем.
+  Future<bool> postTable(List<Json> ops) async {
+    final v = view;
+    if (v == null || ops.isEmpty) return false;
+    final api = ref.read(apiProvider);
+    final payload = {'ops': ops};
+    try {
+      await api.command(widget.gameId, 'TablePost', payload, v.version);
+    } on ApiError catch (e) {
+      if (e.code != 'VERSION_CONFLICT' || !mounted) {
+        _snack(e.message);
+        return false;
+      }
+      final fresh = await runAction(context, () => api.snapshot(widget.gameId));
+      if (fresh == null || !mounted) return false;
+      _audio.baseline(fresh.view, fresh.deadline);
+      setState(() => _snap = fresh);
+      if (!fresh.view.table.canPost) return false;
+      try {
+        await api.command(widget.gameId, 'TablePost', payload, fresh.view.version);
+      } on ApiError catch (e2) {
+        _snack(e2.message);
+        return false;
+      }
+    }
+    if (!mounted) return true;
+    final fresh = await runAction(context, () => api.snapshot(widget.gameId));
+    if (fresh != null && mounted && fresh.view.version >= (view?.version ?? 0)) {
+      _audio.update(fresh.view, fresh.deadline);
+      setState(() => _snap = fresh);
+    }
+    return true;
   }
 
   void _snack(String text) {

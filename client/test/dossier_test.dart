@@ -108,4 +108,79 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     }, skip: !AppConfig.dossierDesign);
   }
+
+  testWidgets('evidence board: threads, pins, checks, a new thread and one post', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    final j = snapshotJson(phase: 'Discussion', allowed: []);
+    (j['view'] as Map<String, dynamic>)['table'] = {
+      'threads': [
+        {'id': 1, 'author': 'u3', 'round': 1, 'sourceKind': 'Hint', 'source': 'orig_0100', 'target': 'orig_0001',
+          'stance': 'For', 'reason': 'цвет', 'endorsedBy': <String>[], 'disputedBy': <String>[]},
+      ],
+      'pins': [{'author': 'u3', 'row': 0, 'column': 0}],
+      'checks': [{'author': 'u3', 'card': 'orig_0002'}],
+      'claims': <Object>[],
+      'canPost': true,
+      'pinsOnly': false,
+    };
+    final snap = GameSnapshot.fromJson(j);
+    app.realtime.game = snap;
+    app.api.snapshotResult = snap;
+    app.go('/game/g1');
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('table-pins-orig_0001')), findsOneWidget);
+    expect(find.byKey(const ValueKey('table-check-orig_0002')), findsOneWidget);
+    expect(find.byKey(const Key('layer-u3')), findsOneWidget);
+    expect(find.text('МОЯ ВЕРСИЯ: 0 ИЗ 2 РЯДОВ'), findsOneWidget);
+
+    Future<void> tapKey(Key key) async {
+      await tester.ensureVisible(find.byKey(key));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(key));
+      await tester.pumpAndSettle();
+    }
+
+    // Новая нить «против» с причиной и булавкой.
+    await tapKey(const Key('hint-orig_0100'));
+    expect(tester.widget<Text>(find.byKey(const Key('table-prompt'))).data, startsWith('Улика в руке'));
+    await tapKey(const ValueKey('table-card-orig_0003'));
+    expect(find.text('УЖЕ НА СТОЛЕ'), findsNothing);
+    await tester.tap(find.byKey(const Key('reason-форма')));
+    await tester.tap(find.byKey(const Key('thread-pin')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('thread-against')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('table-draft-1')), findsOneWidget);
+
+    // Согласие с чужой нитью между теми же картами.
+    await tapKey(const Key('hint-orig_0100'));
+    await tapKey(const ValueKey('table-card-orig_0001'));
+    expect(find.text('УЖЕ НА СТОЛЕ'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('thread-endorse-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('ВЫЛОЖИТЬ НА СТОЛ (3)'), findsOneWidget);
+
+    await tapKey(const Key('table-post'));
+    final sent = app.api.calls.lastWhere((c) => c.$1 == 'command').$2;
+    expect(sent[0], 'TablePost');
+    final ops = ((sent[1] as Map)['ops'] as List).cast<Map>();
+    expect(ops.map((o) => o['kind']), ['Link', 'Pin', 'Endorse']);
+    expect(ops[0], {'kind': 'Link', 'sourceKind': 'Hint', 'source': 'orig_0100', 'target': 'orig_0003',
+      'stance': 'Against', 'reason': 'форма'});
+    expect(ops[1], {'kind': 'Pin', 'target': 'orig_0003'});
+    expect(ops[2], {'kind': 'Endorse', 'thread': 1});
+    expect(find.byKey(const Key('table-draft-0')), findsNothing);
+
+    // Слой «Спорные»: приглушены карты без споров, ошибок отрисовки нет.
+    await tapKey(const Key('layer-conflict'));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, skip: !AppConfig.dossierDesign);
 }
