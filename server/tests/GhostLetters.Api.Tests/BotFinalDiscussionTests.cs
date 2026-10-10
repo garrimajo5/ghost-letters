@@ -233,6 +233,24 @@ public sealed class BotFinalDiscussionTests
         line.Cards.Should().Equal("knife", "boat");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AnswerToLatestQuestionDoesNotConsumeEarlierQuestionFromSamePlayer(bool vague)
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> lines = [new(Me, "Моя версия", ["knife", "boat"], now),
+            new(Ann, "Бот Я, почему такой мотив?", [], now.AddSeconds(1)),
+            new(Ann, vague ? "Бот Я, что думаешь?" : "Бот Я, а что по месту?", [], now.AddSeconds(2))];
+        var latest = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value;
+        latest.Text.Should().Contain(vague ? "уточню" : "Сейчас выберу место 1");
+        lines.Add(new(Me, latest.Text, latest.Cards, now.AddSeconds(3)));
+        var earlier = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value;
+        earlier.Text.Should().Contain("отвечаю про голосование").And.Contain("Сейчас выберу мотив 1");
+        lines.Add(new(Me, earlier.Text, earlier.Cards, now.AddSeconds(4)));
+        BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))?.Text.Should().NotContain("отвечаю про голосование");
+    }
+
     [Fact]
     public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber()
     {
