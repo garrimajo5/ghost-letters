@@ -55,7 +55,10 @@ public sealed record BotPersonality
             var s = Math.Max(0, Shape);
             var c = Math.Max(0, Color);
             var sum = m + s + c;
-            return sum <= 0 ? (1 / 3.0, 1 / 3.0, 1 / 3.0) : (m / sum, s / sum, c / sum);
+            if (sum <= 0) return (.8, .15, .05);
+            var meaning = .7 + .3 * m / sum;
+            var visual = s + c;
+            return visual <= 0 ? (1, 0, 0) : (meaning, (1 - meaning) * s / visual, (1 - meaning) * c / visual);
         }
     }
 
@@ -219,7 +222,7 @@ public static class AccusationReader
 }
 
 /// <summary>Мнение из чата: автор показал карту поля с подписью («думаю, эта», «проверял эту»).</summary>
-public sealed record ChatOpinion(Guid Author, string CardId, double Strength, bool IsCheck = false);
+public sealed record ChatOpinion(Guid Author, string CardId, double Strength, bool IsCheck = false, string? SourceCard = null);
 
 /// <summary>Готовые характеры — кабинет предлагает создать их одной кнопкой.</summary>
 public static class BotPresets

@@ -13,6 +13,7 @@ import '../../widgets/common.dart';
 import 'game_screen.dart';
 import 'game_state.dart';
 import 'chat_card_text.dart';
+import 'table_theory.dart';
 
 /// Пометки на карте поля: счётчики ✕ и ✓ и «считаю истинной».
 class MarkSheet extends StatefulWidget {
@@ -63,6 +64,15 @@ class _MarkSheetState extends State<MarkSheet> {
           ),
           const SizedBox(height: 10),
           Text('${label ?? 'Карта'} · пометки видите только вы', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+          if (v?.phase == 'Discussion' && v?.me != null && v?.me?.role != 'Ghost')
+            TextButton.icon(icon: const Icon(Icons.account_tree_outlined), label: const Text('Объяснить эту карту всем'),
+              onPressed: () async {
+                final screen = widget.screen;
+                final source = widget.cardId;
+                Navigator.pop(context);
+                await showModalBottomSheet<void>(context: screen.context, isScrollControlled: true, useSafeArea: true,
+                  builder: (_) => TableTheorySheet(screen: screen, initialSource: source));
+              }),
           const SizedBox(height: 14),
           Container(
             decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),

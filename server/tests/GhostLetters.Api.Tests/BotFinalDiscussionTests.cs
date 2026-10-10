@@ -25,6 +25,48 @@ public sealed class BotFinalDiscussionTests
         new(Me, Role.Detective, [], []), null, 0, null, null, null, null, [], [nameof(ReadyNextRound)], null);
 
     [Fact]
+    public void CoalitionOffersSharedCardsOnce_AndAnswersAgreement()
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> messages = [new(Me, "Версия", ["knife", "boat"], now),
+            new(Me, "Аня, что думаешь?", [], now.AddSeconds(1)),
+            new(Ann, "Поддерживаю", ["knife"], now.AddSeconds(2))];
+        var offer = BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))!.Value;
+        offer.Text.Should().Contain("Предлагаю голосовать вместе");
+        offer.Cards.Should().Equal("knife");
+        messages.Add(new(Me, offer.Text, offer.Cards, now.AddSeconds(3)));
+        BotDiscussion.Compose(View, Tags, Mind, messages, new Random(1))?.Text.Should().NotContain("Предлагаю голосовать вместе");
+        var reply = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Версия", ["knife"], now), new(Ann, "Бот Я, Предлагаю голосовать вместе. Согласен?", ["knife"], now.AddSeconds(1))], new Random(1))!.Value;
+        reply.Text.Should().Contain("договорились");
+    }
+
+    [Fact]
+    public void KillerWeighsTeammatesSuggestionsByAffinity()
+    {
+        var bob = Guid.NewGuid();
+        var mind = Mind with { Personality = Mind.Personality with { Compromise = 1, Social = new() { Influence = 1 } },
+            Affinities = new Dictionary<Guid, int> { [Ann] = 100, [bob] = -100 } };
+        var view = View with { Phase = Phase.Night, Me = View.Me! with { Role = Role.Killer },
+            AllowedCommands = [nameof(ChooseTruth)],
+            TeamSuggestions = [new(Ann, [0,0], null, null), new(bob, [1,1], null, null)] };
+        Enumerable.Range(0, 100).Count(seed => ((ChooseTruth)BotPlayer.Decide(view, new Random(seed), Tags, mind)!).Columns[0] == 0)
+            .Should().BeGreaterThan(80);
+    }
+
+    [Fact]
+    public void CautiousKillerCanMimicDetectiveAndBreakPublicPromise()
+    {
+        var mind = Mind with { Personality = Mind.Personality with { Risk = 0 } };
+        var killer = View with { Me = View.Me! with { Role = Role.Killer }, Truth = [0, 0] };
+        var story = BotDiscussion.PublicPlan(killer, Tags, mind);
+        story.Should().Equal(BotDiscussion.PublicPlan(View, Tags, mind));
+        // A public promise is not a forced vote: a killer can betray it.
+        Enumerable.Range(0, 100).Select(seed => BotPlayer.Plan(killer, Tags, mind, new Random(seed))[0])
+            .Should().Contain(c => c != story[0]);
+    }
+
+    [Fact]
     public void AffinityChangesWhoTheBotContacts_ZeroInfluenceKeepsSeatOrder()
     {
         var bob = Guid.NewGuid();
@@ -323,6 +365,22 @@ public sealed class BotFinalDiscussionTests
         var reply = BotDiscussion.Compose(View, Tags, mind, lines, new Random(1))!.Value.Text;
         if (shouldAnswer) reply.Should().Contain("отвечаю про голосование").And.Contain("Сейчас выберу место 1");
         else reply.Should().NotContain("отвечаю").And.NotContain("уточню");
+    }
+
+    [Theory]
+    [InlineData("knife")]
+    [InlineData("rose")]
+    public void CoalitionReplyConsumesOfferButPreservesEarlierCardQuestion(string offered)
+    {
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> lines = [new(Me, "Моя версия", ["knife", "boat"], now),
+            new(Ann, "Бот Я, почему такой мотив?", [], now.AddSeconds(1)),
+            new(Ann, "Бот Я, Предлагаю голосовать вместе. Согласен?", [offered], now.AddSeconds(2))];
+        var agreement = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value;
+        agreement.Text.Should().Contain("договорились");
+        lines.Add(new(Me, agreement.Text, agreement.Cards, now.AddSeconds(3)));
+        var answer = BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))!.Value;
+        answer.Text.Should().Contain("отвечаю про голосование").And.NotContain("договорились");
     }
 
     [Fact]

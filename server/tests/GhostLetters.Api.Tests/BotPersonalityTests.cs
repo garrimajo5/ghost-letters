@@ -57,13 +57,13 @@ public sealed class BotPersonalityTests
         new(new VoteStageView(4, VoteStageKind.Killer, -1, 1, [], [Ann, Bob]), 5, null, [], [], [], null, null, null, [], []);
 
     [Fact]
-    public void Attention_ColorEyedBot_SeesDifferentPairs()
+    public void Attention_MeaningDominatesEvenColorFocusedBot()
     {
         var meaning = new BotPersonality { Meaning = 1, Shape = 0, Color = 0 }.Attention;
         var color = new BotPersonality { Meaning = 0, Shape = 0, Color = 1 }.Attention;
 
         Tags.Similarity("apple", "pear", meaning).Should().BeGreaterThan(Tags.Similarity("apple", "ball", meaning), "по смыслу яблоко ближе к груше");
-        Tags.Similarity("apple", "ball", color).Should().BeGreaterThan(Tags.Similarity("apple", "pear", color), "по цвету яблоко ближе к мячу");
+        Tags.Similarity("apple", "pear", color).Should().BeGreaterThan(Tags.Similarity("apple", "ball", color), "даже визуальный характер сначала учитывает смысл");
     }
 
     [Fact]

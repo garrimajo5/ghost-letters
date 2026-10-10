@@ -22,6 +22,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
     /// <summary>Когда партия последний раз сдвинулась (версия) — для ожидания без таймера.</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (int Version, DateTimeOffset Since)> Changed = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (Phase Phase, int Round, DateTimeOffset Since)> PhaseStarted = new();
 
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>
     public async Task<int> TickAsync(CancellationToken ct)
@@ -39,6 +40,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         foreach (var gone in Changed.Keys.Where(k => !active.Contains(k)).ToList())
         {
             Changed.TryRemove(gone, out _);
+            PhaseStarted.TryRemove(gone, out _);
         }
 
         if (rows.Count == 0) return 0;
@@ -51,11 +53,23 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             var rng = new Random(HashCode.Combine(state.Seed, state.Version));
             var bots = game.Select(r => r.UserId).ToHashSet();
             var now = time.GetUtcNow();
+            var phaseSince = PhaseStarted.AddOrUpdate(game.Key, _ => (state.Phase, state.Round, now),
+                (_, old) => old.Phase == state.Phase && old.Round == state.Round ? old : (state.Phase, state.Round, now)).Since;
             var since = Changed.AddOrUpdate(game.Key, _ => (state.Version, now), (_, old) => old.Version == state.Version ? old : (state.Version, now)).Since;
             // Один человек с ботами — таймеров нет, боты ждут человека.
             var solo = state.Players.Count - bots.Count <= 1;
             foreach (var botId in bots.OrderBy(_ => rng.Next()))
             {
+                if (state.Phase == Phase.Night && state.Player(botId).Role.IsKillerTeam())
+                {
+                    if (now - phaseSince < TimeSpan.FromSeconds(8)) continue;
+                    if (await NightTalkAsync(state, botId, ct)) { moves++; break; }
+                    var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
+                        m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseSince)
+                        .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+                    if (state.Player(botId).Role == Role.Killer && WaitForNight(botId, phaseSince, now, row.PhaseDeadline,
+                        recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct))) continue;
+                }
                 if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
                 {
                     continue;
@@ -89,6 +103,42 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         return deadline is { } d
             ? pending && d - now > TimeSpan.FromSeconds(30)
             : pending && soloSince is { } since && now - since < SoloTeamWait;
+    }
+
+    public static bool WaitForNight(Guid bot, DateTimeOffset started, DateTimeOffset now, DateTimeOffset? deadline,
+        DateTimeOffset? lastSpeech = null, string? text = null, TimeSpan? speechTime = null)
+    {
+        if (deadline is { } end && end - now <= TimeSpan.FromSeconds(5)) return false;
+        if (now - started >= TimeSpan.FromMinutes(2)) return false;
+        return now - started < TimeSpan.FromSeconds(60 + bot.ToByteArray()[0] % 21) ||
+            (lastSpeech is { } at && now - at < (speechTime ?? BotDiscussion.SpeechTime(text ?? "")));
+    }
+
+    private async Task<bool> NightTalkAsync(GameState state, Guid bot, CancellationToken ct)
+    {
+        if (state.Players.Count(p => p.Role.IsKillerTeam()) < 2) return false;
+        var messages = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
+            m.Channel == ChatChannels.KillerTeam && m.Round == state.Round).OrderBy(m => m.CreatedAt).ToListAsync(ct);
+        var own = messages.Where(m => m.AuthorId == bot).ToList();
+        if (own.Count >= 2 || (messages.Count > 0 && time.GetUtcNow() - messages[^1].CreatedAt < await ReadingTimeAsync(messages[^1], ct))) return false;
+        if (own.Count > 0 && !messages.Any(m => m.AuthorId != bot && m.CreatedAt > own[^1].CreatedAt)) return false;
+        var view = GameProjection.For(state, bot);
+        var columns = BotPlayer.Decide(view, new Random(state.Seed), tags, await MindAsync(state, bot, ct)) switch
+        {
+            ChooseTruth choice => choice.Columns,
+            TeamSuggest suggestion => suggestion.Columns,
+            _ => null,
+        };
+        var cards = columns is null ? new List<string>() : columns.Select((c, r) => view.Board[r].Cards[c]).Take(4).ToList();
+        var text = own.Count == 0 ? "Давайте обсудим выбор. Предлагаю эти карты — что изменим? Я ещё не подтверждаю." :
+            "Послушал предложения. Показываю текущий вариант; можно возразить до подтверждения.";
+        try
+        {
+            await chat.SendAsync(state.Id, bot, new SendChatRequest(ChatChannels.KillerTeam, text, null, cards,
+                cards.Select(_ => "думаю, эта").ToList()), ct);
+            return true;
+        }
+        catch (AppException e) { logger.LogDebug("Ночная реплика бота пропущена: {Error}", e.Message); return false; }
     }
 
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
@@ -138,12 +188,15 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
 
         if (view.Me?.Role == Role.Ghost) return false;
+        var lastPublic = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
+            m.Round == state.Round && m.Channel == ChatChannels.Public).OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+        if (lastPublic is not null && time.GetUtcNow() - lastPublic.CreatedAt < await ReadingTimeAsync(lastPublic, ct)) return false;
         if (state.Round >= state.TotalRounds)
         {
             var messages = await DiscussionAsync(state, ct);
             var own = messages.Where(m => m.Author == botId).ToList();
             var now = time.GetUtcNow();
-            if (messages.Count > 0 && now - messages[^1].At < TimeSpan.FromSeconds(3)) return false;
+            if (messages.Count > 0 && now - messages[^1].At < BotDiscussion.SpeechTime(messages[^1].Text, messages[^1].DurationMs)) return false;
             if (own.Count > 0 && now - own[^1].At < TimeSpan.FromSeconds(12)) return false;
             if (mind is null)
             {
@@ -155,7 +208,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             if (proposal is not { } finalLine) return false;
             try
             {
-                await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, finalLine.Text, null, finalLine.Cards, finalLine.Notes), ct);
+                await chat.SendAsync(state.Id, botId, TableReasoning.Speech(view, tags, mind, finalLine), ct);
                 return true;
             }
             catch (AppException e)
@@ -181,7 +234,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         try
         {
-            await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, line.Text, null, line.Cards, line.Notes), ct);
+            await chat.SendAsync(state.Id, botId, TableReasoning.Speech(view, tags, mind, line), ct);
             return true;
         }
         catch (AppException e)
@@ -195,7 +248,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&
                 m.Channel == ChatChannels.Public && m.AuthorId != null)
             .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
-            .Select(m => new DiscussionLine(m.AuthorId!.Value, m.Text ?? "", m.CardIds, m.CreatedAt)).ToListAsync(ct);
+            .Select(m => new DiscussionLine(m.AuthorId!.Value, m.Text ?? "", m.CardIds, m.CreatedAt,
+                db.MediaFiles.Where(f => f.Id == m.MediaId).Select(f => (int?)f.DurationMs).FirstOrDefault())).ToListAsync(ct);
+
+    private async Task<TimeSpan> ReadingTimeAsync(ChatMessage message, CancellationToken ct) =>
+        BotDiscussion.SpeechTime(message.Text ?? "", message.MediaId is { } id
+            ? await db.MediaFiles.Where(m => m.Id == id).Select(m => (int?)m.DurationMs).FirstOrDefaultAsync(ct) : null);
 
     /// <summary>
     /// Характер бота на эту партию, его память о соигроках (только партии с ним) и мнения стола из чата.
@@ -222,29 +280,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .ToListAsync(ct);
         var history = BotMemory.Recall(past, personality.Memory);
 
+        var canReadTeam = state.Player(botId).Role.IsKillerTeam();
         var messages = await db.ChatMessages.AsNoTracking()
-            .Where(m => m.GameId == state.Id && m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId)
+            .Where(m => m.GameId == state.Id && (m.Channel == ChatChannels.Public || (canReadTeam && m.Channel == ChatChannels.KillerTeam)) && m.AuthorId != null && m.AuthorId != botId)
             .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
-        var opinions = new List<ChatOpinion>();
-        foreach (var m in messages)
-        {
-            for (var i = 0; i < m.CardIds.Count; i++)
-            {
-                var note = i < m.CardNotes.Count ? m.CardNotes[i] : string.Empty;
-                if (!board.Contains(m.CardIds[i]) || note.StartsWith("кидал", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                // Проверяемая карта ещё не является гипотезой автора. Отрицание — против карты.
-                var checking = note.StartsWith("проверял", StringComparison.Ordinal) && !note.Contains("думаю", StringComparison.Ordinal);
-                var negative = note.StartsWith("исключ", StringComparison.OrdinalIgnoreCase) || note.StartsWith("не эта", StringComparison.OrdinalIgnoreCase);
-                opinions.Add(new ChatOpinion(m.AuthorId!.Value, m.CardIds[i], negative ? -1 : 1, checking));
-            }
-        }
+        var opinions = messages.SelectMany(m => TableReasoning.Read(m.AuthorId!.Value, m.CardIds, m.CardNotes, board)).ToList();
 
         var everyone = state.Players.Select(p => p.Id).ToList();
         var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);

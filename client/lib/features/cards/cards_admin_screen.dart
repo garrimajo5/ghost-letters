@@ -386,7 +386,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   maxLines: 4,
                   decoration: const InputDecoration(
                       labelText: 'Цвет и форма — через запятую',
-                      helperText: 'Например: red, blue, shape-round')),
+                      helperMaxLines: 3,
+                      helperText: 'Форма: shape-round. Главный цветовой акцент: dominant-red, dominant-blue. Обычные red, blue не считаются доводом.')),
               const SizedBox(height: 20),
               const Text(
                   'Вес 1 — основной смысл. Меньший вес — второстепенный: насколько бот замечает его, задаётся в характере бота. Одинаковые ключи связывают карты.',

@@ -6,13 +6,33 @@ using System.Text.RegularExpressions;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Только публичные реплики текущего обсуждения, в хронологическом порядке.</summary>
-public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<string> Cards, DateTimeOffset At);
+public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<string> Cards, DateTimeOffset At, int? DurationMs = null);
 
 /// <summary>Ограниченный обмен версиями, вопросами и ответами перед финалом.</summary>
 public static class BotDiscussion
 {
     public const int MaxMessages = 6;
     private static readonly Regex Who = Words(@"\bкто\b");
+
+    public static TimeSpan SpeechTime(string text, int? durationMs = null) => TimeSpan.FromSeconds(
+        Math.Max(Math.Clamp(2 + text.Length / 14.0, 4, 45), Math.Clamp((durationMs ?? 0) / 1000.0, 0, 60)));
+
+    // A public story can differ from a killer's private vote. Decide the mask
+    // once per game/player, without exposing that decision in public text.
+    public static IReadOnlyList<int> PublicPlan(PlayerView view, CardTags tags, BotMind mind)
+    {
+        var calm = view.Me?.Role.IsKillerTeam() == true
+            ? view with { Truth = null, Me = view.Me with { Role = Role.Detective } } : view;
+        var plan = BotPlayer.Plan(calm, tags, mind, new Random(0)).ToArray();
+        if (view.Me?.Role.IsKillerTeam() == true && view.Truth is { } truth && plan.Length > 0 &&
+            view.Me.Id.ToByteArray()[0] / 255.0 < mind.Personality.Risk)
+        {
+            var row = view.Me.Id.ToByteArray()[1] % plan.Length;
+            var options = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
+            if (options.Count > 0) plan[row] = options.OrderByDescending(c => BotPlayer.Evidence(calm, tags, mind, view.Board[row].Cards[c])).First();
+        }
+        return plan;
+    }
 
     private static readonly IReadOnlyDictionary<Category, Regex> RowWords = new Dictionary<Category, Regex>
     {
@@ -43,6 +63,7 @@ public static class BotDiscussion
     {
         var own = messages.Where(m => m.Author == botId).ToList();
         if (own.Count == 0) return true;
+        if (now - messages[^1].At < SpeechTime(messages[^1].Text, messages[^1].DurationMs)) return true;
         if (own.Count >= MaxMessages || now - own[0].At >= TimeSpan.FromMinutes(2)) return false;
         return now - own[0].At < TimeSpan.FromSeconds(30) || now - messages[^1].At < TimeSpan.FromSeconds(12);
     }
@@ -53,7 +74,7 @@ public static class BotDiscussion
         if (view.Me is not { Role: not Role.Ghost } me || view.Board.Count == 0) return null;
         var own = messages.Where(m => m.Author == me.Id).ToList();
         if (own.Count >= MaxMessages) return null;
-        var plan = BotPlayer.Plan(view, tags, mind, rng);
+        var plan = PublicPlan(view, tags, mind);
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
         string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
@@ -111,7 +132,8 @@ public static class BotDiscussion
         // Each reply consumes just the latest pending question from that player at
         // the time of the reply, not every earlier question by the same author.
         foreach (var response in own.Where(o => o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) ||
-                     o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase)))
+                     o.Text.Contains("уточню", StringComparison.OrdinalIgnoreCase) ||
+                     o.Text.Contains("договорились", StringComparison.OrdinalIgnoreCase)))
         {
             var answered = pending.LastOrDefault(q => q.At < response.At &&
                 response.Text.StartsWith(Name(q.Author) + ",", StringComparison.OrdinalIgnoreCase));
@@ -127,6 +149,14 @@ public static class BotDiscussion
         var incoming = question ?? answer;
         if (incoming is not null)
         {
+            if (question?.Text.Contains("Предлагаю голосовать вместе", StringComparison.Ordinal) == true)
+            {
+                var shared = question.Cards.Intersect(cards).ToList();
+                if (shared.Count > 0)
+                    return ($"{Name(question.Author)}, договорились поддержать эти карты. По остальным пунктам ещё сверю улики." + suspicion,
+                        shared, shared.Select(_ => "думаю, эта").ToList());
+                return Line($"{Name(question.Author)}, пока не договорились: мои улики ведут к другим картам. Показываю свою версию." + suspicion);
+            }
             var mentioned = MentionedRows(view, incoming);
             var asksSuspect = question is not null &&
                 (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase));
@@ -181,6 +211,25 @@ public static class BotDiscussion
             row = Math.Abs(row);
             return Line($"{Name(target.Id)}, за какую карту в ряду «{Where(row, plan[row]).Split(' ')[0]}» будешь голосовать? " +
                 $"Я выбираю {Where(row, plan[row])}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
+        }
+        if (own.Count >= 2 && !own.Any(m => m.Text.Contains("Предлагаю голосовать вместе", StringComparison.Ordinal)))
+        {
+            var ally = messages.Where(m => m.Author != me.Id && mind.Names.ContainsKey(m.Author) &&
+                    view.Players.Any(p => p.Id == m.Author && !p.IsGhost &&
+                        (me.Role.IsKillerTeam() || p.KnownRole is null || !p.KnownRole.Value.IsKillerTeam())))
+                .GroupBy(m => m.Author).Select(g => g.Last())
+                .Select(m => (Message: m, Shared: m.Cards.Intersect(cards).ToList()))
+                .Where(x => x.Shared.Count > 0)
+                .OrderByDescending(x => x.Shared.Count + mind.AffinityBias(x.Message.Author) * .5).FirstOrDefault();
+            if (ally.Message is not null)
+            {
+                var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Name(ally.Message.Author)} из", StringComparison.Ordinal)
+                    ? " По подозрениям у нас могут быть разногласия." : suspicion;
+                return ($"{Name(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты; " +
+                    "если появится новая улика, пересмотрим договорённость." + sharedSuspicion +
+                    (sharedSuspicion.Contains("Подозреваю", StringComparison.Ordinal) ? " Предлагаю вместе голосовать и против этого подозреваемого." : "") + " Согласен?",
+                    ally.Shared, ally.Shared.Select(_ => "думаю, эта").ToList());
+            }
         }
         if (fresh.Count > 0 && !own.Any(m => m.Text.StartsWith("Итог", StringComparison.Ordinal)))
             return Line(Summary("Итог после обсуждения; пока голосовал бы так:"));

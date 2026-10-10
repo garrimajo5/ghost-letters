@@ -70,7 +70,7 @@ public sealed class CardTags
     }
 
     private Dictionary<string, double> DetailsOf(string card) =>
-        (_details.GetValueOrDefault(card) ?? []).GroupBy(d => d.Tag)
+        (_details.GetValueOrDefault(card) ?? []).Where(d => Group(d.Tag) == 0).GroupBy(d => d.Tag)
         .ToDictionary(g => g.Key, g => g.Max(d => d.Weight));
 
     public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention, double details, double secondaryMeanings = 0.35)
@@ -99,16 +99,17 @@ public sealed class CardTags
     {
         var va = Visible(a, secondaryMeanings);
         var vb = Visible(b, secondaryMeanings);
-        var da = _details.GetValueOrDefault(a) ?? [];
-        var db = _details.GetValueOrDefault(b) ?? [];
+        var da = (_details.GetValueOrDefault(a) ?? []).Where(d => Group(d.Tag) == 0).ToList();
+        var db = (_details.GetValueOrDefault(b) ?? []).Where(d => Group(d.Tag) == 0).ToList();
         if ((da.Count == 0 || db.Count == 0) && !da.Any(d => vb.Contains(d.Tag)) && !db.Any(d => va.Contains(d.Tag)))
             details = 0; // Same fallback to the main image as Similarity.
+        var weights = Contributions(a, b, attention, secondaryMeanings);
         var reasons = new List<(double Score, string Text)>();
         var common = va.Intersect(vb).ToList();
         foreach (var (group, weight, label) in new[] {
-            (0, attention.Meaning, "по смыслу: общий предмет или тема"),
-            (1, attention.Shape, "по форме: похожий силуэт"),
-            (2, attention.Color, "по цвету: общая палитра") })
+            (0, weights.Meaning, "по смыслу: общий предмет или тема"),
+            (1, weights.Shape, "по форме: похожий силуэт"),
+            (2, weights.Color, "по цвету: выраженный цветовой акцент") })
         {
             if (common.Any(t => Group(t) == group) && weight > 0 && details < 1)
             {
@@ -121,86 +122,62 @@ public sealed class CardTags
             }
         }
         var other = DetailsOf(b);
-        foreach (var d in _details.GetValueOrDefault(a) ?? [])
+        foreach (var d in da)
             if (details > 0 && (other.ContainsKey(d.Tag) || vb.Contains(d.Tag)))
                 reasons.Add((details * Math.Min(other.GetValueOrDefault(d.Tag, d.Weight), d.Weight), "по деталям: " + d.Label));
-        foreach (var d in _details.GetValueOrDefault(b) ?? [])
+        foreach (var d in db)
             if (details > 0 && va.Contains(d.Tag))
                 reasons.Add((details * d.Weight, "по деталям: " + d.Label));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
     }
 
-    /// <summary>Цвета и форма (shape-*) — визуальные теги: они тоже связывают карты, но вдвое слабее смысла.</summary>
+    /// <summary>Цвета и форма отделены от смысла; цвет связывает карты только через dominant-*.</summary>
     private static readonly HashSet<string> Colors =
         ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white", "gray"];
 
     public static double Weight(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) || Colors.Contains(tag) ? 0.5 : 1;
 
     /// <summary>
-    /// Похожесть двух карт 0…1: взвешенная доля общих тегов (мера Жаккара; цвет и форма весят половину).
+    /// Похожесть двух карт 0…1: смысл доминирует, визуальное сходство служит слабой запасной подсказкой.
     /// Одна и та же карта — 1.
     /// </summary>
-    public double Similarity(string a, string b)
-    {
-        if (a == b)
-        {
-            return 1;
-        }
+    public double Similarity(string a, string b) => MainSimilarity(a, b, (.8, .15, .05), .35);
 
-        if (!_tags.TryGetValue(a, out var x) || !_tags.TryGetValue(b, out var y) || x.Count == 0 || y.Count == 0)
-        {
-            return 0;
-        }
-
-        var common = x.Where(y.Contains).Sum(Weight);
-        return common == 0 ? 0 : common / (x.Sum(Weight) + y.Sum(Weight) - common);
-    }
-
-    /// <summary>
-    /// Похожесть глазами конкретного бота: сходство по смыслу, по форме и по цвету считается отдельно
-    /// (мера Жаккара внутри каждой группы тегов) и смешивается в долях его внимания.
-    /// Группы, которых нет ни у одной из двух карт, не участвуют — их доля делится между остальными.
-    /// </summary>
     public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention)
-        => MainSimilarity(a, b, attention, 0.35);
+        => MainSimilarity(a, b, attention, .35);
+
+    private (double Meaning, double Shape, double Color) Contributions(string a, string b,
+        (double Meaning, double Shape, double Color) attention, double secondary)
+    {
+        double Match(int group)
+        {
+            var x = Of(a).Where(t => Group(t) == group && (group != 2 || t.StartsWith("dominant-"))).ToHashSet();
+            var y = Of(b).Where(t => Group(t) == group && (group != 2 || t.StartsWith("dominant-"))).ToHashSet();
+            var union = x.Union(y).Sum(t => Math.Max(x.Contains(t) ? Salience(a, t, secondary) : 0, y.Contains(t) ? Salience(b, t, secondary) : 0));
+            var confidence = Math.Min(x.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
+                y.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
+            return union <= 0 ? 0 : confidence * x.Intersect(y).Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))) / union;
+        }
+        var meaning = Match(0);
+        var sum = Math.Max(0, attention.Meaning) + Math.Max(0, attention.Shape) + Math.Max(0, attention.Color);
+        var m = sum <= 0 ? .8 : Math.Max(.7, attention.Meaning / sum);
+        // A strong semantic match does not need a visual tie-breaker. Unlabelled
+        // background colours are never evidence; dominant-* is an explicit annotation.
+        var fallback = meaning >= .25 ? .05 : 1 - meaning;
+        return (m * meaning, Math.Min(.2, Math.Max(0, attention.Shape)) * fallback * Match(1),
+            Math.Min(.08, Math.Max(0, attention.Color)) * fallback * Match(2));
+    }
 
     private double MainSimilarity(string a, string b, (double Meaning, double Shape, double Color) attention, double secondary)
     {
-        if (a == b)
-        {
-            return 1;
-        }
-
-        if (!_tags.TryGetValue(a, out var x) || !_tags.TryGetValue(b, out var y) || x.Count == 0 || y.Count == 0)
-        {
-            return 0;
-        }
-
-        double total = 0, weight = 0;
-        foreach (var (group, w) in new[] { (0, attention.Meaning), (1, attention.Shape), (2, attention.Color) })
-        {
-            var gx = x.Where(t => Group(t) == group).ToHashSet();
-            var gy = y.Where(t => Group(t) == group).ToHashSet();
-            if (gx.Count == 0 && gy.Count == 0)
-            {
-                continue;
-            }
-
-            var union = gx.Union(gy).Sum(t => Math.Max(gx.Contains(t) ? Salience(a, t, secondary) : 0, gy.Contains(t) ? Salience(b, t, secondary) : 0));
-            if (union <= 0) continue;
-            var common = gx.Intersect(gy).Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary)));
-            var confidence = Math.Min(gx.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
-                gy.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
-            total += w * common / union * confidence;
-            weight += w;
-        }
-
-        return weight <= 0 ? 0 : total / weight;
+        if (a == b) return 1;
+        var score = Contributions(a, b, attention, secondary);
+        return score.Meaning + score.Shape + score.Color;
     }
 
     /// <summary>0 — смысл, 1 — форма (shape-*), 2 — цвет.</summary>
-    public static int Group(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) ? 1 : Colors.Contains(tag) ? 2 : 0;
+    public static int Group(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) ? 1 : (Colors.Contains(tag) || (tag.StartsWith("accent-", StringComparison.Ordinal) && Colors.Contains(tag[7..])) || (tag.StartsWith("dominant-", StringComparison.Ordinal) && Colors.Contains(tag[9..]))) ? 2 : 0;
 
     public static CardTags Parse(string json)
     {

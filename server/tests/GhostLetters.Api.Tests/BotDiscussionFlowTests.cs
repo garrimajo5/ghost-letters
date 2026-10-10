@@ -28,7 +28,9 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
                 foreach (var id in ids) db.BotProfiles.Add(new BotProfile { UserId = id });
                 return await db.SaveChangesAsync();
             });
-            for (var i = 0; i < 30; i++)
+            // Human-paced long explanations can take 45 seconds each; allow
+            // both bots their bounded six turns rather than truncating speech.
+            for (var i = 0; i < 60; i++)
             {
                 _factory.Time.Advance(TimeSpan.FromSeconds(15));
                 await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));

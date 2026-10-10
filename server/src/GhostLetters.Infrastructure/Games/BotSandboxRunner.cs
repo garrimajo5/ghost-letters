@@ -143,13 +143,7 @@ public static class BotSandboxRunner
     {
         var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
         var others = messages.Where(m => m.Author != seat.Id).ToList();
-        var opinions = others.SelectMany(m => m.Cards.Select((card, i) => {
-            var note = i < m.Notes.Count ? m.Notes[i] : "";
-            return (Card: card, Note: note, Author: m.Author);
-        })).Where(m => board.Contains(m.Card) && !m.Note.StartsWith("кидал", StringComparison.Ordinal))
-            .Select(m => new ChatOpinion(m.Author, m.Card,
-                m.Note.StartsWith("исключ", StringComparison.OrdinalIgnoreCase) || m.Note.StartsWith("не эта", StringComparison.OrdinalIgnoreCase) ? -1 : 1,
-                m.Note.StartsWith("проверял", StringComparison.Ordinal) && !m.Note.Contains("думаю", StringComparison.Ordinal)))
+        var opinions = others.SelectMany(m => TableReasoning.Read(m.Author, m.Cards, m.Notes, board))
             .GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
         var accusations = parsedAccusations.Where(a => a.Author != seat.Id)
             .GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
