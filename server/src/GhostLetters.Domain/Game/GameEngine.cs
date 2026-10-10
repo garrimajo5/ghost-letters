@@ -81,6 +81,9 @@ public static partial class GameEngine
             case TeamSuggest suggest:
                 ApplyTeamSuggest(state, actor, suggest, events);
                 break;
+            case TablePost post:
+                ApplyTablePost(state, actor, post, events);
+                break;
             case ChooseTruth choose:
                 RequirePhase(state, Phase.Night);
                 if (actor.Id != TruthChooser(state).Id)
@@ -257,13 +260,29 @@ public static partial class GameEngine
         if (state.Phase == Phase.Night)
         {
             var columns = suggest.Columns;
-            if (columns is null || columns.Count != state.Board.Count ||
-                columns.Select((c, r) => c >= 0 && c < state.Board[r].Cards.Count).Any(ok => !ok))
+            var avoid = suggest.Avoid?.Distinct().ToList() ?? [];
+            if (columns is null && avoid.Count == 0)
+            {
+                throw GameRuleException.Validation("Предложите карты или отметьте, какие не брать.");
+            }
+
+            if (columns is not null && (columns.Count != state.Board.Count ||
+                columns.Select((c, r) => c >= 0 && c < state.Board[r].Cards.Count).Any(ok => !ok)))
             {
                 throw GameRuleException.Validation("Предложите по одной карте в каждом ряду.");
             }
 
-            suggestion = new TeamSuggestion { Columns = columns.ToList() };
+            if (avoid.Any(a => a.Row < 0 || a.Row >= state.Board.Count || a.Column < 0 || a.Column >= state.Board[a.Row].Cards.Count))
+            {
+                throw GameRuleException.Validation("Такой карты на поле нет.");
+            }
+
+            if (columns is not null && avoid.Any(a => columns[a.Row] == a.Column))
+            {
+                throw GameRuleException.Validation("Одну и ту же карту нельзя и советовать, и отговаривать.");
+            }
+
+            suggestion = new TeamSuggestion { Columns = columns?.ToList(), Avoid = avoid.Count == 0 ? null : avoid };
         }
         else
         {

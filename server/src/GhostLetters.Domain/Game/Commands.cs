@@ -50,10 +50,15 @@ public sealed record ReadyRevote : GameCommand;
 public sealed record HuntPick(Guid Target, Role? Guess = null) : GameCommand;
 
 /// <summary>
-/// Подсказка Сообщника Убийце (видна только команде Убийцы): ночью — карта в каждом ряду (Columns),
-/// на охоте — игрок (Target) и, если в игре и Свидетель, и Эксперт, роль (Guess). Решает всё равно Убийца.
+/// Подсказка Сообщника Убийце (видна только команде Убийцы): ночью — карта в каждом ряду (Columns)
+/// и/или карты, которые лучше не брать (Avoid); на охоте — игрок (Target) и, если в игре и Свидетель,
+/// и Эксперт, роль (Guess). Решает всё равно Убийца.
 /// </summary>
-public sealed record TeamSuggest(IReadOnlyList<int>? Columns = null, Guid? Target = null, Role? Guess = null) : GameCommand;
+public sealed record TeamSuggest(IReadOnlyList<int>? Columns = null, Guid? Target = null, Role? Guess = null,
+    IReadOnlyList<BoardCellRef>? Avoid = null) : GameCommand;
+
+/// <summary>Клетка поля: ряд и столбец.</summary>
+public sealed record BoardCellRef(int Row, int Column);
 
 /// <summary>Убийца указывает, кого считает Шантажистом.</summary>
 public sealed record BlackmailerPick(Guid Target) : GameCommand;
@@ -69,3 +74,21 @@ public sealed record Nominate(string? Code, Guid? Nominee) : GameCommand;
 
 /// <summary>Голос за выдвижение по его номеру; null — пропустить.</summary>
 public sealed record AwardVote(int? Entry) : GameCommand;
+
+/// <summary>
+/// Одна операция на доске улик. Какие поля нужны, зависит от Kind:
+/// Link — SourceKind, Source, Target, Stance, Reason?; Unlink/Endorse/Dispute/Clear — Thread;
+/// Pin/Unpin/Check/Uncheck — Target (карта поля); Claim — Round и Source (карта, которую игрок называет своим письмом).
+/// </summary>
+public sealed record TableOp(
+    TableOpKind Kind,
+    TableSourceKind? SourceKind = null,
+    string? Source = null,
+    string? Target = null,
+    TableStance? Stance = null,
+    string? Reason = null,
+    int? Thread = null,
+    int? Round = null);
+
+/// <summary>Пачка изменений на доске улик от одного игрока (до 6 операций).</summary>
+public sealed record TablePost(IReadOnlyList<TableOp> Ops) : GameCommand;

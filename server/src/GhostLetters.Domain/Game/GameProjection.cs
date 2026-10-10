@@ -37,10 +37,30 @@ public sealed record PlayerView(
     IReadOnlyList<string> AllowedCommands,
     FinaleView? Finale,
     IReadOnlyList<TeamSuggestionView>? TeamSuggestions = null,
-    IReadOnlyList<Role>? HuntRoles = null);
+    IReadOnlyList<Role>? HuntRoles = null,
+    TableView? Table = null);
 
 /// <summary>Подсказка Сообщника Убийце — видна только команде Убийцы.</summary>
-public sealed record TeamSuggestionView(Guid From, IReadOnlyList<int>? Columns, Guid? Target, Role? Guess);
+public sealed record TeamSuggestionView(Guid From, IReadOnlyList<int>? Columns, Guid? Target, Role? Guess,
+    IReadOnlyList<BoardCellRef>? Avoid = null);
+
+public sealed record TableThreadView(int Id, Guid Author, int Round, TableSourceKind SourceKind, string Source, string Target,
+    TableStance Stance, string? Reason, IReadOnlyList<Guid> EndorsedBy, IReadOnlyList<Guid> DisputedBy);
+
+public sealed record TablePinView(Guid Author, int Row, int Column);
+
+public sealed record TableCheckView(Guid Author, string Card);
+
+public sealed record LetterClaimView(Guid Author, int Round, string Card);
+
+/// <summary>Доска улик глазами смотрящего: всё открыто всем; CanPost — может ли он её менять, PinsOnly — только булавки.</summary>
+public sealed record TableView(
+    IReadOnlyList<TableThreadView> Threads,
+    IReadOnlyList<TablePinView> Pins,
+    IReadOnlyList<TableCheckView> Checks,
+    IReadOnlyList<LetterClaimView> Claims,
+    bool CanPost,
+    bool PinsOnly);
 
 /// <summary>Строит проекцию состояния для игрока по матрице «кто что знает».</summary>
 public static class GameProjection
@@ -93,12 +113,27 @@ public static class GameProjection
             viewer is null ? Array.Empty<string>() : AllowedCommands(state, viewer),
             FinaleProjection.For(state, viewer),
             viewer?.Role is Role.Killer or Role.Accomplice && GameEngine.TeamSuggestPhase(state)
-                ? state.TeamSuggestions.Select(kv => new TeamSuggestionView(kv.Key, kv.Value.Columns, kv.Value.Target, kv.Value.Guess)).ToList()
+                ? state.TeamSuggestions.Select(kv => new TeamSuggestionView(kv.Key, kv.Value.Columns, kv.Value.Target, kv.Value.Guess, kv.Value.Avoid)).ToList()
                 : null,
             // На охоте — какие роли вообще есть в партии (состав по таблице известен всем): нельзя назвать Эксперта, если его нет.
             state.Phase == Phase.Hunt
                 ? state.Players.Select(p => p.Role).Where(r => r is Role.Witness or Role.Expert).Distinct().OrderBy(r => r).ToList()
-                : null);
+                : null,
+            Table(state, viewer));
+    }
+
+    /// <summary>Доска улик открыта всем — это слова игроков, а не тайное знание.</summary>
+    public static TableView Table(GameState state, PlayerState? viewer)
+    {
+        var t = state.Table;
+        return new TableView(
+            t.Threads.Select(x => new TableThreadView(x.Id, x.Author, x.Round, x.SourceKind, x.Source, x.Target, x.Stance, x.Reason,
+                x.EndorsedBy.ToList(), x.DisputedBy.ToList())).ToList(),
+            t.Pins.Select(p => new TablePinView(p.Author, p.Row, p.Column)).ToList(),
+            t.Checks.Select(c => new TableCheckView(c.Author, c.Card)).ToList(),
+            t.Claims.Select(c => new LetterClaimView(c.Author, c.Round, c.Card)).ToList(),
+            viewer is not null && GameEngine.CanPostTable(state, viewer),
+            GameEngine.TablePinsOnly(state));
     }
 
     /// <summary>Знает ли смотрящий роль игрока target.</summary>
