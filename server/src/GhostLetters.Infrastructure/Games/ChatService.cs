@@ -95,7 +95,7 @@ public sealed class ChatService(
         }
 
         // Свои письма тоже можно показать: «отправлял вот эту».
-        var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand)
+        var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards)).Concat(author.Hand).Concat(author.Discarded)
             .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId))
             .ToHashSet();
         if (cards.Count <= MaxCards && cards.Any(c => !known.Contains(c)))

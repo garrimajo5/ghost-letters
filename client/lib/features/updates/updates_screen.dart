@@ -1,0 +1,96 @@
+import 'package:flutter/material.dart';
+
+import '../../core/app_version.dart';
+
+/// Curated player-facing history. Add new releases first; keep older entries.
+const releaseHistory = [
+  (
+    version: '0.1.1',
+    title: 'Удобнее объяснять версии',
+    added: [
+      'Переключение между картами стола, уликами Призрака, своими письмами и письмами других игроков.',
+      'Можно связать со столом свою сброшенную карту или карту, показанную в общем чате.',
+      'Экран «Что нового» с историей изменений по версиям.',
+    ],
+    fixed: [
+      'Письма больше не скрываются во вложенном списке редактора версии.',
+      'Выбранная исходная карта видна отдельно; её можно убрать и выбрать другую.',
+    ],
+  ),
+  (
+    version: '0.1.0',
+    title: 'Игра, общение и детективы-боты',
+    added: [
+      'Сетевые партии, разные роли, кооперативный режим, голосование, рейтинг и история игр.',
+      'Зрители могут наблюдать идущие партии, не раскрывая скрытых ролей и истинных улик.',
+      'Пресеты «Классика», «Озон» и личные наборы настроек; смена пресета из метки лобби.',
+      'Последний применённый пресет запоминается для новых лобби отдельно для каждого аккаунта на устройстве.',
+      'Музыка меню и партии, звуки действий, отдельные настройки громкости.',
+      'Аватарки игроков и ботов, голосовые сообщения и упоминания карт в чате.',
+      'Версии на столе: связи и исключения между картами, пояснения текстом и голосом.',
+      'Характеры, память и симпатии ботов; обсуждение улик всех раундов, вопросы, союзы и обман.',
+      'Смысл доминирует в рассуждениях ботов; форма и выраженный цветовой акцент дополняют его.',
+      'Боты не спешат с ночным выбором и учитывают предложения команды.',
+      'Для администратора: управление ботами, метками и весами смыслов карт, песочница партий ботов.',
+    ],
+    fixed: [
+      'Исправлены масштабирование поля в браузере и скачивание APK.',
+      'Улучшены обрезка аватарок, отображение ботов в рейтинге и чёткость карт в выборе для чата.',
+      'Ускорены загрузка игры и обновления чата; улучшено восстановление соединения.',
+      'Боты точнее понимают вопросы, отрицания и цитаты; реже повторяются и объясняют пересмотр версии.',
+      'Усилены проверки доступа к API и приватной информации игры.',
+    ],
+  ),
+];
+
+class UpdatesScreen extends StatelessWidget {
+  const UpdatesScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Что нового')),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Text(AppVersion.current.label),
+                const SizedBox(height: 8),
+                const Text(
+                    'Краткая история заметных изменений. Последние версии — сверху.'),
+                for (final release in releaseHistory)
+                  Card(
+                    margin: const EdgeInsets.only(top: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Версия ${release.version}',
+                              style: Theme.of(context).textTheme.titleLarge),
+                          Text(release.title),
+                          for (final section in [
+                            ('Добавлено', release.added),
+                            ('Исправлено', release.fixed),
+                          ]) ...[
+                            const SizedBox(height: 12),
+                            Text(section.$1,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            for (final change in section.$2)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text('• $change'),
+                              ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+}

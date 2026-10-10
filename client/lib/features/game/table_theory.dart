@@ -222,6 +222,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
   final _targets = <String, bool>{};
   final _text = TextEditingController();
   String _mode = 'source';
+  String _cards = 'board';
   bool _busy = false, _recording = false;
   Timer? _limit;
   late final Voice _voice;
@@ -257,6 +258,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
         _source = _source == id ? null : id;
         _targets.remove(id);
         _mode = 'support';
+        _cards = 'board';
       } else if (id != _source) {
         if (_targets[id] == (_mode == 'support')) {
           _targets.remove(id);
@@ -333,12 +335,25 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
   @override
   Widget build(BuildContext context) {
     final v = widget.screen.view!;
-    final sources = <String>{
-      for (final h in v.hints) ...h.cards,
+    final ownLetters = <String>{
       for (final l in v.me?.letters ?? <MyLetter>[]) l.cardId,
+      ...?v.me?.discarded,
       for (final m in widget.screen.chat)
-        if (m.channel == 'public') ...m.cardIds
+        if (m.channel == 'public' && m.authorId == v.me?.id) ...m.cardIds,
     };
+    final hints = v.hints.expand((h) => h.cards).toSet();
+    final shown = widget.screen.chat
+        .where((m) =>
+            m.channel == 'public' &&
+            m.authorId != null &&
+            m.authorId != v.me?.id)
+        .expand((m) => m.cardIds)
+        .toSet();
+    final selectedCards = _cards == 'own'
+        ? ownLetters
+        : _cards == 'ghost'
+            ? hints
+            : shown;
     Widget card(String id, {bool sourceOnly = false}) => Semantics(
         label: 'Карта $id',
         selected: _source == id || _targets.containsKey(id),
@@ -381,29 +396,58 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
                     onSelected:
                         _busy ? null : (_) => setState(() => _mode = mode.key)),
             ]),
-            SizedBox(
-                height: (MediaQuery.sizeOf(context).height * .38)
-                    .clamp(140.0, 400.0),
-                child: ListView(children: [
-                  for (final row in v.board) ...[
-                    Text(T.category(row.category)),
-                    Wrap(
-                        spacing: 3,
-                        runSpacing: 3,
-                        children: row.cards.map(card).toList()),
-                  ],
-                  if (sources.isNotEmpty) ...[
-                    const Text('Открытые улики, мои письма и показанные карты'),
-                    Wrap(
-                        spacing: 3,
-                        runSpacing: 3,
-                        children: sources
-                            .where((id) =>
-                                !v.board.any((r) => r.cards.contains(id)))
-                            .map((id) => card(id, sourceOnly: true))
-                            .toList()),
-                  ],
-                ])),
+            if (_source != null)
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+                const Text('Связываю карту: '),
+                CardImage(cardId: _source!, size: 56),
+                IconButton(
+                    tooltip: 'Убрать исходную карту',
+                    onPressed:
+                        _busy ? null : () => setState(() => _source = null),
+                    icon: const Icon(Icons.close)),
+              ]),
+            Wrap(spacing: 6, children: [
+              for (final tab in const {
+                'board': 'Карты на столе',
+                'ghost': 'Улики Призрака',
+                'own': 'Мои письма',
+                'others': 'Письма других',
+              }.entries)
+                ChoiceChip(
+                    key: ValueKey('theory-tab-${tab.key}'),
+                    label: Text(tab.value),
+                    selected: _cards == tab.key,
+                    onSelected:
+                        _busy ? null : (_) => setState(() => _cards = tab.key)),
+            ]),
+            if (_cards != 'board') ...[
+              Text(_cards == 'ghost'
+                  ? 'Открытые улики всех раундов.'
+                  : _cards == 'own'
+                      ? 'Ваши письма, сброс и карты, которые вы показывали в чате.'
+                      : 'Карты, показанные другими в общем чате. Это их заявления, а не подтверждение отправки.'),
+              if (selectedCards.isEmpty)
+                const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Пока нет доступных карт')),
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                      spacing: 3,
+                      runSpacing: 3,
+                      children: selectedCards
+                          .map((id) => card(id, sourceOnly: true))
+                          .toList())),
+            ] else
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (final row in v.board) ...[
+                  Text(T.category(row.category)),
+                  Wrap(
+                      spacing: 3,
+                      runSpacing: 3,
+                      children: row.cards.map(card).toList()),
+                ],
+              ]),
             TextField(
                 controller: _text,
                 maxLength: 1000,
