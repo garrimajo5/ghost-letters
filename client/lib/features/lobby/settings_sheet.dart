@@ -56,7 +56,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
         padding: const EdgeInsets.all(16),
         children: [
           Text(widget.personal ? 'МОИ НАСТРОЙКИ' : widget.inGame ? 'НАСТРОЙКИ ПАРТИИ' : 'НОВАЯ ИГРА', style: heading(22, spacing: 1.5)),
-          if (widget.personal) const Text('Настройте параметры, затем откройте «Пресеты» и сохраните их как личный пресет.'),
+          if (widget.personal) const Text('Выберите пресет или настройте параметры. После сохранения они будут использоваться для новых лобби на этом устройстве.'),
           if (!_rulesLocked)
             OutlinedButton.icon(
               key: const Key('settings-presets'),
@@ -223,7 +223,7 @@ class _SettingsSheetState extends State<SettingsSheet> {
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
             onPressed: () => Navigator.pop(context, s),
-            child: Text(widget.personal ? 'Закрыть' : 'Сохранить'),
+            child: const Text('Сохранить'),
           ),
         ],
       ),
