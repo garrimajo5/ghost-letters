@@ -49,6 +49,21 @@ public sealed class BotSandboxRunnerTests(ITestOutputHelper output)
         var result = BotSandboxRunner.Run("clear-hints", 1000, deck, CardTags.Empty, default);
         result.Status.Should().Be("invalid-scenario"); result.Passed.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    public void RevealedWitnessIsHunted_WithoutNamingTheKiller(int seed)
+    {
+        var (deck, tags) = Cards();
+        var report = BotSandboxRunner.Run("witness-reveal", seed, deck, tags, default);
+        report.Status.Should().Be("completed", report.Error);
+        report.Messages.Single().Text.Should().Be("Я Свидетель.");
+        report.Passed.Should().BeTrue("публичное раскрытие роли заметно без обвинения по имени");
+    }
 }
 
 [Collection(DbCollection.Name)]
