@@ -7,6 +7,7 @@ import 'package:ghost_letters/core/session.dart';
 import 'package:ghost_letters/features/auth/recovery_screen.dart';
 import 'package:ghost_letters/widgets/common.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'support/fakes.dart';
 
 class RecoveryApi extends Api {
   RecoveryApi(super.ref);
@@ -51,6 +52,18 @@ Future<void> submit(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('login router opens account recovery without an existing session', (tester) async {
+    final app = await TestApp.create();
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('login-by-key')));
+    await tester.tap(find.byKey(const Key('login-by-key')));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecoveryScreen), findsOneWidget);
+    expect(find.byKey(const Key('recovery-word')), findsOneWidget);
+  });
+
   testWidgets('registration sends confirmed key atomically and never stores it in preferences', (tester) async {
     final c = await open(tester, const RecoveryScreen(nickname: 'Ватсон', color: '#3E7C6E'));
     final api = c.read(apiProvider) as RecoveryApi;
