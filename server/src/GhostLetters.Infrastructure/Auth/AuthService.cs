@@ -12,7 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace GhostLetters.Infrastructure.Auth;
 
 /// <summary>Вход гостем, выдача и ротация токенов, выход.</summary>
-public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> options, TimeProvider time)
+public sealed partial class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> options, TimeProvider time)
 {
     private readonly JwtOptions _jwt = options.Value;
 
@@ -60,8 +60,12 @@ public sealed class AuthService(GhostLettersDbContext db, IOptions<JwtOptions> o
             return await RefreshAsync(request.RefreshToken, ct);
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        if (request.Recovery is not null)
+            db.RecoveryCredentials.Add(await NewCredentialAsync(user.Id, request.Recovery, ct));
         var tokens = Issue(user, now);
         await db.SaveChangesAsync(ct);
+        await transaction.CommitAsync(ct);
         return new AuthResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, UserDto.From(user));
     }
 

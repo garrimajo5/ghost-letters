@@ -10,6 +10,7 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
     public DbSet<SandboxRun> SandboxRuns => Set<SandboxRun>();
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<RecoveryCredential> RecoveryCredentials => Set<RecoveryCredential>();
     public DbSet<SettingsPreset> SettingsPresets => Set<SettingsPreset>();
 
     public DbSet<AuthIdentity> AuthIdentities => Set<AuthIdentity>();
@@ -74,6 +75,17 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
 
     private static void ConfigureAccounts(ModelBuilder b)
     {
+        b.Entity<RecoveryCredential>(e =>
+        {
+            e.ToTable("recovery_credentials");
+            e.HasKey(x => x.UserId);
+            e.Property(x => x.Login).HasMaxLength(32);
+            e.HasIndex(x => x.Login).IsUnique();
+            e.Property(x => x.Kind).HasMaxLength(8);
+            e.Property(x => x.Salt).HasMaxLength(64);
+            e.Property(x => x.KeyHash).HasMaxLength(64);
+            UserFk(e, x => x.UserId);
+        });
         b.Entity<SettingsPreset>(e =>
         {
             e.ToTable("settings_presets");

@@ -10,6 +10,7 @@ import '../../models/models.dart';
 import '../../widgets/common.dart';
 import 'avatar_crop.dart';
 import '../bots/bot_relationships.dart';
+import '../auth/recovery_screen.dart';
 
 final profileProvider = FutureProvider.autoDispose.family<Profile, String>((ref, id) => ref.read(apiProvider).profile(id));
 
@@ -147,6 +148,12 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 4),
+            OutlinedButton.icon(
+              key: const Key('recovery-settings'),
+              icon: const Icon(Icons.key),
+              label: const Text('Ключ входа — слово или три карты'),
+              onPressed: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const RecoveryScreen(edit: true))),
+            ),
             OutlinedButton.icon(
               key: const Key('link-device'),
               icon: const Icon(Icons.devices_other),

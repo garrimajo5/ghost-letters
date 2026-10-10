@@ -68,6 +68,19 @@ public sealed class RefreshToken
     public Guid? ReplacedById { get; set; }
 }
 
+/// <summary>Постоянный ключ входа. Только соль и PBKDF2-хэш, без слова и идентификаторов выбранных карт.</summary>
+public sealed class RecoveryCredential
+{
+    public Guid UserId { get; set; }
+    public string Login { get; set; } = string.Empty;
+    public string Kind { get; set; } = string.Empty;
+    public string Salt { get; set; } = string.Empty;
+    public string KeyHash { get; set; } = string.Empty;
+    public int Iterations { get; set; } = 600_000;
+    public int FailedAttempts { get; set; }
+    public DateTimeOffset? LockedUntil { get; set; }
+}
+
 public sealed class PushToken
 {
     public Guid Id { get; set; }

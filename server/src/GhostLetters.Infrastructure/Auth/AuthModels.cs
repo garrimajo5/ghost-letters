@@ -2,7 +2,12 @@ using GhostLetters.Infrastructure.Persistence.Entities;
 
 namespace GhostLetters.Infrastructure.Auth;
 
-public sealed record GuestLoginRequest(string DeviceId, string Nickname, string? AvatarColor, string? RefreshToken = null);
+public sealed record GuestLoginRequest(string DeviceId, string Nickname, string? AvatarColor, string? RefreshToken = null, RecoveryKeyRequest? Recovery = null);
+
+public sealed record RecoverySecret(string Kind, string? Word = null, string[]? Cards = null);
+public sealed record RecoveryKeyRequest(string Login, RecoverySecret Key, RecoverySecret? CurrentKey = null);
+public sealed record KeyLoginRequest(string Login, RecoverySecret Key);
+public sealed record RecoveryInfo(string? Login, string? Kind);
 
 public sealed record RefreshRequest(string RefreshToken);
 
