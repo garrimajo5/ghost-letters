@@ -828,10 +828,13 @@ public static class BotPlayer
                 $"Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.\n" +
                 string.Join("\n", checkedCards.Select(x => $"• {Where(x.Row, x.Column)} — {Connection(claimCard, Card(x.Row, x.Column))}."));
             var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
-            var conclusion = vanished && checkedCards.Count > 0
-                ? NegativeWeight > 0 ? "Письмо исчезло: исключаю эти карты из основной версии, но это не доказательство."
-                    : "Письмо исчезло, но я не считаю это исключением карт."
-                : claimText.Contains("открыл", StringComparison.Ordinal) ? "Открытие письма усиливает эти связи." : "Пока жду результат проверки.";
+            var conclusion = vanished
+                ? checkedCards.Count == 0 ? "Письмо исчезло, но явных связей с картами поля я не вижу."
+                    : NegativeWeight > 0 ? "Письмо исчезло: это ослабляет эти версии, но не исключает карты — другие улики могут перевесить."
+                        : "Письмо исчезло, но я не считаю это исключением карт."
+                : claimText.Contains("открыл", StringComparison.Ordinal)
+                    ? checkedCards.Count > 0 ? "Открытие письма усиливает эти связи." : "Письмо открыто, но явных связей с картами поля я не вижу."
+                    : "Пока жду результат проверки.";
             // Лимит чата соблюдаем по законченным строкам, не обрывая объяснение посреди слова.
             var sections = new[] { claimText, checkedText, conclusion, opinion };
             var text = string.Join("\n", sections);
