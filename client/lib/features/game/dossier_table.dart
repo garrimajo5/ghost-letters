@@ -9,11 +9,13 @@ class _DossierTable extends StatefulWidget {
   State<_DossierTable> createState() => _DossierTableState();
 }
 
-class _DossierTableState extends State<_DossierTable> {
+class _DossierTableState extends State<_DossierTable> with _EvidenceBoard {
   final _seen = <String>{};
   final _queue = <ChatMessage>[];
+  @override
   final _canvas = GlobalKey();
   final _source = GlobalKey();
+  @override
   final _cards = <String, GlobalKey>{};
   ChatMessage? _message;
   Timer? _timer;
@@ -26,6 +28,7 @@ class _DossierTableState extends State<_DossierTable> {
   bool _shown(int index) => index < _visible || _mentioned.contains(index);
   int _visible = 0;
   bool _paused = false;
+  @override
   GameScreenState get screen => widget.screen;
   List<ChatMessage> get messages => screen.chat.where((m) =>
       m.channel == 'public' && m.authorId != null &&
@@ -151,7 +154,8 @@ class _DossierTableState extends State<_DossierTable> {
               return (start, canvas.globalToLocal(target.localToGlobal(Offset(target.size.width / 2, target.size.height))), _color(i));
             })()];
       }),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: CustomPaint(foregroundPainter: _TableThreadsPainter(_threadLines),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('УЛИКИ НА СТОЛЕ', style: sectionLabel()),
         const SizedBox(height: 12),
         _Board(screen: screen, maxCard: size, decorate: (id, child) {
@@ -161,7 +165,7 @@ class _DossierTableState extends State<_DossierTable> {
             foregroundDecoration: active ? BoxDecoration(
               border: Border.all(color: _color(index), width: 3),
               borderRadius: BorderRadius.circular(12)) : null,
-            child: Stack(children: [child, if (active) Positioned(right: 3, bottom: 3,
+            child: Stack(children: [_boardOverlay(id, child), if (active) Positioned(right: 3, bottom: 3,
               child: IgnorePointer(child: Semantics(
                 label: '${screen.nick(m!.authorId)}: ${theoryLabel(m.noteFor(index) ?? '')}',
                 child: Container(key: ValueKey('dossier-mark-$id'),
@@ -177,6 +181,8 @@ class _DossierTableState extends State<_DossierTable> {
                   ])))))]));
         }),
         _roundHints(size),
+        _claimsStrip(size),
+        _boardControls(),
         if (m != null && m.cardIds.isNotEmpty) Padding(
           padding: const EdgeInsets.only(top: 16),
           child: Row(children: [
@@ -187,7 +193,7 @@ class _DossierTableState extends State<_DossierTable> {
                 'Публичная версия, не подтверждённая истина',
                 style: const TextStyle(color: AppColors.muted, fontSize: 12))),
           ])),
-      ]));
+      ])));
   }
 
   Widget _dialogue() {
@@ -263,7 +269,7 @@ class _DossierTableState extends State<_DossierTable> {
   Widget _actions() => Column(children: [
     KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
     if (screen.view!.me?.letters.isNotEmpty == true)
-      ExpansionTile(title: const Text('Мои письма'), children: [_MyLetters(screen: screen)]),
+      ExpansionTile(title: const Text('Мои письма'), children: [_claimButtons(), _MyLetters(screen: screen)]),
   ]);
 
   Widget _roundHints(double size) => ExpansionTile(
@@ -279,10 +285,9 @@ class _DossierTableState extends State<_DossierTable> {
               if (hint.cards.isEmpty) SizedBox(width: size, height: size,
                 child: const Center(child: Text('Нет открытых улик')))
               else Row(children: [for (final card in hint.cards)
-                Padding(padding: const EdgeInsets.only(right: 5), child: GestureDetector(
-                  key: Key('hint-$card'), onTap: () => showCardZoom(context, card),
-                  onLongPress: screen.view!.me == null ? null : () => HintSheet.show(context, screen, card, hint.round),
-                  child: CardImage(cardId: card, size: size))),
+                Padding(padding: const EdgeInsets.only(right: 5), child: _sourceCard(
+                  _ThreadSource('Hint', card), size, key: Key('hint-$card'),
+                  onLongPress: screen.view!.me == null ? null : () => HintSheet.show(context, screen, card, hint.round))),
               ]),
             ])),
       ]))]);

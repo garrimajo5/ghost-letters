@@ -662,6 +662,7 @@ class GameView {
     required this.finale,
     this.teamSuggestions = const [],
     this.huntRoles = const [],
+    this.table = TableView.empty,
   });
 
   factory GameView.fromJson(Json j) => GameView(
@@ -687,6 +688,7 @@ class GameView {
         finale: j['finale'] is Map ? Finale.fromJson(Map<String, dynamic>.from(j['finale'] as Map)) : null,
         teamSuggestions: j['teamSuggestions'] is List ? _list(j['teamSuggestions'], TeamSuggestion.fromJson) : const [],
         huntRoles: _strings(j['huntRoles']),
+        table: j['table'] is Map ? TableView.fromJson(Map<String, dynamic>.from(j['table'] as Map)) : TableView.empty,
       );
 
   final String gameId;
@@ -715,6 +717,9 @@ class GameView {
 
   /// На охоте: какие из ролей Свидетель/Эксперт есть в партии (пусто — неизвестно).
   final List<String> huntRoles;
+
+  /// Доска улик: нити, булавки, проверки и заявления о письмах — видна всем.
+  final TableView table;
 
   bool can(String command) => allowedCommands.contains(command);
 
@@ -913,16 +918,22 @@ class LinkCode {
 
 /// Подсказка Сообщника: карты ночью (columns) или игрок на охоте (target, guess).
 class TeamSuggestion {
-  const TeamSuggestion({required this.from, this.columns, this.target, this.guess});
+  const TeamSuggestion({required this.from, this.columns, this.target, this.guess, this.avoid = const []});
 
   factory TeamSuggestion.fromJson(Json j) => TeamSuggestion(
         from: j['from'] as String,
         columns: j['columns'] is List ? _ints(j['columns']) : null,
         target: j['target'] as String?,
         guess: j['guess'] as String?,
+        avoid: j['avoid'] is List
+            ? [for (final c in j['avoid'] as List) ((c['row'] as num).toInt(), (c['column'] as num).toInt())]
+            : const [],
       );
 
   final String from;
+
+  /// Карты (ряд, столбец), которые Убийце лучше не брать.
+  final List<(int, int)> avoid;
   final List<int>? columns;
   final String? target;
   final String? guess;
@@ -1128,4 +1139,114 @@ class BotCard {
   final String avatarColor;
   final String? avatarId;
   final String about;
+}
+
+// ---------- Доска улик ----------
+
+/// Нить от подсказки Призрака (Hint) или названного письма (Letter) к карте поля.
+class TableThread {
+  const TableThread({
+    required this.id,
+    required this.author,
+    required this.round,
+    required this.sourceKind,
+    required this.source,
+    required this.target,
+    required this.stance,
+    this.reason,
+    this.endorsedBy = const [],
+    this.disputedBy = const [],
+  });
+
+  factory TableThread.fromJson(Json j) => TableThread(
+        id: (j['id'] as num).toInt(),
+        author: j['author'] as String,
+        round: (j['round'] as num?)?.toInt() ?? 0,
+        sourceKind: j['sourceKind'] as String? ?? 'Hint',
+        source: j['source'] as String,
+        target: j['target'] as String,
+        stance: j['stance'] as String? ?? 'For',
+        reason: j['reason'] as String?,
+        endorsedBy: _strings(j['endorsedBy']),
+        disputedBy: _strings(j['disputedBy']),
+      );
+
+  final int id;
+  final String author;
+  final int round;
+  final String sourceKind;
+  final String source;
+  final String target;
+  final String stance;
+  final String? reason;
+  final List<String> endorsedBy;
+  final List<String> disputedBy;
+
+  bool get isFor => stance == 'For';
+}
+
+/// Булавка «моя версия по ряду».
+class TablePin {
+  const TablePin(this.author, this.row, this.column);
+
+  factory TablePin.fromJson(Json j) =>
+      TablePin(j['author'] as String, (j['row'] as num).toInt(), (j['column'] as num).toInt());
+
+  final String author;
+  final int row;
+  final int column;
+}
+
+/// «Проверял письмом — исчезло».
+class TableCheck {
+  const TableCheck(this.author, this.card);
+
+  factory TableCheck.fromJson(Json j) => TableCheck(j['author'] as String, j['card'] as String);
+
+  final String author;
+  final String card;
+}
+
+/// «В раунде N я отправлял эту карту».
+class LetterClaim {
+  const LetterClaim(this.author, this.round, this.card);
+
+  factory LetterClaim.fromJson(Json j) =>
+      LetterClaim(j['author'] as String, (j['round'] as num).toInt(), j['card'] as String);
+
+  final String author;
+  final int round;
+  final String card;
+}
+
+/// Доска улик глазами смотрящего. canPost — может ли он её менять, pinsOnly — только булавки (голосование).
+class TableView {
+  const TableView({
+    this.threads = const [],
+    this.pins = const [],
+    this.checks = const [],
+    this.claims = const [],
+    this.canPost = false,
+    this.pinsOnly = false,
+  });
+
+  factory TableView.fromJson(Json j) => TableView(
+        threads: _list(j['threads'], TableThread.fromJson),
+        pins: _list(j['pins'], TablePin.fromJson),
+        checks: _list(j['checks'], TableCheck.fromJson),
+        claims: _list(j['claims'], LetterClaim.fromJson),
+        canPost: j['canPost'] as bool? ?? false,
+        pinsOnly: j['pinsOnly'] as bool? ?? false,
+      );
+
+  static const empty = TableView();
+
+  final List<TableThread> threads;
+  final List<TablePin> pins;
+  final List<TableCheck> checks;
+  final List<LetterClaim> claims;
+  final bool canPost;
+  final bool pinsOnly;
+
+  bool get isEmpty => threads.isEmpty && pins.isEmpty && checks.isEmpty && claims.isEmpty;
 }

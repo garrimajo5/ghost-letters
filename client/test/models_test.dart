@@ -88,4 +88,36 @@ void main() {
     expect(back.isEmpty, isTrue);
     expect(CardMark.fromJson(byMarple.toJson('x')).crossBy, ['u3']);
   });
+
+  test('доска улик и «не брать» Сообщника разбираются из снимка', () {
+    final j = snapshotJson(phase: 'Discussion', allowed: []);
+    final view = j['view'] as Map<String, dynamic>;
+    view['table'] = {
+      'threads': [
+        {'id': 7, 'author': 'u3', 'round': 2, 'sourceKind': 'Letter', 'source': 'orig_0300', 'target': 'orig_0002',
+          'stance': 'Against', 'reason': 'цвет', 'endorsedBy': ['u2'], 'disputedBy': <String>[]},
+      ],
+      'pins': [{'author': 'u3', 'row': 1, 'column': 4}],
+      'checks': [{'author': 'u2', 'card': 'orig_0001'}],
+      'claims': [{'author': 'u3', 'round': 1, 'card': 'orig_0300'}],
+      'canPost': true,
+      'pinsOnly': false,
+    };
+    view['teamSuggestions'] = [
+      {'from': 'u3', 'columns': [1, 2], 'avoid': [{'row': 0, 'column': 3}]},
+    ];
+    final v = GameSnapshot.fromJson(j).view;
+    final t = v.table.threads.single;
+    expect((t.id, t.author, t.sourceKind, t.isFor, t.reason), (7, 'u3', 'Letter', false, 'цвет'));
+    expect(t.endorsedBy, ['u2']);
+    expect((v.table.pins.single.row, v.table.pins.single.column), (1, 4));
+    expect(v.table.checks.single.card, 'orig_0001');
+    expect(v.table.claims.single.round, 1);
+    expect(v.table.canPost, isTrue);
+    expect(v.teamSuggestions.single.avoid, [(0, 3)]);
+
+    final old = GameSnapshot.fromJson(snapshotJson()).view;
+    expect(old.table.isEmpty, isTrue);
+    expect(old.table.canPost, isFalse);
+  });
 }
