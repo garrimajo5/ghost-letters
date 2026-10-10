@@ -203,6 +203,15 @@ public sealed class CardTags
     public double Similarity(string a, string b, (double Meaning, double Shape, double Color) attention)
         => MainSimilarity(a, b, attention, .35);
 
+    /// <summary>Короткая причина нити для доски улик: что сильнее всего связало карты глазами бота.</summary>
+    public string? ReasonChip(string a, string b, (double Meaning, double Shape, double Color) attention, double secondary = .35)
+    {
+        var w = Contributions(a, b, attention, secondary);
+        var max = Math.Max(w.Meaning, Math.Max(w.Shape, w.Color));
+        if (max <= .01) return null;
+        return max == w.Meaning ? "предмет" : max == w.Shape ? "форма" : "цвет";
+    }
+
     private (double Meaning, double Shape, double Color) Contributions(string a, string b,
         (double Meaning, double Shape, double Color) attention, double secondary)
     {

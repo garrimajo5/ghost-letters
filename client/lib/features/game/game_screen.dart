@@ -64,6 +64,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
   final suspicion = <String, int>{};
   final chat = <ChatMessage>[];
   final chatChanges = ValueNotifier<int>(0);
+
+  /// Ход мысли ботов у доски улик (канал table) — отдельно от чата: без звука и счётчика.
+  final thoughts = <ChatMessage>[];
+  final thoughtChanges = ValueNotifier<int>(0);
   int unread = 0;
 
   /// Широкий экран (компьютер): чат постоянно открыт справа, счётчик непрочитанного не нужен.
@@ -135,6 +139,13 @@ class GameScreenState extends ConsumerState<GameScreen> {
     }));
     _subs.add(_realtime.chat.listen((m) {
       if (!mounted || chat.any((c) => c.id == m.id)) return;
+      if (m.channel == 'table') {
+        if (thoughts.any((t) => t.id == m.id)) return;
+        thoughts.add(m);
+        if (thoughts.length > 60) thoughts.removeRange(0, thoughts.length - 60);
+        thoughtChanges.value++;
+        return;
+      }
       if (!chatDocked && !_chatOpen && !_audioBaseline && _audioActive &&
           m.authorId != view?.me?.id && DateTime.now().difference(m.createdAt).abs() < const Duration(seconds: 10)) {
         ref.read(soundProvider).play(Sfx.chat);
@@ -207,9 +218,21 @@ class GameScreenState extends ConsumerState<GameScreen> {
         final live = chat.where((m) => !known.contains(m.id)).toList();
         chat
           ..clear()
-          ..addAll(history)
+          ..addAll(history.where((m) => m.channel != 'table'))
           ..addAll(live);
         chatChanges.value++;
+      }
+
+      Future<void> loadThoughts() async {
+        final history = await api.thoughts(widget.gameId);
+        if (!mounted) return;
+        final known = {for (final m in history) m.id};
+        final live = thoughts.where((m) => !known.contains(m.id)).toList();
+        thoughts
+          ..clear()
+          ..addAll(history)
+          ..addAll(live);
+        thoughtChanges.value++;
       }
 
       Future<void> loadMarks() async {
@@ -256,6 +279,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
       }
       await Future.wait([
         section(loadHistory, 'историю чата'),
+        // Ход мысли ботов показывает только стол «Досье»; без него партия работает как раньше.
+        if (AppConfig.dossierDesign) loadThoughts().catchError((Object _) {}),
         if (snap.view.me != null) section(loadMarks, 'пометки карт'),
         if (snap.view.me != null) section(loadNotes, 'заметки'),
         loadLobby(),
@@ -282,6 +307,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     _lifecycle.dispose();
     _scroll.dispose();
     chatChanges.dispose();
+    thoughtChanges.dispose();
     _realtime.forgetGame(widget.gameId);
     final l = lobby;
     if (l != null) _realtime.unsubscribeLobby(l.id);

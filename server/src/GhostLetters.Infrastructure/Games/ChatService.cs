@@ -147,16 +147,60 @@ public sealed class ChatService(
         return dto;
     }
 
+    public const int MaxThoughtLength = 200;
+
+    /// <summary>
+    /// Шаг хода мысли бота у доски улик (канал table). Только для ботов и только из публичного:
+    /// карты — с поля, из подсказок и названных на доске писем, без скрытых чужих.
+    /// </summary>
+    public async Task<ChatMessageDto> ThinkAsync(Guid gameId, Guid botId, string text, IReadOnlyList<string> cards,
+        IReadOnlyList<string> notes, CancellationToken ct)
+    {
+        var state = await LoadStateAsync(gameId, ct);
+        var author = state.Player(botId);
+        text = text.Trim();
+        if (text.Length is 0 or > MaxThoughtLength) throw AppException.Validation($"Мысль — до {MaxThoughtLength} символов.");
+        var known = state.Board.SelectMany(r => r.Cards).Concat(state.Hints.SelectMany(h => h.Cards))
+            .Concat(state.Table.Claims.Select(c => c.Card))
+            .Concat(state.Letters.Where(l => l.From == author.Id).Select(l => l.CardId)).ToHashSet();
+        var ids = cards.Distinct().ToList();
+        if (ids.Count > MaxCards || ids.Any(c => !known.Contains(c)) || notes.Count > ids.Count || notes.Any(n => n.Length > MaxNoteLength))
+            throw AppException.Validation("Мысль ссылается на неизвестную карту.");
+        var message = new ChatMessage
+        {
+            Id = Guid.NewGuid(),
+            GameId = gameId,
+            Round = state.Round,
+            Channel = ChatChannels.Table,
+            AuthorId = botId,
+            Kind = ChatKinds.Text,
+            Text = text,
+            CardIds = ids,
+            CardNotes = notes.ToList(),
+            CreatedAt = time.GetUtcNow(),
+        };
+        db.ChatMessages.Add(message);
+        await db.SaveChangesAsync(ct);
+        var dto = Dto(message, null);
+        await notifier.ChatAsync(dto, Recipients(state, ChatChannels.Table), toTable: true, ct);
+        return dto;
+    }
+
     /// <summary>История чата, новые снизу. Канал команды Убийцы виден только его участникам и Призраку.</summary>
     public async Task<IReadOnlyList<ChatMessageDto>> HistoryAsync(Guid gameId, Guid userId, string? channel,
         DateTimeOffset? before, int limit, CancellationToken ct)
     {
         var viewer = await games.RequireViewerAsync(gameId, userId, ct);
         var state = await LoadStateAsync(gameId, ct);
-        var channels = viewer.IsObserver ? new List<string> { ChatChannels.Public } : VisibleChannels(state, state.Player(userId));
+        var channels = viewer.IsObserver ? new List<string> { ChatChannels.Public, ChatChannels.Table } : VisibleChannels(state, state.Player(userId));
         if (channel is not null)
         {
             channels = channels.Where(c => c == channel).ToList();
+        }
+        else
+        {
+            // Ход мысли ботов — только по явному запросу: он не вытесняет из истории реплики людей.
+            channels.Remove(ChatChannels.Table);
         }
 
         var rows = await (
@@ -239,8 +283,8 @@ public sealed class ChatService(
 
     public static List<string> VisibleChannels(GameState state, PlayerState player) =>
         player.Role.IsKillerTeam() || player.Role == Role.Ghost || state.Result is not null
-            ? [ChatChannels.Public, ChatChannels.KillerTeam]
-            : [ChatChannels.Public];
+            ? [ChatChannels.Public, ChatChannels.KillerTeam, ChatChannels.Table]
+            : [ChatChannels.Public, ChatChannels.Table];
 
     private static void RequireCanWrite(GameState state, PlayerState author, string channel)
     {
@@ -277,7 +321,7 @@ public sealed class ChatService(
         {
             var viewer = await games.RequireViewerAsync(gameId, userId, ct);
             var state = await LoadStateAsync(gameId, ct);
-            return viewer.IsObserver ? [ChatChannels.Public] : VisibleChannels(state, state.Player(userId));
+            return viewer.IsObserver ? [ChatChannels.Public, ChatChannels.Table] : VisibleChannels(state, state.Player(userId));
         }
         catch (AppException)
         {

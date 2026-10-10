@@ -38,6 +38,7 @@ class _DossierTableState extends State<_DossierTable> with _EvidenceBoard {
   void initState() {
     super.initState();
     screen.chatChanges.addListener(_changed);
+    screen.thoughtChanges.addListener(_thought);
     _changed(initial: true);
   }
 
@@ -52,6 +53,10 @@ class _DossierTableState extends State<_DossierTable> with _EvidenceBoard {
       if (_queue.length > 12) _queue.removeRange(0, _queue.length - 12);
       if (!_paused && _timer == null && _queue.isNotEmpty) _next();
     }
+    if (mounted) setState(() {});
+  }
+
+  void _thought() {
     if (mounted) setState(() {});
   }
 
@@ -126,6 +131,7 @@ class _DossierTableState extends State<_DossierTable> with _EvidenceBoard {
   @override
   void dispose() {
     screen.chatChanges.removeListener(_changed);
+    screen.thoughtChanges.removeListener(_thought);
     _timer?.cancel();
     _typed.dispose();
     super.dispose();
@@ -156,6 +162,7 @@ class _DossierTableState extends State<_DossierTable> with _EvidenceBoard {
       }),
       child: CustomPaint(foregroundPainter: _TableThreadsPainter(_threadLines),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _botThinking(),
         Text('УЛИКИ НА СТОЛЕ', style: sectionLabel()),
         const SizedBox(height: 12),
         _Board(screen: screen, maxCard: size, decorate: (id, child) {

@@ -177,6 +177,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return true;
         }
 
+        var (tabled, tablePending) = await TryTableAsync(state, view, botId, mind, ct);
+        if (tabled) return true;
+
         if (state.Phase == Phase.Discussion && state.Round >= state.TotalRounds && view.Me?.Role != Role.Ghost &&
             BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow())) return false;
 
@@ -187,6 +190,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         {
             return false;
         }
+
+        // Не заканчиваем раунд, пока не разложили свою версию на доске (шагов за раунд — ограниченно).
+        if (command is ReadyNextRound && tablePending) return false;
 
         try
         {
@@ -204,6 +210,41 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         {
             logger.LogDebug("Бот {Bot} не сходил {Command}: {Error}", botId, command.GetType().Name, e.Message);
             return false;
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Guid Game, Guid Bot, int Round), int> TableFailures = new();
+
+    /// <summary>
+    /// Шаг бота у доски улик: изменение доски (если есть) и мысль вслух в канал table.
+    /// Возвращает, сделан ли шаг и остались ли ещё шаги в этом раунде.
+    /// </summary>
+    private async Task<(bool Acted, bool Pending)> TryTableAsync(GameState state, PlayerView view, Guid botId, BotMind? mind, CancellationToken ct)
+    {
+        if (state.Phase is not (Phase.Discussion or Phase.Voting) || view.Table is not { CanPost: true } ||
+            view.Me is null || view.Me.Role == Role.Ghost) return (false, false);
+        var key = (state.Id, botId, state.Round);
+        if (TableFailures.GetValueOrDefault(key) >= 3) return (false, false);
+        var recent = await db.ChatMessages.AsNoTracking()
+            .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Table && m.Round == state.Round)
+            .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
+            .Select(m => new BotThought(m.CreatedAt, m.CardIds, m.CardNotes)).ToListAsync(ct);
+        var plan = BotPlayer.Plan(view, tags, mind, BotTable.Random(state, botId));
+        var step = BotTable.Next(view, tags, mind, plan, recent);
+        if (step is null) return (false, false);
+        if (!BotTable.Due(recent, time.GetUtcNow())) return (false, true);
+        try
+        {
+            if (step.Ops.Count > 0)
+                await games.ExecuteAsync(state.Id, botId, Request(new TablePost(step.Ops), state.Version), ct);
+            await chat.ThinkAsync(state.Id, botId, step.Thought, step.Cards, step.Notes, ct);
+            return (true, true);
+        }
+        catch (AppException e)
+        {
+            if (e.Code != AppException.Codes.VersionConflict) TableFailures.AddOrUpdate(key, 1, (_, n) => n + 1);
+            logger.LogDebug("Бот {Bot} не смог изменить доску: {Error}", botId, e.Message);
+            return (false, false);
         }
     }
 

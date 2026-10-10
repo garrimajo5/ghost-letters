@@ -1,5 +1,6 @@
 using System.Net;
 using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace GhostLetters.Api.Tests;
@@ -100,6 +101,43 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
         var withBots = await host.GetAsync("/api/v1/leaderboard?limit=100&bots=true");
         withBots.EnumerateArray().Where(r => r.GetProperty("isBot").GetBoolean())
             .Select(r => r.GetProperty("user").Str("nickname")).Should().NotBeEmpty().And.OnlyContain(n => n.StartsWith("Бот"));
+    }
+
+    [Fact]
+    public async Task Bots_ThinkAloud_AtEvidenceBoard_AndHumansCannotWriteThoughts()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings { Rounds = 1 } });
+        var id = lobby.Id("id");
+        for (var i = 0; i < 4; i++)
+        {
+            await host.PostAsync($"/api/v1/lobbies/{id}/bots", null);
+        }
+
+        var gameId = (await host.PostAsync($"/api/v1/lobbies/{id}/start", null)).Id("gameId");
+        var game = GameHarness.Existing(_factory, [host], id, lobby.Str("code"), gameId);
+        var driver = new GameDriver(game);
+        for (var i = 0; i < 3000 && (await game.StateAsync()).Status == "active"; i++)
+        {
+            var moved = await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
+            if (moved == 0 && !await driver.StepAsync()) await game.ExpireAsync(TimeSpan.FromSeconds(30));
+        }
+
+        (await game.StateAsync()).Status.Should().Be("finished");
+        var thoughts = await _factory.WithDbAsync(db => db.ChatMessages.AsNoTracking()
+            .Where(m => m.GameId == gameId && m.Channel == ChatChannels.Table).ToListAsync());
+        thoughts.Should().NotBeEmpty("боты думают вслух у доски");
+        thoughts.Should().OnlyContain(m => m.Text != null && m.Text.Length <= ChatService.MaxThoughtLength);
+        var bots = await _factory.WithDbAsync(db => db.Users.Where(u => u.IsBot).Select(u => u.Id).ToListAsync());
+        thoughts.Should().OnlyContain(m => m.AuthorId != null && bots.Contains(m.AuthorId.Value));
+
+        var table = (await host.ViewAsync(gameId)).GetProperty("table");
+        table.GetProperty("pins").EnumerateArray().Should().NotBeEmpty("боты закрепляют версии булавками");
+
+        var history = await host.GetAsync($"/api/v1/games/{gameId}/chat?channel=table");
+        history.EnumerateArray().Should().NotBeEmpty("ход мысли виден людям за столом");
+        (await host.PostAsync($"/api/v1/games/{gameId}/chat", new { channel = "table", text = "я тоже думаю" }, HttpStatusCode.BadRequest))
+            .Code().Should().Be("VALIDATION");
     }
 
     [Fact]
