@@ -18,6 +18,13 @@ class _DossierTableState extends State<_DossierTable> {
   ChatMessage? _message;
   String? _author;
   Timer? _timer;
+  final _typed = ValueNotifier<int>(0);
+  List<String> _letters = [];
+  int _holdTicks = 0;
+  int _cueTicks = 0;
+  final _mentioned = <int>{};
+  final _mentionAt = <int, int>{};
+  bool _shown(int index) => index < _visible || _mentioned.contains(index);
   int _visible = 0;
   bool _paused = false;
   GameScreenState get screen => widget.screen;
@@ -53,20 +60,51 @@ class _DossierTableState extends State<_DossierTable> {
   void _show(ChatMessage? message, {bool animate = true}) {
     _timer?.cancel();
     _timer = null;
+    _letters = (message?.text ?? '').characters.toList();
+    _mentioned.clear();
+    _mentionAt.clear();
+    if (message != null) {
+      for (var i = 0; i < message.cardIds.length; i++) {
+        for (final row in screen.view!.board) {
+          final column = row.cards.indexOf(message.cardIds[i]);
+          if (column < 0) continue;
+          final category = T.category(row.category).toLowerCase();
+          final match = RegExp('${RegExp.escape(category)}\\s+(?:карта\\s+)?${column + 1}(?![0-9])',
+            caseSensitive: false).firstMatch(message.text ?? '');
+          if (match != null) {
+            _mentionAt[i] = (message.text ?? '').substring(0, match.end).characters.length;
+          }
+        }
+      }
+    }
+    _typed.value = animate ? 0 : _letters.length;
+    _holdTicks = 0;
+    _cueTicks = 0;
     setState(() {
       _message = message;
-      _visible = animate ? 1 : message?.cardIds.length ?? 0;
+      _visible = animate ? 0 : message?.cardIds.length ?? 0;
     });
     if (message == null || !animate || _paused) return;
-    // Reveal links gradually, then leave enough time to read the whole thought.
-    var elapsed = 0;
-    final seconds = ((message.text?.length ?? 0) / 14).ceil().clamp(6, 25);
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      elapsed++;
-      if (elapsed.isEven && _visible < message.cardIds.length) {
-        setState(() => _visible++);
+    _run();
+  }
+
+  void _run() {
+    _timer?.cancel();
+    // Only the text notifier rebuilds for each grapheme, not the whole board.
+    _timer = Timer.periodic(const Duration(milliseconds: 35), (timer) {
+      if (_typed.value < _letters.length) {
+        _typed.value++;
+        final mentioned = _mentionAt.entries.where((e) => e.value <= _typed.value && !_mentioned.contains(e.key));
+        if (mentioned.isNotEmpty) setState(() => _mentioned.addAll(mentioned.map((e) => e.key)));
+        return;
       }
-      if (elapsed >= seconds && _visible >= message.cardIds.length) {
+      // Structured card notes are shown as individual spoken beats. A mark
+      // appears with its beat, never before the referenced card is presented.
+      if (_visible < (_message?.cardIds.length ?? 0)) {
+        if (_cueTicks++ % 40 == 0) setState(() => _visible++);
+        return;
+      }
+      if (++_holdTicks >= 86) {
         timer.cancel();
         _timer = null;
         if (_queue.isNotEmpty) _next();
@@ -76,6 +114,12 @@ class _DossierTableState extends State<_DossierTable> {
 
   void _next() {
     if (_queue.isNotEmpty) _show(_queue.removeAt(0));
+  }
+
+  void _complete() {
+    _typed.value = _letters.length;
+    setState(() => _visible = _message?.cardIds.length ?? 0);
+    _holdTicks = 0;
   }
 
   void _select(String? author) {
@@ -89,6 +133,7 @@ class _DossierTableState extends State<_DossierTable> {
   void dispose() {
     screen.chatChanges.removeListener(_changed);
     _timer?.cancel();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -123,8 +168,8 @@ class _DossierTableState extends State<_DossierTable> {
         final source = _source.currentContext?.findRenderObject();
         if (canvas is! RenderBox || source is! RenderBox || m == null) return [];
         final start = canvas.globalToLocal(source.localToGlobal(Offset(source.size.width / 2, 0)));
-        return [for (var i = 1; i < _visible && i < m.cardIds.length; i++)
-          if (theoryLinked(m, i) && _cards[m.cardIds[i]]?.currentContext?.findRenderObject() is RenderBox)
+        return [for (var i = 1; i < m.cardIds.length; i++)
+          if (_shown(i) && theoryLinked(m, i) && _cards[m.cardIds[i]]?.currentContext?.findRenderObject() is RenderBox)
             (() {
               final target = _cards[m.cardIds[i]]!.currentContext!.findRenderObject()! as RenderBox;
               return (start, canvas.globalToLocal(target.localToGlobal(Offset(target.size.width / 2, target.size.height))), _color(i));
@@ -135,16 +180,25 @@ class _DossierTableState extends State<_DossierTable> {
         const SizedBox(height: 12),
         _Board(screen: screen, maxCard: 130, decorate: (id, child) {
           final index = m?.cardIds.indexOf(id) ?? -1;
-          final active = index >= 0 && index < _visible;
+          final active = index >= 0 && _shown(index);
           return Container(key: _cards.putIfAbsent(id, GlobalKey.new),
             foregroundDecoration: active ? BoxDecoration(
               border: Border.all(color: _color(index), width: 3),
               borderRadius: BorderRadius.circular(12)) : null,
-            child: Stack(children: [child, if (active) Positioned(right: 3, top: 3,
-              child: DecoratedBox(decoration: BoxDecoration(color: AppColors.bg,
-                borderRadius: BorderRadius.circular(5)), child: Icon(
-                  theoryNegative(m!.noteFor(index) ?? '') ? Icons.close : Icons.check,
-                  size: 19, color: _color(index))))]));
+            child: Stack(children: [child, if (active) Positioned(right: 3, bottom: 3,
+              child: IgnorePointer(child: Semantics(
+                label: '${screen.nick(m!.authorId)}: ${theoryLabel(m.noteFor(index) ?? '')}',
+                child: Container(key: ValueKey('dossier-mark-$id'),
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(color: AppColors.bg,
+                    borderRadius: BorderRadius.circular(8)),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Avatar(nickname: screen.nick(m.authorId), color: screen.colorOf(m.authorId),
+                      photoId: screen.photoOf(m.authorId), size: 20),
+                    Icon(theoryNegative(m.noteFor(index) ?? '') ? Icons.close :
+                      theoryLabel(m.noteFor(index) ?? '') == 'За' ? Icons.check : Icons.search,
+                      size: 14, color: _color(index)),
+                  ])))))]));
         }),
         if (m != null && m.cardIds.isNotEmpty) Padding(
           padding: const EdgeInsets.only(top: 16),
@@ -173,11 +227,27 @@ class _DossierTableState extends State<_DossierTable> {
             photoId: screen.photoOf(m.authorId), size: 30), const SizedBox(width: 8),
             Expanded(child: Text(screen.nick(m.authorId), style: heading(17)))]),
           const SizedBox(height: 12),
-          Text(m.text ?? 'Голосовое сообщение — откройте разговор для прослушивания.',
-            key: const Key('dossier-statement'), style: const TextStyle(height: 1.6)),
+          GestureDetector(onTap: _complete, child: Stack(children: [
+            ExcludeSemantics(child: Opacity(opacity: 0, child: Text(
+              m.text ?? 'Голосовое сообщение — откройте разговор для прослушивания.',
+              style: const TextStyle(height: 1.6)))),
+            ValueListenableBuilder<int>(
+            valueListenable: _typed, builder: (context, count, _) => Text(
+              m.text == null ? 'Голосовое сообщение — откройте разговор для прослушивания.' :
+                _letters.take(count).join(),
+              key: const Key('dossier-statement'), style: const TextStyle(height: 1.6))),
+          ])),
+          if (_visible > 0 && m.cardIds.isNotEmpty) Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(children: [
+              Expanded(child: Text(_cardCue(m, _visible - 1),
+                key: const Key('dossier-card-cue'), style: const TextStyle(color: AppColors.ice))),
+              CardImage(cardId: m.cardIds[_visible - 1], size: 52),
+            ])),
           const SizedBox(height: 12),
           Wrap(spacing: 6, runSpacing: 6, children: [
-            for (var i = 0; i < _visible && i < m.cardIds.length; i++)
+            for (var i = 0; i < m.cardIds.length; i++)
+              if (_shown(i))
               GestureDetector(onTap: () => showCardZoom(context, m.cardIds[i]),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   CardImage(cardId: m.cardIds[i], size: 46),
@@ -190,9 +260,10 @@ class _DossierTableState extends State<_DossierTable> {
             label: Text(_paused ? 'Продолжить' : 'Пауза'), onPressed: () {
               setState(() => _paused = !_paused);
               if (_paused) { _timer?.cancel(); _timer = null; }
-              else if (_queue.isNotEmpty) { _next(); }
-              else { _show(_message, animate: true); }
+              else if (_message != null) { _run(); }
             }),
+          TextButton(onPressed: _message == null ? null : _complete,
+            child: const Text('Показать сразу')),
           TextButton(onPressed: _queue.isEmpty ? null : _next, child: const Text('Дальше')),
           TextButton(onPressed: screen.openChat, child: const Text('Весь разговор')),
         ]),
@@ -203,9 +274,17 @@ class _DossierTableState extends State<_DossierTable> {
       ]));
   }
 
+  String _cardCue(ChatMessage m, int index) {
+    final note = m.noteFor(index) ?? '';
+    if (note.startsWith('кидал')) return 'Я говорил, что отправил эту карту';
+    if (theorySource(note)) return 'Рассматриваю эту улику';
+    if (theoryNegative(note)) return 'По моей версии, эту карту исключаю';
+    if (theoryLabel(note) == 'Проверка') return 'Проверял связь с этой картой';
+    return 'По моей версии, эта карта подходит';
+  }
+
   Widget _actions() => Column(children: [
     KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
-    ExpansionTile(title: const Text('Улики всех раундов'), children: [_Hints(screen: screen)]),
     if (screen.view!.me?.letters.isNotEmpty == true)
       ExpansionTile(title: const Text('Мои письма'), children: [_MyLetters(screen: screen)]),
   ]);
@@ -238,6 +317,13 @@ class _DossierTableState extends State<_DossierTable> {
             padding: const EdgeInsets.all(12), children: [_dialogue(), const SizedBox(height: 12), _actions()])),
         ]);
       })),
+      Material(color: AppColors.surface, child: ExpansionTile(
+        key: const Key('dossier-bottom-hints'),
+        title: const Text('Подсказки Призрака · все раунды'),
+        visualDensity: VisualDensity.compact,
+        children: [ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .22),
+          child: SingleChildScrollView(child: _Hints(screen: screen)))])),
       _Dock(screen: screen, compact: true),
     ])));
 }

@@ -9,6 +9,52 @@ import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 void main() {
+  testWidgets('typing pauses, references mark cards, hints expand below table', (tester) async {
+    tester.view.physicalSize = const Size(1440, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    final snap = GameSnapshot.fromJson(snapshotJson(phase: 'Discussion', allowed: []));
+    app.realtime.game = snap;
+    app.api.snapshotResult = snap;
+    app.go('/game/g1');
+    await tester.pumpAndSettle();
+    const text = 'Исключаю мотив 1. Эта карта противоречит моей версии, но я ещё могу передумать.';
+    app.realtime.chatCtl.add(ChatMessage(id: 'typing', channel: 'public', authorId: 'u3',
+      kind: 'text', text: text, cardIds: ['orig_0100', 'orig_0001'],
+      cardNotes: ['улика', 'исключаю:0'], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 175));
+    String shown() => tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data!;
+    expect(shown(), 'Исклю');
+    expect(find.byKey(const ValueKey('dossier-mark-orig_0001')), findsNothing);
+    await tester.tap(find.text('Пауза'));
+    await tester.pump(const Duration(seconds: 2));
+    expect(shown(), 'Исклю');
+    await tester.tap(find.text('Продолжить'));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(shown(), startsWith('Исключаю мотив 1.'));
+    final badge = find.byKey(const ValueKey('dossier-mark-orig_0001'));
+    expect(badge, findsOneWidget);
+    expect(find.descendant(of: badge, matching: find.byIcon(Icons.close)), findsOneWidget);
+    await tester.tap(find.text('Показать сразу'));
+    await tester.pump();
+    expect(shown(), text);
+    final hints = find.byKey(const Key('dossier-bottom-hints'));
+    expect(tester.getTopLeft(hints).dy, greaterThan(600));
+    await tester.tap(find.text('Подсказки Призрака · все раунды'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hint-orig_0100')).hitTestable(), findsOneWidget);
+    await tester.tap(find.text('Подсказки Призрака · все раунды'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('hint-orig_0100')).hitTestable(), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, skip: !AppConfig.dossierDesign);
+
   for (final width in [320.0, 1440.0]) {
     testWidgets('dossier public versions, playback and editor at $width', (tester) async {
       tester.view.physicalSize = Size(width, 900);
@@ -33,18 +79,18 @@ void main() {
       send('1', 'u3', 'Подсказка поддерживает первую карту');
       await tester.pump();
       await tester.pump(const Duration(seconds: 3));
-      expect(find.text('Подсказка поддерживает первую карту'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Подсказка поддерживает первую карту');
       await tester.ensureVisible(find.byKey(const ValueKey('dossier-author-u3')));
       await tester.tap(find.byKey(const ValueKey('dossier-author-u3')));
       await tester.pumpAndSettle();
       send('2', 'u2', 'Чужая версия');
       send('3', 'u3', 'Секретная версия', channel: 'killer_team');
       await tester.pump();
-      expect(find.text('Подсказка поддерживает первую карту'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Подсказка поддерживает первую карту');
       expect(find.text('Секретная версия'), findsNothing);
       send('4', 'u3', 'Пересмотренная версия');
       await tester.pump();
-      expect(find.text('Пересмотренная версия'), findsOneWidget);
+      expect(tester.widget<Text>(find.byKey(const Key('dossier-statement'))).data, 'Пересмотренная версия');
       const captures = String.fromEnvironment('DOSSIER_SCREENSHOTS');
       if (captures.isNotEmpty) {
         await tester.pumpAndSettle();
