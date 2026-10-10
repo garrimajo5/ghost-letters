@@ -247,6 +247,23 @@ public sealed class BotFinalDiscussionTests
         line.Cards.Should().Contain("boat");
     }
 
+    [Theory]
+    [InlineData("Бот Борис, кто будет голосовать за место 1?", false)]
+    [InlineData("Борис, кто будет голосовать за место 1?", false)]
+    [InlineData("Никто не голосовал за место 1?", false)]
+    [InlineData("Кто будет голосовать за место 1?", true)]
+    public void OnlyUnaddressedWhoQuestionsInviteTheWholeTable(string text, bool shouldAnswer)
+    {
+        var bob = Guid.NewGuid();
+        var mind = Mind with { Names = new Dictionary<Guid, string>(Mind.Names) { [bob] = "Бот Борис" } };
+        var now = DateTimeOffset.UtcNow;
+        List<DiscussionLine> lines = [new(Me, "Моя версия", ["knife", "boat"], now),
+            new(Ann, text, [], now.AddSeconds(1))];
+        var reply = BotDiscussion.Compose(View, Tags, mind, lines, new Random(1))!.Value.Text;
+        if (shouldAnswer) reply.Should().Contain("отвечаю про голосование").And.Contain("Сейчас выберу место 1");
+        else reply.Should().NotContain("отвечаю").And.NotContain("уточню");
+    }
+
     [Fact]
     public void DialogueIsBounded_AndWaitsForAnswers()
     {
