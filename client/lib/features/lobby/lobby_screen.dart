@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api.dart';
+import '../../core/lobby_preferences.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
 import '../../core/texts.dart';
@@ -74,7 +75,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   Future<void> _openPresets(Lobby lobby, int players) async {
     final chosen = await PresetsSheet.show(context, lobby.settings, players, applyImmediately: true);
     if (chosen == null || !mounted) return;
-    await _apply((api) => api.saveSettings(lobby.id, chosen.copyWith(ghostUserId: lobby.settings.ghostUserId)));
+    await _saveSettings(lobby.id, chosen.copyWith(ghostUserId: lobby.settings.ghostUserId));
+  }
+
+  Future<void> _saveSettings(String lobbyId, LobbySettings settings) async {
+    final userId = ref.read(sessionProvider).user!.id;
+    final preferences = ref.read(lobbyPreferencesProvider);
+    await _apply((api) async {
+      final lobby = await api.saveSettings(lobbyId, settings);
+      await preferences.save(userId, settings);
+      return lobby;
+    });
   }
 
   /// Выбор бота: из кабинета (с характером) или случайный. Если кабинет пуст — сразу случайный.
@@ -123,7 +134,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
   Future<void> _openSettings(Lobby lobby, int players) async {
     final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players);
-    if (s != null) await _apply((api) => api.saveSettings(lobby.id, s));
+    if (s != null && mounted) await _saveSettings(lobby.id, s);
   }
 
   @override
@@ -218,7 +229,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
             players: players.length,
             members: players,
             inGame: lobby.status == 'in_game',
-            onChange: isHost ? (next) => _apply((api) => api.saveSettings(lobby.id, next)) : null,
+            onChange: isHost ? (next) => _saveSettings(lobby.id, next) : null,
             onOpenPresets: isHost ? () => _openPresets(lobby, players.length) : null,
             onOpenSheet: isHost ? () => _openSettings(lobby, players.length) : null,
           ),
