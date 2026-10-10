@@ -12,6 +12,7 @@ public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<stri
 public static class BotDiscussion
 {
     public const int MaxMessages = 6;
+    private static readonly Regex Who = Words(@"\bкто\b");
 
     private static readonly IReadOnlyDictionary<Category, Regex> RowWords = new Dictionary<Category, Regex>
     {
@@ -98,10 +99,11 @@ public static class BotDiscussion
         bool Addresses(DiscussionLine m, Guid target) => m.Text.StartsWith(Name(target) + ",", StringComparison.OrdinalIgnoreCase) ||
             m.Text.StartsWith(Name(target).Replace("Бот ", "") + ",", StringComparison.OrdinalIgnoreCase);
         bool Addressed(DiscussionLine m) => Addresses(m, me.Id);
+        bool AddressedElsewhere(DiscussionLine m) => mind.Names.Keys.Any(id => id != me.Id && Addresses(m, id));
         // A question can arrive before this bot's opening summary. Do not lose it
         // merely because the summary was sent later; only an answer consumes it.
         var pending = messages.Where(m => m.Author != me.Id && m.Text.Contains('?') &&
-            (Addressed(m) || (m.Text.Contains("Кто", StringComparison.OrdinalIgnoreCase) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase)))).ToList();
+            (Addressed(m) || (!AddressedElsewhere(m) && Who.IsMatch(m.Text) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase)))).ToList();
         // Each reply consumes just the latest pending question from that player at
         // the time of the reply, not every earlier question by the same author.
         foreach (var response in own.Where(o => o.Text.Contains("отвечаю", StringComparison.OrdinalIgnoreCase) ||
