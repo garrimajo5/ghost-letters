@@ -6,6 +6,7 @@ import '../../core/app_version.dart';
 import '../../core/session.dart';
 import '../../core/theme.dart';
 import '../../widgets/common.dart';
+import 'recovery_screen.dart';
 
 /// Палитра заглушек-аватаров — та же, что на сервере (приглушённые цвета из дизайна).
 const avatarPalette = ['#3E7C6E', '#6A5A9E', '#8A5A44', '#3D6A99', '#7A6A3A', '#9A4F6E', '#4F7F3F', '#5A6E82'];
@@ -47,13 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    setState(() => _busy = true);
-    final session = ref.read(sessionProvider.notifier);
-    await runAction(context, () async {
-      final tokens = await ref.read(apiProvider).loginGuest(session.deviceId, nick, _color);
-      session.signIn(tokens);
-    });
-    if (mounted) setState(() => _busy = false);
+    await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => RecoveryScreen(nickname: nick, color: _color)));
   }
 
   /// Уже играю на другом устройстве: ввожу код оттуда — и это тот же аккаунт.
@@ -148,6 +143,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         : const Text('СОЗДАТЬ АККАУНТ'),
                   ),
                   const SizedBox(height: 8),
+                  OutlinedButton(
+                    key: const Key('login-by-key'),
+                    onPressed: _busy ? null : () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => const RecoveryScreen())),
+                    child: const Text('Уже есть аккаунт — войти по ключу'),
+                  ),
                   TextButton(
                     key: const Key('login-by-code'),
                     onPressed: _busy ? null : _loginByCode,
@@ -155,7 +155,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Для существующего аккаунта используйте вход по коду. Ник сам по себе не восстанавливает аккаунт.',
+                    'Вход по ключу работает даже после выхода со всех устройств. Если ключ ещё не настроен, используйте код с другого устройства.',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
                   ),

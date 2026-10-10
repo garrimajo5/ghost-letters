@@ -16,6 +16,9 @@ public static class AuthEndpoints
                 service.LinkAsync(request, ct))
             .WithName("LoginByLinkCode");
 
+        auth.MapPost("/key-login", (KeyLoginRequest request, AuthService service, CancellationToken ct) =>
+            service.KeyLoginAsync(request, ct));
+
         auth.MapPost("/link-code", (HttpContext http, AuthService service, CancellationToken ct) =>
                 service.CreateLinkCodeAsync(http.User.UserId(), ct))
             .RequireAuthorization()
@@ -33,6 +36,12 @@ public static class AuthEndpoints
             .WithName("Logout");
 
         var me = api.MapGroup("/me").WithTags("Profile").RequireAuthorization();
+
+        me.MapGet("/recovery", (HttpContext http, AuthService service, CancellationToken ct) =>
+            service.RecoveryInfoAsync(http.User.UserId(), ct));
+        me.MapPut("/recovery", (RecoveryKeyRequest request, HttpContext http, AuthService service, CancellationToken ct) =>
+            service.SetRecoveryAsync(http.User.UserId(), request, ct)).RequireRateLimiting(Hosting.Hardening.AuthPolicy);
+
 
         me.MapGet("", (HttpContext http, UserService users, CancellationToken ct) =>
                 users.GetAsync(http.User.UserId(), ct))
