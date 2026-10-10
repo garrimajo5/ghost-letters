@@ -80,6 +80,24 @@ public sealed class ChatTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task OwnDiscardCanBeShownButOthersCannotGuessItBeforePublication()
+    {
+        var game = await GameHarness.StartAsync(_factory, players: 7);
+        var driver = new GameDriver(game);
+        await driver.RunUntilAsync(p => p == "GhostPick");
+        var detective = await game.WithRoleAsync("Detective");
+        var killer = await game.WithRoleAsync("Killer");
+        var card = (await detective.ViewAsync(game.GameId)).GetProperty("me").GetProperty("hand")[0].GetString()!;
+        await detective.CommandAsync(game.GameId, "Discard", new { cardId = card });
+        await driver.RunUntilAsync(p => p == "Mailbox");
+        await killer.PostAsync(Chat(game), new { text = "Чужая скрытая", cardIds = new[] { card } }, HttpStatusCode.BadRequest);
+        var sent = await detective.PostAsync(Chat(game), new { text = "Сбрасывал эту", cardIds = new[] { card }, cardNotes = new[] { "улика" } });
+        sent.GetProperty("cardIds")[0].GetString().Should().Be(card);
+        _factory.Time.Advance(TimeSpan.FromSeconds(1));
+        await killer.PostAsync(Chat(game), new { text = "Теперь вижу", cardIds = new[] { card } });
+    }
+
+    [Fact]
     public async Task CardNotes_AreStoredUnderCards()
     {
         var game = await GameHarness.StartAsync(_factory, players: 4);
