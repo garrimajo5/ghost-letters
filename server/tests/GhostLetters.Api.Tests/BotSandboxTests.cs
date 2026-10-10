@@ -11,6 +11,31 @@ namespace GhostLetters.Api.Tests;
 
 public sealed class BotSandboxRunnerTests(ITestOutputHelper output)
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(1000)]
+    public void SharedPlanMatchesIndividualRowVotes(int seed)
+    {
+        var (deck, tags) = Cards();
+        var players = Enumerable.Range(0, 6).Select(i => new Guid(i + 1, 0, 0, new byte[8])).ToList();
+        var state = GameEngine.Create(new Guid(42, 0, 0, new byte[8]), players, new GameSettings(), deck, seed);
+        var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
+        var hints = deck.Where(c => !board.Contains(c)).Take(15).ToList();
+        state.Hints.AddRange([new HintGroup { Round = 1, Cards = hints.Take(5).ToList() },
+            new HintGroup { Round = 2, Cards = hints.Skip(5).Take(5).ToList() },
+            new HintGroup { Round = 3, Cards = hints.Skip(10).ToList() }]);
+        var view = GameProjection.For(state, state.Players.First(p => p.Role == Role.Detective).Id);
+        var mind = GhostLetters.Infrastructure.Bots.BotMind.Neutral;
+        var plan = BotPlayer.Plan(view, tags, mind, new Random(seed));
+        for (var row = 0; row < view.Board.Count; row++)
+        {
+            var voting = view with { Phase = Phase.Voting, AllowedCommands = [nameof(CastVote)],
+                Finale = new(new(row, VoteStageKind.Row, row, 1, Enumerable.Range(0, view.Board[row].Cards.Count).ToList(), []),
+                    view.Board.Count, null, [], [], [], null, null, null, [], []) };
+            var vote = (CastVote)BotPlayer.Decide(voting, new Random(seed + row), tags, mind)!;
+            vote.Column.Should().Be(plan[row], "общий кэш не меняет оценку отдельного ряда");
+        }
+    }
     private static (List<string> Deck, CardTags Tags) Cards()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

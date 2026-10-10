@@ -65,6 +65,40 @@ public sealed class BotFinalDiscussionTests
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
     }
 
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(1.0)]
+    public void SummaryExplainsWhetherPersonalityUsesVanishedLetters(double negative)
+    {
+        var view = View with { Me = View.Me! with { Letters = [new(2, "sword", false)] } };
+        var mind = Mind with { Personality = Mind.Personality with { Negative = negative } };
+        var withLetter = BotPlayer.Evidence(view, Tags, mind, "knife");
+        var withoutLetter = BotPlayer.Evidence(View, Tags, mind, "knife");
+        var line = BotDiscussion.Compose(view, Tags, mind, [], new Random(1))!.Value;
+        if (negative == 0)
+        {
+            withLetter.Should().Be(withoutLetter);
+            line.Text.Should().NotContain("Учёл и свои исчезнувшие письма")
+                .And.Contain("Исчезновение своих писем не считаю доводом против карт");
+        }
+        else
+        {
+            withLetter.Should().BeLessThan(withoutLetter);
+            line.Text.Should().Contain("Учёл и свои исчезнувшие письма");
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(null)]
+    public void SummaryDoesNotInventVanishingForOpenedOrPendingLetter(bool? revealed)
+    {
+        var view = View with { Me = View.Me! with { Letters = [new(2, "sword", revealed)] } };
+        var mind = Mind with { Personality = Mind.Personality with { Negative = 0 } };
+        var line = BotDiscussion.Compose(view, Tags, mind, [], new Random(1))!.Value;
+        line.Text.Should().NotContain("исчезнувшие письма").And.NotContain("Исчезновение своих писем");
+    }
+
     [Fact]
     public void AsksNamedPlayer_AnswersSpecificRow_AndDoesNotAnswerSameQuestionTwice()
     {
@@ -251,13 +285,27 @@ public sealed class BotFinalDiscussionTests
         BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1))?.Text.Should().NotContain("отвечаю про голосование");
     }
 
-    [Fact]
-    public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DirectQuestionAboutPlayerGetsSuspicionAnswer_NotCardNumber(bool attachCards)
     {
         var now = DateTimeOffset.UtcNow;
         var line = BotDiscussion.Compose(View, Tags, Mind,
-            [new(Me, "Версия", ["knife"], now), new(Ann, "Бот Я, за кого будешь голосовать?", [], now.AddSeconds(15))], new Random(1))!.Value;
+            [new(Me, "Версия", ["knife"], now), new(Ann, "Бот Я, за кого будешь голосовать?", attachCards ? ["boat"] : [], now.AddSeconds(15))], new Random(1))!.Value;
         line.Text.Should().Contain("про подозрения").And.Contain("недостаточно оснований").And.NotContain("мотив 1");
+    }
+
+    [Theory]
+    [InlineData("Что думаешь о месте и за кого будешь голосовать?", "место 1")]
+    [InlineData("Что думаешь о мотиве и месте, кого подозреваешь?", "мотив 1")]
+    public void MixedQuestionAnswersRowsAndSuspicions(string question, string expected)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var line = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Версия", [], now), new(Ann, "Бот Я, " + question, [], now.AddSeconds(1))], new Random(1))!.Value;
+        line.Text.Should().Contain(expected).And.Contain("место 1").And.Contain("недостаточно оснований");
+        line.Cards.Should().Contain("boat");
     }
 
     [Theory]
