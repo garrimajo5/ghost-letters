@@ -88,3 +88,51 @@ public class TeamSuggestTests
         state.Result!.Side.Should().Be(WinningSide.Killer);
     }
 }
+
+/// <summary>Сообщник ночью советует и что выбрать, и что не брать.</summary>
+public class TeamAvoidTests
+{
+    [Fact]
+    public void Night_AccompliceMarksCardsToAvoid_KillerSeesThem()
+    {
+        var state = TestGame.Create(players: 7);
+        state.AckAll();
+        var accomplice = state.WithRole(Role.Accomplice);
+
+        state.Run(accomplice, new TeamSuggest(Avoid: [new BoardCellRef(0, 1), new BoardCellRef(2, 3)]));
+
+        var suggestion = GameProjection.For(state, state.WithRole(Role.Killer).Id).TeamSuggestions.Should().ContainSingle().Subject;
+        suggestion.Columns.Should().BeNull();
+        suggestion.Avoid.Should().Equal(new BoardCellRef(0, 1), new BoardCellRef(2, 3));
+
+        state.Run(accomplice, new TeamSuggest(Columns: [0, 0, 0, 0], Avoid: [new BoardCellRef(1, 2)]));
+        GameProjection.For(state, state.WithRole(Role.Killer).Id).TeamSuggestions!.Single().Columns.Should().Equal(0, 0, 0, 0);
+    }
+
+    [Fact]
+    public void Night_AvoidValidation()
+    {
+        var state = TestGame.Create(players: 7);
+        state.AckAll();
+        var accomplice = state.WithRole(Role.Accomplice);
+
+        var nothing = () => state.Run(accomplice, new TeamSuggest());
+        nothing.Should().Throw<GameRuleException>();
+        var outside = () => state.Run(accomplice, new TeamSuggest(Avoid: [new BoardCellRef(9, 0)]));
+        outside.Should().Throw<GameRuleException>();
+        var both = () => state.Run(accomplice, new TeamSuggest(Columns: [1, 1, 1, 1], Avoid: [new BoardCellRef(0, 1)]));
+        both.Should().Throw<GameRuleException>();
+    }
+
+    [Fact]
+    public void Night_KillerTimesOut_AvoidOnlySuggestion_FallsBackToRandom()
+    {
+        var state = TestGame.Create(players: 7);
+        state.AckAll();
+        state.Run(state.WithRole(Role.Accomplice), new TeamSuggest(Avoid: [new BoardCellRef(0, 0)]));
+
+        GameEngine.Timeout(state);
+
+        state.Truth.Should().HaveCount(state.Board.Count);
+    }
+}

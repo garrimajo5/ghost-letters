@@ -139,6 +139,9 @@ public sealed class TeamSuggestion
 {
     public List<int>? Columns { get; init; }
 
+    /// <summary>Карты, которые Сообщник советует ночью не брать.</summary>
+    public List<BoardCellRef>? Avoid { get; init; }
+
     public Guid? Target { get; init; }
 
     public Role? Guess { get; init; }
