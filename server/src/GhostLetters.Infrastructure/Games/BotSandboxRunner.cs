@@ -15,6 +15,12 @@ public sealed record SandboxReport(int Format, string EngineVersion, string Scen
     bool? Passed, int CorrectRows, int TotalRows, string? Winner, long ElapsedMs, IReadOnlyList<SandboxSeat> Seats,
     IReadOnlyList<SandboxMessage> Messages, IReadOnlyList<SandboxFrame> Frames);
 
+/// <summary>
+/// Состав серийного прогона: число игроков, раунды (null — как в лобби по умолчанию), роли и нужны ли снимки
+/// каждого шага (для просмотра в кабинете; серия баланса без них в разы быстрее).
+/// </summary>
+public sealed record SandboxOptions(int Players = 6, int? Rounds = 3, RoleOptions? Roles = null, bool Frames = true);
+
 /// <summary>Isolated engine: no users, live games, ratings, relationships or persistence services.</summary>
 public static class BotSandboxRunner
 {
@@ -22,19 +28,27 @@ public static class BotSandboxRunner
     public const int MaxSteps = 600;
     private static Guid StableId(int seed, int seat) => new(SHA256.HashData(Encoding.UTF8.GetBytes($"sandbox-v1:{seed}:{seat}"))[..16]);
 
-    public static SandboxReport Run(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct)
+    public static SandboxReport Run(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct) =>
+        Simulate(scenario, seed, deck, tags, ct).Report;
+
+    /// <summary>Прогон с итоговым состоянием партии (роли, исход) — для серий баланса.</summary>
+    public static (SandboxReport Report, GameState State) Simulate(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags,
+        CancellationToken ct, SandboxOptions? options = null)
     {
         if (!Scenarios.Contains(scenario)) throw new ArgumentException("Unknown scenario", nameof(scenario));
+        var custom = options is not null && scenario == "full-game";
+        options ??= new SandboxOptions();
         var watch = Stopwatch.StartNew();
-        var count = scenario == "witness-reveal" ? 7 : 6;
+        var count = custom ? options.Players : scenario == "witness-reveal" ? 7 : 6;
+        var maxSteps = custom ? Math.Max(MaxSteps, 160 * (options.Rounds ?? 4) + 60 * count) : MaxSteps;
         var seats = Enumerable.Range(0, count).Select(i => {
             var preset = BotPresets.All[i % BotPresets.All.Count];
             return new SandboxSeat(StableId(seed, i), $"Бот {preset.Name} {i + 1}", preset.P.Clamped());
         }).ToList();
         var names = seats.ToDictionary(s => s.Id, s => s.Name);
         var state = GameEngine.Create(StableId(seed, -1), seats.Select(s => s.Id).ToList(), new GameSettings {
-            Rounds = 3, Discussion = DiscussionMode.FreeChat, Ranked = false,
-            Roles = new RoleOptions(KillerEnabled: scenario != "clear-hints")
+            Rounds = custom ? options.Rounds : 3, Discussion = DiscussionMode.FreeChat, Ranked = false,
+            Roles = custom ? options.Roles ?? new RoleOptions() : new RoleOptions(KillerEnabled: scenario != "clear-hints")
         }, deck.Order(StringComparer.Ordinal).ToList(), seed);
         var messages = new List<SandboxMessage>();
         var frames = new List<SandboxFrame>();
@@ -43,9 +57,13 @@ public static class BotSandboxRunner
         var clock = DateTimeOffset.UnixEpoch;
         string? error = null;
         var status = "completed";
-        void Capture(string action, Guid? actor = null, GameCommand? command = null, PlayerView? observation = null) => frames.Add(new(
+        void Capture(string action, Guid? actor = null, GameCommand? command = null, PlayerView? observation = null)
+        {
+            if (options.Frames) frames.Add(Frame(action, actor, command, observation));
+        }
+        SandboxFrame Frame(string action, Guid? actor, GameCommand? command, PlayerView? observation) => new(
             action, actor, command is null ? null : JsonSerializer.SerializeToElement(command, command.GetType(), GameJson.Options),
-            GameJson.Deserialize<GameState>(GameJson.Serialize(state)), observation, messages.Count));
+            GameJson.Deserialize<GameState>(GameJson.Serialize(state)), observation, messages.Count);
         void Say(Guid actor, string text, IReadOnlyList<string> cards, IReadOnlyList<string> notes)
         {
             messages.Add(new(actor, state.Round, text, cards, notes, clock));
@@ -92,7 +110,7 @@ public static class BotSandboxRunner
             Say(witness.Id, "Я Свидетель.", [], []);
         }
         Capture("Начальное состояние");
-        for (var step = 0; status == "completed" && state.Result is null && step < MaxSteps; step++)
+        for (var step = 0; status == "completed" && state.Result is null && step < maxSteps; step++)
         {
             ct.ThrowIfCancellationRequested();
             if (watch.Elapsed > TimeSpan.FromSeconds(15)) { status = "limit"; error = "Превышен лимит времени симуляции."; break; }
@@ -149,8 +167,8 @@ public static class BotSandboxRunner
             _ => null
         };
         if (status == "invalid-scenario") passed = null;
-        return new(1, typeof(BotSandboxRunner).Assembly.ManifestModule.ModuleVersionId.ToString(), scenario, seed, status, error,
-            passed, rows.Count(r => r.Correct), rows.Count, state.Result?.Side.ToString(), watch.ElapsedMilliseconds, seats, messages, frames);
+        return (new(1, typeof(BotSandboxRunner).Assembly.ManifestModule.ModuleVersionId.ToString(), scenario, seed, status, error,
+            passed, rows.Count(r => r.Correct), rows.Count, state.Result?.Side.ToString(), watch.ElapsedMilliseconds, seats, messages, frames), state);
     }
 
     private static BotMind Mind(SandboxSeat seat, PlayerView view, IReadOnlyDictionary<Guid, string> names, IReadOnlyList<SandboxMessage> messages, IReadOnlyList<Accusation> parsedAccusations)

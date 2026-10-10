@@ -169,6 +169,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
     {
         var view = GameProjection.For(state, botId);
+        // Боту нечего делать (ночь чужой команды, ждёт других, не его слово) — не собираем «мнение»:
+        // это пять запросов к базе и разбор всего чата партии на каждом такте.
+        var ghostDebrief = state.Result is not null && view.Me?.Role == Role.Ghost;
+        var mayTalk = state.Phase == Phase.Discussion && view.Me is { } me && me.Role != Role.Ghost;
+        var mayTable = state.Phase is Phase.Discussion or Phase.Voting && view.Table is { CanPost: true };
+        if (!ghostDebrief && !mayTalk && !mayTable && !BotPlayer.HasMove(view)) return false;
         var mind = await MindAsync(state, botId, ct);
         if (state.Result is not null && view.Me?.Role == Role.Ghost &&
             await DebriefAsync(state, botId, mind, ct) is { } debrief) return debrief;
@@ -229,10 +235,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Table && m.Round == state.Round)
             .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
             .Select(m => new BotThought(m.CreatedAt, m.CardIds, m.CardNotes)).ToListAsync(ct);
+        // Пауза между шагами — без расчёта версии: такт идёт раз в 1,5 с, шаг — раз в 6 с.
+        if (!BotTable.Due(recent, time.GetUtcNow()))
+            return (false, state.Phase == Phase.Discussion && recent.Count < BotTable.MaxStepsPerRound);
         var plan = BotPlayer.Plan(view, tags, mind, BotTable.Random(state, botId));
         var step = BotTable.Next(view, tags, mind, plan, recent);
         if (step is null) return (false, false);
-        if (!BotTable.Due(recent, time.GetUtcNow())) return (false, true);
         try
         {
             if (step.Ops.Count > 0)
