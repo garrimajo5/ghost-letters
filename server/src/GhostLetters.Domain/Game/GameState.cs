@@ -131,6 +131,7 @@ public sealed partial class GameState
     /// <summary>Игроки, кроме Призрака, по местам.</summary>
     [JsonIgnore]
     public IEnumerable<PlayerState> Investigators => Players.Where(p => p.Role != Role.Ghost).OrderBy(p => p.Seat);
+    public IEnumerable<PlayerState> EligibleVoters => Investigators.Where(p => !Arrested.Contains(p.Id));
 }
 
 /// <summary>Подсказка Сообщника: карты ночью или игрок на охоте.</summary>

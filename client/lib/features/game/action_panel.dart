@@ -386,6 +386,8 @@ class ActionPanel extends StatelessWidget {
           const SizedBox(height: 8),
           TextButton(onPressed: () => screen.send('CastVote', {'column': null, 'suspect': null}), child: const Text('Воздержаться')),
         ]);
+      } else if (finale.arrested.contains(v.me?.id)) {
+        widgets.add(const Text('Вы арестованы и больше не участвуете в голосовании.', style: TextStyle(color: AppColors.muted)));
       } else if (finale.hasMyVote) {
         widgets.add(const Padding(
           padding: EdgeInsets.only(top: 6),
@@ -962,7 +964,7 @@ class _VotersProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final v = screen.view!;
-    final voters = v.players.where((p) => !p.isGhost).toList()..sort((a, b) => a.seat.compareTo(b.seat));
+      final voters = v.players.where((p) => !p.isGhost && !(v.finale?.arrested.contains(p.id) ?? false)).toList()..sort((a, b) => a.seat.compareTo(b.seat));
     if (voters.isEmpty) return const SizedBox.shrink();
     final done = voters.where((p) => p.hasActed).length;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

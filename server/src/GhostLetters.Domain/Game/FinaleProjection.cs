@@ -124,7 +124,7 @@ public static class FinaleProjection
 
     internal static void AddAllowedCommands(GameState state, PlayerState viewer, bool done, List<string> list)
     {
-        var investigator = viewer.Role != Role.Ghost;
+        var investigator = viewer.Role != Role.Ghost && !state.Arrested.Contains(viewer.Id);
         switch (state.Phase)
         {
             case Phase.Voting when investigator && !done:
