@@ -20,6 +20,7 @@ public sealed class BotBalanceTests
         new("4 игрока", new SandboxOptions(4, null, null, false)),
         new("5 игроков", new SandboxOptions(5, null, null, false)),
         new("6 игроков", new SandboxOptions(6, null, null, false)),
+        new("6 игроков без Убийцы (контроль: никто не врёт)", new SandboxOptions(6, null, new RoleOptions(KillerEnabled: false), false)),
         new("6 игроков, +1 Сообщник", new SandboxOptions(6, null, new RoleOptions(ExtraAccomplices: 1), false)),
         new("7 игроков (Сообщник, Свидетель)", new SandboxOptions(7, null, null, false)),
         new("8 игроков, +Шантажист", new SandboxOptions(8, null, new RoleOptions(UseBlackmailer: true), false)),
@@ -68,14 +69,17 @@ public sealed class BotBalanceTests
         var roleWins = new Dictionary<Role, (int Games, int Wins)>();
         var presetWins = new Dictionary<string, (int Games, int Wins, int DetGames, int DetWins, int KillGames, int KillWins)>();
         md.AppendLine("## Исход по составам").AppendLine();
-        md.AppendLine("| Состав | Партий | Детективы | Убийца | Шантажист | Никто | Ряды угаданы | Убийца пойман | Охота удалась | Сбои | мс / партия |");
-        md.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|");
+        md.AppendLine("| Состав | Партий | Детективы | Убийца | Шантажист | Никто | Ряды угаданы | Все ряды | Убийца пойман | Охота удалась | Сбои | мс / партия |");
+        md.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
+        var spreads = new List<string>();
         foreach (var config in Configs)
         {
             var sides = new Dictionary<WinningSide, int>();
             int correct = 0, rows = 0, caught = 0, hunts = 0, huntOk = 0, failed = 0, finished = 0;
             long ms = 0;
             var failures = new List<string>();
+            var spread = new int[6];
+            var allRows = 0;
             for (var seed = 1; seed <= games; seed++)
             {
                 var (report, state) = BotSandboxRunner.Simulate("full-game", seed, Deck, tags, CancellationToken.None, config.Options);
@@ -90,6 +94,8 @@ public sealed class BotBalanceTests
                 finished++;
                 sides[result.Side] = sides.GetValueOrDefault(result.Side) + 1;
                 correct += report.CorrectRows;
+                spread[Math.Min(report.CorrectRows, 5)]++;
+                if (report.TotalRows > 0 && report.CorrectRows == report.TotalRows) allRows++;
                 rows += report.TotalRows;
                 if (result.KillerCaught) caught++;
                 if (state.Hunt is { } hunt) { hunts++; if (hunt.Success) huntOk++; }
@@ -112,12 +118,18 @@ public sealed class BotBalanceTests
             string Share(int n) => finished == 0 ? "—" : Pct(n, finished);
             md.AppendLine($"| {config.Name} | {games} | {Share(sides.GetValueOrDefault(WinningSide.Detectives))} | " +
                 $"{Share(sides.GetValueOrDefault(WinningSide.Killer))} | {Share(sides.GetValueOrDefault(WinningSide.Blackmailer))} | " +
-                $"{Share(sides.GetValueOrDefault(WinningSide.Nobody))} | {(rows == 0 ? "—" : Pct(correct, rows))} | {Share(caught)} | " +
+                $"{Share(sides.GetValueOrDefault(WinningSide.Nobody))} | {(rows == 0 ? "—" : Pct(correct, rows))} | {Share(allRows)} | {Share(caught)} | " +
                 $"{(hunts == 0 ? "—" : $"{Pct(huntOk, hunts)} из {hunts}")} | {failed} | {ms / Math.Max(1, games)} |");
-            foreach (var f in failures) md.AppendLine($"|  ↳ сбой: {f.Replace("|", "/")} |||||||||||");
+            foreach (var f in failures) md.AppendLine($"|  ↳ сбой: {f.Replace("|", "/")} ||||||||||||");
+            spreads.Add($"| {config.Name} | " + string.Join(" | ", spread.Take(5).Select(n => Share(n))) + " |");
         }
 
-        md.AppendLine().AppendLine("Погрешность при 100 партиях — около ±10 п.п. на долю 50 %.").AppendLine();
+        md.AppendLine().AppendLine($"Погрешность при {games} партиях — около ±{Math.Round(100 / Math.Sqrt(games))} п.п. на долю 50 %. " +
+            "Дело раскрыто, если угаданы все ряды (или все, кроме одного, при пойманном Убийце).").AppendLine();
+        md.AppendLine("## Сколько рядов угадано за партию").AppendLine();
+        md.AppendLine("| Состав | 0 | 1 | 2 | 3 | 4 |").AppendLine("|---|---|---|---|---|---|");
+        foreach (var line in spreads) md.AppendLine(line);
+        md.AppendLine();
         md.AppendLine("## Победы по ролям (все составы вместе)").AppendLine();
         md.AppendLine("| Роль | В партиях | Побед |").AppendLine("|---|---|---|");
         foreach (var (role, (g, w)) in roleWins.OrderBy(r => r.Key)) md.AppendLine($"| {role} | {g} | {Pct(w, g)} |");
