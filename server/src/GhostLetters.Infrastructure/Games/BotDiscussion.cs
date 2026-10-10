@@ -127,7 +127,9 @@ public static class BotDiscussion
         bool AddressedElsewhere(DiscussionLine m) => mind.Names.Keys.Any(id => id != me.Id && Addresses(m, id));
         // A question can arrive before this bot's opening summary. Do not lose it
         // merely because the summary was sent later; only an answer consumes it.
-        var pending = messages.Where(m => m.Author != me.Id && m.Text.Contains('?') &&
+        var pending = messages.Where(m => m.Author != me.Id && (m.Text.Contains('?') ||
+            (m.Text.Contains("верси", StringComparison.OrdinalIgnoreCase) &&
+             new[] { "назови", "покажи", "повтори", "расскажи" }.Any(word => m.Text.Contains(word, StringComparison.OrdinalIgnoreCase)))) &&
             (Addressed(m) || (!AddressedElsewhere(m) && Who.IsMatch(m.Text) && m.Text.Contains("голос", StringComparison.OrdinalIgnoreCase)))).ToList();
         // Each reply consumes just the latest pending question from that player at
         // the time of the reply, not every earlier question by the same author.

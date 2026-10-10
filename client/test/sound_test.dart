@@ -11,6 +11,24 @@ import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 void main() {
+  test('typing respects mute, voice, recording and lifecycle', () {
+    final output = FakeSoundOutput();
+    final sound = Sound(output, const SoundSettings())..unlock();
+    sound.play(Sfx.typing);
+    expect(output.effects, [Sfx.typing]);
+    sound.playingVoice(true);
+    sound.play(Sfx.typing);
+    sound.playingVoice(false);
+    sound.recording(true);
+    sound.play(Sfx.typing);
+    sound.recording(false);
+    sound.active(false);
+    sound.play(Sfx.typing);
+    sound.active(true);
+    sound.configure(const SoundSettings(effects: false));
+    sound.play(Sfx.typing);
+    expect(output.effects, [Sfx.typing]);
+  });
   test('settings persist and disabled music never starts', () async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();

@@ -47,3 +47,7 @@ Open **Звук и музыка** with the home screen speaker button or the gam
 
 Game cues use differences between live snapshots, with one prioritized cue per change. Initial loads, duplicate snapshots and reconnect baselines remain silent.
 
+
+## Typing click
+
+`sfx/typing.mp3`: original procedurally synthesized 32 ms noise click, generated for this project, CC0-1.0. No external samples. Played quietly through the personal effects controls.

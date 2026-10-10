@@ -8,6 +8,7 @@ import 'session.dart';
 enum Music { menu, game }
 
 enum Sfx {
+  typing,
   phase,
   yourTurn,
   letterSent,
@@ -144,11 +145,12 @@ class Sound {
   }
 
   void play(Sfx effect) {
+    if (effect == Sfx.typing && (_recording || _playingVoice)) return;
     if (_unlocked &&
         _active &&
         settings.effects &&
         settings.effectsVolume > 0) {
-      output.effect(effect, settings.effectsVolume);
+      output.effect(effect, settings.effectsVolume * (effect == Sfx.typing ? .15 : 1));
     }
   }
 }
@@ -166,6 +168,7 @@ class PlayerSoundOutput implements SoundOutput {
   bool _running = false;
   bool _disposed = false;
   DateTime? _lastEffect;
+  Sfx? _lastEffectKind;
   int _effectGeneration = 0;
 
   @override
@@ -222,11 +225,16 @@ class PlayerSoundOutput implements SoundOutput {
   void effect(Sfx effect, double volume) {
     if (_disposed) return;
     final now = DateTime.now();
+    if (effect == Sfx.typing && _lastEffectKind != Sfx.typing &&
+        _lastEffect != null && now.difference(_lastEffect!) < const Duration(milliseconds: 800)) {
+      return;
+    }
     if (_lastEffect != null &&
         now.difference(_lastEffect!) < const Duration(milliseconds: 150)) {
       return;
     }
     _lastEffect = now;
+    _lastEffectKind = effect;
     unawaited(_playEffect(effect, volume, ++_effectGeneration));
   }
 

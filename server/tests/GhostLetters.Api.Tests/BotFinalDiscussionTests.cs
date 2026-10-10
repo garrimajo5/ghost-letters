@@ -7,6 +7,17 @@ namespace GhostLetters.Api.Tests;
 
 public sealed class BotFinalDiscussionTests
 {
+    [Fact]
+    public void DirectRequestWithoutQuestionMarkRepeatsPublicVersion()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var result = BotDiscussion.Compose(View, Tags, Mind,
+            [new(Me, "Моя версия", ["knife"], now),
+             new(Ann, "Бот Я, покажи свою версию", [], now.AddSeconds(1))], new Random(1));
+        result.Should().NotBeNull();
+        result!.Value.Text.Should().Contain("по всей версии");
+        result.Value.Cards.Should().NotBeEmpty();
+    }
     private static readonly Guid Me = Guid.NewGuid(), Ann = Guid.NewGuid(), Ghost = Guid.NewGuid();
     private static readonly CardTags Tags = new(new Dictionary<string, HashSet<string>>
     {

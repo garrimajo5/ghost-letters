@@ -114,10 +114,21 @@ public sealed class CardTags
             if (common.Any(t => Group(t) == group) && weight > 0 && details < 1)
             {
                 var selected = common.Where(t => Group(t) == group)
-                    .OrderByDescending(t => Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings))).First();
+                    .OrderByDescending(t => FeatureLabel(t) is not null ||
+                        _meanings.GetValueOrDefault(a)?.Any(m => m.Tag == t && m.Label != t) == true ||
+                        _meanings.GetValueOrDefault(b)?.Any(m => m.Tag == t && m.Label != t) == true)
+                    .ThenByDescending(t => Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings)))
+                    .ThenBy(t => t, StringComparer.Ordinal).First();
                 var meaning = _meanings.GetValueOrDefault(a)?.FirstOrDefault(m => m.Tag == selected)
                     ?? _meanings.GetValueOrDefault(b)?.FirstOrDefault(m => m.Tag == selected);
-                var text = group == 0 && meaning is not null ? "по смыслу: " + meaning.Label : label;
+                var feature = FeatureLabel(selected);
+                var text = group == 0 && meaning is not null && meaning.Label != selected
+                    ? "по смыслу: " + meaning.Label
+                    : feature is not null ? (group == 0 ? "по смыслу: " : group == 1 ? "по форме: " : "по цвету: ") + feature
+                    : null;
+                // Unknown technical tags are not a concrete explanation.
+                // Prefer another shared feature with a known, human-readable name.
+                if (text is null) continue;
                 reasons.Add((weight * (1 - details) * Math.Min(Salience(a, selected, secondaryMeanings), Salience(b, selected, secondaryMeanings)), text));
             }
         }
@@ -131,6 +142,51 @@ public sealed class CardTags
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
     }
+
+    private static string? FeatureLabel(string tag)
+    {
+        var key = tag.StartsWith("dominant-", StringComparison.Ordinal) ? tag[9..] :
+            tag.StartsWith("accent-", StringComparison.Ordinal) ? tag[7..] : tag;
+        return FeatureLabels.GetValueOrDefault(key);
+    }
+
+    private static readonly IReadOnlyDictionary<string, string> FeatureLabels = new Dictionary<string, string>
+    {
+        ["music"] = "музыка и музыкальные инструменты", ["sound"] = "звук",
+        ["red"] = "красный акцент", ["blue"] = "синий акцент", ["green"] = "зелёный акцент",
+        ["yellow"] = "жёлтый акцент", ["black"] = "чёрный акцент", ["white"] = "белый акцент",
+        ["brown"] = "коричневый акцент", ["gold"] = "золотой акцент", ["silver"] = "серебристый акцент",
+        ["orange"] = "оранжевый акцент", ["pink"] = "розовый акцент", ["purple"] = "фиолетовый акцент",
+        ["gray"] = "серый акцент", ["grey"] = "серый акцент",
+        ["water"] = "вода", ["sea"] = "море", ["fire"] = "огонь", ["weapon"] = "оружие",
+        ["animal"] = "животные", ["bird"] = "птицы", ["flower"] = "цветы", ["plant"] = "растения",
+        ["death"] = "смерть", ["danger"] = "опасность", ["love"] = "любовь", ["heart"] = "сердце",
+        ["travel"] = "путешествия", ["transport"] = "транспорт", ["food"] = "еда", ["drink"] = "напитки",
+        ["writing"] = "письмо и письменные принадлежности", ["book"] = "книги", ["time"] = "время",
+        ["clock"] = "часы", ["key"] = "ключи", ["lock"] = "замки и запирание", ["money"] = "деньги",
+        ["magic"] = "магия", ["light"] = "свет", ["dark"] = "темнота", ["house"] = "дом",
+        ["building"] = "здания", ["royal"] = "королевская власть", ["crown"] = "корона",
+        ["metal"] = "металл", ["wood"] = "дерево как материал", ["glass"] = "стекло",
+        ["stone"] = "камень", ["paper"] = "бумага", ["fabric"] = "ткань",
+        ["shape-round"] = "круглая форма", ["shape-long"] = "вытянутая форма",
+        ["shape-square"] = "квадратная форма", ["shape-triangle"] = "треугольная форма",
+        ["shape-rectangle"] = "прямоугольная форма", ["shape-curved"] = "изогнутая форма",
+        ["shape-compact"] = "компактный силуэт", ["shape-spiky"] = "острые выступы",
+        ["shape-tall"] = "высокий вытянутый силуэт", ["shape-wide"] = "широкий силуэт",
+        ["shape-diagonal"] = "предмет расположен по диагонали",
+        ["tool"] = "инструменты", ["old"] = "старинные предметы", ["nature"] = "природа",
+        ["clothes"] = "одежда", ["clothing"] = "одежда", ["toy"] = "игрушки",
+        ["insect"] = "насекомые", ["war"] = "война", ["jewelry"] = "украшения",
+        ["container"] = "ёмкости для хранения", ["drinkware"] = "посуда для напитков",
+        ["science"] = "наука", ["sport"] = "спорт", ["religion"] = "религия",
+        ["game"] = "игры", ["medical"] = "медицина", ["medicine"] = "медицина",
+        ["tech"] = "техника", ["home"] = "домашний быт", ["art"] = "искусство",
+        ["east"] = "восточная культура", ["kitchen"] = "кухня", ["poison"] = "яд",
+        ["occult"] = "оккультизм", ["crime"] = "преступление", ["gothic"] = "готика",
+        ["cold"] = "холод", ["retro"] = "ретро", ["car"] = "автомобили",
+        ["statue"] = "скульптуры", ["leather"] = "кожа как материал",
+        ["round"] = "круглые предметы", ["sharp"] = "острые предметы", ["colorful"] = "многоцветность",
+    };
 
     /// <summary>Цвета и форма отделены от смысла; цвет связывает карты только через dominant-*.</summary>
     private static readonly HashSet<string> Colors =
