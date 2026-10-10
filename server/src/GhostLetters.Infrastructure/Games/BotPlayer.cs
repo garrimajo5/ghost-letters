@@ -68,9 +68,14 @@ public static class BotPlayer
         view.Me is { } me ? new Brain(view, me, new Random(0), tags, mind).Evidence(card) : 0;
 
     /// <summary>Версия по всем рядам: те же улики, характер и мнения, что при голосовании.</summary>
-    public static IReadOnlyList<int> Plan(PlayerView view, CardTags tags, BotMind? mind, Random rng) =>
-        view.Me is { } me ? view.Board.Select((row, r) => new Brain(view, me, rng, tags, mind)
-            .RowVote(new VoteStageView(0, VoteStageKind.Row, r, 1, Enumerable.Range(0, row.Cards.Count).ToList(), [])) ?? 0).ToList() : [];
+    public static IReadOnlyList<int> Plan(PlayerView view, CardTags tags, BotMind? mind, Random rng)
+    {
+        if (view.Me is not { } me) return [];
+        // All rows share the same immutable role projection and evidence for this decision.
+        var brain = new Brain(view, me, rng, tags, mind);
+        return view.Board.Select((row, r) => brain
+            .RowVote(new VoteStageView(0, VoteStageKind.Row, r, 1, Enumerable.Range(0, row.Cards.Count).ToList(), [])) ?? 0).ToList();
+    }
 
     public static string DiscussionSuspicion(PlayerView view, CardTags tags, BotMind mind, Random rng) =>
         view.Me is { } me ? new Brain(view, me, rng, tags, mind).Accusation() : "";
