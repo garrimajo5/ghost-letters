@@ -1466,6 +1466,22 @@ class _Dock extends StatelessWidget {
             _ChatButton(screen: screen),
           ],
         ]),
+          if (v.can('Nominate') || v.can('AwardVote'))
+            TextButton.icon(
+              key: const Key('skip-award-action'),
+              onPressed: () => v.can('Nominate')
+                  ? screen.send('Nominate', {'code': null, 'nominee': null})
+                  : screen.send('AwardVote', {'entry': null}),
+              icon: const Icon(Icons.skip_next),
+              label: const Text('Пропустить'),
+            ),
+          if (v.phase == 'Finished')
+            OutlinedButton.icon(
+              key: const Key('finished-main-menu'),
+              onPressed: () => context.go('/'),
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('В главное меню'),
+            ),
       ]),
     );
   }

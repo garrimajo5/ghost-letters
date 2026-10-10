@@ -21,12 +21,13 @@ public static partial class GameEngine
             case ReadyRevote:
                 RequirePhase(state, Phase.VoteTie);
                 RequireInvestigator(actor);
+                RequireNotArrested(state, actor);
                 if (state.Done.Add(actor.Id))
                 {
                     events.Add(new GameEvent("ReadyRevote", actor.Id));
                 }
 
-                if (state.Investigators.All(p => state.Done.Contains(p.Id)))
+                if (state.EligibleVoters.All(p => state.Done.Contains(p.Id)))
                 {
                     SetPhase(state, Phase.Voting, events);
                 }
@@ -78,7 +79,7 @@ public static partial class GameEngine
         switch (state.Phase)
         {
             case Phase.Voting:
-                foreach (var p in state.Investigators.Where(x => !state.Done.Contains(x.Id)).ToList())
+                foreach (var p in state.EligibleVoters.Where(x => !state.Done.Contains(x.Id)).ToList())
                 {
                     ApplyVote(state, p, new CastVote(null, null), events);
                 }
@@ -214,8 +215,15 @@ public static partial class GameEngine
             (p.Role != Role.Ghost || state.Settings.Roles.RandomKillerOmission) && !state.Arrested.Contains(p.Id)).Select(p => p.Id).ToList(),
     };
 
+    private static void RequireNotArrested(GameState state, PlayerState player)
+    {
+        if (state.Arrested.Contains(player.Id))
+            throw GameRuleException.NotAllowed("Арестованный игрок больше не участвует в голосовании.");
+    }
+
     private static void ApplyVote(GameState state, PlayerState voter, CastVote vote, List<GameEvent> events)
     {
+        RequireNotArrested(state, voter);
         if (state.Done.Contains(voter.Id))
         {
             throw GameRuleException.NotAllowed("Голос на этом этапе уже отдан.");
@@ -257,7 +265,7 @@ public static partial class GameEngine
         state.Done.Add(voter.Id);
         events.Add(new GameEvent(abstain ? "VoteAbstained" : "VoteCast", voter.Id));
 
-        if (state.Investigators.All(p => state.Done.Contains(p.Id)))
+        if (state.EligibleVoters.All(p => state.Done.Contains(p.Id)))
         {
             TallyVotes(state, events);
         }

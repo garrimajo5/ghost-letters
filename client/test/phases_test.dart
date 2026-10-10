@@ -67,6 +67,31 @@ Future<void> tapCta(WidgetTester tester) async {
 }
 
 void main() {
+  for (final stage in [('AwardNomination', 'Nominate'), ('AwardVoting', 'AwardVote')]) {
+    testWidgets('нижняя кнопка пропуска наград: ${stage.$1}', (tester) async {
+      final app = await openGame(tester, phaseSnapshot(stage.$1, [stage.$2], finale: {'currentStage': null, 'result': result}));
+      tester.view.physicalSize = const Size(480, 1350);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('skip-award-action')));
+      await tester.pumpAndSettle();
+      expect(lastCommand(app)[0], stage.$2);
+      expect(lastCommand(app)[1], stage.$2 == 'Nominate' ? {'code': null, 'nominee': null} : {'entry': null});
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('после наград доступны реванш и главное меню', (tester) async {
+    await openGame(tester, phaseSnapshot('Finished', const ['Like'], finale: {'currentStage': null, 'result': result}));
+    expect(find.text('РЕВАНШ'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('finished-main-menu')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('create-lobby')), findsOneWidget);
+  });
+  testWidgets('арестованный сообщник не голосует и не учитывается в ожидании', (tester) async {
+    await openGame(tester, phaseSnapshot('Voting', const [], role: 'Accomplice', finale: {'arrested': ['u2']}));
+    expect(find.text('Вы арестованы и больше не участвуете в голосовании.'), findsOneWidget);
+    expect(find.text('Воздержаться'), findsNothing);
+    expect(find.text('Проголосовали 0 из 1'), findsOneWidget);
+  });
   // Каждая фаза отрисовывается без ошибок и показывает понятную подсказку.
   final cases = <String, (GameSnapshot, String)>{
     'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'ВАША РОЛЬ'),

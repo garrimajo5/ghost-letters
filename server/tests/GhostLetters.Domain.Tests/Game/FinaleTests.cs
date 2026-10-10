@@ -204,6 +204,9 @@ public class FinaleTests
         state.CurrentVoteStage!.CandidateSuspects.Should().HaveCount(5).And.NotContain(accomplice.Id);
         GameProjection.For(state, state.WithRole(Role.Detective).Id).Finale!.Outcomes.Last()
             .RevealedRole.Should().Be(Role.Accomplice);
+        GameProjection.For(state, accomplice.Id).AllowedCommands.Should().NotContain(nameof(CastVote));
+        var arrestedVote = () => state.Run(accomplice, new CastVote(null, null));
+        arrestedVote.Should().Throw<GameRuleException>();
 
         state.VoteKiller(state.WithRole(Role.Detective));
         state.Run(state.WithRole(Role.Killer), new HuntPick(state.WithRole(Role.Detective).Id));
@@ -211,6 +214,24 @@ public class FinaleTests
         state.Result!.Side.Should().Be(WinningSide.Killer);
         state.Result.Winners.Should().BeEquivalentTo(new[] { state.WithRole(Role.Killer).Id, accomplice.Id },
             "арестованный Сообщник побеждает вместе с командой Убийцы");
+    }
+
+    [Fact]
+    public void ArrestedAccomplice_IsSkippedOnTimeoutAndRevote()
+    {
+        var state = FinaleGame.ToVoting(players: 7);
+        state.VoteAllRows(Wrong);
+        var accomplice = state.WithRole(Role.Accomplice);
+        state.VoteKiller(accomplice);
+        var stage = state.VoteStageIndex;
+        GameEngine.Timeout(state);
+        state.VoteRecords.Where(v => v.Stage == stage).Should().NotContain(v => v.Voter == accomplice.Id);
+        state.Phase.Should().Be(Phase.VoteTie);
+        GameProjection.For(state, accomplice.Id).AllowedCommands.Should().NotContain(nameof(ReadyRevote));
+        var ready = () => state.Run(accomplice, new ReadyRevote());
+        ready.Should().Throw<GameRuleException>();
+        foreach (var voter in state.EligibleVoters.ToList()) state.Run(voter, new ReadyRevote());
+        state.Phase.Should().Be(Phase.Voting);
     }
 
     [Fact]
@@ -533,7 +554,7 @@ internal static class FinaleGame
     public static void VoteKiller(this GameState state, PlayerState suspect)
     {
         state.CurrentVoteStage!.Kind.Should().Be(VoteStageKind.Killer);
-        foreach (var p in state.Investigators.ToList())
+        foreach (var p in state.EligibleVoters.ToList())
         {
             state.Run(p, p.Id == suspect.Id ? new CastVote(null, null) : new CastVote(null, suspect.Id));
         }
