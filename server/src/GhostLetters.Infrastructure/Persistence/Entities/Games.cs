@@ -89,6 +89,9 @@ public static class ChatChannels
 {
     public const string Public = "public";
     public const string KillerTeam = "killer_team";
+
+    /// <summary>Ход мысли ботов у доски улик: видят все, включая Призрака и зрителей; пишет только сервер.</summary>
+    public const string Table = "table";
 }
 
 public static class ChatKinds

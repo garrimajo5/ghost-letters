@@ -192,6 +192,51 @@ mixin _EvidenceBoard on State<_DossierTable> {
     return lines;
   }
 
+  /// Мысли ботов этого раунда (канал table).
+  List<ChatMessage> get _roundThoughts => [for (final m in screen.thoughts) if (m.round == _bv.round) m];
+
+  /// Карты последней мысли бота — на них голубое кольцо фокуса (экран D02).
+  bool _focused(String card) => _roundThoughts.lastOrNull?.cardIds.contains(card) == true;
+
+  static final _focusDecoration = BoxDecoration(
+    border: Border.all(color: AppColors.ice, width: 3), borderRadius: BorderRadius.circular(10),
+    boxShadow: [BoxShadow(color: AppColors.ice.withValues(alpha: .35), blurRadius: 12, spreadRadius: 2)]);
+
+  /// Бот думает вслух: кто, что делает сейчас и последние шаги с относительным временем.
+  Widget _botThinking() {
+    final list = _roundThoughts;
+    if (list.isEmpty) return const SizedBox.shrink();
+    final last = list.last;
+    final author = last.authorId;
+    final shown = list.length > 5 ? list.sublist(list.length - 5) : list;
+    final start = shown.first.createdAt;
+    return Container(key: const Key('bot-thinking'), margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(decoration: BoxDecoration(shape: BoxShape.circle,
+              boxShadow: [BoxShadow(color: AppColors.ice.withValues(alpha: .45), spreadRadius: 3)]),
+            child: Avatar(nickname: screen.nick(author), color: screen.colorOf(author), photoId: screen.photoOf(author), size: 36)),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${screen.nick(author)} · бот у доски', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+            Semantics(liveRegion: true, child: Text(last.text ?? '', key: const Key('bot-presence'),
+              style: const TextStyle(fontSize: 14, height: 1.35, color: AppColors.ice))),
+          ])),
+        ]),
+        const SizedBox(height: 10),
+        Text('ХОД МЫСЛИ · ВИДЕН ВСЕМ НА СТОЛЕ', style: sectionLabel(color: AppColors.dim)),
+        for (var i = 0; i < shown.length; i++) Padding(padding: const EdgeInsets.only(top: 4), child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(width: 44, child: Text('+${shown[i].createdAt.difference(start).inSeconds} с',
+              style: heading(12, color: AppColors.dim))),
+            Expanded(child: Text('${screen.nick(shown[i].authorId)}: ${shown[i].text ?? ''}',
+              style: TextStyle(fontSize: 12, height: 1.35, color: i == shown.length - 1 ? AppColors.text : AppColors.dim))),
+          ])),
+      ]));
+  }
+
   /// Булавки, проверки и подсветка поверх карты поля; перехватывает нажатие, когда улика в руке.
   Widget _boardOverlay(String id, Widget child) {
     final cell = _cell(id);
@@ -223,6 +268,7 @@ mixin _EvidenceBoard on State<_DossierTable> {
           borderRadius: BorderRadius.circular(10)),
         child: w);
     }
+    if (_focused(id) && !conflict) w = Container(key: ValueKey('table-focus-$id'), foregroundDecoration: _focusDecoration, child: w);
     if (dimmed) w = Opacity(opacity: .35, child: w);
     return GestureDetector(key: ValueKey('table-card-$id'),
       onTap: _intercepting ? () => _tapBoardCard(id) : null, child: w);
@@ -238,7 +284,7 @@ mixin _EvidenceBoard on State<_DossierTable> {
       child: AnimatedContainer(duration: const Duration(milliseconds: 150),
         transform: Matrix4.translationValues(0, held ? -4 : 0, 0),
         foregroundDecoration: held ? BoxDecoration(border: Border.all(color: AppColors.amber, width: 3),
-          borderRadius: BorderRadius.circular(9)) : null,
+          borderRadius: BorderRadius.circular(9)) : _focused(source.card) ? _focusDecoration : null,
         child: KeyedSubtree(key: _sourceKey(source.kind, source.card), child: CardImage(cardId: source.card, size: size))));
   }
 
