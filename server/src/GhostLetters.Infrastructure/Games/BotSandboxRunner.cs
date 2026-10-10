@@ -40,6 +40,7 @@ public static class BotSandboxRunner
         var frames = new List<SandboxFrame>();
         var parsedAccusations = new List<Accusation>();
         var rng = new Random(seed);
+        var clock = DateTimeOffset.UnixEpoch;
         string? error = null;
         var status = "completed";
         void Capture(string action, Guid? actor = null, GameCommand? command = null, PlayerView? observation = null) => frames.Add(new(
@@ -47,7 +48,7 @@ public static class BotSandboxRunner
             GameJson.Deserialize<GameState>(GameJson.Serialize(state)), observation, messages.Count));
         void Say(Guid actor, string text, IReadOnlyList<string> cards, IReadOnlyList<string> notes)
         {
-            messages.Add(new(actor, state.Round, text, cards, notes, DateTimeOffset.UnixEpoch.AddSeconds(messages.Count * 5)));
+            messages.Add(new(actor, state.Round, text, cards, notes, clock));
             parsedAccusations.AddRange(AccusationReader.Read(actor, text, names));
         }
 
@@ -95,7 +96,9 @@ public static class BotSandboxRunner
         {
             ct.ThrowIfCancellationRequested();
             if (watch.Elapsed > TimeSpan.FromSeconds(15)) { status = "limit"; error = "Превышен лимит времени симуляции."; break; }
+            clock += TimeSpan.FromSeconds(5);
             var moved = false;
+            var waiting = false;
             foreach (var seat in seats.OrderBy(_ => rng.Next()))
             {
                 var view = GameProjection.For(state, seat.Id);
@@ -103,18 +106,21 @@ public static class BotSandboxRunner
                 var mind = Mind(seat, view, names, messages, parsedAccusations);
                 if (state.Phase == Phase.Discussion && !view.Players.Single(p => p.Id == seat.Id).IsGhost)
                 {
-                    var discussion = messages.Where(m => m.Round == state.Round).Select(m => new DiscussionLine(m.Author, m.Text, m.Cards, m.At)).ToList();
+                    var discussion = messages.Where(m => m.Round == state.Round).Select(m => new DiscussionLine(m.Author, m.Text, m.Cards, m.At, Notes: m.Notes)).ToList();
                     var own = discussion.Where(m => m.Author == seat.Id).ToList();
                     var mayReply = own.Count == 1 && discussion.Any(m => m.Author != seat.Id && m.At > own[0].At);
-                    var line = state.Round >= state.TotalRounds
+                    var now = clock;
+                    var tactic = own.Count < BotDiscussion.MaxMessages ? BotLetterTactics.Compose(view, mind, discussion, rng, now) : null;
+                    var line = tactic ?? (BotLetterTactics.Pending(seat.Id, discussion) ? null : state.Round >= state.TotalRounds
                         ? BotDiscussion.Compose(view, tags, mind, discussion, rng)
                         : own.Count == 0 ? BotPlayer.Say(view, rng, tags, mind)
-                        : mayReply ? BotPlayer.Reply(view, rng, tags, mind) : null;
+                        : mayReply ? BotPlayer.Reply(view, rng, tags, mind) : null);
                     if (line is { } said)
                     {
                         Say(seat.Id, said.Text, said.Cards, said.Notes);
                         Capture("Сообщение", seat.Id, observation: view); moved = true; break;
                     }
+                    if (BotLetterTactics.Pending(seat.Id, discussion)) { waiting = true; continue; }
                 }
                 var command = BotPlayer.Decide(view, rng, tags, mind);
                 if (command is null) continue;
@@ -125,9 +131,17 @@ public static class BotSandboxRunner
                 Capture(command.GetType().Name, seat.Id, command, view); moved = true; break;
             }
             if (status != "completed") break;
+            if (!moved && waiting) continue;
             if (!moved) { status = "stalled"; error = "Ни один бот не смог сделать ход."; break; }
         }
         if (status == "completed" && state.Result is null) { status = "limit"; error = "Превышен лимит ходов."; }
+        if (state.Result is not null)
+        {
+            var ghost = seats.Single(s => s.Id == state.Ghost.Id);
+            foreach (var report in GhostDebrief.Compose(state, tags, Mind(ghost, GameProjection.For(state, ghost.Id), names, messages, parsedAccusations)))
+                Say(ghost.Id, report.Text, report.Cards, report.Notes);
+            Capture("Разбор Призрака");
+        }
         var rows = state.VoteOutcomes.Where(o => o.Kind == VoteStageKind.Row).ToList();
         bool? passed = status != "completed" ? false : scenario switch {
             "clear-hints" => rows.Count == state.Board.Count && rows.All(r => r.Correct),

@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Только публичные реплики текущего обсуждения, в хронологическом порядке.</summary>
-public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<string> Cards, DateTimeOffset At, int? DurationMs = null);
+public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<string> Cards, DateTimeOffset At, int? DurationMs = null, IReadOnlyList<string>? Notes = null);
 
 /// <summary>Ограниченный обмен версиями, вопросами и ответами перед финалом.</summary>
 public static class BotDiscussion

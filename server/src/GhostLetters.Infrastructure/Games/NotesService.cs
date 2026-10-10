@@ -119,12 +119,17 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
             throw AppException.Validation($"Пометки — на картах поля, подсказках и своих письмах, счётчики от 0 до {MaxCounter}.");
         }
 
+        // A bluff can name a catalog card that never belonged to this player.
+        // This validates the choice, not ownership or another player's hidden hand.
+        var claims = marks.Select(m => m.Sources?.Claim).OfType<string>().Distinct().ToList();
+        var claimable = known.Concat(await db.Cards.AsNoTracking().Where(c => claims.Contains(c.ImageKey))
+            .Select(c => c.ImageKey).ToListAsync(ct)).ToHashSet();
         foreach (var src in marks.Select(m => m.Sources).OfType<MarkSources>())
         {
             var ids = (src.CrossBy ?? []).Concat(src.CheckBy ?? []).Concat(src.ClaimedBy is { } c ? new[] { c } : Array.Empty<Guid>());
-            if (ids.Any(id => !players.Contains(id)) || (src.Claim is { } claim && !known.Contains(claim)))
+            if (ids.Any(id => !players.Contains(id)) || (src.Claim is { } claim && !claimable.Contains(claim)))
             {
-                throw AppException.Validation("Источник пометки — игрок этой партии, карта — с поля, из подсказок или ваших писем.");
+                throw AppException.Validation("Источник пометки — игрок этой партии, названная карта — из каталога игры.");
             }
         }
 
@@ -155,7 +160,7 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
         s?.ClaimedBy,
         string.IsNullOrWhiteSpace(s?.Claim) ? null : s.Claim);
 
-    private static MarkSources? ReadSources(string json)
+    internal static MarkSources? ReadSources(string json)
     {
         try
         {

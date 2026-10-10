@@ -119,10 +119,10 @@ public sealed class BotPersonalityTests
         var view = View(Phase.Discussion, [], Role.Killer, letters, hints, truth: [1, 0]);
 
         int Lies(double risk) => Enumerable.Range(0, 60)
-            .Count(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = risk }))!.Value.Cards[0] == "tulip");
+            .Count(seed => BotLetterTactics.Compose(view, Mind(new BotPersonality { Risk = risk }), [], new Random(seed)) is { } line && line.Cards[0] == "tulip");
 
         Lies(0).Should().BeLessThan(15, "осторожный почти не врёт — не хочет попасться");
-        Lies(1).Should().BeGreaterThan(45, "рисковый врёт почти всегда");
+        Lies(1).Should().BeGreaterThan(15, "рисковый может присвоить письмо, даже пока остальные не высказались");
     }
 
     [Theory]

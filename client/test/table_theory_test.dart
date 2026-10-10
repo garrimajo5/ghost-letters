@@ -8,7 +8,7 @@ import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
 Future<TestApp> open(WidgetTester tester, double width,
-    {bool discarded = false}) async {
+    {bool discarded = false, bool claimed = false}) async {
   tester.view.physicalSize = Size(width, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -21,6 +21,18 @@ Future<TestApp> open(WidgetTester tester, double width,
     ((json['view'] as Json)['me'] as Json)['discarded'] = ['orig_0400'];
   }
   final snap = GameSnapshot.fromJson(json);
+  if (claimed) {
+    app.api.marksResult = [
+      {
+        'cardId': 'orig_0300',
+        'sources': {'claim': 'orig_0700'}
+      },
+      {
+        'cardId': 'orig_0001',
+        'sources': {'claim': 'orig_0701'}
+      },
+    ];
+  }
   app.realtime.game = snap;
   app.api.snapshotResult = snap;
   app.go('/game/g1');
@@ -29,6 +41,33 @@ Future<TestApp> open(WidgetTester tester, double width,
 }
 
 void main() {
+  testWidgets(
+      'что скажу доступно в моих письмах и отправляется только по выбору',
+      (tester) async {
+    final app = await open(tester, 320, claimed: true);
+    expect(app.api.calls.where((c) => c.$1 == 'sendChat'), isEmpty);
+    await tester.ensureVisible(find.byKey(const Key('show-table-theory')));
+    await tester.tap(find.byKey(const Key('show-table-theory')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('theory-tab-own')));
+    await tester.tap(find.byKey(const ValueKey('theory-tab-own')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('theory-orig_0700')), findsOneWidget);
+    expect(find.byKey(const ValueKey('theory-orig_0701')), findsNothing);
+    await tester.ensureVisible(find.byKey(const ValueKey('theory-orig_0700')));
+    await tester.tap(find.byKey(const ValueKey('theory-orig_0700')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const ValueKey('theory-orig_0002')));
+    await tester.tap(find.byKey(const ValueKey('theory-orig_0002')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Показать всем'));
+    await tester.tap(find.text('Показать всем'));
+    await tester.pumpAndSettle();
+    expect(app.api.calls.lastWhere((c) => c.$1 == 'sendChat').$2[3],
+        ['orig_0700', 'orig_0002']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
       'выбор автора показывает последнюю версию и не переключается на других',
       (tester) async {
@@ -54,7 +93,8 @@ void main() {
     send('3', 'u2', 'Версия Ватсона', ['orig_0004']);
     await tester.pump();
     await tester.pump();
-    await tester.ensureVisible(find.byKey(const Key('current-theory-selector')));
+    await tester
+        .ensureVisible(find.byKey(const Key('current-theory-selector')));
     await tester.tap(find.byKey(const Key('current-theory-selector')));
     await tester.pumpAndSettle();
     expect(find.text('Марпл · раунд 4'), findsOneWidget);

@@ -27,11 +27,15 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>
     public async Task<int> TickAsync(CancellationToken ct)
     {
+        var recentFinish = time.GetUtcNow() - TimeSpan.FromHours(1);
         var rows = await (
                 from p in db.GamePlayers.AsNoTracking()
                 join u in db.Users.AsNoTracking() on p.UserId equals u.Id
                 join g in db.Games.AsNoTracking() on p.GameId equals g.Id
-                where u.IsBot && g.Status == GameStatuses.Active
+                where u.IsBot && (g.Status == GameStatuses.Active ||
+                    (g.Status == GameStatuses.Finished && g.FinishedAt >= recentFinish && p.Role == "Ghost" &&
+                     db.ChatMessages.Any(m => m.GameId == g.Id && m.AuthorId == p.UserId && m.Text != null && m.Text.StartsWith(GhostDebrief.Prefix)) &&
+                     !db.ChatMessages.Any(m => m.GameId == g.Id && m.AuthorId == p.UserId && m.Text != null && m.Text.EndsWith(GhostDebrief.Completed))))
                 select new { p.GameId, p.UserId })
             .ToListAsync(ct);
 
@@ -145,6 +149,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     {
         var view = GameProjection.For(state, botId);
         var mind = await MindAsync(state, botId, ct);
+        if (state.Result is not null && view.Me?.Role == Role.Ghost &&
+            await DebriefAsync(state, botId, mind, ct) is { } debrief) return debrief;
         if (await TrySpeakAsync(state, view, botId, rng, mind, ct))
         {
             return true;
@@ -152,6 +158,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         if (state.Phase == Phase.Discussion && state.Round >= state.TotalRounds && view.Me?.Role != Role.Ghost &&
             BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow())) return false;
+
+        if (state.Phase == Phase.Discussion && BotLetterTactics.Pending(botId, await DiscussionAsync(state, ct))) return false;
 
         var command = BotPlayer.Decide(view, rng, tags, mind);
         if (command is null)
@@ -178,6 +186,20 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
     }
 
+    private async Task<bool?> DebriefAsync(GameState state, Guid botId, BotMind? mind, CancellationToken ct)
+    {
+        var reports = GhostDebrief.Compose(state, tags, mind ?? BotMind.Neutral);
+        var sent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.AuthorId == botId &&
+            m.Channel == ChatChannels.Public && m.Text != null && m.Text.StartsWith(GhostDebrief.Prefix))
+            .OrderBy(m => m.CreatedAt).ToListAsync(ct);
+        if (sent.Count >= reports.Count) return null;
+        // Wait without counting a move, so timers and other players can advance.
+        if (sent.Count > 0 && time.GetUtcNow() - sent[^1].CreatedAt < await ReadingTimeAsync(sent[^1], ct)) return false;
+        var report = reports[sent.Count];
+        await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, report.Text, null, report.Cards, report.Notes), ct);
+        return true;
+    }
+
     /// <summary>Раз за раунд обсуждения бот говорит, что думает (в рации — когда у него слово).</summary>
     private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, BotMind? mind, CancellationToken ct)
     {
@@ -191,6 +213,18 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var lastPublic = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
             m.Round == state.Round && m.Channel == ChatChannels.Public).OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
         if (lastPublic is not null && time.GetUtcNow() - lastPublic.CreatedAt < await ReadingTimeAsync(lastPublic, ct)) return false;
+        var letterDiscussion = await DiscussionAsync(state, ct);
+        if (mind is not null && letterDiscussion.Count(m => m.Author == botId) < BotDiscussion.MaxMessages &&
+            BotLetterTactics.Compose(view, mind, letterDiscussion, rng, time.GetUtcNow()) is { } tactic)
+        {
+            try
+            {
+                await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, tactic.Text, null, tactic.Cards, tactic.Notes), ct);
+                return true;
+            }
+            catch (AppException e) { logger.LogDebug("Заявление о письме пропущено: {Error}", e.Message); return false; }
+        }
+        if (BotLetterTactics.Pending(botId, letterDiscussion)) return false;
         if (state.Round >= state.TotalRounds)
         {
             var messages = await DiscussionAsync(state, ct);
@@ -249,7 +283,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 m.Channel == ChatChannels.Public && m.AuthorId != null)
             .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
             .Select(m => new DiscussionLine(m.AuthorId!.Value, m.Text ?? "", m.CardIds, m.CreatedAt,
-                db.MediaFiles.Where(f => f.Id == m.MediaId).Select(f => (int?)f.DurationMs).FirstOrDefault())).ToListAsync(ct);
+                db.MediaFiles.Where(f => f.Id == m.MediaId).Select(f => (int?)f.DurationMs).FirstOrDefault(), m.CardNotes)).ToListAsync(ct);
 
     private async Task<TimeSpan> ReadingTimeAsync(ChatMessage message, CancellationToken ct) =>
         BotDiscussion.SpeechTime(message.Text ?? "", message.MediaId is { } id
