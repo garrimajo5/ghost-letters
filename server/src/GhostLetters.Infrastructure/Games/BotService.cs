@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
-public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time)
+public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time, ReactionService reactions)
 {
     private CardTags tags = baselineTags;
     /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
@@ -166,9 +166,42 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         catch (AppException e) { logger.LogDebug("Ночная реплика бота пропущена: {Error}", e.Message); return false; }
     }
 
+    /// <summary>Кто из ботов уже отреагировал эмодзи на событие (партия, бот, раунд, фаза).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Guid, Guid, int, Phase), bool> Reacted = new();
+
+    /// <summary>
+    /// Боты реагируют, как люди: через несколько секунд после открытия писем — 🤔/😮/😱 (Призрак — 👻),
+    /// в итогах — радость или досада. Не всегда и не все; это не ход и не сообщение в чат.
+    /// </summary>
+    private async Task TryReactAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
+    {
+        var round = state.Phase == Phase.Discussion ? state.Round : -1;
+        if (state.Phase is not (Phase.Discussion or Phase.AwardNomination) || Reacted.ContainsKey((state.Id, botId, round, state.Phase))) return;
+        // Человек реагирует не мгновенно: у каждого бота своя задержка 3–10 с.
+        if (PhaseStarted.TryGetValue(state.Id, out var started) && started.Phase == state.Phase &&
+            time.GetUtcNow() - started.Since < TimeSpan.FromSeconds(3 + (botId.GetHashCode() & 7))) return;
+        if (Reacted.Count > 20_000) Reacted.Clear();
+        Reacted[(state.Id, botId, round, state.Phase)] = true;
+        string? emoji = null;
+        if (state.Phase == Phase.Discussion && state.Hints.LastOrDefault(h => h.Round == state.Round) is { } hints && rng.NextDouble() < .35)
+            emoji = view.Me?.Role == Role.Ghost ? "👻" : hints.Cards.Count == 0 ? "😱" : hints.Cards.Count >= 2 ? "😮" : "🤔";
+        else if (state.Phase == Phase.AwardNomination && state.Result is { } result && rng.NextDouble() < .6)
+            emoji = result.Winners.Contains(botId) ? (rng.Next(2) == 0 ? "🔥" : "❤️") : (rng.Next(2) == 0 ? "🙈" : "😱");
+        if (emoji is null) return;
+        try
+        {
+            await reactions.SendAsync(state.Id, botId, emoji, ct);
+        }
+        catch (AppException e)
+        {
+            logger.LogDebug("Реакция бота пропущена: {Error}", e.Message);
+        }
+    }
+
     private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
     {
         var view = GameProjection.For(state, botId);
+        await TryReactAsync(state, view, botId, rng, ct);
         // Боту нечего делать (ночь чужой команды, ждёт других, не его слово) — не собираем «мнение»:
         // это пять запросов к базе и разбор всего чата партии на каждом такте.
         var ghostDebrief = state.Phase == Phase.Finished && state.Result is not null && view.Me?.Role == Role.Ghost;
