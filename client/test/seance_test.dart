@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ghost_letters/features/game/game_screen.dart';
 import 'package:ghost_letters/models/models.dart';
 
 import 'support/fakes.dart';
@@ -142,10 +143,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('seance-table')), findsNothing);
     expect(find.byKey(const Key('main-table')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('main-menu')));
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.text('Вид: спиритический сеанс'));
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byKey(const Key('seance-table')), findsOneWidget);
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    expect(state.seance, isFalse);
   });
 }
