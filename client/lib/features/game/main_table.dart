@@ -386,6 +386,37 @@ class _TableArea extends StatelessWidget {
   final bool staircase;
 
   /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
+  /// Цвета связей показа: у каждой улики свой цвет (первая — зелёная), карты поля, на которые она указывает, —
+  /// того же цвета; на карту указывают несколько улик — рамка из нескольких цветов. Исключённая — красная
+  /// (при нескольких уликах — вместе с цветом улики, которая её исключила).
+  List<Color> _links(String id, ChatMessage? statement) {
+    if (say.active || statement == null) return const [];
+    final sources = [for (var i = 0; i < statement.cardIds.length; i++) if (theorySource(statement.noteFor(i) ?? '')) i];
+    final out = <Color>[];
+    void add(Color c) {
+      if (!out.contains(c)) out.add(c);
+    }
+    for (var i = 0; i < statement.cardIds.length; i++) {
+      if (statement.cardIds[i] != id) continue;
+      if (typing?.current?.id == statement.id && !typing!.isRevealed(i)) continue;
+      final note = statement.noteFor(i) ?? '';
+      final k = sources.indexOf(i);
+      if (k >= 0) {
+        add(linkColor(k));
+        continue;
+      }
+      final link = RegExp(r':(\d+)$').firstMatch(note);
+      final n = link != null ? int.parse(link[1]!) : (sources.length == 1 ? 0 : -1);
+      if (theoryNegative(note)) {
+        add(AppColors.redBright);
+        if (sources.length > 1 && n >= 0 && n < sources.length) add(linkColor(n));
+      } else {
+        add(n >= 0 && n < sources.length ? linkColor(n) : AppColors.believed);
+      }
+    }
+    return out;
+  }
+
   Color? _mark(String id, ChatMessage? statement) {
     if (say.active) {
       final m = say.marks[id];
@@ -435,7 +466,7 @@ class _TableArea extends StatelessWidget {
               for (final group in v.hints)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint)),
+                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _links(id, statement))),
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -473,14 +504,7 @@ class _TableArea extends StatelessWidget {
                           ),
                         ),
                       ])
-                    : Container(
-                        key: Key('say-mark-$id'),
-                        foregroundDecoration: BoxDecoration(
-                          border: Border.all(color: color, width: 3),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: child,
-                      );
+                    : _LinkBorder(key: Key('say-mark-$id'), colors: say.active ? [color] : _links(id, statement).ifEmpty(color), child: child);
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
                 if (say.active) out = GestureDetector(onTap: () => say.cycle(id), child: out);
                 return out;
@@ -501,12 +525,14 @@ class _TableArea extends StatelessWidget {
 
 /// Ступенька лесенки: подпись раунда и его подсказки; лишние карты листаются свайпом.
 class _HintStep extends StatelessWidget {
-  const _HintStep({required this.screen, required this.say, required this.hint, required this.size});
+  const _HintStep({required this.screen, required this.say, required this.hint, required this.size, this.links});
 
   final GameScreenState screen;
   final _Say say;
   final HintGroup hint;
   final double size;
+  /// Цвет улики в показе говорящего — тот же, что у карт поля, на которые она указывает.
+  final List<Color> Function(String id)? links;
 
   @override
   Widget build(BuildContext context) {
@@ -539,7 +565,9 @@ class _HintStep extends StatelessWidget {
                             foregroundDecoration: say.active && say.isSource(c)
                                 ? BoxDecoration(border: Border.all(color: AppColors.amber, width: 3), borderRadius: BorderRadius.circular(7))
                                 : null,
-                            child: CardImage(cardId: c, size: size, radius: 7),
+                            child: say.active || (links?.call(c) ?? const []).isEmpty
+                                ? CardImage(cardId: c, size: size, radius: 7)
+                                : _LinkBorder(key: Key('hint-link-$c'), colors: links!(c), radius: 7, child: CardImage(cardId: c, size: size, radius: 7)),
                           ),
                           if (screen.marks[c]?.claimedBy case final who?)
                             Positioned(
@@ -1581,4 +1609,59 @@ class _SuspectBoard extends StatelessWidget {
       child: CardImage(key: Key('suspect-vote-${p.id}-$r'), cardId: id, size: card, radius: 6),
     );
   }
+}
+
+/// Цвет n-й улики в показе: первая — зелёная, как «указывает сюда», дальше — различимые на тёмном столе.
+Color linkColor(int n) => const [
+      AppColors.believed,
+      Color(0xFF4FC3F7),
+      Color(0xFFF2B33D),
+      Color(0xFFE57CD8),
+      Color(0xFFB39DDB),
+      Color(0xFFFF8A65),
+    ][n % 6];
+
+extension _OrFallback on List<Color> {
+  List<Color> ifEmpty(Color fallback) => isEmpty ? [fallback] : this;
+}
+
+/// Рамка карты из одного или нескольких цветов (по цвету на каждую улику).
+class _LinkBorder extends StatelessWidget {
+  const _LinkBorder({super.key, required this.colors, required this.child, this.radius = 10});
+
+  final List<Color> colors;
+  final Widget child;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) => colors.length == 1
+      ? Container(
+          foregroundDecoration: BoxDecoration(border: Border.all(color: colors.first, width: 3), borderRadius: BorderRadius.circular(radius)),
+          child: child,
+        )
+      : CustomPaint(foregroundPainter: _SegmentsPainter(colors, radius), child: child);
+}
+
+class _SegmentsPainter extends CustomPainter {
+  _SegmentsPainter(this.colors, this.radius);
+
+  final List<Color> colors;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final n = colors.length;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..shader = SweepGradient(
+        colors: [for (final c in colors) ...[c, c]],
+        stops: [for (var i = 0; i < n; i++) ...[i / n, (i + 1) / n]],
+      ).createShader(rect);
+    canvas.drawRRect(RRect.fromRectAndRadius(rect.deflate(1.75), Radius.circular(radius)), paint);
+  }
+
+  @override
+  bool shouldRepaint(_SegmentsPainter old) => old.colors.length != colors.length || !old.colors.every(colors.contains);
 }
