@@ -286,8 +286,9 @@ public sealed class BotPersonalityTests
         var view = View(Phase.Discussion, [], Role.Detective,
             letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["tulip"])]);
         var line = BotPlayer.Say(view, new Random(3), Tags, Mind(new BotPersonality { Negative = 1 }))!.Value;
-        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("ослабляет")
-            .And.Contain("не исключает").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
+        line.Text.Should().Contain("Проверял:").And.Contain("по смыслу").And.Contain("Версия:").And.Contain("Подсказка р.2 №1");
+        // Исчезнувшее письмо ослабляет, но не вычёркивает — разными словами.
+        line.Text.Should().Match(t => t.Contains("не исключает") || t.Contains("не вычеркнуты") || t.Contains("одной проверки мало"));
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
         line.Cards.Count.Should().BeLessThanOrEqualTo(ChatService.MaxCards);
         line.Notes.Should().HaveSameCount(line.Cards);
