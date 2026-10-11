@@ -405,7 +405,9 @@ class _TableArea extends StatelessWidget {
         add(linkColor(k));
         continue;
       }
-      final link = RegExp(r':(\d+)$').firstMatch(note);
+      // noteFor убирает «:N» — номер улики читаем из исходной заметки.
+      final raw = i < statement.cardNotes.length ? statement.cardNotes[i] : '';
+      final link = RegExp(r':(\d+)$').firstMatch(raw);
       final n = link != null ? int.parse(link[1]!) : (sources.length == 1 ? 0 : -1);
       if (theoryNegative(note)) {
         add(AppColors.redBright);
