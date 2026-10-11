@@ -555,6 +555,39 @@ void main() {
     expect(app.api.named('command'), isEmpty);
   });
 
+  testWidgets('показ: у каждой подсказки свой цвет и номер, прежняя не гаснет при выборе следующей', (tester) async {
+    await _open(tester, phone, edit: (view) => view['hints'] = [
+          {'round': 0, 'cards': ['orig_0100']},
+          {'round': 1, 'cards': ['orig_0101']},
+        ]);
+    await tester.tap(find.byKey(const Key('say-start')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hint-orig_0100')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hint-orig_0101')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-0-1')));
+    await tester.pump();
+    expect(find.byKey(const Key('hint-link-orig_0100')), findsOneWidget);
+    expect(find.byKey(const Key('hint-link-orig_0101')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('say-mark-orig_0002')), matching: find.byKey(const Key('link-number-2'))), findsOneWidget);
+  });
+
+  testWidgets('карта поля: голая версия бота без связи с письмом — не проверка', (tester) async {
+    final app = await _open(tester, const Size(390, 844));
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'v9', channel: 'public', authorId: 'u3', kind: 'text', text: 'Отправлял вот эту — исчезла. Версия: мотив 1.',
+        cardIds: const ['orig_0200', 'orig_0001'], cardNotes: const ['кидал эту', 'думаю, эта'],
+        createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mark-evidence')), findsNothing);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
