@@ -73,6 +73,44 @@ class GameScreenState extends ConsumerState<GameScreen> {
   final thoughtChanges = ValueNotifier<int>(0);
   int unread = 0;
 
+  /// Эмодзи, что сейчас летят по столу (последние секунды), и счётчик у аватара отправителя.
+  final reactions = <Reaction>[];
+  final reactionChanges = ValueNotifier<int>(0);
+  DateTime _reactedAt = DateTime(2000);
+
+  static const reactionLife = Duration(seconds: 4);
+
+  void addReaction(Reaction r) {
+    final now = DateTime.now();
+    reactions
+      ..removeWhere((x) => now.difference(x.at) > reactionLife)
+      ..add(Reaction(gameId: r.gameId, userId: r.userId, emoji: r.emoji, at: now));
+    if (reactions.length > 40) reactions.removeRange(0, reactions.length - 40);
+    reactionChanges.value++;
+    Timer(reactionLife + const Duration(milliseconds: 50), () {
+      if (!mounted) return;
+      reactions.removeWhere((x) => DateTime.now().difference(x.at) > reactionLife);
+      reactionChanges.value++;
+    });
+  }
+
+  /// Сколько эмодзи игрок прислал за последние секунды — значок на аватаре.
+  int reactionCount(String userId) => reactions.where((r) => r.userId == userId).length;
+
+  /// Своя реакция: сразу летит у себя, не чаще раза в 0,4 с (сервер режет всплески сам).
+  Future<void> react(String emoji) async {
+    final now = DateTime.now();
+    if (now.difference(_reactedAt) < const Duration(milliseconds: 400)) return;
+    _reactedAt = now;
+    final me = view?.me?.id;
+    if (me != null) addReaction(Reaction(gameId: widget.gameId, userId: me, emoji: emoji, at: now));
+    try {
+      await _realtime.react(widget.gameId, emoji);
+    } catch (_) {
+      // Лимит или обрыв связи — реакция не важна, молча пропускаем.
+    }
+  }
+
   /// Широкий экран (компьютер): чат постоянно открыт справа, счётчик непрочитанного не нужен.
   bool chatDocked = false;
 
@@ -158,6 +196,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
       chat.add(m);
       if (!chatDocked && !_chatOpen) unread++;
       chatChanges.value++;
+    }));
+    _subs.add(_realtime.reactions.listen((r) {
+      // Свою реакцию уже показали сразу при отправке.
+      if (!mounted || r.gameId != widget.gameId || r.userId == view?.me?.id) return;
+      addReaction(r);
     }));
     _subs.add(_realtime.lobbyUpdates.listen((l) {
       if (mounted && l.id == lobbyId) setState(() => lobby = l);
@@ -312,6 +355,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
     _lifecycle.dispose();
     _scroll.dispose();
     chatChanges.dispose();
+    reactionChanges.dispose();
     thoughtChanges.dispose();
     _realtime.forgetGame(widget.gameId);
     final l = lobby;

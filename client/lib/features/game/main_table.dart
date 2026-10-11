@@ -19,6 +19,7 @@ class _MainTableState extends State<_MainTable> {
   bool? _panel;
   String? _phase;
   final _say = _Say();
+  bool _emoji = false;
 
   GameScreenState get screen => widget.screen;
 
@@ -27,6 +28,7 @@ class _MainTableState extends State<_MainTable> {
     super.initState();
     _say.addListener(_refresh);
     screen.chatChanges.addListener(_refresh);
+    screen.reactionChanges.addListener(_refresh);
   }
 
   void _refresh() {
@@ -36,6 +38,7 @@ class _MainTableState extends State<_MainTable> {
   @override
   void dispose() {
     screen.chatChanges.removeListener(_refresh);
+    screen.reactionChanges.removeListener(_refresh);
     _say.dispose();
     super.dispose();
   }
@@ -60,7 +63,7 @@ class _MainTableState extends State<_MainTable> {
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final open = _panelOpen(v);
     final center = open ? _panelView(v) : _TableArea(screen: screen, landscape: landscape, say: _say);
-    final hand = v.me != null && v.me!.hand.isNotEmpty && !isFinale(v);
+    final hand = v.me != null;
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, dragDevices: PointerDeviceKind.values.toSet()),
@@ -68,9 +71,11 @@ class _MainTableState extends State<_MainTable> {
         key: const Key('main-table'),
         backgroundColor: night ? AppColors.night : AppColors.bg,
         body: SafeArea(
-          child: Column(children: [
+          child: Stack(children: [
+            Positioned.fill(child: Column(children: [
             const ConnectionBanner(),
             _TopBar(screen: screen, panelOpen: open, onEye: () => _toggle(v)),
+            if (_emoji) _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
             if (landscape)
               Expanded(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -91,12 +96,15 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: center),
             ],
-            if (hand) _Fan(screen: screen, say: _say, height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
+            if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
             if (!landscape)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
                 child: _Actions(screen: screen, row: true, onStatus: () => setState(() => _panel = true)),
               ),
+            ])),
+            // Эмодзи проплывают по столу снизу вверх и не мешают нажатиям.
+            Positioned.fill(child: IgnorePointer(child: _FlyingReactions(screen: screen))),
           ]),
         ),
       ),
@@ -486,6 +494,18 @@ class _SeatTile extends StatelessWidget {
       if (first)
         Positioned(left: -5, top: -4, child: CountBadge(key: Key('first-${p.id}'), text: '1', color: AppColors.green)),
       if (arrested) const Positioned(left: -4, bottom: -2, child: Icon(Icons.lock, size: 14, color: AppColors.redBright)),
+      if (screen.reactionCount(p.id) case final n when n > 0)
+        Positioned(
+          right: -12,
+          bottom: -8,
+          child: Container(
+            key: Key('react-badge-${p.id}'),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99), border: Border.all(color: AppColors.bg)),
+            child: Text('${screen.reactions.lastWhere((r) => r.userId == p.id).emoji}${n > 1 ? '×$n' : ''}',
+                style: const TextStyle(fontSize: 11)),
+          ),
+        ),
     ]);
     final nameStyle = TextStyle(
       fontSize: 12,
@@ -556,16 +576,17 @@ class _Actions extends StatelessWidget {
 
 /// Рука веером снизу: выбранная карта приподнята; долгое нажатие — карта крупно.
 class _Fan extends StatelessWidget {
-  const _Fan({required this.screen, required this.say, required this.height});
+  const _Fan({required this.screen, required this.say, required this.onEmoji, required this.height});
 
   final GameScreenState screen;
   final _Say say;
+  final VoidCallback onEmoji;
   final double height;
 
   @override
   Widget build(BuildContext context) {
     final v = screen.view!;
-    final hand = v.me!.hand;
+    final hand = isFinale(v) ? const <String>[] : v.me!.hand;
     final selectable = v.can('SendLetter') || v.can('Discard') || v.can('GiveFirstClue');
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
     final card = height - 14;
@@ -576,11 +597,35 @@ class _Fan extends StatelessWidget {
       height: height,
       child: LayoutBuilder(builder: (context, box) {
         final n = hand.length;
-        final step = n <= 1 ? 0.0 : ((box.maxWidth - card - 24) / (n - 1)).clamp(12.0, card + 6);
+        // Справа от веера — карта-эмодзи.
+        final room = box.maxWidth - card * 0.8 - 12;
+        final step = n <= 1 ? 0.0 : ((room - card - 24) / (n - 1)).clamp(12.0, card + 6);
         final width = card + step * (n - 1);
-        final left = (box.maxWidth - width) / 2;
+        final left = ((room - width) / 2).clamp(4.0, double.infinity);
         final mid = (n - 1) / 2;
         return Stack(clipBehavior: Clip.none, children: [
+          Positioned(
+            right: 8,
+            top: 14,
+            child: GestureDetector(
+              key: const Key('fan-emoji'),
+              onTap: onEmoji,
+              child: Transform.rotate(
+                angle: 0.12,
+                child: Container(
+                  width: card * 0.8,
+                  height: card * 0.8,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text('😊', style: TextStyle(fontSize: card * 0.4)),
+                ),
+              ),
+            ),
+          ),
           for (var i = 0; i < n; i++)
             Positioned(
               left: left + step * i,
@@ -817,6 +862,78 @@ class _SayStrip extends StatelessWidget {
         border: Border.all(color: say.active ? AppColors.amber : AppColors.border),
       ),
       child: Row(children: children),
+    );
+  }
+}
+
+/// Полоска эмодзи над столом: каждое нажатие — реакция, можно спамить.
+class _EmojiBar extends StatelessWidget {
+  const _EmojiBar({required this.screen, required this.onClose});
+
+  final GameScreenState screen;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        key: const Key('emoji-bar'),
+        height: 44,
+        child: Row(children: [
+          Expanded(
+            child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
+              for (final e in Reaction.allowed)
+                InkWell(
+                  key: Key('emoji-$e'),
+                  borderRadius: BorderRadius.circular(99),
+                  onTap: () => screen.react(e),
+                  child: Padding(padding: const EdgeInsets.all(6), child: Text(e, style: const TextStyle(fontSize: 24))),
+                ),
+            ]),
+          ),
+          IconButton(tooltip: 'Скрыть эмодзи', icon: const Icon(Icons.close, size: 18), onPressed: onClose),
+        ]),
+      );
+}
+
+/// Летящие эмодзи: каждое поднимается снизу вверх и тает за [GameScreenState.reactionLife].
+class _FlyingReactions extends StatelessWidget {
+  const _FlyingReactions({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final now = DateTime.now();
+        return Stack(children: [
+          for (final r in screen.reactions)
+            if (now.difference(r.at) < GameScreenState.reactionLife)
+              _Flying(
+                key: ValueKey('fly-${r.userId}-${r.at.microsecondsSinceEpoch}'),
+                reaction: r,
+                size: box.biggest,
+              ),
+        ]);
+      });
+}
+
+class _Flying extends StatelessWidget {
+  const _Flying({super.key, required this.reaction, required this.size});
+
+  final Reaction reaction;
+  final Size size;
+
+  @override
+  Widget build(BuildContext context) {
+    // Дорожка по горизонтали — от отправителя и момента, чтобы спам не летел одной колонной.
+    final lane = ((reaction.userId.hashCode ^ reaction.at.millisecondsSinceEpoch) % 1000) / 1000;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: GameScreenState.reactionLife,
+      builder: (context, t, child) => Positioned(
+        left: 24 + lane * (size.width - 96),
+        top: (size.height - 60) * (1 - t),
+        child: Opacity(opacity: t < .8 ? 1 : (1 - t) * 5, child: child),
+      ),
+      child: Text(reaction.emoji, key: Key('flying-${reaction.emoji}'), style: const TextStyle(fontSize: 34)),
     );
   }
 }

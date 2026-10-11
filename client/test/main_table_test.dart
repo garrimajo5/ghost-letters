@@ -190,4 +190,32 @@ void main() {
     // Верность ряда не раскрывается: отметки — только мнение игрока.
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('эмодзи: карта в веере, летят по столу и дублируются значком у аватара', (tester) async {
+    final app = await _open(tester, phone);
+
+    await tester.tap(find.byKey(const Key('fan-emoji')));
+    await tester.pump();
+    expect(find.byKey(const Key('emoji-bar')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('emoji-👍')));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(app.realtime.sentReactions, ['👍']);
+    expect(find.byKey(const Key('flying-👍')), findsOneWidget);
+    expect(find.byKey(const Key('react-badge-u2')), findsOneWidget);
+
+    for (var i = 0; i < 3; i++) {
+      app.realtime.reactionsCtl.add(Reaction(gameId: 'g1', userId: 'u3', emoji: '😂', at: DateTime.now()));
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('flying-😂')), findsNWidgets(3));
+    expect(find.text('😂×3'), findsOneWidget);
+    // Чужая партия не долетает.
+    app.realtime.reactionsCtl.add(Reaction(gameId: 'other', userId: 'u3', emoji: '🔥', at: DateTime.now()));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const Key('flying-🔥')), findsNothing);
+
+    await tester.pump(const Duration(seconds: 5));
+    expect(find.byKey(const Key('flying-😂')), findsNothing);
+    expect(find.byKey(const Key('react-badge-u3')), findsNothing);
+  });
 }

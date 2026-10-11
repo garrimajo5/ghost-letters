@@ -276,6 +276,14 @@ class FakeRealtime extends Realtime {
   final viewsCtl = StreamController<({GameView view, DateTime? deadline})>.broadcast();
   final snapshotsCtl = StreamController<GameSnapshot>.broadcast();
   final chatCtl = StreamController<ChatMessage>.broadcast();
+  final reactionsCtl = StreamController<Reaction>.broadcast();
+  final sentReactions = <String>[];
+
+  @override
+  Stream<Reaction> get reactions => reactionsCtl.stream;
+
+  @override
+  Future<void> react(String gameId, String emoji) async => sentReactions.add(emoji);
   final connectedCtl = StreamController<bool>.broadcast();
 
   @override
