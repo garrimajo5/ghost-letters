@@ -309,7 +309,8 @@ class _TopBar extends StatelessWidget {
         ),
         Text(
           seance
-              ? (v.round > 0 ? 'СЕАНС · РАУНД ${v.round} ИЗ ${v.totalRounds}' : 'СЕАНС')
+              ? (v.round <= 0 ? 'СЕАНС' : MediaQuery.sizeOf(context).width >= 700
+                  ? 'СЕАНС · РАУНД ${v.round} ИЗ ${v.totalRounds}' : 'СЕАНС · ${v.round}/${v.totalRounds}')
               : v.round > 0 ? 'Р. ${v.round}/${v.totalRounds}' : 'ПАРТИЯ',
           key: const Key('round'),
           style: heading(15, spacing: 1),
