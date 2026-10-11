@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/core/theme.dart';
+import 'package:ghost_letters/features/game/chat_card_text.dart';
 import 'package:ghost_letters/features/game/game_screen.dart';
 import 'package:ghost_letters/models/models.dart';
 import 'package:ghost_letters/widgets/common.dart';
@@ -586,6 +587,34 @@ void main() {
     await tester.tap(find.byKey(const Key('board-0-0')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('mark-evidence')), findsNothing);
+  });
+
+  testWidgets('счётчики на поле — по уликам, а не по репликам: одно письмо дважды — один ✕', (tester) async {
+    final app = await _open(tester, phone);
+    for (final id in ['c1', 'c2']) {
+      app.realtime.chatCtl.add(ChatMessage(
+          id: id, channel: 'public', authorId: id == 'c1' ? 'u3' : 'u1', kind: 'text', text: 'Проверял: мотив 1.',
+          cardIds: const ['orig_0200', 'orig_0001'], cardNotes: const ['кидал эту', 'проверял эту, исчезла:0'],
+          createdAt: DateTime.now(), round: 4));
+    }
+    await tester.pump();
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    expect(state.effectiveMark('orig_0001')?.crosses, 1);
+  });
+
+  testWidgets('упоминание игрока в реплике выделено', (tester) async {
+    await tester.pumpWidget(const SizedBox());
+    final m = ChatMessage(id: 'mm', channel: 'public', authorId: 'u3', kind: 'text', text: 'Ватсон, ты за что?',
+        cardIds: const [], createdAt: DateTime.now(), round: 1);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: ChatCardText(message: m, parts: [(text: m.text!, cardId: null)],
+        mentions: const {'Ватсон': ChatCardText.mentionMe}))));
+    final rich = tester.widget<RichText>(find.byType(RichText).first);
+    final spans = <TextSpan>[];
+    rich.text.visitChildren((s) {
+      if (s is TextSpan && s.text == 'Ватсон') spans.add(s);
+      return true;
+    });
+    expect(spans.single.style?.backgroundColor, ChatCardText.mentionMe);
   });
 
   testWidgets('реплика бота печатается по буквам', (tester) async {

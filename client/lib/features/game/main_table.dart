@@ -160,7 +160,22 @@ class _MainTableState extends State<_MainTable> {
               Expanded(child: dropCenter),
             ],
             if (landscape && !seance)
+              // В итогах карт на руке нет (только эмодзи) — веер узкий, а строке хода с длинной подписью — вся ширина.
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                if (isFinale(v))
+                  SizedBox(
+                    width: fanHeight * 1.3 + 40,
+                    child: hand
+                        ? _Fan(
+                            screen: screen,
+                            say: _say,
+                            onEmoji: () => setState(() => _emoji = !_emoji),
+                            onDrag: (on) => setState(() => _dragging = on),
+                            height: fanHeight,
+                          )
+                        : SizedBox(height: fanHeight),
+                  )
+                else
                 Expanded(
                   child: hand
                       ? _Fan(
@@ -172,6 +187,14 @@ class _MainTableState extends State<_MainTable> {
                         )
                       : SizedBox(height: fanHeight),
                 ),
+                if (isFinale(v))
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 4, 8, 8),
+                      child: _Actions(screen: screen, row: true, onStatus: () => setState(() => _panel = true)),
+                    ),
+                  )
+                else
                 SizedBox(
                   width: (size.width * 0.24).clamp(150.0, 260.0),
                   child: Padding(
@@ -199,7 +222,8 @@ class _MainTableState extends State<_MainTable> {
             // Выбор эмодзи — прямо над картой-смайликом (может перекрыть стол — это нестрашно).
             if (_emoji)
               Positioned(
-                right: landscape && !seance ? (size.width * 0.24).clamp(150.0, 260.0) + 8 : 8,
+                left: landscape && !seance && isFinale(v) ? 8 : null,
+                right: landscape && !seance && isFinale(v) ? null : landscape && !seance ? (size.width * 0.24).clamp(150.0, 260.0) + 8 : 8,
                 bottom: fanHeight + (!landscape || seance ? 70 : 0) - 6,
                 child: _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
               ),
@@ -1522,7 +1546,7 @@ class _Dialog extends StatelessWidget {
             style: const TextStyle(fontSize: 13))
         : m.kind != 'text' && text.isEmpty
             ? const Text('🎤 голосовое', style: TextStyle(fontSize: 13))
-            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints), keyPrefix: 'dialog-inline');
+            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints), keyPrefix: 'dialog-inline', mentions: screen.mentions);
     final bubble = Container(
       key: Key('dialog-${m.id}'),
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),

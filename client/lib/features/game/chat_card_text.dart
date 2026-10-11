@@ -7,7 +7,13 @@ import '../../widgets/common.dart';
 /// Resolve only public board/hint references. Keep the stored text readable for
 /// quotes, older clients and references that cannot be resolved in this snapshot.
 class ChatCardText extends StatelessWidget {
-  const ChatCardText({super.key, required this.message, required this.parts, this.keyPrefix = 'chat-inline'});
+  const ChatCardText({super.key, required this.message, required this.parts, this.keyPrefix = 'chat-inline', this.mentions = const {}});
+
+  /// Имена игроков → цвет: упоминание в тексте выделяется; упоминание меня — с подложкой.
+  /// Ключ `null`-цвета не бывает; моё имя передаётся с цветом [mentionMe].
+  final Map<String, Color> mentions;
+
+  static const mentionMe = Color(0xFFFFC857);
 
   final ChatMessage message;
   /// Префикс ключей миниатюр: в чате и в разговоре под полем одна реплика видна дважды.
@@ -75,7 +81,7 @@ class ChatCardText extends StatelessWidget {
   Widget build(BuildContext context) => Text.rich(
         TextSpan(children: [
           for (var i = 0; i < parts.length; i++) ...[
-            TextSpan(text: parts[i].text + (parts[i].cardId == null ? '' : ' ')),
+            ..._mentioned(parts[i].text + (parts[i].cardId == null ? '' : ' ')),
             if (parts[i].cardId case final cardId?)
               WidgetSpan(
                 alignment: PlaceholderAlignment.middle,
@@ -99,4 +105,31 @@ class ChatCardText extends StatelessWidget {
         ]),
         style: const TextStyle(fontSize: 14, height: 1.4),
       );
+
+  /// Текст с выделенными упоминаниями игроков (длинные имена — первыми, чтобы «Бот Ватсон» не дробился).
+  List<InlineSpan> _mentioned(String text) {
+    if (mentions.isEmpty || text.isEmpty) return [TextSpan(text: text)];
+    final names = mentions.keys.where((n) => n.trim().length > 1).toList()..sort((a, b) => b.length.compareTo(a.length));
+    if (names.isEmpty) return [TextSpan(text: text)];
+    final pattern = RegExp('(?<![а-яёa-z0-9])(${names.map(RegExp.escape).join('|')})(?![а-яёa-z0-9])', caseSensitive: false);
+    final out = <InlineSpan>[];
+    var end = 0;
+    for (final m in pattern.allMatches(text)) {
+      out.add(TextSpan(text: text.substring(end, m.start)));
+      final key = mentions.keys.firstWhere((n) => n.toLowerCase() == m[0]!.toLowerCase(), orElse: () => m[0]!);
+      final color = mentions[key] ?? mentionMe;
+      final me = color == mentionMe;
+      out.add(TextSpan(
+        text: m[0],
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: me ? const Color(0xFF1B1405) : color,
+          backgroundColor: me ? mentionMe : null,
+        ),
+      ));
+      end = m.end;
+    }
+    out.add(TextSpan(text: text.substring(end)));
+    return out;
+  }
 }
