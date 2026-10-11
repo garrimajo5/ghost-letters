@@ -51,14 +51,18 @@ public static class GhostCluePolicy
             : memo[(a, b)] = tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
         var shown = view.Hints.SelectMany(h => h.Cards).ToList();
         var all = candidates.Select(c => c.Card).ToList();
-        var current = TableScore(view, truth, shown, all, Sim);
+        // Как широко стол читает подсказку: строгий стол «объясняет» письмо одной картой, широкий — несколькими.
+        var breadth = Math.Clamp(mind.TableBreadth, 1, 4);
+        var focus = 4 + 8 * (1 - (breadth - 1) / 3);
+        var current = TableScore(view, truth, shown, all, Sim, focus);
+        var risk = candidates[0].Value.Risk;
         var chosen = new List<string>();
-        var cost = .03 * (1 - candidates[0].Value.Risk);
+        var cost = .03 * (1 - risk);
         while (true)
         {
             var best = candidates.Where(c => !chosen.Contains(c.Card))
-                .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim) - current))
-                .Where(c => c.Gain > cost && (c.Value.Reveal || c.Gain >= .35))
+                .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim, focus) - current))
+                .Where(c => (c.Value.Reveal && c.Gain > cost - .4 * risk * risk) || c.Gain >= .35)
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (best.Card is null) break;
@@ -75,7 +79,7 @@ public static class GhostCluePolicy
     /// на истину, вредно.
     /// </summary>
     public static double TableScore(PlayerView view, IReadOnlyList<int> truth, IReadOnlyList<string> hints,
-        IReadOnlyList<string> hidden, Func<string, string, double> sim)
+        IReadOnlyList<string> hidden, Func<string, string, double> sim, double focus = 8)
     {
         var board = view.Board.SelectMany(r => r.Cards).ToList();
         var evidence = board.ToDictionary(c => c, _ => 0.0);
@@ -83,14 +87,14 @@ public static class GhostCluePolicy
         {
             var scores = board.Where(c => c != hint).Select(c => (Card: c, S: sim(hint, c))).ToList();
             var top = scores.Select(x => x.S).DefaultIfEmpty(0).Max();
-            foreach (var (card, s) in scores) evidence[card] += Read(s, top);
+            foreach (var (card, s) in scores) evidence[card] += Read(s, top, focus);
         }
 
         foreach (var letter in hidden)
         {
             var scores = board.Where(c => c != letter).Select(c => (Card: c, S: sim(letter, c))).ToList();
             var top = scores.Select(x => x.S).DefaultIfEmpty(0).Max();
-            foreach (var (card, s) in scores) evidence[card] -= .3 * Read(s, top);
+            foreach (var (card, s) in scores) evidence[card] -= .3 * Read(s, top, focus);
         }
 
         return view.Board.Select((row, r) =>
