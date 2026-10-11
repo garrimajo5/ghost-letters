@@ -1073,7 +1073,9 @@ class _Board extends StatelessWidget {
                   height: size,
                   child: RotatedBox(
                     quarterTurns: 3,
-                    child: Center(
+                    child: FittedBox(
+                      // Низкий ряд (телефон боком): длинная подпись ужимается, а не обрезается.
+                      fit: BoxFit.scaleDown,
                       child: Text(
                         T.category(v.board[r].category).toUpperCase(),
                         key: Key('row-label-$r'),
