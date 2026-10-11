@@ -400,7 +400,9 @@ public static class BotPlayer
         {
             if (_evidence.TryGetValue(card, out var score)) return score;
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Sim(l.CardId, card));
+            // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
+            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Classic ? Sim(l.CardId, card)
+                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), 4 + 8 * P.Strictness));
             return _evidence[card] = hints - NegativeWeight * vanished;
         }
 
@@ -552,7 +554,9 @@ public static class BotPlayer
 
             // Строгий выбирает письмо, похожее на цель и ни на что больше на поле, — чтобы проверить ровно её.
             var board = view.Board.SelectMany(r => r.Cards).Where(c => c != target).ToList();
-            double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - 0.6 * P.Strictness * Best(h, board);
+            // Письмо должно ясно проверять одну карту: похожее на цель и ни на что больше на поле —
+            // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
+            double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (0.4 + 0.4 * P.Strictness) * Best(h, board);
             return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
         }
 
