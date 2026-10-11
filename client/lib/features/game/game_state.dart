@@ -88,7 +88,7 @@ class CardMark {
         'crosses': crosses,
         'checks': checks,
         'believed': believed,
-        'sources': {'crossBy': crossBy, 'checkBy': checkBy, 'claimedBy': claimedBy, 'claim': claim, 'ignored': ignored},
+        'sources': {'crossBy': crossBy, 'checkBy': checkBy, 'claimedBy': claimedBy, 'claim': claim, if (ignored.isNotEmpty) 'ignored': ignored},
       };
 }
 
