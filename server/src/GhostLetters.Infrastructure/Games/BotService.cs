@@ -226,6 +226,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow())) return false;
 
         if (state.Phase == Phase.Discussion && BotLetterTactics.Pending(botId, await DiscussionAsync(state, ct))) return false;
+        if (await SpeakerStillReadingAsync(state, view, botId, ct)) return false;
 
         var command = BotPlayer.Decide(view, rng, tags, mind);
         if (command is null)
@@ -304,6 +305,19 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var report = reports[sent.Count];
         await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, report.Text, null, report.Cards, report.Notes), ct);
         return true;
+    }
+
+    /// <summary>
+    /// В рации бот держит слово, пока стол читает последнюю реплику: чужую — потом говорит сам, а не отдаёт
+    /// слово молча (иначе после длинной реплики все боты пропускали ход); свою — чтобы её дочитали до смены фазы.
+    /// </summary>
+    private async Task<bool> SpeakerStillReadingAsync(GameState state, PlayerView view, Guid botId, CancellationToken ct)
+    {
+        if (state.Phase != Phase.Discussion || view.Discussion != DiscussionMode.Radio || view.CurrentSpeaker != botId ||
+            view.Me?.Role == Role.Ghost) return false;
+        var lastPublic = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
+            m.Round == state.Round && m.Channel == ChatChannels.Public).OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+        return lastPublic is not null && time.GetUtcNow() - lastPublic.CreatedAt < await ReadingTimeAsync(lastPublic, ct);
     }
 
     /// <summary>Раз за раунд обсуждения бот говорит, что думает (в рации — когда у него слово).</summary>
