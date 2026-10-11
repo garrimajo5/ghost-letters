@@ -92,6 +92,7 @@ class _MainTableState extends State<_MainTable> {
             });
     }
     final hand = v.me != null;
+    final dropCenter = _dropZone(v, center);
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, dragDevices: PointerDeviceKind.values.toSet()),
@@ -105,11 +106,11 @@ class _MainTableState extends State<_MainTable> {
             _TopBar(screen: screen, panelOpen: open, seance: seance, onEye: () => _toggle(v)),
             if (_emoji) _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
             if (seance)
-              Expanded(child: center)
+              Expanded(child: dropCenter)
             else if (landscape)
               Expanded(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Expanded(child: center),
+                  Expanded(child: dropCenter),
                   SizedBox(
                     width: (size.width * 0.24).clamp(150.0, 260.0),
                     child: Column(children: [
@@ -124,7 +125,7 @@ class _MainTableState extends State<_MainTable> {
               )
             else ...[
               _PlayersRow(screen: screen),
-              Expanded(child: center),
+              Expanded(child: dropCenter),
             ],
             if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
             if (!landscape || seance)
@@ -140,6 +141,51 @@ class _MainTableState extends State<_MainTable> {
       ),
     );
   }
+
+  /// Что сделает карта, вытащенная из веера на стол; null — сейчас сыграть нечего.
+  String? _dropLabel(GameView v) {
+    if (_say.active) return 'Кидал эту';
+    if (v.can('SendLetter')) return lettersPerPlayer(v) > 1 && screen.selectedHand.isEmpty ? 'Первое письмо' : 'Отправить письмо';
+    if (v.can('GiveFirstClue')) return 'Выложить зацепку';
+    if (v.can('Discard')) return 'Сбросить карту';
+    return null;
+  }
+
+  void _played(GameView v, String card) {
+    if (_say.active) {
+      if (_say.source != card) _say.pick(card, hint: false);
+      return;
+    }
+    if (_dropLabel(v) == null) return;
+    final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
+    if (!screen.selectedHand.contains(card)) _toggleHand(screen, card, limit);
+    // Набрали нужное число карт — ход сделан той же кнопкой, что и внизу.
+    if (screen.selectedHand.length == limit) ActionPanel.cta(screen)?.onPressed?.call();
+  }
+
+  Widget _dropZone(GameView v, Widget child) => DragTarget<String>(
+        onWillAcceptWithDetails: (_) => _dropLabel(v) != null,
+        onAcceptWithDetails: (d) => _played(v, d.data),
+        builder: (context, candidates, _) => Stack(children: [
+          Positioned.fill(child: child),
+          if (candidates.isNotEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  key: const Key('drop-zone'),
+                  margin: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.amber.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.amber, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(_dropLabel(v) ?? '', style: heading(20, color: AppColors.amberLight, spacing: 1)),
+                ),
+              ),
+            ),
+        ]),
+      );
 
   Widget _panelView(GameView v) => ListView(
         key: const Key('main-panel'),
@@ -624,6 +670,26 @@ class _Fan extends StatelessWidget {
   final VoidCallback onEmoji;
   final double height;
 
+  /// Карту можно вытащить из веера на стол — как настоящую: отпустили над столом — сыграна.
+  Widget _draggable(String id, double card, {required bool enabled, required Widget child}) {
+    if (!enabled) return child;
+    return Draggable<String>(
+      data: id,
+      feedback: Transform.rotate(
+        angle: -0.08,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(11),
+            boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, offset: Offset(0, 8))],
+          ),
+          child: CardImage(cardId: id, size: card * 1.3, radius: 11),
+        ),
+      ),
+      childWhenDragging: Opacity(opacity: 0.25, child: child),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final v = screen.view!;
@@ -682,21 +748,26 @@ class _Fan extends StatelessWidget {
                           ? () => _toggleHand(screen, hand[i], limit)
                           : null,
                   onLongPress: () => showCardZoom(context, hand[i], caption: 'Карта на руке'),
-                  child: Container(
-                    foregroundDecoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(
-                        color: raised(hand[i]) ? AppColors.amber : AppColors.border,
-                        width: raised(hand[i]) ? 3 : 1,
+                  child: _draggable(
+                    hand[i],
+                    card,
+                    enabled: selectable || say.active,
+                    child: Container(
+                      foregroundDecoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                          color: raised(hand[i]) ? AppColors.amber : AppColors.border,
+                          width: raised(hand[i]) ? 3 : 1,
+                        ),
                       ),
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(9),
-                      boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2))],
-                    ),
-                    child: Opacity(
-                      opacity: selectable || say.active || !needsMe(v) ? 1 : 0.6,
-                      child: CardImage(cardId: hand[i], size: card, radius: 9),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2))],
+                      ),
+                      child: Opacity(
+                        opacity: selectable || say.active || !needsMe(v) ? 1 : 0.6,
+                        child: CardImage(cardId: hand[i], size: card, radius: 9),
+                      ),
                     ),
                   ),
                 ),
