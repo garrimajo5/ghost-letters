@@ -22,7 +22,9 @@ class _MainTableState extends State<_MainTable> {
   bool? _panel;
   String? _phase;
   final _say = _Say();
+  late final _typing = _Typing(screen);
   bool _emoji = false;
+  bool _dragging = false;
 
   GameScreenState get screen => widget.screen;
 
@@ -30,9 +32,14 @@ class _MainTableState extends State<_MainTable> {
   void initState() {
     super.initState();
     _say.addListener(_refresh);
+    _typing.sync(initial: true);
+    _typing.addListener(_refresh);
+    screen.chatChanges.addListener(_chat);
     screen.chatChanges.addListener(_refresh);
     screen.reactionChanges.addListener(_refresh);
   }
+
+  void _chat() => _typing.sync();
 
   void _refresh() {
     if (mounted) setState(() {});
@@ -41,6 +48,8 @@ class _MainTableState extends State<_MainTable> {
   @override
   void dispose() {
     screen.chatChanges.removeListener(_refresh);
+    screen.chatChanges.removeListener(_chat);
+    _typing.dispose();
     screen.reactionChanges.removeListener(_refresh);
     _say.dispose();
     super.dispose();
@@ -60,6 +69,7 @@ class _MainTableState extends State<_MainTable> {
       _phase = v.phase;
       _panel = null;
       _say.reset();
+      _typing.reset();
     }
     final size = MediaQuery.sizeOf(context);
     final landscape = size.width > size.height;
@@ -70,7 +80,7 @@ class _MainTableState extends State<_MainTable> {
     final seance = widget.seance;
     final board = suspectVote
         ? _SuspectBoard(screen: screen)
-        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance);
+        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing);
     final Widget center;
     if (open) {
       center = _panelView(v);
@@ -128,7 +138,14 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: dropCenter),
             ],
-            if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: fanHeight),
+            if (hand)
+              _Fan(
+                screen: screen,
+                say: _say,
+                onEmoji: () => setState(() => _emoji = !_emoji),
+                onDrag: (on) => setState(() => _dragging = on),
+                height: fanHeight,
+              ),
             if (!landscape || seance)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
@@ -174,26 +191,49 @@ class _MainTableState extends State<_MainTable> {
   Widget _dropZone(GameView v, Widget child) => DragTarget<String>(
         onWillAcceptWithDetails: (_) => _dropLabel(v) != null,
         onAcceptWithDetails: (d) => _played(v, d.data),
-        builder: (context, candidates, _) => Stack(children: [
-          Positioned.fill(child: child),
-          if (candidates.isNotEmpty)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  key: const Key('drop-zone'),
-                  margin: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.amber.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.amber, width: 2),
+        builder: (context, candidates, _) {
+          final over = candidates.isNotEmpty;
+          final label = _dropLabel(v);
+          return Stack(children: [
+            Positioned.fill(child: child),
+            // Пока карту тянут, посреди стола — куда её нести: почтовый ящик, мусорка, зацепка.
+            if ((_dragging || over) && label != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedContainer(
+                    key: over ? const Key('drop-zone') : const Key('drop-hint'),
+                    duration: const Duration(milliseconds: 150),
+                    margin: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.bg.withValues(alpha: over ? .55 : .35),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.amber.withValues(alpha: over ? 1 : .5), width: over ? 3 : 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      AnimatedScale(
+                        duration: const Duration(milliseconds: 150),
+                        scale: over ? 1.15 : 1,
+                        child: Icon(_dropIcon(v), key: Key('drop-icon-${_dropIcon(v).codePoint}'), size: 96,
+                            color: over ? AppColors.amberLight : AppColors.amber.withValues(alpha: .8)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(label, style: heading(20, color: AppColors.amberLight, spacing: 1)),
+                    ]),
                   ),
-                  alignment: Alignment.center,
-                  child: Text(_dropLabel(v) ?? '', style: heading(20, color: AppColors.amberLight, spacing: 1)),
                 ),
               ),
-            ),
-        ]),
+          ]);
+        },
       );
+
+  IconData _dropIcon(GameView v) {
+    if (_say.active) return Icons.record_voice_over_outlined;
+    if (v.can('SendLetter')) return Icons.markunread_mailbox_outlined;
+    if (v.can('Discard')) return Icons.delete_outline;
+    if (v.can('GiveFirstClue')) return Icons.style_outlined;
+    return Icons.pan_tool_outlined;
+  }
 
   Widget _panelView(GameView v) => ListView(
         key: const Key('main-panel'),
@@ -296,11 +336,18 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true});
+  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing});
 
   final GameScreenState screen;
   final bool landscape;
   final _Say say;
+  final _Typing? typing;
+
+  ChatMessage? get _current {
+    if (!const {'Discussion', 'Voting', 'VoteTie'}.contains(screen.view!.phase)) return null;
+    final typed = typing?.current;
+    return typed != null && typed.round == screen.view!.round ? typed : _statement(screen);
+  }
 
   /// Лесенка подсказок слева; на сеансе подсказки — в секторах круга.
   final bool staircase;
@@ -314,6 +361,8 @@ class _TableArea extends StatelessWidget {
     if (statement == null) return null;
     final i = statement.cardIds.indexOf(id);
     if (i < 0) return null;
+    // Подсветка — когда реплика до карты дошла.
+    if (typing?.current?.id == statement.id && !typing!.isRevealed(i)) return null;
     final note = statement.noteFor(i) ?? '';
     if (theorySource(note)) return null;
     return theoryNegative(note) ? AppColors.redBright : AppColors.believed;
@@ -328,15 +377,16 @@ class _TableArea extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
-      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 4 + 10)) / (columns + hintCards * 0.7);
-      final stripHeight = say.active || _statement(screen) != null || _canSay(v) ? _SayStrip.height : 0.0;
+      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.85);
+      final stripHeight = say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
-      final hint = (card * 0.7 < card + gap - 15 ? card * 0.7 : card + gap - 15).floorToDouble();
-      final hintsWidth = staircase ? hintCards * (hint + 4) + 10 : 0.0;
+      // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
+      final hint = (card * 0.85).floorToDouble();
+      final hintsWidth = staircase ? hintCards * (hint + 3) + 6 : 0.0;
       final order = _Board.tableOrder(v);
-      final statement = _statement(screen);
+      final statement = _current;
       final strip = say.active || statement != null || _canSay(v);
       final board = SingleChildScrollView(
         key: const Key('main-board'),
@@ -389,7 +439,7 @@ class _TableArea extends StatelessWidget {
       );
       if (!strip) return board;
       return Column(children: [
-        _SayStrip(screen: screen, say: say, statement: statement),
+        _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
         Expanded(child: board),
       ]);
     });
@@ -408,14 +458,7 @@ class _HintStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = hint.round == 0 ? 'зацепка' : 'р. ${hint.round}';
-    return Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-      SizedBox(
-        height: 14,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 4),
-          child: Text(label, maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.muted, height: 1.2)),
-        ),
-      ),
+    return Stack(clipBehavior: Clip.none, alignment: Alignment.topRight, children: [
       SizedBox(
         height: size,
         child: hint.cards.isEmpty
@@ -433,7 +476,7 @@ class _HintStep extends StatelessWidget {
                 children: [
                   for (final c in hint.cards.reversed)
                     Padding(
-                      padding: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.only(right: 3),
                       child: GestureDetector(
                         key: Key('hint-$c'),
                         onTap: () => say.active ? say.pick(c, hint: true) : HintSheet.show(context, screen, c, hint.round),
@@ -456,6 +499,17 @@ class _HintStep extends StatelessWidget {
                     ),
                 ],
               ),
+      ),
+      Positioned(
+        top: 2,
+        right: 6,
+        child: IgnorePointer(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: BoxDecoration(color: AppColors.bg.withValues(alpha: .75), borderRadius: BorderRadius.circular(6)),
+            child: Text(label, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
+          ),
+        ),
       ),
     ]);
   }
@@ -671,11 +725,14 @@ class _Actions extends StatelessWidget {
 
 /// Рука веером снизу: выбранная карта приподнята; долгое нажатие — карта крупно.
 class _Fan extends StatelessWidget {
-  const _Fan({required this.screen, required this.say, required this.onEmoji, required this.height});
+  const _Fan({required this.screen, required this.say, required this.onEmoji, required this.height, this.onDrag});
 
   final GameScreenState screen;
   final _Say say;
   final VoidCallback onEmoji;
+
+  /// Карту тянут из веера (true) или отпустили (false) — стол показывает, куда её нести.
+  final ValueChanged<bool>? onDrag;
   final double height;
 
   /// Карту можно вытащить из веера на стол — как настоящую: отпустили над столом — сыграна.
@@ -694,6 +751,8 @@ class _Fan extends StatelessWidget {
         ),
       ),
       childWhenDragging: Opacity(opacity: 0.25, child: child),
+      onDragStarted: () => onDrag?.call(true),
+      onDragEnd: (_) => onDrag?.call(false),
       child: child,
     );
   }
@@ -929,13 +988,14 @@ String _sayText(GameView v, _Say say) {
 
 /// Строка над полем: что говорящий показал на столе, а во время своего показа — источники и «Отправить».
 class _SayStrip extends StatelessWidget {
-  const _SayStrip({required this.screen, required this.say, required this.statement});
+  const _SayStrip({required this.screen, required this.say, required this.statement, this.typing});
 
   static const height = 46.0;
 
   final GameScreenState screen;
   final _Say say;
   final ChatMessage? statement;
+  final _Typing? typing;
 
   Future<void> _send(BuildContext context) async {
     final v = screen.view!;
@@ -996,6 +1056,7 @@ class _SayStrip extends StatelessWidget {
       final m = statement;
       if (m != null) {
         final sources = [for (var i = 0; i < m.cardIds.length; i++) if (theorySource(m.noteFor(i) ?? '')) m.cardIds[i]];
+        final typing = this.typing;
         children.addAll([
           Avatar(nickname: screen.nick(m.authorId), color: screen.colorOf(m.authorId), photoId: screen.photoOf(m.authorId), size: 26),
           const SizedBox(width: 6),
@@ -1007,11 +1068,15 @@ class _SayStrip extends StatelessWidget {
             const SizedBox(width: 4),
           ],
           Expanded(
-            child: _TypedLine(
-              key: const Key('say-statement'),
-              screen: screen,
-              message: m,
-              text: '${screen.nick(m.authorId)}: ${(m.text ?? '').replaceFirst(tablePostPrefix, '')}',
+            child: GestureDetector(
+              onTap: typing?.complete,
+              child: Text(
+                typing?.current?.id == m.id ? typing!.text : _Typing.fullText(screen, m),
+                key: const Key('say-statement'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
           ),
         ]);
@@ -1048,90 +1113,160 @@ class _SayStrip extends StatelessWidget {
   }
 }
 
-/// Реплика печатается по буквам со звуком, как в визуальной новелле. Свои реплики и те, что были до
-/// открытия стола, показываются сразу; нажатие — показать целиком.
-class _TypedLine extends StatefulWidget {
-  const _TypedLine({super.key, required this.screen, required this.message, required this.text});
+/// Реплики за столом в человеческом темпе, как в визуальной новелле: печатаются по буквам со звуком,
+/// карты подсвечиваются в тот момент, когда реплика до них доходит («Мотив 2»), остальные — по одной
+/// после текста. Пришло несколько реплик подряд — идут по очереди, с паузой на чтение.
+class _Typing extends ChangeNotifier {
+  _Typing(this.screen);
 
   final GameScreenState screen;
-  final ChatMessage message;
-  final String text;
+  static const tick = Duration(milliseconds: 40);
 
-  @override
-  State<_TypedLine> createState() => _TypedLineState();
-}
-
-class _TypedLineState extends State<_TypedLine> {
-  late List<String> _letters = widget.text.characters.toList();
-  late int _shown = _letters.length;
+  ChatMessage? current;
+  List<String> _letters = [];
+  int shown = 0;
+  final revealed = <int>{};
+  final _mentionAt = <int, int>{};
+  final _queue = <ChatMessage>[];
+  final _seen = <String>{};
   Timer? _timer;
+  int _cue = 0, _hold = 0;
+  bool _disposed = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Только что пришедшая реплика печатается и при первом показе строки.
-    if (DateTime.now().difference(widget.message.createdAt).abs() < const Duration(seconds: 15)) _animate();
-  }
+  bool get busy => _timer != null;
 
-  @override
-  void didUpdateWidget(_TypedLine old) {
-    super.didUpdateWidget(old);
-    if (old.message.id == widget.message.id) {
-      _letters = widget.text.characters.toList();
-      if (_timer == null) _shown = _letters.length;
+  String get text => _letters.take(shown).join();
+
+  bool isRevealed(int index) => revealed.contains(index);
+
+  static String prefixOf(GameScreenState screen, ChatMessage m) => '${screen.nick(m.authorId)}: ';
+
+  static String fullText(GameScreenState screen, ChatMessage m) =>
+      prefixOf(screen, m) + (m.text ?? '').replaceFirst(tablePostPrefix, '');
+
+  void sync({bool initial = false}) {
+    final v = screen.view;
+    if (v == null) return;
+    final all = screen.chat.where((m) => m.channel == 'public' && m.authorId != null && m.round == v.round &&
+        (m.cardIds.isNotEmpty || (m.text ?? '').trim().isNotEmpty)).toList();
+    final fresh = all.where((m) => _seen.add(m.id)).toList();
+    if (initial) {
+      _show(all.lastOrNull, animate: false);
       return;
     }
-    _letters = widget.text.characters.toList();
-    _animate();
-  }
-
-  void _animate() {
-    final mine = widget.message.authorId == widget.screen.view?.me?.id;
-    if (mine) {
-      _timer?.cancel();
-      _timer = null;
-      _shown = _letters.length;
-      return;
+    for (final m in fresh) {
+      if (m.authorId == v.me?.id) {
+        // Свою реплику не ждём: показываем сразу.
+        _queue.clear();
+        _show(m, animate: false);
+      } else {
+        _queue.add(m);
+      }
     }
-    // Имя автора видно сразу, текст — по буквам.
-    _shown = '${widget.screen.nick(widget.message.authorId)}: '.characters.length.clamp(0, _letters.length);
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: 32), (timer) {
-      if (!mounted) return;
-      if (_shown >= _letters.length) {
-        timer.cancel();
-        _timer = null;
-        return;
-      }
-      setState(() => _shown++);
-      if (_shown % 5 == 0 && _letters[_shown - 1].trim().isNotEmpty) {
-        widget.screen.ref.read(soundProvider).play(Sfx.typing);
-      }
-    });
+    if (_queue.length > 6) _queue.removeRange(0, _queue.length - 6);
+    if (_timer == null && _queue.isNotEmpty) _show(_queue.removeAt(0));
   }
 
-  void _complete() {
+  void _show(ChatMessage? m, {bool animate = true}) {
     _timer?.cancel();
     _timer = null;
-    setState(() => _shown = _letters.length);
+    current = m;
+    revealed.clear();
+    _mentionAt.clear();
+    _letters = m == null ? [] : fullText(screen, m).characters.toList();
+    if (m == null) {
+      _notify();
+      return;
+    }
+    final text = _letters.join();
+    final v = screen.view!;
+    for (var i = 0; i < m.cardIds.length; i++) {
+      final note = m.noteFor(i) ?? '';
+      // Карта, которую «кидал», и улика — с первой буквы: о них реплика.
+      if (theorySource(note)) {
+        revealed.add(i);
+        continue;
+      }
+      for (final row in v.board) {
+        final column = row.cards.indexOf(m.cardIds[i]);
+        if (column < 0) continue;
+        final category = RegExp.escape(T.category(row.category));
+        final match = RegExp('$category\\s*(?:[—–:,-]\\s*)?(?:карт[аыу]\\s+)?${column + 1}(?![0-9])', caseSensitive: false)
+            .firstMatch(text);
+        if (match != null) _mentionAt[i] = text.substring(0, match.end).characters.length;
+      }
+    }
+    if (!animate) {
+      shown = _letters.length;
+      revealed.addAll(List.generate(m.cardIds.length, (i) => i));
+      _notify();
+      return;
+    }
+    shown = prefixOf(screen, m).characters.length.clamp(0, _letters.length);
+    _cue = 0;
+    _hold = 0;
+    _timer = Timer.periodic(tick, (_) => _step());
+    _notify();
+  }
+
+  void _step() {
+    final m = current;
+    if (m == null || _disposed) return;
+    if (shown < _letters.length) {
+      shown++;
+      if (shown % 5 == 0 && _letters[shown - 1].trim().isNotEmpty) screen.ref.read(soundProvider).play(Sfx.typing);
+      for (final e in _mentionAt.entries) {
+        if (e.value <= shown) revealed.add(e.key);
+      }
+      _notify();
+      return;
+    }
+    // Текст допечатан: оставшиеся карты — по одной, как будто игрок показывает их пальцем.
+    final rest = List.generate(m.cardIds.length, (i) => i).where((i) => !revealed.contains(i)).toList();
+    if (rest.isNotEmpty) {
+      if (_cue++ % 15 == 0) {
+        revealed.add(rest.first);
+        _notify();
+      }
+      return;
+    }
+    // Пауза на чтение, затем следующая реплика.
+    if (++_hold >= 60) {
+      _timer?.cancel();
+      _timer = null;
+      if (_queue.isNotEmpty) _show(_queue.removeAt(0));
+      _notify();
+    }
+  }
+
+  /// Новая фаза: прежняя реплика больше не «текущая» (без уведомления — вызывается при сборке).
+  void reset() {
+    _timer?.cancel();
+    _timer = null;
+    _queue.clear();
+    current = null;
+    revealed.clear();
+  }
+
+  void complete() {
+    final m = current;
+    if (m == null) return;
+    shown = _letters.length;
+    revealed.addAll(List.generate(m.cardIds.length, (i) => i));
+    _hold = 0;
+    _notify();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _timer?.cancel();
     super.dispose();
   }
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: _complete,
-        child: Text(
-          _letters.take(_shown).join(),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 12),
-        ),
-      );
 }
 
 /// Выбор эмодзи — облачко над картой-смайликом: каждое нажатие — реакция, можно спамить.

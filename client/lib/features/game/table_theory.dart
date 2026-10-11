@@ -12,7 +12,7 @@ import 'game_screen.dart';
 
 bool theorySource(String note) => note == 'улика' || note.startsWith('кидал');
 bool theoryNegative(String note) =>
-    note.startsWith('исключ') || note.startsWith('не эта');
+    note.startsWith('исключ') || note.startsWith('не эта') || note.contains('исчезла');
 bool theoryLinked(ChatMessage message, int index) =>
     index > 0 &&
     message.cardNotes.isNotEmpty &&

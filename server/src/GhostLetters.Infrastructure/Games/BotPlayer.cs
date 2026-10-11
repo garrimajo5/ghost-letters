@@ -988,7 +988,9 @@ public static class BotPlayer
             {
                 cards.Add(Card(r, c));
                 // «:0» связывает проверку с письмом — так стол знает, какое письмо проверяло эту карту.
-                notes.Add((!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
+                // Письмо исчезло — проверенные им карты бот показывает красным: по его рассуждению, это «не они».
+                var gone = !Classic && claimText.Contains("исчезла", StringComparison.Ordinal);
+                notes.Add((!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
             if (!cards.Contains(card) && cards.Count < ChatService.MaxCards)

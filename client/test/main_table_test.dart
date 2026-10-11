@@ -332,6 +332,7 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('drop-zone')), findsOneWidget);
     expect(find.text('Отправить письмо'), findsOneWidget);
+    expect(find.byKey(Key('drop-icon-${Icons.markunread_mailbox_outlined.codePoint}')), findsOneWidget);
     await _shot(tester, 'drag');
     await gesture.up();
     await tester.pumpAndSettle();
@@ -386,5 +387,32 @@ void main() {
     expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
     await tester.pump(const Duration(seconds: 3));
     expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
+  });
+
+  testWidgets('реплика бота подсвечивает карту, когда до неё доходит', (tester) async {
+    final app = await _open(tester, phone);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'v1', channel: 'public', authorId: 'u3', kind: 'text',
+        text: 'Долго думал над подсказками, и вот что скажу. Ставлю на мотив, карта 1.',
+        cardIds: const ['orig_0001'], cardNotes: const ['думаю, эта'], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('say-mark-orig_0001')), findsNothing, reason: 'до карты реплика ещё не дошла');
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
+  });
+
+  testWidgets('пока тянут карту, посреди стола — почтовый ящик', (tester) async {
+    await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
+
+    final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('hand-orig_0200'))));
+    await gesture.moveBy(const Offset(0, -30));
+    await tester.pump();
+    expect(find.byKey(const Key('drop-hint')), findsOneWidget);
+    expect(find.byKey(Key('drop-icon-${Icons.markunread_mailbox_outlined.codePoint}')), findsOneWidget);
+    await gesture.moveBy(const Offset(0, 30));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('drop-hint')), findsNothing);
   });
 }
