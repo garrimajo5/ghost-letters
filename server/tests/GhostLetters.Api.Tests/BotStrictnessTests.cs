@@ -82,7 +82,19 @@ public sealed class BotStrictnessTests
         var forLoose = (RevealHints)BotPlayer.Decide(view, new Random(1), Tags, Mind(BotPersonality.Default, looseTable))!;
 
         forStrict.CardIds.Should().BeEmpty("строгий стол монетой проверит только кольцо — подсказка его запутает");
-        forLoose.CardIds.Should().Equal(["coin"], "широкий стол увидит за монетой и кошелёк");
+        // Призрак примеряет письмо на стол: монета сильнее всего похожа на ложное кольцо — даже широкий
+        // стол прочтёт её прежде всего как кольцо, и отрыв истинного кошелька станет хуже, чем без подсказки.
+        forLoose.CardIds.Should().BeEmpty("монета уводит к кольцу сильнее, чем к кошельку");
+
+        // Если ряд с кошельком уже ясен по другим подсказкам, широкому столу монета не повредит —
+        // но и не поможет: Призрак не открывает письма без пользы.
+        var tie = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["coin"] = ["money", "coin"], ["wallet"] = ["money", "wallet"], ["ring"] = ["gold", "ring"],
+            ["sword"] = ["sword"], ["boat"] = ["boat"],
+        });
+        var helpful = (RevealHints)BotPlayer.Decide(view, new Random(1), tie, Mind(BotPersonality.Default, looseTable))!;
+        helpful.CardIds.Should().Equal(["coin"], "монета указывает только на истинный кошелёк");
     }
 
     [Fact]

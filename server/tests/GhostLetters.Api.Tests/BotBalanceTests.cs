@@ -143,6 +143,73 @@ public sealed class BotBalanceTests
         File.WriteAllText(output, md.ToString());
     }
 
+    /// <summary>
+    /// A/B-серия: варианты настроек ботов (BotTuning) на одинаковых seed. BOT_EXPERIMENT_VARIANTS —
+    /// «имя: Настройка=значение, … | имя2: …»; BOT_EXPERIMENT_GAMES — партий на состав.
+    /// </summary>
+    [Fact]
+    public void Balance_Experiment()
+    {
+        if (!int.TryParse(Environment.GetEnvironmentVariable("BOT_EXPERIMENT_GAMES"), out var games) || games <= 0) return;
+        var spec = Environment.GetEnvironmentVariable("BOT_EXPERIMENT_VARIANTS") ?? "";
+        var output = Environment.GetEnvironmentVariable("BOT_EXPERIMENT_OUT") ?? Path.Combine(Path.GetTempPath(), "bot-experiments.md");
+        var variants = new List<(string Name, BotTuning Tuning)> { ("по умолчанию", BotTuning.Default) };
+        foreach (var part in spec.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var colon = part.IndexOf(':');
+            variants.Add(colon < 0 ? (part, BotTuning.Parse(part)) : (part[..colon].Trim(), BotTuning.Parse(part[(colon + 1)..])));
+        }
+
+        Config[] configs = [Configs[0], Configs[1], Configs[2], Configs[3], Configs[5]];
+        var tags = RealTags();
+        var md = new StringBuilder();
+        var commit = Environment.GetEnvironmentVariable("GITHUB_SHA") is { Length: >= 7 } sha ? sha[..7] : "локально";
+        md.AppendLine("# Эксперименты с ботами").AppendLine();
+        md.AppendLine($"Сборка {commit}, {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC. По {games} партий на состав, одинаковые seed для всех вариантов.").AppendLine();
+        md.AppendLine("Ячейка: победы детективов · угаданные ряды · все ряды · ряды с прямой подсказкой (самое похожее на открытое письмо — истина) → точность на них / на остальных.").AppendLine();
+        md.AppendLine("| Вариант | " + string.Join(" | ", configs.Select(c => c.Name)) + " |");
+        md.AppendLine("|---|" + string.Concat(configs.Select(_ => "---|")));
+        foreach (var (name, tuning) in variants)
+        {
+            var cells = new List<string>();
+            foreach (var config in configs)
+            {
+                int det = 0, finished = 0, correct = 0, rows = 0, all = 0, covered = 0, coveredOk = 0, bareOk = 0;
+                using (BotTuning.Use(tuning))
+                {
+                    for (var seed = 1; seed <= games; seed++)
+                    {
+                        var (report, state) = BotSandboxRunner.Simulate("full-game", seed, Deck, tags, CancellationToken.None, config.Options);
+                        if (state.Result is not { } result) continue;
+                        finished++;
+                        if (result.Side == WinningSide.Detectives) det++;
+                        correct += report.CorrectRows;
+                        rows += report.TotalRows;
+                        if (report.TotalRows > 0 && report.CorrectRows == report.TotalRows) all++;
+                        if (state.Truth is not { } truth) continue;
+                        var board = state.Board.SelectMany(b => b.Cards).ToList();
+                        var pointed = state.Hints.SelectMany(h => h.Cards)
+                            .Select(h => board.Where(c => c != h).MaxBy(c => tags.Similarity(h, c))).ToHashSet();
+                        for (var r = 0; r < state.Board.Count; r++)
+                        {
+                            var ok = state.VoteOutcomes.LastOrDefault(o => o.Kind == VoteStageKind.Row && o.Row == r)?.Correct == true;
+                            if (pointed.Contains(state.Board[r].Cards[truth[r]])) { covered++; if (ok) coveredOk++; }
+                            else if (ok) bareOk++;
+                        }
+                    }
+                }
+
+                cells.Add($"{Pct(det, finished)} · {Pct(correct, rows)} · {Pct(all, finished)} · {Pct(covered, rows)} → {Pct(coveredOk, covered)} / {Pct(bareOk, rows - covered)}");
+            }
+
+            md.AppendLine($"| {name} | {string.Join(" | ", cells)} |");
+        }
+
+        md.AppendLine().AppendLine($"Погрешность ±{Math.Round(100 / Math.Sqrt(games))} п.п. на долю 50 %; варианты сравниваются на тех же seed, поэтому разница между ними точнее.");
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
+        File.WriteAllText(output, md.ToString());
+    }
+
     private static string Pct(int n, int of) =>
         of == 0 ? "—" : (100.0 * n / of).ToString("0", CultureInfo.InvariantCulture) + " %";
 }

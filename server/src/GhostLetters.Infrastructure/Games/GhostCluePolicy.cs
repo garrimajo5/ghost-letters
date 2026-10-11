@@ -34,9 +34,85 @@ public static class GhostCluePolicy
         return new(yes, no, risk, reveal);
     }
 
-    public static IReadOnlyList<string> Choose(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> cards) =>
-        cards.Select(c => (Card: c, Value: Assess(view, tags, mind, c)))
-            .Where(x => x.Value.Reveal)
-            .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch * (1 - x.Value.Risk))
-            .Select(x => x.Card).ToList();
+    /// <summary>
+    /// Какие письма открыть. Призрак примеряет каждое на стол: как изменится чтение всех рядов (подсказка
+    /// «объясняется» самой похожей картой поля, слабее похожие почти не в счёт), и жадно добавляет
+    /// письма, пока они делают истинные карты заметнее ложных. Осторожность по-прежнему решает, можно ли
+    /// открыть сомнительное письмо; очень полезное для стола письмо открывается и у осторожного.
+    /// </summary>
+    public static IReadOnlyList<string> Choose(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> cards)
+    {
+        if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return [];
+        var tuning = BotTuning.Current;
+        if (!tuning.GhostPlans)
+            return cards.Select(c => (Card: c, Value: Assess(view, tags, mind, c))).Where(x => x.Value.Reveal)
+                .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch * (1 - x.Value.Risk)).Select(x => x.Card).ToList();
+        var p = mind.Personality;
+        var candidates = cards.Distinct().Select(c => (Card: c, Value: Assess(view, tags, mind, c))).ToList();
+        if (candidates.Count == 0) return [];
+        var memo = new Dictionary<(string, string), double>();
+        double Sim(string a, string b) => memo.TryGetValue((a, b), out var v) ? v
+            : memo[(a, b)] = tuning.GhostTableDefault ? tags.Similarity(a, b) : tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
+        var shown = view.Hints.SelectMany(h => h.Cards).ToList();
+        var all = candidates.Select(c => c.Card).ToList();
+        // Как широко стол читает подсказку: строгий стол «объясняет» письмо одной картой, широкий — несколькими.
+        var breadth = tuning.GhostBreadth ? Math.Clamp(mind.TableBreadth, 1, 4) : 1;
+        var focus = 4 + 8 * (1 - (breadth - 1) / 3);
+        var current = TableScore(view, truth, shown, all, Sim, focus);
+        var risk = candidates[0].Value.Risk;
+        var chosen = new List<string>();
+        var cost = .03 * (1 - risk);
+        while (true)
+        {
+            var best = candidates.Where(c => !chosen.Contains(c.Card))
+                .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim, focus) - current))
+                .Where(c => (c.Value.Reveal && c.Gain >= cost - tuning.GhostTolerance * risk * risk && c.Gain > -1e-9 - tuning.GhostTolerance * risk * risk) || c.Gain >= .35)
+                .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
+                .FirstOrDefault();
+            if (best.Card is null) break;
+            chosen.Add(best.Card);
+            current += best.Gain;
+        }
+
+        return chosen;
+    }
+
+    /// <summary>
+    /// Насколько ясно стол прочтёт истину: сумма по рядам отрыва истины от лучшей ложной. Неоткрытые письма
+    /// тоже читаются — отправитель отодвигается от похожих на них карт, поэтому прятать письмо, указывающее
+    /// на истину, вредно.
+    /// </summary>
+    public static double TableScore(PlayerView view, IReadOnlyList<int> truth, IReadOnlyList<string> hints,
+        IReadOnlyList<string> hidden, Func<string, string, double> sim, double focus = 8)
+    {
+        var board = view.Board.SelectMany(r => r.Cards).ToList();
+        var evidence = board.ToDictionary(c => c, _ => 0.0);
+        foreach (var hint in hints)
+        {
+            var scores = board.Where(c => c != hint).Select(c => (Card: c, S: sim(hint, c))).ToList();
+            var top = scores.Select(x => x.S).DefaultIfEmpty(0).Max();
+            foreach (var (card, s) in scores) evidence[card] += Read(s, top, focus);
+        }
+
+        foreach (var letter in hidden)
+        {
+            var scores = board.Where(c => c != letter).Select(c => (Card: c, S: sim(letter, c))).ToList();
+            var top = scores.Select(x => x.S).DefaultIfEmpty(0).Max();
+            foreach (var (card, s) in scores) evidence[card] -= .3 * Read(s, top, focus);
+        }
+
+        return view.Board.Select((row, r) =>
+        {
+            var real = evidence[row.Cards[truth[r]]];
+            var fake = row.Cards.Where((_, c) => c != truth[r]).Select(c => evidence[c]).DefaultIfEmpty(0).Max();
+            return Math.Tanh((real - fake) / .4);
+        }).Sum();
+    }
+
+    /// <summary>
+    /// Вклад подсказки в карту: сходство, ослабленное тем, насколько карта уступает самой похожей карте поля.
+    /// Игрок «объясняет» письмо лучшим совпадением — остальные похожие почти не в счёт.
+    /// </summary>
+    public static double Read(double similarity, double top, double focus = 8) =>
+        similarity <= 0 ? 0 : similarity * Math.Exp(-focus * Math.Max(0, top - similarity));
 }
