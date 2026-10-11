@@ -7,9 +7,11 @@ import '../../widgets/common.dart';
 /// Resolve only public board/hint references. Keep the stored text readable for
 /// quotes, older clients and references that cannot be resolved in this snapshot.
 class ChatCardText extends StatelessWidget {
-  const ChatCardText({super.key, required this.message, required this.parts});
+  const ChatCardText({super.key, required this.message, required this.parts, this.keyPrefix = 'chat-inline'});
 
   final ChatMessage message;
+  /// Префикс ключей миниатюр: в чате и в разговоре под полем одна реплика видна дважды.
+  final String keyPrefix;
   final List<({String text, String? cardId})> parts;
 
   static List<({String text, String? cardId})> parse(
@@ -85,7 +87,7 @@ class ChatCardText extends StatelessWidget {
                     child: Tooltip(
                       message: parts[i].text,
                       child: GestureDetector(
-                        key: Key('chat-inline-${message.id}-$i'),
+                        key: Key('$keyPrefix-${message.id}-$i'),
                         onTap: () => showCardZoom(context, cardId, caption: parts[i].text),
                         child: CardImage(cardId: cardId, size: 44, radius: 6),
                       ),
