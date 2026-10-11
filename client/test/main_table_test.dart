@@ -698,4 +698,28 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('drop-hint')), findsNothing);
   });
+
+  testWidgets('бот спросил меня про ряд: ряд подсвечен, нажатие на карту — ответ', (tester) async {
+    final app = await _open(tester, phone, edit: (view) => view['currentSpeaker'] = 'u2');
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'q1',
+        channel: 'public',
+        authorId: 'u3',
+        kind: 'text',
+        text: 'Ватсон, за какую карту в ряду «Место» будешь голосовать? Я выбираю Место 2.',
+        cardIds: const [],
+        cardNotes: const [],
+        createdAt: DateTime.now(),
+        round: 4));
+    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 6));
+
+    expect(find.byKey(const Key('ask-strip')), findsOneWidget);
+    expect(find.byKey(const Key('focus-row-1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('ask-pick-orig_0008')));
+    await tester.pumpAndSettle();
+    final sent = app.api.named('sendChat').last.$2;
+    expect(sent[1], startsWith('Марпл, в ряду «Место» голосую за'));
+    expect(tester.takeException(), isNull);
+  });
 }
