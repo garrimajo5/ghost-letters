@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../../core/config.dart';
 import '../../core/sound.dart';
 import '../../core/sound_settings_sheet.dart';
 import '../../core/realtime.dart';
+import '../../core/session.dart' show prefsProvider;
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
@@ -24,6 +26,7 @@ import 'table_theory.dart';
 
 part 'dossier_table.dart';
 part 'evidence_board.dart';
+part 'main_table.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -97,6 +100,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
   String colorOf(String? id) => rosterOf(id)?.avatarColor ?? '#3D6A99';
 
   String? photoOf(String? id) => rosterOf(id)?.avatarId;
+
+  bool isBot(String? id) => rosterOf(id)?.isBot ?? false;
 
   String? get lobbyId => _snap?.lobbyId;
 
@@ -443,6 +448,16 @@ class GameScreenState extends ConsumerState<GameScreen> {
   /// Стол крупно: поле и подсказки во весь экран с приближением пальцами.
   bool zoomed = false;
 
+  /// Настройка «Классический стол»: прежняя раскладка вместо нового стола по наброску.
+  static const classicKey = 'table.classic';
+
+  bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
+
+  Future<void> setClassicTable(bool value) async {
+    await ref.read(prefsProvider).setBool(classicKey, value);
+    if (mounted) setState(() {});
+  }
+
   void setZoomed(bool value) => setState(() => zoomed = value);
 
   /// Ряд, где сейчас выбирают карту: истина ночью, назвать улики, голосование по ряду.
@@ -546,6 +561,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
     if (AppConfig.dossierDesign && v.phase != 'RoleReveal') {
       chatDocked = false;
       return _DossierTable(screen: this);
+    }
+    // Новый стол — для игроков; экран стола (зрители, ТВ) остаётся прежним.
+    if (v.me != null && v.phase != 'RoleReveal' && !classicTable) {
+      chatDocked = false;
+      return _MainTable(screen: this);
     }
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final finale = isFinale(v);
@@ -781,11 +801,15 @@ class _Header extends StatelessWidget {
                 screen.editSettings();
               case 'rules':
                 context.push('/rules');
+              case 'new-table':
+                screen.setClassicTable(false);
             }
           },
           itemBuilder: (_) => [
             if (v.me == null && screen.lobbyId != null)
               const PopupMenuItem(value: 'leave-viewing', child: Text('Завершить просмотр')),
+            if (v.me != null && !AppConfig.dossierDesign)
+              const PopupMenuItem(value: 'new-table', child: Text('Новый стол')),
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
@@ -931,14 +955,28 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen, this.maxCard = 96, this.decorate});
+  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false});
 
   final GameScreenState screen;
   final double maxCard;
   final Widget Function(String, Widget)? decorate;
 
+  /// Порядок показа рядов (индексы в v.board); null — как пришло с сервера.
+  final List<int>? order;
+
+  /// Новый стол: подписи рядов вертикально, без жетонов и номеров столбцов.
+  final bool vertical;
+
   static const gap = 5.0;
   static const labelWidth = 46.0;
+  static const verticalLabel = 18.0;
+
+  /// Тайна, Мотив, Способ, Место — порядок рядов на новом столе.
+  static List<int> tableOrder(GameView v) {
+    const rank = {'Secret': 0, 'Motive': 1, 'Method': 2, 'Place': 3};
+    return [for (var i = 0; i < v.board.length; i++) i]
+      ..sort((a, b) => (rank[v.board[a].category] ?? 9).compareTo(rank[v.board[b].category] ?? 9));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -959,16 +997,17 @@ class _Board extends StatelessWidget {
 
     return LayoutBuilder(builder: (context, box) {
       // Карта = (ширина − колонка жетонов − промежутки) / столбцы, но не больше 96.
-      var label = labelWidth;
+      var label = vertical ? verticalLabel : labelWidth;
       var size = ((box.maxWidth - label - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
       // Крупные карты (планшет, компьютер) — жетоны рядов крупнее вместе с ними.
-      if (size > 96) {
+      if (size > 96 && !vertical) {
         label = (size * 0.55).clamp(labelWidth, 100.0).floorToDouble();
         size = ((box.maxWidth - label - gap * columns) / columns).clamp(24.0, maxCard).floorToDouble();
       }
       final token = label - 12;
+      final rowsOrder = order ?? [for (var i = 0; i < v.board.length; i++) i];
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
+        if (!vertical) ...[Row(children: [
           SizedBox(width: label),
           for (var c = 0; c < columns; c++)
             Container(
@@ -978,11 +1017,30 @@ class _Board extends StatelessWidget {
               child: Text('${c + 1}', style: heading(11, color: AppColors.dim, spacing: 0)),
             ),
         ]),
-        const SizedBox(height: 4),
-        for (var r = 0; r < v.board.length; r++)
+        const SizedBox(height: 4)],
+        for (final r in rowsOrder)
           Padding(
             padding: const EdgeInsets.only(bottom: gap),
             child: Row(children: [
+              if (vertical)
+                SizedBox(
+                  width: label,
+                  height: size,
+                  child: RotatedBox(
+                    quarterTurns: 3,
+                    child: Center(
+                      child: Text(
+                        T.category(v.board[r].category).toUpperCase(),
+                        key: Key('row-label-$r'),
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                        style: heading(11, color: AppColors.ice, spacing: 1.5),
+                      ),
+                    ),
+                  ),
+                )
+              else
               SizedBox(
                 width: label,
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1677,6 +1735,18 @@ class _ChatButton extends StatelessWidget {
   }
 }
 
+/// Выбор карты руки: письмо (1 карта, вдвоём — 2), сброс, первая зацепка.
+void _toggleHand(GameScreenState screen, String c, int limit) {
+  HapticFeedback.selectionClick();
+  if (screen.selectedHand.contains(c)) {
+    screen.selectedHand.remove(c);
+  } else {
+    if (screen.selectedHand.length >= limit) screen.selectedHand.clear();
+    screen.selectedHand.add(c);
+  }
+  screen.refresh();
+}
+
 class _Hand extends StatelessWidget {
   const _Hand({required this.screen});
 
@@ -1701,18 +1771,7 @@ class _Hand extends StatelessWidget {
               GestureDetector(
                 key: Key('hand-$c'),
                 onLongPress: () => showCardZoom(context, c, caption: 'Карта на руке'),
-                onTap: selectable
-                    ? () {
-                        HapticFeedback.selectionClick();
-                        if (screen.selectedHand.contains(c)) {
-                          screen.selectedHand.remove(c);
-                        } else {
-                          if (screen.selectedHand.length >= limit) screen.selectedHand.clear();
-                          screen.selectedHand.add(c);
-                        }
-                        screen.refresh();
-                      }
-                    : null,
+                onTap: selectable ? () => _toggleHand(screen, c, limit) : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   margin: const EdgeInsets.symmetric(horizontal: 4),

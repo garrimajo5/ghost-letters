@@ -1,0 +1,141 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:ghost_letters/core/theme.dart';
+import 'package:ghost_letters/features/game/game_screen.dart';
+import 'package:ghost_letters/models/models.dart';
+
+import 'support/fakes.dart';
+import 'support/fixtures.dart';
+
+/// Новый стол по наброску: телефон боком и вертикально.
+Future<TestApp> _open(WidgetTester tester, Size size,
+    {String phase = 'Discussion', List<String> allowed = const ['RaiseHand'], void Function(Json view)? edit}) async {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final app = await TestApp.create(user: watson, classicTable: false);
+  addTearDown(app.container.dispose);
+  await tester.pumpWidget(app.widget);
+  await tester.pumpAndSettle();
+  final j = snapshotJson(phase: phase, allowed: allowed);
+  final view = j['view'] as Json;
+  view['board'] = [
+    for (final (i, cat) in const ['Motive', 'Place', 'Method', 'Secret'].indexed)
+      {'category': cat, 'cards': [for (var c = 0; c < 5; c++) 'orig_0${(i * 5 + c + 1).toString().padLeft(3, '0')}']},
+  ];
+  view['finale'] = null;
+  view['currentSpeaker'] = 'u3';
+  (j['roster'] as List)[2] = {'id': 'u3', 'nickname': 'Марпл', 'avatarColor': '#E5647A', 'seat': 2, 'isBot': true};
+  edit?.call(view);
+  app.realtime.game = GameSnapshot.fromJson(j);
+  app.go('/game/g1');
+  await tester.pumpAndSettle();
+  return app;
+}
+
+void main() {
+  const phone = Size(800, 360);
+  const portrait = Size(390, 844);
+
+  for (final size in const [phone, portrait, Size(1280, 800)]) {
+    for (final (phase, allowed) in const [
+      ('Discussion', ['RaiseHand']),
+      ('Mailbox', ['SendLetter']),
+      ('Night', <String>[]),
+    ]) {
+      testWidgets('новый стол ${size.width.toInt()}×${size.height.toInt()}, $phase: без переполнений', (tester) async {
+        await _open(tester, size, phase: phase, allowed: allowed);
+
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const Key('main-table')), findsOneWidget);
+        expect(find.byKey(const Key('main-fan')), findsOneWidget);
+        expect(find.byKey(const Key('board-3-4')), findsOneWidget);
+        expect(find.byTooltip('Чат'), findsOneWidget);
+      });
+    }
+  }
+
+  testWidgets('ряды по порядку: Тайна, Мотив, Способ, Место; подсказки на высоте своих рядов', (tester) async {
+    await _open(tester, phone);
+
+    double y(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
+    // board: 0 Motive, 1 Place, 2 Method, 3 Secret.
+    expect(y('row-label-3'), lessThan(y('row-label-0')));
+    expect(y('row-label-0'), lessThan(y('row-label-2')));
+    expect(y('row-label-2'), lessThan(y('row-label-1')));
+    // Первая зацепка — в ряду Тайны.
+    final hint = tester.getCenter(find.byKey(const Key('hint-orig_0100'))).dy;
+    expect(hint, greaterThan(y('board-3-0')));
+    expect(hint, lessThan(tester.getBottomLeft(find.byKey(const Key('board-3-0'))).dy + 6));
+    // Игроки справа от поля.
+    expect(tester.getTopLeft(find.byKey(const Key('main-players'))).dx,
+        greaterThan(tester.getTopRight(find.byKey(const Key('board-0-4'))).dx));
+  });
+
+  testWidgets('игроки: Призрак, бот и говорящий отмечены', (tester) async {
+    await _open(tester, phone);
+
+    expect(find.byKey(const Key('ghost-badge-u1')), findsOneWidget);
+    expect(find.byKey(const Key('bot-badge-u3')), findsOneWidget);
+    expect(find.textContaining('бот'), findsWidgets);
+    // Первым говорил тот, у кого рация (реплик в раунде ещё нет).
+    expect(find.byKey(const Key('first-u2')), findsOneWidget);
+    // Говорящий — зелёное имя.
+    final name = tester.widget<Text>(find.descendant(of: find.byKey(const Key('player-u3')), matching: find.text('Марпл')));
+    expect(name.style?.color, AppColors.believed);
+  });
+
+  testWidgets('письмо: из веера выбирается одна карта', (tester) async {
+    await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
+
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    await tester.tap(find.byKey(const Key('hand-orig_0200')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hand-orig_0201')));
+    await tester.pump();
+    expect(state.selectedHand, {'orig_0201'});
+  });
+
+  testWidgets('глазик переключает стол и ход партии на одном месте, выбор сохраняется', (tester) async {
+    await _open(tester, portrait, phase: 'Mailbox', allowed: const ['SendLetter']);
+
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    await tester.tap(find.byKey(const Key('hand-orig_0200')));
+    await tester.pump();
+    final eye = tester.getCenter(find.byKey(const Key('main-eye')));
+    await tester.tap(find.byKey(const Key('main-eye')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-panel')), findsOneWidget);
+    expect(find.byKey(const Key('main-board')), findsNothing);
+    expect(tester.getCenter(find.byKey(const Key('main-eye'))), eye);
+    await tester.tap(find.byKey(const Key('main-eye')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-board')), findsOneWidget);
+    expect(state.selectedHand, {'orig_0200'});
+  });
+
+  testWidgets('ничья открывает ход партии сама', (tester) async {
+    await _open(tester, phone, phase: 'VoteTie', allowed: const ['ReadyRevote'],
+        edit: (view) => view['finale'] = (snapshotJson()['view'] as Json)['finale']);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('main-panel')), findsOneWidget);
+  });
+
+  testWidgets('меню: «Классический стол» возвращает прежнюю раскладку и обратно', (tester) async {
+    await _open(tester, phone);
+
+    await tester.tap(find.byKey(const Key('main-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Классический стол'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-table')), findsNothing);
+    expect(find.byKey(const Key('landscape-board')), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Меню партии'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Новый стол'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('main-table')), findsOneWidget);
+  });
+}

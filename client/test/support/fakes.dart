@@ -12,6 +12,7 @@ import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/realtime.dart';
 import 'package:ghost_letters/core/session.dart';
 import 'package:ghost_letters/core/sound.dart';
+import 'package:ghost_letters/features/game/game_screen.dart';
 import 'package:ghost_letters/features/profile/avatar_crop.dart';
 import 'package:ghost_letters/models/models.dart';
 import 'package:ghost_letters/models/admin_cards.dart';
@@ -330,8 +331,10 @@ class TestApp {
 
   FakeRealtime get realtime => container.read(realtimeProvider) as FakeRealtime;
 
-  static Future<TestApp> create({User? user}) async {
+  /// [classicTable] — прежний стол (старые тесты завязаны на его раскладку); новый стол — false.
+  static Future<TestApp> create({User? user, bool classicTable = true}) async {
     SharedPreferences.setMockInitialValues({
+      if (classicTable) GameScreenState.classicKey: true,
       if (user != null)
         'session': jsonEncode({'user': user.toJson(), 'accessToken': 'access', 'refreshToken': 'refresh'}),
     });

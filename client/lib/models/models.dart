@@ -736,10 +736,14 @@ class GameView {
 }
 
 class RosterEntry {
-  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat, [this.avatarId]);
+  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat, [this.avatarId, this.isBot = false]);
 
   factory RosterEntry.fromJson(Json j) => RosterEntry(
-      j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt(), j['avatarId'] as String?);
+      j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt(), j['avatarId'] as String?,
+      j['isBot'] as bool? ?? false);
+
+  /// Игрок-бот: на столе помечается значком робота и подписью «бот».
+  final bool isBot;
 
   final String? avatarId;
   final String id;
