@@ -405,7 +405,28 @@ public static class BotPlayer
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
                 : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus));
-            return _evidence[card] = hints - NegativeWeight * vanished;
+            return _evidence[card] = hints - NegativeWeight * (vanished + OthersVanished(card));
+        }
+
+        /// <summary>
+        /// Чужие исчезнувшие письма: игрок сказал, каким письмом проверял карту, а письма среди открытых нет.
+        /// Слабее своего (могут соврать) и с доверием к автору.
+        /// </summary>
+        private double OthersVanished(string card)
+        {
+            if (Classic || mind is null || BotTuning.Current.OthersVanished <= 0) return 0;
+            var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
+            var mine = me.Letters.Select(l => l.CardId).ToHashSet();
+            var trusted = KillerTeam ? 0 : 1;
+            return trusted * BotTuning.Current.OthersVanished * mind.Opinions
+                .Where(o => o.IsCheck && o.CardId == card && o.Author != me.Id && o.SourceCard is { } src && !shown.Contains(src) && !mine.Contains(src)
+                    && !view.Board.Any(r => r.Cards.Contains(src)))
+                .GroupBy(o => o.SourceCard!).Sum(g =>
+                {
+                    var o = g.First();
+                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : HistoryTrust(o.Author);
+                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus);
+                });
         }
 
         /// <summary>Лучший столбец ряда по подсказкам (среди кандидатов, если заданы).</summary>
@@ -547,6 +568,10 @@ public static class BotPlayer
                 var fakes = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
                 target = Card(row, fakes[rng.Next(fakes.Count)]);
             }
+            else if (!Classic && BotTuning.Current.Probe && !(Truth is not null && me.Role == Role.Expert) && Probe() is { } probe)
+            {
+                return [probe, .. me.Hand.Where(h => h != probe).OrderByDescending(h => ProbeValue(h) + Noise()).Take(count - 1)];
+            }
             else
             {
                 // Проверяем самый неясный ряд: его лучшую (или случайную) карту.
@@ -560,6 +585,39 @@ public static class BotPlayer
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
             return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
+        }
+
+        /// <summary>
+        /// Письмо-проверка: однозначно похожее на одну карту поля, правдоподобную в неясном ряду и ещё не
+        /// проверенную. Открыли — эта карта почти наверняка истина; исчезло — почти наверняка нет.
+        /// Игроки за столом расходятся по разным картам (сдвиг по месту и раунду), чтобы не проверять одно и то же.
+        /// </summary>
+        private string? Probe()
+        {
+            var scored = me.Hand.Select(h => (Card: h, Value: ProbeValue(h))).Where(x => x.Value > 0).OrderByDescending(x => x.Value).ToList();
+            if (scored.Count == 0) return null;
+            var seat = view.Players.Where(p => !p.IsGhost).OrderBy(p => p.Seat).Select(p => p.Id).ToList().IndexOf(me.Id);
+            // Из почти равноценных проверок каждый берёт «свою»; явно лучшую берут все.
+            var close = scored.TakeWhile(x => x.Value >= scored[0].Value * .75).ToList();
+            return close[(Math.Max(0, seat) + view.Round) % close.Count].Card;
+        }
+
+        private double ProbeValue(string letter)
+        {
+            var cards = view.Board.SelectMany((r, ri) => r.Cards.Select((c, ci) => (Card: c, Row: ri, Column: ci))).Where(x => x.Card != letter)
+                .Select(x => (x.Card, x.Row, x.Column, S: Sim(letter, x.Card))).OrderByDescending(x => x.S).ToList();
+            if (cards.Count < 2 || cards[0].S <= 0.05) return 0;
+            var top = cards[0];
+            var margin = top.S - cards[1].S;
+            if (margin <= 0) return 0;
+            var row = view.Board[top.Row].Cards;
+            // Правдоподобие карты в ряду и неясность ряда — по мягкому максимуму моих улик.
+            var weights = row.Select(c => Math.Exp(6 * Evidence(c))).ToList();
+            var share = weights[top.Column] / weights.Sum();
+            var unclear = 1 - weights.Max() / weights.Sum();
+            var tested = me.Letters.Any(l => view.Board.SelectMany(r => r.Cards).Where(c => c != l.CardId)
+                .MaxBy(c => Sim(l.CardId, c)) == top.Card);
+            return (tested ? .3 : 1) * (.25 + share) * (.2 + unclear) * Math.Min(1, margin / .15) * Math.Min(1, top.S / .25);
         }
 
         public string? CardToDiscard()
@@ -855,7 +913,8 @@ public static class BotPlayer
             foreach (var (r, c) in checkedCards)
             {
                 cards.Add(Card(r, c));
-                notes.Add(!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту");
+                // «:0» связывает проверку с письмом — так стол знает, какое письмо проверяло эту карту.
+                notes.Add((!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
             if (!cards.Contains(card) && cards.Count < ChatService.MaxCards)

@@ -1,0 +1,2 @@
+120
+variants: без проверок: Probe=false | без чужих исчезнувших: OthersVanished=0 | чужие исчезнувшие ×1: OthersVanished=1 | без обоих: Probe=false, OthersVanished=0 | средний взгляд: GhostTableDefault=true

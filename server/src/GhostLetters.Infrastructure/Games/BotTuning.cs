@@ -31,6 +31,12 @@ public sealed record BotTuning
     public double LetterBase { get; init; } = .4;
     public double LetterStrict { get; init; } = .4;
 
+    /// <summary>Письма — проверки: однозначные, по правдоподобным картам неясных рядов, разные у разных игроков.</summary>
+    public bool Probe { get; init; } = true;
+
+    /// <summary>Вес чужих исчезнувших писем (по их публичным «кидал эту — проверял…») относительно своих.</summary>
+    public double OthersVanished { get; init; } = .5;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -65,6 +71,8 @@ public sealed record BotTuning
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
+                nameof(Probe) => t with { Probe = B() },
+                nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
             };
