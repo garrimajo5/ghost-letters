@@ -187,7 +187,7 @@ public sealed record LobbySettings
             Phase.Mailbox => t.Mailbox,
             Phase.GhostPick => t.GhostPick,
             Phase.Refill => t.Refill,
-            Phase.Discussion when state.Round >= state.TotalRounds => 2 * t.FreeDiscussion,
+            Phase.Discussion when state.IsFinalTalk => 2 * t.FreeDiscussion,
             Phase.Discussion => state.EffectiveDiscussion == DiscussionMode.Radio ? t.SpeakerTurn : t.FreeDiscussion,
             Phase.Voting => t.Voting,
             Phase.VoteTie => t.VoteTie,

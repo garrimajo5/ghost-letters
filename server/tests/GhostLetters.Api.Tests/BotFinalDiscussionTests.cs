@@ -419,6 +419,9 @@ public sealed class BotFinalDiscussionTests
         var settings = new LobbySettings { Timers = new PhaseTimers { FreeDiscussion = 120, SpeakerTurn = 45 } };
         settings.TimerFor(state).Should().Be(TimeSpan.FromSeconds(45));
         state.Round = 2;
+        // Последний раунд с рацией: сначала по кругу, затем общее обсуждение.
+        state.EffectiveDiscussion.Should().Be(DiscussionMode.Radio);
+        state.FinalTalk = true;
         state.EffectiveDiscussion.Should().Be(DiscussionMode.FreeChat);
         state.CurrentSpeaker.Should().BeNull();
         settings.TimerFor(state).Should().Be(TimeSpan.FromSeconds(240));

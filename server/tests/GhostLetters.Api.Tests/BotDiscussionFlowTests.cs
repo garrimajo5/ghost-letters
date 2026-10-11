@@ -15,7 +15,7 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
     [Fact]
     public async Task FinalRound_BotsExchangeQuestionsAndAnswers_AndThenStop()
     {
-        var game = await GameHarness.StartAsync(_factory, 5, new LobbySettings { Rounds = 1 });
+        var game = await GameHarness.StartAsync(_factory, 5, new LobbySettings { Rounds = 1, Discussion = DiscussionMode.FreeChat });
         await new GameDriver(game).RunUntilAsync(p => p == "Discussion");
         var state = await _factory.WithDbAsync(async db => GameStore.Read(await db.Games.AsNoTracking().SingleAsync(g => g.Id == game.GameId)));
         state.EffectiveDiscussion.Should().Be(DiscussionMode.FreeChat);

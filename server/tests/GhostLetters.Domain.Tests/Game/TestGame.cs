@@ -67,13 +67,16 @@ internal static class TestGame
 
     public static void TalkThrough(this GameState state)
     {
-        if (state.EffectiveDiscussion == DiscussionMode.FreeChat)
+        // В последнем раунде с рацией после круга говорящих идёт ещё общее обсуждение — проходим и его.
+        var round = state.Round;
+        while (state.Phase == Phase.Discussion && state.Round == round)
         {
-            foreach (var player in state.Investigators.ToList()) state.Run(player, new ReadyNextRound());
-            return;
-        }
-        while (state.Phase == Phase.Discussion && state.CurrentSpeaker is { } speaker)
-        {
+            if (state.EffectiveDiscussion == DiscussionMode.FreeChat)
+            {
+                foreach (var player in state.Investigators.ToList()) state.Run(player, new ReadyNextRound());
+                return;
+            }
+            if (state.CurrentSpeaker is not { } speaker) return;
             state.Run(state.Player(speaker), new EndTurn());
         }
     }
