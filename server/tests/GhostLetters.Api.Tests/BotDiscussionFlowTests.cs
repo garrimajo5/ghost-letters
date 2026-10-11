@@ -38,7 +38,8 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
             var lines = await _factory.WithDbAsync(db => db.ChatMessages.AsNoTracking()
                 .Where(m => m.GameId == game.GameId && m.Channel != ChatChannels.Table && m.AuthorId != null && ids.Contains(m.AuthorId.Value))
                 .OrderBy(m => m.CreatedAt).ToListAsync());
-            lines.Should().Contain(m => m.Text!.Contains("по всем открытым уликам"));
+            // Итоговая версия — построчно по рядам (вступления у ботов разные).
+            lines.Should().Contain(m => m.Text!.Contains("\n• "));
             lines.Should().Contain(m => m.Text!.Contains("будешь голосовать?"));
             lines.Should().Contain(m => m.Text!.Contains("отвечаю про голосование"));
             lines.GroupBy(m => m.AuthorId).Should().OnlyContain(g => g.Count() <= BotDiscussion.MaxMessages);

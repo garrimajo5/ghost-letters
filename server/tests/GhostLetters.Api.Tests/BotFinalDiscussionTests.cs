@@ -113,7 +113,7 @@ public sealed class BotFinalDiscussionTests
         BotPlayer.Plan(view, Tags, Mind, new Random(1)).Should().Equal(0, 0);
         BotPlayer.Plan(view with { Hints = [view.Hints[^1]] }, Tags, Mind, new Random(1))[0].Should().Be(1);
         var line = BotDiscussion.Compose(view, Tags, Mind, [], new Random(1))!.Value;
-        line.Text.Should().Contain("мотив 1").And.Contain("место 1").And.Contain("Подсказка р.0 №1").And.Contain("Подсказка р.1 №2");
+        line.Text.Should().Contain("мотив 1").And.Contain("место 1").And.Contain("Зацепка").And.Contain("Подсказка р.1 №2");
         line.Cards.Should().Equal("knife", "boat");
         line.Text.Length.Should().BeLessThanOrEqualTo(ChatService.MaxTextLength);
     }
@@ -193,7 +193,7 @@ public sealed class BotFinalDiscussionTests
             [new(Me, "Моя версия", [earlier, "boat"], now),
              new(Ann, "Бот Я, что думаешь о мотиве?", [], now.AddSeconds(1))], new Random(1))!.Value;
         line.Cards[0].Should().Be("knife");
-        line.Text.Should().Contain("Подсказка р.0 №1");
+        line.Text.Should().Contain("Зацепка");
         if (changed) line.Text.Should().Contain("Пересмотрел выбор: мотив 2 → мотив 1");
         else line.Text.Should().NotContain("Пересмотрел выбор");
     }
@@ -301,7 +301,7 @@ public sealed class BotFinalDiscussionTests
         var line = BotDiscussion.Compose(view, Tags, Mind, messages, new Random(1))!.Value;
         line.Text.Should().StartWith("Аня, отвечаю").And.NotContain("уточню");
         line.Text.Should().Contain("мотив 1").And.Contain("место 1").And.NotContain("тайна");
-        line.Text.Should().Contain("Подсказка р.0 №1").And.Contain("Подсказка р.1 №2");
+        line.Text.Should().Contain("Зацепка").And.Contain("Подсказка р.1 №2");
         line.Text.Should().Contain("не согласен").And.Contain("совпадают");
         line.Cards.Should().Equal("knife", "boat");
         line.Notes.Should().Equal("думаю, эта", "думаю, эта");
