@@ -1,0 +1,2 @@
+120
+variants: как раньше: FocusBase=0, FocusStrict=0, GhostPlans=false, VanishedFocus=false, LetterBase=0, LetterStrict=0.6 | без примерки: GhostPlans=false | без фокуса: FocusBase=0, FocusStrict=0 | без терпимости: GhostTolerance=0 | без ширины: GhostBreadth=false | письма как раньше: LetterBase=0, LetterStrict=0.6 | исчезнувшие без фокуса: VanishedFocus=false

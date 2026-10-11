@@ -43,8 +43,24 @@ jobs:
           games=${games:-100}
           if [ "$games" -gt 500 ]; then games=500; fi
           echo "games=$games" >> "$GITHUB_OUTPUT"
+          # Вторая строка «variants: имя: Настройка=значение, … | …» — A/B-серия вместо полного отчёта.
+          variants=""
+          if [ -f bot-balance.request ]; then variants=$(grep '^variants:' bot-balance.request | sed 's/^variants: *//' || true); fi
+          echo "variants=$variants" >> "$GITHUB_OUTPUT"
+
+      - name: Run experiment
+        if: steps.games.outputs.variants != ''
+        env:
+          BOT_EXPERIMENT_GAMES: ${{ steps.games.outputs.games }}
+          BOT_EXPERIMENT_VARIANTS: ${{ steps.games.outputs.variants }}
+          BOT_EXPERIMENT_OUT: ${{ github.workspace }}/docs/bot-experiments.md
+        run: |
+          dotnet test tests/GhostLetters.Api.Tests -c Release --filter "FullyQualifiedName~BotBalanceTests.Balance_Experiment" --logger "console;verbosity=minimal"
+          test -s "$BOT_EXPERIMENT_OUT"
+          echo "::notice title=Bot experiment::$(head -c 3000 "$BOT_EXPERIMENT_OUT" | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
 
       - name: Run balance series
+        if: steps.games.outputs.variants == ''
         env:
           BOT_BALANCE_GAMES: ${{ steps.games.outputs.games }}
           BOT_BALANCE_OUT: ${{ github.workspace }}/docs/bot-balance.md
@@ -58,6 +74,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if [ -f bot-balance.request ]; then git rm -q bot-balance.request; fi
-          git add ../docs/bot-balance.md
-          git commit -m "Баланс ботов: ${{ steps.games.outputs.games }} партий на состав"
+          git add ../docs/bot-balance.md ../docs/bot-experiments.md 2>/dev/null || git add ../docs/bot-balance.md
+          git commit -m "Баланс ботов: ${{ steps.games.outputs.games }} партий${{ steps.games.outputs.variants != '' && ' (эксперимент)' || '' }}"
           git push

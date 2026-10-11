@@ -168,11 +168,13 @@ public static class BotPlayer
 
             // Подсказку объясняет самая похожая карта поля: чем дальше карта от неё, тем меньше вклад.
             // Строгий читает узко (сильнее гасит вторые совпадения), широкий — мягче.
-            var read = GhostCluePolicy.Read(s, HintTop(hint), 4 + 8 * P.Strictness);
+            var read = GhostCluePolicy.Read(s, HintTop(hint), Focus);
             return Rank(hint, card) < MyBreadth ? read : read * (1 - P.Strictness);
         }
 
         private readonly Dictionary<string, double> _hintTops = new();
+
+        private double Focus => BotTuning.Current.FocusBase + BotTuning.Current.FocusStrict * P.Strictness;
 
         private double HintTop(string hint)
         {
@@ -401,8 +403,8 @@ public static class BotPlayer
             if (_evidence.TryGetValue(card, out var score)) return score;
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Classic ? Sim(l.CardId, card)
-                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), 4 + 8 * P.Strictness));
+            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
+                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus));
             return _evidence[card] = hints - NegativeWeight * vanished;
         }
 
@@ -556,7 +558,7 @@ public static class BotPlayer
             var board = view.Board.SelectMany(r => r.Cards).Where(c => c != target).ToList();
             // Письмо должно ясно проверять одну карту: похожее на цель и ни на что больше на поле —
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
-            double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (0.4 + 0.4 * P.Strictness) * Best(h, board);
+            double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
             return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
         }
 

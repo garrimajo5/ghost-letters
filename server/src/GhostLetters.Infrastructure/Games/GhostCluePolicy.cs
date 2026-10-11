@@ -43,6 +43,10 @@ public static class GhostCluePolicy
     public static IReadOnlyList<string> Choose(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> cards)
     {
         if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return [];
+        var tuning = BotTuning.Current;
+        if (!tuning.GhostPlans)
+            return cards.Select(c => (Card: c, Value: Assess(view, tags, mind, c))).Where(x => x.Value.Reveal)
+                .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch * (1 - x.Value.Risk)).Select(x => x.Card).ToList();
         var p = mind.Personality;
         var candidates = cards.Distinct().Select(c => (Card: c, Value: Assess(view, tags, mind, c))).ToList();
         if (candidates.Count == 0) return [];
@@ -52,7 +56,7 @@ public static class GhostCluePolicy
         var shown = view.Hints.SelectMany(h => h.Cards).ToList();
         var all = candidates.Select(c => c.Card).ToList();
         // Как широко стол читает подсказку: строгий стол «объясняет» письмо одной картой, широкий — несколькими.
-        var breadth = Math.Clamp(mind.TableBreadth, 1, 4);
+        var breadth = tuning.GhostBreadth ? Math.Clamp(mind.TableBreadth, 1, 4) : 1;
         var focus = 4 + 8 * (1 - (breadth - 1) / 3);
         var current = TableScore(view, truth, shown, all, Sim, focus);
         var risk = candidates[0].Value.Risk;
@@ -62,7 +66,7 @@ public static class GhostCluePolicy
         {
             var best = candidates.Where(c => !chosen.Contains(c.Card))
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim, focus) - current))
-                .Where(c => (c.Value.Reveal && c.Gain > cost - .4 * risk * risk) || c.Gain >= .35)
+                .Where(c => (c.Value.Reveal && c.Gain > cost - tuning.GhostTolerance * risk * risk) || c.Gain >= .35)
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (best.Card is null) break;
