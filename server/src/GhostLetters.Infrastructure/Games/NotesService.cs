@@ -18,7 +18,8 @@ public sealed record MarkSources(
     IReadOnlyList<Guid>? CrossBy = null,
     IReadOnlyList<Guid>? CheckBy = null,
     Guid? ClaimedBy = null,
-    string? Claim = null);
+    string? Claim = null,
+    IReadOnlyList<string>? Ignored = null);
 
 public sealed record CardMarkDto(string CardId, int Crosses, int Checks, bool Believed, MarkSources? Sources = null);
 
@@ -158,7 +159,9 @@ public sealed class NotesService(GhostLettersDbContext db, GameService games, Ti
         s?.CrossBy?.Distinct().ToList() ?? [],
         s?.CheckBy?.Distinct().ToList() ?? [],
         s?.ClaimedBy,
-        string.IsNullOrWhiteSpace(s?.Claim) ? null : s.Claim);
+        string.IsNullOrWhiteSpace(s?.Claim) ? null : s.Claim,
+        // Проверки из реплик, с которыми игрок не согласен: «id реплики:номер карты».
+        s?.Ignored?.Where(k => !string.IsNullOrWhiteSpace(k) && k.Length <= 80).Distinct().Take(60).ToList() ?? []);
 
     internal static MarkSources? ReadSources(string json)
     {

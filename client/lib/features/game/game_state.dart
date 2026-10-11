@@ -11,6 +11,7 @@ class CardMark {
     this.checkBy = const [],
     this.claimedBy,
     this.claim,
+    this.ignored = const [],
   });
 
   factory CardMark.fromJson(Json j) {
@@ -24,6 +25,7 @@ class CardMark {
       checkBy: ids(src['checkBy']),
       claimedBy: src['claimedBy'] as String?,
       claim: src['claim'] as String?,
+      ignored: ids(src['ignored']),
     );
   }
 
@@ -41,7 +43,11 @@ class CardMark {
   /// Для моего письма: какую карту я называю своей.
   final String? claim;
 
-  bool get isEmpty => crosses == 0 && checks == 0 && !believed && crossBy.isEmpty && checkBy.isEmpty && claimedBy == null && claim == null;
+  /// Проверки из реплик, с которыми я не согласен (ключи «id реплики:номер карты»): их не учитываю.
+  final List<String> ignored;
+
+  bool get isEmpty =>
+      crosses == 0 && checks == 0 && !believed && crossBy.isEmpty && checkBy.isEmpty && claimedBy == null && claim == null && ignored.isEmpty;
 
   CardMark copyWith({
     int? crosses,
@@ -53,6 +59,7 @@ class CardMark {
     bool clearClaimedBy = false,
     String? claim,
     bool clearClaim = false,
+    List<String>? ignored,
   }) =>
       CardMark(
         crosses: (crosses ?? this.crosses).clamp(0, 20),
@@ -62,6 +69,7 @@ class CardMark {
         checkBy: checkBy ?? this.checkBy,
         claimedBy: clearClaimedBy ? null : (claimedBy ?? this.claimedBy),
         claim: clearClaim ? null : (claim ?? this.claim),
+        ignored: ignored ?? this.ignored,
       );
 
   /// Переключить игрока в списке источников и подправить счётчик: добавили — +1, убрали — −1.
@@ -80,7 +88,7 @@ class CardMark {
         'crosses': crosses,
         'checks': checks,
         'believed': believed,
-        'sources': {'crossBy': crossBy, 'checkBy': checkBy, 'claimedBy': claimedBy, 'claim': claim},
+        'sources': {'crossBy': crossBy, 'checkBy': checkBy, 'claimedBy': claimedBy, 'claim': claim, if (ignored.isNotEmpty) 'ignored': ignored},
       };
 }
 
@@ -153,3 +161,49 @@ bool isFinale(GameView v) => const {
       'AwardVoting',
       'Finished',
     }.contains(v.phase);
+
+/// Что сказали о карте поля в репликах: кто проверял её своим письмом или уликой и что вышло.
+class CardEvidence {
+  const CardEvidence({required this.key, required this.authorId, required this.negative, required this.round, this.sourceCard});
+
+  /// «id реплики:номер карты» — чтобы можно было не согласиться с конкретной проверкой.
+  final String key;
+  final String authorId;
+  final bool negative;
+  final int round;
+  final String? sourceCard;
+}
+
+/// Проверки карты из публичных реплик (заметки к картам: «проверял эту:0», «исключаю:1», «думаю, эта:0»…).
+List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId) => [
+      for (final m in chat)
+        if (m.channel == 'public' && m.authorId != null && m.cardNotes.isNotEmpty)
+          ...() {
+            final sources = [for (var i = 0; i < m.cardIds.length; i++) if (theoryNote(m, i).$1) i];
+            return [
+              for (var i = 0; i < m.cardIds.length; i++)
+                if (m.cardIds[i] == cardId && !theoryNote(m, i).$1)
+                  () {
+                    final raw = i < m.cardNotes.length ? m.cardNotes[i] : '';
+                    final link = RegExp(r':(\d+)$').firstMatch(raw);
+                    final n = link != null ? int.parse(link[1]!) : (sources.length == 1 ? 0 : -1);
+                    return CardEvidence(
+                      key: '${m.id}:$i',
+                      authorId: m.authorId!,
+                      negative: theoryNote(m, i).$2,
+                      round: m.round,
+                      sourceCard: n >= 0 && n < sources.length ? m.cardIds[sources[n]] : null,
+                    );
+                  }(),
+            ];
+          }(),
+    ];
+
+/// (улика ли это, отрицательная ли заметка) для карты [index] реплики.
+(bool, bool) theoryNote(ChatMessage m, int index) {
+  final note = m.noteFor(index) ?? '';
+  final raw = index < m.cardNotes.length ? m.cardNotes[index] : '';
+  final source = note == 'улика' || note.startsWith('кидал');
+  final negative = raw.startsWith('исключ') || raw.startsWith('не эта') || raw.contains('исчезла');
+  return (source, negative);
+}

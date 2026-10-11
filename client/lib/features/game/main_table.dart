@@ -310,6 +310,8 @@ class _TopBar extends StatelessWidget {
                 screen.setZoomed(true);
               case 'view':
                 screen.setSeance(!seance);
+              case 'big':
+                screen.setBigBoard(!screen.bigBoard);
             }
           },
           itemBuilder: (_) => [
@@ -317,6 +319,8 @@ class _TopBar extends StatelessWidget {
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             if (v.board.isNotEmpty) const PopupMenuItem(value: 'zoom', child: Text('Стол крупно')),
             PopupMenuItem(value: 'view', key: const Key('menu-view'), child: Text(seance ? 'Вид: основной стол' : 'Вид: спиритический сеанс')),
+            if (v.board.isNotEmpty && !seance)
+              PopupMenuItem(value: 'big', key: const Key('menu-big'), child: Text(screen.bigBoard ? 'Поле целиком на экране' : 'Поле крупно, листать свайпом')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),
           ],
@@ -465,12 +469,10 @@ class _TableArea extends StatelessWidget {
       final order = _Board.tableOrder(v);
       final statement = _current;
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
-      final board = SingleChildScrollView(
-        key: const Key('main-board'),
-        padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (staircase && !below) SizedBox(
+      // Боком поле крупнее экрана: листается свайпом в обе стороны, подсказки — всегда видны слева.
+      final pan = landscape && staircase && screen.bigBoard;
+      final fieldCard = pan ? (card * 1.4).floorToDouble() : card;
+      final Widget hintsColumn = SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               // Подсказки раунда относятся ко всему столу, а не к ряду: столбик вплотную, без сетки поля.
@@ -485,14 +487,12 @@ class _TableArea extends StatelessWidget {
                   child: Text('исчезло ×${v.vanishedCount}', key: const Key('main-vanished'), style: const TextStyle(fontSize: 10, color: AppColors.dim)),
                 ),
             ]),
-          ),
-          // Поле ровно по своим картам — по центру свободного места, лесенка вплотную слева.
-          Flexible(
-            child: SizedBox(
-            width: _Board.verticalLabel + (card + gap) * columns + 1,
+          );
+      final Widget field = SizedBox(
+            width: _Board.verticalLabel + (fieldCard + gap) * columns + 1,
             child: _Board(
               screen: screen,
-              maxCard: card,
+              maxCard: fieldCard,
               order: order,
               vertical: true,
               focusRow: voting ? stage.row : null,
@@ -521,8 +521,26 @@ class _TableArea extends StatelessWidget {
                 return out;
               },
             ),
-            ),
-          ),
+            );
+      final board = pan
+          ? Row(key: const Key('main-board'), crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SingleChildScrollView(padding: const EdgeInsets.fromLTRB(4, 2, 4, 8), child: hintsColumn),
+              Expanded(
+                child: SingleChildScrollView(
+                  key: const Key('main-board-pan'),
+                  padding: const EdgeInsets.fromLTRB(0, 2, 8, 8),
+                  child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: field),
+                ),
+              ),
+            ])
+          : SingleChildScrollView(
+        key: const Key('main-board'),
+        padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (staircase && !below) hintsColumn,
+          // Поле ровно по своим картам — по центру свободного места, лесенка вплотную слева.
+          Flexible(child: field),
         ]),
         if (below && v.hints.isNotEmpty)
           Padding(
