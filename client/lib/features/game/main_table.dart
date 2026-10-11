@@ -414,7 +414,8 @@ class _TableArea extends StatelessWidget {
       final stage = v.finale?.currentStage;
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
-      final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
+      // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
+      final byHeight = box.maxHeight.isFinite ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.

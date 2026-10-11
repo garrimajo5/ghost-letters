@@ -101,6 +101,13 @@ void main() {
     }, skip: !AppConfig.dossierDesign);
   }
 
+  testWidgets('сеанс вертикально на планшете: все четыре ряда видны без прокрутки', (tester) async {
+    await _open(tester, const Size(800, 915));
+    expect(tester.takeException(), isNull);
+    final last = tester.getRect(find.byKey(const Key('board-3-4')));
+    expect(last.bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const Key('main-fan'))).top));
+  }, skip: !AppConfig.dossierDesign);
+
   testWidgets('сеанс: пока дух читает письма, ящик светится', (tester) async {
     await _open(tester, portrait, phase: 'GhostPick');
     expect(find.byKey(const Key('seance-mailbox-glow')), findsOneWidget);
