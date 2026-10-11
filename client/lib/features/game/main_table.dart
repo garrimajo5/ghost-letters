@@ -775,6 +775,8 @@ String? _firstSpeaker(GameScreenState screen) {
 
 /// Игроки справа: фото, имя, Призрак, бот, кто говорит (зелёным) и кто говорил первым.
 /// Если все не помещаются, строки сжимаются до кружков у края.
+/// Игроки боком — по кругу, как за настоящим столом: по часовой от верха в порядке мест,
+/// так видно, кто за кем говорит (первый — с меткой «1», стрелка — направление хода).
 class _PlayersColumn extends StatelessWidget {
   const _PlayersColumn({required this.screen});
 
@@ -786,22 +788,63 @@ class _PlayersColumn extends StatelessWidget {
     final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
-      // Строка игрока ~46 dp; не помещаются все — сжимаем до кружков у края, по несколько в ряд.
-      final circles = (box.maxHeight - 8) / (players.isEmpty ? 1 : players.length) < 46;
-      return SingleChildScrollView(
-        key: const Key('main-players'),
-        padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
-        child: circles
-            ? Wrap(alignment: WrapAlignment.end, spacing: 6, children: [
-                for (final p in players)
-                  SizedBox(width: 50, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false)),
-              ])
-            : Column(children: [
-                for (final p in players) _SeatTile(screen: screen, player: p, first: first == p.id, compact: false),
-              ]),
-      );
+      final n = players.length;
+      const tile = 56.0;
+      final w = box.maxWidth, h = box.maxHeight;
+      final rx = (w - tile) / 2, ry = (h - tile - 14) / 2;
+      if (n == 0 || rx < 20 || ry < 20) return const SizedBox.shrink();
+      final center = Offset(w / 2, h / 2);
+      // Первый говорящий — сверху: круг поворачивается так, чтобы ход шёл от него по часовой.
+      final start = first == null ? 0 : players.indexWhere((p) => p.id == first).clamp(0, n - 1);
+      Offset at(int i) {
+        final angle = -math.pi / 2 + 2 * math.pi * ((i - start) % n) / n;
+        return center + Offset(math.cos(angle) * rx, math.sin(angle) * ry);
+      }
+      return Stack(key: const Key('main-players'), clipBehavior: Clip.none, children: [
+        Positioned.fill(child: IgnorePointer(child: CustomPaint(painter: _SeatRingPainter(rx: rx * .78, ry: ry * .78)))),
+        for (var i = 0; i < n; i++)
+          Positioned(
+            left: at(i).dx - tile / 2,
+            top: at(i).dy - tile / 2,
+            width: tile,
+            child: _SeatTile(screen: screen, player: players[i], first: first == players[i].id, compact: true),
+          ),
+      ]);
     });
   }
+}
+
+/// Пунктирное кольцо стола и стрелка по часовой — куда переходит слово.
+class _SeatRingPainter extends CustomPainter {
+  _SeatRingPainter({required this.rx, required this.ry});
+
+  final double rx;
+  final double ry;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final paint = Paint()
+      ..color = AppColors.border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final rect = Rect.fromCenter(center: c, width: rx * 2, height: ry * 2);
+    const dashes = 36;
+    for (var i = 0; i < dashes; i += 2) {
+      canvas.drawArc(rect, 2 * math.pi * i / dashes, 2 * math.pi / dashes, false, paint);
+    }
+    // Стрелка на кольце справа сверху: ход идёт по часовой.
+    const a = -math.pi / 4;
+    final p = c + Offset(math.cos(a) * rx, math.sin(a) * ry);
+    final arrow = Path()
+      ..moveTo(p.dx - 6, p.dy - 5)
+      ..lineTo(p.dx + 4, p.dy + 1)
+      ..lineTo(p.dx - 4, p.dy + 7);
+    canvas.drawPath(arrow, paint..strokeWidth = 2);
+  }
+
+  @override
+  bool shouldRepaint(_SeatRingPainter old) => old.rx != rx || old.ry != ry;
 }
 
 /// Вертикальный стол: игроки строкой сверху, лишние листаются.

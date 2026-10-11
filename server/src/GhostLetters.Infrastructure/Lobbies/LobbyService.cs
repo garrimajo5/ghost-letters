@@ -239,6 +239,13 @@ public sealed class LobbyService(
     public async Task KickAsync(Guid lobbyId, Guid hostId, Guid userId, CancellationToken ct)
     {
         var lobby = await RequireHostAsync(lobbyId, hostId, ct);
+        // Партия уже закончилась (реванш), а лобби не успело открыться — открываем и даём исключить ушедшего.
+        if (lobby.Status == LobbyStatuses.InGame && lobby.CurrentGameId is { } gameId &&
+            await db.Games.AnyAsync(g => g.Id == gameId && g.Status != GameStatuses.Active, ct))
+        {
+            lobby.Status = LobbyStatuses.Open;
+        }
+
         if (lobby.Status != LobbyStatuses.Open)
         {
             throw AppException.Conflict(AppException.Codes.GameInProgress, "Во время партии исключать нельзя.");

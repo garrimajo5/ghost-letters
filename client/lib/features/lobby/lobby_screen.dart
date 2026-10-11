@@ -399,13 +399,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                     child: ListView(
                       key: const Key('lobby-left'),
                       padding: const EdgeInsets.fromLTRB(16, 8, 8, 16),
+                      // Кнопка «Начать партию» / «Готов» — сразу под кодом, выше тегов настроек: видна без прокрутки.
                       children: [
-                        ...headItems,
+                        headItems.first,
                         if (bottom != null) ...[
                           const SizedBox(height: 12),
-                          _RolesPreview(lobby: lobby, players: players.length),
-                          const SizedBox(height: 8),
                           bottom,
+                        ],
+                        ...headItems.skip(1),
+                        if (bottom != null) ...[
+                          const SizedBox(height: 8),
+                          _RolesPreview(lobby: lobby, players: players.length),
                         ],
                       ],
                     ),
