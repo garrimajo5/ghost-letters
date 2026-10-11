@@ -115,7 +115,8 @@ void main() {
         id: 's1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Со стола: эта улика; указывает на Мотив 1.',
         cardIds: const ['orig_0100', 'orig_0001'], cardNotes: const ['улика', 'думаю, эта:0'], createdAt: DateTime.now(), round: 4));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    // Реплика печатается в человеческом темпе — карты подсвечиваются, когда она до них доходит.
+    await tester.pump(const Duration(seconds: 4));
     expect(find.byKey(const Key('seance-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
     await _shot(tester, 'statement');
