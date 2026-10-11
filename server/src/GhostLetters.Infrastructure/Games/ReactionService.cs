@@ -15,7 +15,7 @@ public sealed record ReactionDto(Guid GameId, Guid UserId, string Emoji, DateTim
 /// </summary>
 public sealed class ReactionService(GhostLettersDbContext db, IRealtimeNotifier notifier, ReactionLimiter limiter, TimeProvider time)
 {
-    public static readonly string[] Allowed = ["👍", "👎", "😂", "😮", "🤔", "👻", "🔥", "❤️", "😱", "🙈"];
+    public static readonly string[] Allowed = ["👍", "👎", "😂", "😮", "🤔", "👻", "🔥", "❤️", "😱", "🙈", "🤡", "🥷"];
 
     public async Task<ReactionDto> SendAsync(Guid gameId, Guid userId, string? emoji, CancellationToken ct)
     {

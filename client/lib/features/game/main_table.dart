@@ -72,6 +72,7 @@ class _MainTableState extends State<_MainTable> {
       _say.reset();
       _typing.reset();
     }
+    _say.vanished = {for (final l in v.me?.letters ?? const <MyLetter>[]) if (l.revealed == false) l.cardId};
     final size = MediaQuery.sizeOf(context);
     final landscape = size.width > size.height;
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
@@ -147,15 +148,10 @@ class _MainTableState extends State<_MainTable> {
               Expanded(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Expanded(child: dropCenter),
+                  // Справа — игроки; кнопка хода и чат опустились к вееру (эмодзи теперь — карта в руке).
                   SizedBox(
                     width: (size.width * 0.24).clamp(150.0, 260.0),
-                    child: Column(children: [
-                      Expanded(child: _PlayersColumn(screen: screen)),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 4, 8, 6),
-                        child: _Actions(screen: screen, onStatus: () => setState(() => _panel = true)),
-                      ),
-                    ]),
+                    child: _PlayersColumn(screen: screen),
                   ),
                 ]),
               )
@@ -163,7 +159,28 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: dropCenter),
             ],
-            if (hand)
+            if (landscape && !seance)
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Expanded(
+                  child: hand
+                      ? _Fan(
+                          screen: screen,
+                          say: _say,
+                          onEmoji: () => setState(() => _emoji = !_emoji),
+                          onDrag: (on) => setState(() => _dragging = on),
+                          height: fanHeight,
+                        )
+                      : SizedBox(height: fanHeight),
+                ),
+                SizedBox(
+                  width: (size.width * 0.24).clamp(150.0, 260.0),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 4, 8, 8),
+                    child: _Actions(screen: screen, onStatus: () => setState(() => _panel = true)),
+                  ),
+                ),
+              ])
+            else if (hand)
               _Fan(
                 screen: screen,
                 say: _say,
@@ -182,7 +199,7 @@ class _MainTableState extends State<_MainTable> {
             // Выбор эмодзи — прямо над картой-смайликом (может перекрыть стол — это нестрашно).
             if (_emoji)
               Positioned(
-                right: 8,
+                right: landscape && !seance ? (size.width * 0.24).clamp(150.0, 260.0) + 8 : 8,
                 bottom: fanHeight + (!landscape || seance ? 70 : 0) - 6,
                 child: _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
               ),
@@ -214,7 +231,8 @@ class _MainTableState extends State<_MainTable> {
   }
 
   Widget _dropZone(GameView v, Widget child) => DragTarget<String>(
-        onWillAcceptWithDetails: (_) => _dropLabel(v) != null,
+        // Карта-эмодзи не играется: её «вытаскивают» ради реакции.
+        onWillAcceptWithDetails: (d) => d.data != _FanState._emojiId && _dropLabel(v) != null,
         onAcceptWithDetails: (d) => _played(v, d.data),
         builder: (context, candidates, _) {
           final over = candidates.isNotEmpty;
@@ -517,7 +535,7 @@ class _TableArea extends StatelessWidget {
                       ])
                     : _LinkBorder(key: Key('say-mark-$id'), colors: say.active ? [color] : _links(id, statement).ifEmpty(color), child: child);
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
-                if (say.active) out = GestureDetector(onTap: () => say.cycle(id), child: out);
+                if (say.active) out = GestureDetector(onTap: () => say.cycle(id), onLongPress: () => showCardZoom(context, id), child: out);
                 return out;
               },
             ),
@@ -810,7 +828,8 @@ class _SeatTile extends StatelessWidget {
     return GestureDetector(
       key: Key('player-${p.id}'),
       behavior: HitTestBehavior.opaque,
-      onTap: () => screen.tapPlayer(p.id),
+      // В обсуждении нажатие на игрока — попросить показать версию или передать ему слово.
+      onTap: () => _canAsk(v, p) ? _askMenu(context, v, p) : screen.tapPlayer(p.id),
       child: Semantics(
         label: [name, if (meta.isNotEmpty) meta, if (speaking) 'говорит'].join(', '),
         child: Padding(
@@ -838,6 +857,39 @@ class _SeatTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+bool _canAsk(GameView v, PlayerInfo p) =>
+    v.phase == 'Discussion' && v.me != null && v.me!.role != 'Ghost' && p.id != v.me!.id && !p.isGhost && p.knownRole != 'Ghost';
+
+Future<void> _askMenu(BuildContext context, GameView v, PlayerInfo p) async {
+  final screen = context.findAncestorStateOfType<GameScreenState>()!;
+  final box = context.findRenderObject()! as RenderBox;
+  final at = box.localToGlobal(Offset.zero);
+  final me = v.me!.id;
+  final canWrite = !v.isRadio || v.currentSpeaker == me || v.floorGrantedTo == me;
+  final choice = await showMenu<String>(
+    context: context,
+    position: RelativeRect.fromLTRB(at.dx, at.dy + box.size.height, at.dx + box.size.width, 0),
+    items: [
+      PopupMenuItem(
+        value: 'ask',
+        key: Key('ask-version-${p.id}'),
+        enabled: canWrite,
+        child: Text(canWrite ? 'Попросить показать версию' : 'Попросить версию — когда у вас слово'),
+      ),
+      if (v.can('GiveFloor')) PopupMenuItem(value: 'floor', key: Key('give-floor-${p.id}'), child: const Text('Передать слово')),
+    ],
+  );
+  if (choice == null) return;
+  final name = screen.nick(p.id).startsWith('Бот ') ? screen.nick(p.id).substring(4) : screen.nick(p.id);
+  if (choice == 'ask') {
+    await screen.ref.read(apiProvider).sendChat(v.gameId, '$name, покажи свою версию: на что указывают улики?', channel: 'public');
+    // В рации — сразу и слово, чтобы он мог ответить.
+    if (v.can('GiveFloor')) await screen.send('GiveFloor', {'to': p.id});
+  } else if (choice == 'floor') {
+    await screen.send('GiveFloor', {'to': p.id});
   }
 }
 
@@ -912,6 +964,35 @@ class _FanState extends State<_Fan> {
   ValueChanged<bool>? get onDrag => widget.onDrag;
   double get height => widget.height;
 
+  static const _emojiId = '__emoji';
+
+  /// Карта-эмодзи в руке: нажать или вытащить — открыть выбор реакции.
+  Widget _emojiCard(double card) {
+    final face = Container(
+      width: card,
+      height: card,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF2A3B55), Color(0xFF16223A)]),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2))],
+      ),
+      alignment: Alignment.center,
+      child: Text('😊', style: TextStyle(fontSize: card * 0.42)),
+    );
+    return GestureDetector(
+      key: const Key('fan-emoji'),
+      onTap: onEmoji,
+      child: Draggable<String>(
+        data: _emojiId,
+        feedback: Opacity(opacity: .9, child: face),
+        childWhenDragging: Opacity(opacity: .25, child: face),
+        onDragEnd: (_) => onEmoji(),
+        child: face,
+      ),
+    );
+  }
+
   /// Карту можно вытащить из веера на стол — как настоящую: отпустили над столом — сыграна.
   Widget _draggable(String id, double card, {required bool enabled, required Widget child}) {
     if (!enabled) return child;
@@ -942,7 +1023,6 @@ class _FanState extends State<_Fan> {
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
     // Карты крупнее полосы веера: нижняя четверть уходит за край, как карты в руке.
     final card = (height * 1.3).floorToDouble();
-    final emoji = height - 20;
     // Во время показа на столе карта из веера — «кидал эту».
     bool raised(String c) => say.active ? say.isSource(c) : screen.selectedHand.contains(c);
     return SizedBox(
@@ -951,46 +1031,25 @@ class _FanState extends State<_Fan> {
       child: ClipRect(
         clipper: const _ClipBelow(),
         child: LayoutBuilder(builder: (context, box) {
-        final n = hand.length;
-        // Справа от веера — карта-эмодзи.
-        final room = box.maxWidth - emoji * 0.8 - 12;
+        // Призрак говорит только картами: до итогов реакций у него нет.
+        final silent = v.me?.role == 'Ghost' && !const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+        // Эмодзи — последняя карта руки: её не сыграть и не сбросить, «вытащил» — выбор реакции.
+        final items = [...hand, if (!silent) _emojiId];
+        final n = items.length;
+        final room = box.maxWidth - 12;
         // Внахлёст: шаг меньше карты, но не меньше трети её ширины.
         final step = n <= 1 ? 0.0 : ((room - card - 24) / (n - 1)).clamp(card * .33, card * .72);
         final width = card + step * (n - 1);
         final left = ((room - width) / 2).clamp(4.0, double.infinity);
         final mid = (n - 1) / 2;
-        // Призрак говорит только картами: до итогов реакций у него нет.
-        final silent = v.me?.role == 'Ghost' && !const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
         return Stack(clipBehavior: Clip.none, children: [
-          if (!silent) Positioned(
-            right: 8,
-            top: 14,
-            child: GestureDetector(
-              key: const Key('fan-emoji'),
-              onTap: onEmoji,
-              child: Transform.rotate(
-                angle: 0.12,
-                child: Container(
-                  width: emoji * 0.8,
-                  height: emoji * 0.8,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text('😊', style: TextStyle(fontSize: emoji * 0.4)),
-                ),
-              ),
-            ),
-          ),
           // Выдвинутая карта рисуется последней — поверх соседей.
-          for (final i in [for (var j = 0; j < n; j++) if (j != _hover && !raised(hand[j])) j, for (var j = 0; j < n; j++) if (j == _hover || raised(hand[j])) j])
+          for (final i in [for (var j = 0; j < n; j++) if (j != _hover && !raised(items[j])) j, for (var j = 0; j < n; j++) if (j == _hover || raised(items[j])) j])
             AnimatedPositioned(
-              key: ValueKey('fan-slot-${hand[i]}'),
+              key: ValueKey('fan-slot-${items[i]}'),
               duration: const Duration(milliseconds: 140),
               left: left + step * i,
-              top: _hover == i || raised(hand[i])
+              top: _hover == i || raised(items[i])
                   ? height - card - 4
                   : height - card * .62 + ((i - mid).abs() * 2.0),
               child: MouseRegion(
@@ -1003,24 +1062,24 @@ class _FanState extends State<_Fan> {
                 child: Transform.rotate(
                 angle: (i - mid) * 0.06,
                 alignment: Alignment.bottomCenter,
-                child: GestureDetector(
-                  key: Key('hand-${hand[i]}'),
+                child: items[i] == _emojiId ? _emojiCard(card) : GestureDetector(
+                  key: Key('hand-${items[i]}'),
                   onTap: say.active
-                      ? () => say.pick(hand[i], hint: false)
+                      ? () => say.pick(items[i], hint: false)
                       : selectable
-                          ? () => _toggleHand(screen, hand[i], limit)
+                          ? () => _toggleHand(screen, items[i], limit)
                           : null,
-                  onLongPress: () => showCardZoom(context, hand[i], caption: 'Карта на руке'),
+                  onLongPress: () => showCardZoom(context, items[i], caption: 'Карта на руке'),
                   child: _draggable(
-                    hand[i],
+                    items[i],
                     card,
                     enabled: selectable || say.active,
                     child: Container(
                       foregroundDecoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(9),
                         border: Border.all(
-                          color: raised(hand[i]) ? AppColors.amber : AppColors.border,
-                          width: raised(hand[i]) ? 3 : 1,
+                          color: raised(items[i]) ? AppColors.amber : AppColors.border,
+                          width: raised(items[i]) ? 3 : 1,
                         ),
                       ),
                       decoration: BoxDecoration(
@@ -1029,7 +1088,7 @@ class _FanState extends State<_Fan> {
                       ),
                       child: Opacity(
                         opacity: selectable || say.active || !needsMe(v) ? 1 : 0.6,
-                        child: CardImage(cardId: hand[i], size: card, radius: 9),
+                        child: CardImage(cardId: items[i], size: card, radius: 9),
                       ),
                     ),
                   ),
@@ -1070,6 +1129,9 @@ class _Say extends ChangeNotifier {
 
   /// Карта поля → (зелёная?, индекс источника или −1).
   final marks = <String, (bool, int)>{};
+
+  /// Письма, которые исчезли: проверка ими — «не эта», первое нажатие сразу красное.
+  Set<String> vanished = const {};
 
   String? get source => current >= 0 && current < sources.length ? sources[current] : null;
 
@@ -1123,8 +1185,24 @@ class _Say extends ChangeNotifier {
 
   void cycle(String id) {
     final m = marks[id];
+    // Подсказка Призрака только указывает: нажатие — зелёная, ещё раз — снять.
+    if (hint) {
+      if (m == null) {
+        if (total < maxCards) marks[id] = (true, current);
+      } else {
+        marks.remove(id);
+      }
+      notifyListeners();
+      return;
+    }
+    // Своё исчезнувшее письмо проверяло «мимо»: нажатие сразу красное, ещё раз — зелёная, ещё — снять.
+    final negativeFirst = source != null && vanished.contains(source);
     if (m == null) {
-      if (total < maxCards) marks[id] = (true, current);
+      if (total < maxCards) marks[id] = (!negativeFirst, current);
+    } else if (negativeFirst && !m.$1) {
+      marks[id] = (true, m.$2);
+    } else if (negativeFirst) {
+      marks.remove(id);
     } else if (m.$1) {
       marks[id] = (false, m.$2);
     } else {
@@ -1650,7 +1728,7 @@ class _EmojiBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 4, 2, 4),
           child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             SizedBox(
-              width: 5 * 44,
+              width: 6 * 44,
               child: Wrap(children: [
                 for (final e in Reaction.allowed)
                   InkWell(

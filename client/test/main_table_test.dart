@@ -522,6 +522,39 @@ void main() {
     expect(tester.getRect(find.byKey(const Key('hint-orig_0100'))).top, hint.top, reason: 'подсказки не уезжают');
   });
 
+  testWidgets('показ: подсказка Призрака только указывает — второе нажатие снимает, а не краснит', (tester) async {
+    await _open(tester, phone);
+    await tester.tap(find.byKey(const Key('say-start')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hint-orig_0100')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump();
+    expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump();
+    expect(find.byKey(const Key('say-mark-orig_0001')), findsNothing);
+  });
+
+  testWidgets('нажатие на игрока в обсуждении: попросить показать версию', (tester) async {
+    final app = await _open(tester, phone, allowed: const ['EndTurn', 'GiveFloor'], edit: (view) => view['currentSpeaker'] = 'u2');
+    await tester.tap(find.byKey(const Key('player-u3')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ask-version-u3')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('sendChat').single.$2[1] as String, contains('покажи свою версию'));
+    expect(app.api.named('command').where((c) => c.$2[0] == 'GiveFloor'), isNotEmpty);
+  });
+
+  testWidgets('эмодзи — карта в руке: вытащил — выбор реакции, на стол не играется', (tester) async {
+    final app = await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
+    await tester.drag(find.byKey(const Key('fan-emoji')), const Offset(0, -150));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('emoji-bar')), findsOneWidget);
+    expect(find.byKey(const Key('emoji-🥷')), findsOneWidget);
+    expect(app.api.named('command'), isEmpty);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(

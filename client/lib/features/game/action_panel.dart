@@ -315,7 +315,8 @@ class ActionPanel extends StatelessWidget {
             style: const TextStyle(fontSize: 12, color: AppColors.muted),
           ),
         ],
-        if (v.can('GiveFloor')) ...[
+        // На новом столе слово передают нажатием на игрока.
+        if (v.can('GiveFloor') && screen.classicTable) ...[
           const SizedBox(height: 10),
           Text('Передать слово:', style: sectionLabel()),
           const SizedBox(height: 6),
