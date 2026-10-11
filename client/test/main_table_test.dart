@@ -1,4 +1,8 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/core/theme.dart';
 import 'package:ghost_letters/features/game/game_screen.dart';
@@ -16,7 +20,7 @@ Future<TestApp> _open(WidgetTester tester, Size size,
   addTearDown(tester.view.reset);
   final app = await TestApp.create(user: watson, classicTable: false);
   addTearDown(app.container.dispose);
-  await tester.pumpWidget(app.widget);
+  await tester.pumpWidget(RepaintBoundary(key: _shotKey, child: app.widget));
   await tester.pumpAndSettle();
   final j = snapshotJson(phase: phase, allowed: allowed);
   final view = j['view'] as Json;
@@ -32,6 +36,22 @@ Future<TestApp> _open(WidgetTester tester, Size size,
   app.go('/game/g1');
   await tester.pumpAndSettle();
   return app;
+}
+
+final _shotKey = GlobalKey();
+
+/// Снимок экрана для проверки вида: только при --dart-define=TABLE_SCREENSHOTS=<папка>.
+Future<void> _shot(WidgetTester tester, String name) async {
+  const dir = String.fromEnvironment('TABLE_SCREENSHOTS');
+  if (dir.isEmpty) return;
+  await tester.runAsync(() async {
+    final boundary = _shotKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await boundary.toImage();
+    final png = await image.toByteData(format: ui.ImageByteFormat.png);
+    await Directory(dir).create(recursive: true);
+    await File('$dir/main-$name.png').writeAsBytes(png!.buffer.asUint8List());
+    image.dispose();
+  });
 }
 
 void main() {
@@ -52,6 +72,7 @@ void main() {
         expect(find.byKey(const Key('main-fan')), findsOneWidget);
         expect(find.byKey(const Key('board-3-4')), findsOneWidget);
         expect(find.byTooltip('Чат'), findsOneWidget);
+        await _shot(tester, '${size.width.toInt()}x${size.height.toInt()}-$phase');
       });
     }
   }
@@ -156,6 +177,7 @@ void main() {
     await tester.pump();
     expect(find.byKey(const Key('say-mark-orig_0002')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0008')), findsOneWidget);
+    await _shot(tester, 'say-editing');
     await tester.tap(find.byKey(const Key('say-send')));
     await tester.pumpAndSettle();
 
@@ -188,6 +210,7 @@ void main() {
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0007')), findsOneWidget);
     expect(find.textContaining('Марпл: эта улика'), findsOneWidget);
+    await _shot(tester, 'statement');
     // Верность ряда не раскрывается: отметки — только мнение игрока.
     expect(tester.takeException(), isNull);
   });
@@ -210,6 +233,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const Key('flying-😂')), findsNWidgets(3));
     expect(find.text('😂×3'), findsOneWidget);
+    await _shot(tester, 'emoji');
     // Чужая партия не долетает.
     app.realtime.reactionsCtl.add(Reaction(gameId: 'other', userId: 'u3', emoji: '🔥', at: DateTime.now()));
     await tester.pump(const Duration(milliseconds: 100));
@@ -239,6 +263,7 @@ void main() {
     expect(find.byKey(const Key('chat-table-b')), findsOneWidget);
     expect(find.byKey(const Key('chat-table-a')), findsNothing);
     expect(find.byKey(const Key('chat-outcome-0')), findsOneWidget);
+    await _shot(tester, 'chat');
     expect(find.textContaining('стол выбрал карту 3'), findsOneWidget);
     expect(find.textContaining('верн'), findsNothing);
   });
@@ -259,6 +284,7 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('suspect-board')), findsOneWidget);
+    await _shot(tester, 'suspect');
     final u2 = tester.widget<CardImage>(find.byKey(const Key('suspect-vote-u2-0')));
     expect(u2.cardId, 'orig_0003');
     // Учитывается последняя попытка.

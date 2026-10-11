@@ -136,6 +136,20 @@ jobs:
           python3 ../.github/scripts/flutter_annotations.py tests dossier-results.json
           exit $status
 
+      - name: Table screenshots (new table and seance)
+        # Снимки раскладки для проверки на глаз; проверки те же, что в основных прогонах.
+        continue-on-error: true
+        run: |
+          flutter test --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/main_table_test.dart
+          flutter test --dart-define=DOSSIER_DESIGN=true --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/seance_test.dart
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: table-screens
+          path: client/screens/*.png
+          if-no-files-found: ignore
+
   client-web:
     name: Client — web build & smoke
     runs-on: ubuntu-latest
