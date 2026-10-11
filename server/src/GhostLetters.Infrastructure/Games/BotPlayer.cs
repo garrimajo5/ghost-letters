@@ -166,7 +166,18 @@ public static class BotPlayer
                 return s;
             }
 
-            return Rank(hint, card) < MyBreadth ? s : s * (1 - P.Strictness);
+            // Подсказку объясняет самая похожая карта поля: чем дальше карта от неё, тем меньше вклад.
+            // Строгий читает узко (сильнее гасит вторые совпадения), широкий — мягче.
+            var read = GhostCluePolicy.Read(s, HintTop(hint), 4 + 8 * P.Strictness);
+            return Rank(hint, card) < MyBreadth ? read : read * (1 - P.Strictness);
+        }
+
+        private readonly Dictionary<string, double> _hintTops = new();
+
+        private double HintTop(string hint)
+        {
+            if (_hintTops.TryGetValue(hint, out var top)) return top;
+            return _hintTops[hint] = view.Board.SelectMany(r => r.Cards).Where(c => c != hint).Select(c => Sim(hint, c)).DefaultIfEmpty(0).Max();
         }
 
         /// <summary>
