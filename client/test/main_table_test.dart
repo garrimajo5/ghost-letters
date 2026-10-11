@@ -423,6 +423,8 @@ void main() {
     final label = tester.getRect(find.byKey(const Key('hint-label-0')));
     final card = tester.getRect(find.byKey(const Key('hint-orig_0100')));
     expect(label.right, lessThanOrEqualTo(card.left + 0.5));
+  });
+
   testWidgets('у Призрака нет карты-эмодзи: он подсказывает только картами', (tester) async {
     await _open(tester, phone, edit: (view) => (view['me'] as Json)['role'] = 'Ghost');
     expect(find.byKey(const Key('fan-emoji')), findsNothing);
