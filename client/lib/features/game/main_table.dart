@@ -602,12 +602,10 @@ class _TableArea extends StatelessWidget {
                         return _LinkBorder(key: Key('say-mark-$id'), colors: l.colors.ifEmpty(color), numbers: l.numbers, child: child);
                       }();
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
-                // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить,
-                // двойное нажатие — окно карты с проверками.
+                // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить.
                 if (say.active || _canSpeakNow(v)) {
                   out = GestureDetector(
                     onTap: () => _tapBoard(v, id),
-                    onDoubleTap: () => MarkSheet.show(context, screen, id),
                     onLongPress: () => showCardZoom(context, id),
                     child: out,
                   );
