@@ -224,6 +224,8 @@ void main() {
         createdAt: DateTime.now(),
         round: 4));
     await tester.pumpAndSettle();
+    // Реплика печатается по буквам — даём ей допечататься.
+    await tester.pump(const Duration(seconds: 3));
 
     expect(find.byKey(const Key('say-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
@@ -382,7 +384,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     final partial = tester.widget<Text>(find.descendant(of: find.byKey(const Key('say-statement')), matching: find.byType(Text))).data!;
     expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 3));
     expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
   });
 }
