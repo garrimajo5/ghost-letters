@@ -401,6 +401,10 @@ public sealed class BotFinalDiscussionTests
         List<DiscussionLine> lines = [new(Me, "Версия", [], now)];
         BotDiscussion.ShouldWait(Me, lines, now.AddSeconds(5)).Should().BeTrue();
         BotDiscussion.ShouldWait(Me, lines, now.AddMinutes(3)).Should().BeFalse();
+        // Люди готовы голосовать: после двух своих реплик бот не тянет обсуждение.
+        List<DiscussionLine> two = [new(Me, "Версия", [], now), new(Me, "Ответ", [], now.AddSeconds(1))];
+        BotDiscussion.ShouldWait(Me, two, now.AddSeconds(20)).Should().BeTrue();
+        BotDiscussion.ShouldWait(Me, two, now.AddSeconds(20), humansReady: true).Should().BeFalse();
         for (var i = 1; i < BotDiscussion.MaxMessages; i++) lines.Add(new(Me, "Ответ", [], now.AddSeconds(i)));
         BotDiscussion.Compose(View, Tags, Mind, lines, new Random(1)).Should().BeNull();
         BotDiscussion.ShouldWait(Me, lines, now.AddSeconds(10)).Should().BeFalse();
