@@ -40,8 +40,11 @@ flutter pub get
 flutter analyze
 flutter test
 flutter test --dart-define=DOSSIER_DESIGN=true test/dossier_test.dart
-flutter build web --release --base-href=/download/dossier/ --dart-define=DOSSIER_DESIGN=true --dart-define=APP_VERSION=0.1.3-dossier --pwa-strategy=none
+flutter build web --release --base-href=/download/dossier/ --dart-define=DOSSIER_DESIGN=true --dart-define=APP_VERSION=0.1.6-dossier --pwa-strategy=none
 ```
+
+В `main` эту сборку теперь делает и выкладывает «Deploy web» вместе с основной веб-версией.
+
 
 Содержимое `client/build/web` размещается **только** в отдельной директории
 `/opt/ghost-letters/www/download/dossier/`. Существующий обработчик Caddy
