@@ -929,6 +929,8 @@ public static class BotPlayer
 
             var card = Card(target, column);
             string Where(int r, int c) => $"{Name(view.Board[r].Category).ToLowerInvariant()} {c + 1}";
+            // Человек не называет версию наугад: без опоры на улики — только если в ряду остальное уже проверено.
+            var blind = !Classic && Evidence(card) <= 0.05 && !OnlyLeft(target, column);
             var lines = Evidence(card) > 0
                 ? new[]
                 {
@@ -960,10 +962,18 @@ public static class BotPlayer
                 }
                 if (version.Count > 1) opinion += "\nЦеликом думаю так: " + string.Join(", ", version) + ".";
             }
-            opinion += Accusation();
+            var accusation = Accusation();
+            opinion += accusation;
+            if (blind)
+            {
+                var wait = claimCard is null
+                    ? new[] { "Улик пока мало — версию не строю, жду подсказок.", "Пока гадать рано: подсказок почти нет.", "Подожду улик, наугад называть не буду." }[rng.Next(3)]
+                    : "";
+                opinion = (wait + accusation).Trim();
+            }
             if (claimCard is null)
             {
-                return (opinion, new List<string> { card }, new List<string> { "думаю, эта" });
+                return blind ? (opinion, new List<string>(), new List<string>()) : (opinion, new List<string> { card }, new List<string> { "думаю, эта" });
             }
 
             // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
@@ -990,10 +1000,10 @@ public static class BotPlayer
                 // «:0» связывает проверку с письмом — так стол знает, какое письмо проверяло эту карту.
                 // Письмо исчезло — проверенные им карты бот показывает красным: по его рассуждению, это «не они».
                 var gone = !Classic && claimText.Contains("исчезла", StringComparison.Ordinal);
-                notes.Add((!Classic && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
+                notes.Add((!Classic && !blind && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
-            if (!cards.Contains(card) && cards.Count < ChatService.MaxCards)
+            if (!blind && !cards.Contains(card) && cards.Count < ChatService.MaxCards)
             {
                 cards.Add(card);
                 notes.Add("думаю, эта");
@@ -1018,12 +1028,16 @@ public static class BotPlayer
                     ? checkedCards.Count > 0 ? "Открытие письма усиливает эти связи." : "Письмо открыто, но явных связей с картами поля я не вижу."
                     : "Пока жду результат проверки.";
             // Лимит чата соблюдаем по законченным строкам, не обрывая объяснение посреди слова.
-            var sections = new[] { claimText, checkedText, conclusion, opinion };
+            var sections = new[] { claimText, checkedText, conclusion, opinion }.Where(x => x.Length > 0);
             var text = string.Join("\n", sections);
             if (text.Length > ChatService.MaxTextLength)
-                text = string.Join("\n", new[] { claimText, checkedText, conclusion, $"Версия: {Where(target, column)}." });
+                text = string.Join("\n", new[] { claimText, checkedText, conclusion, blind ? "" : $"Версия: {Where(target, column)}." }.Where(x => x.Length > 0));
             return (text, cards, notes);
         }
+
+        /// <summary>Карта — последняя непроверенная в ряду: остальные уже ослаблены исчезнувшими письмами.</summary>
+        private bool OnlyLeft(int row, int column) =>
+            Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != column).All(c => Evidence(Card(row, c)) < -0.05);
 
         /// <summary>
         /// Отклик на последнее чужое мнение о том же ряду — как в живом разговоре: «Аня, согласен» или «Боб, не соглашусь».
