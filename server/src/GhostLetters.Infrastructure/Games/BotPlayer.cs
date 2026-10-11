@@ -932,7 +932,7 @@ public static class BotPlayer
             var lines = Evidence(card) > 0
                 ? new[]
                 {
-                    $"Подсказки похожи на эту: {Name(view.Board[target].Category)} — карта {column + 1}.",
+                    $"скорее всего, {Name(view.Board[target].Category).ToLowerInvariant()} — карта {column + 1}.",
                     $"Ставлю на {Name(view.Board[target].Category).ToLowerInvariant()}, карта {column + 1}.",
                     $"По-моему, {Name(view.Board[target].Category)}: {column + 1}. Кто против?",
                 }
@@ -944,7 +944,7 @@ public static class BotPlayer
             var opinion = Reply(target, card) + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
             var links = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
                 .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
-                .Select(h => $"Подсказка р.{h.Round} №{h.Number} → {Where(target, column)} ({Connection(h.Id, card)}).");
+                .Select(h => $"Подсказка р.{h.Round} №{h.Number} → {Where(target, column)}: {Connection(h.Id, card)}.");
             opinion += "\n" + string.Join("\n", links);
             if (!links.Any()) opinion += "Связь с открытыми уликами слабая — это только предположение.";
             if (!Classic && view.Board.Count > 1)

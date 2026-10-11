@@ -34,7 +34,7 @@ class ChatCardText extends StatelessWidget {
         for (final hint in hints) {
           if (hint.round == round && index >= 0 && index < hint.cards.length) {
             cardId = hint.cards[index];
-            label = 'Подсказка р.$round';
+            label = round == 0 ? 'Зацепка' : 'Подсказка р.$round';
             break;
           }
         }
