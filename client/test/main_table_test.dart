@@ -450,6 +450,18 @@ void main() {
     await _shot(tester, 'dialog');
   });
 
+  testWidgets('планшет вертикально: поле целиком видно над разговором', (tester) async {
+    final app = await _open(tester, const Size(800, 915));
+    app.realtime.chatCtl.add(ChatMessage(id: 'h1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Мотив 1.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 6));
+    final last = tester.getRect(find.byKey(const Key('board-3-4')));
+    final dialog = tester.getRect(find.byKey(const Key('main-dialog')));
+    expect(last.bottom, lessThanOrEqualTo(dialog.top + 1));
+    expect(last.height, greaterThan(80));
+  });
+
   testWidgets('подпись раунда — сбоку от подсказки, не поверх картинки', (tester) async {
     await _open(tester, const Size(390, 844));
     final label = tester.getRect(find.byKey(const Key('hint-label-0')));

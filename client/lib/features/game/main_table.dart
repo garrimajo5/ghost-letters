@@ -451,8 +451,9 @@ class _TableArea extends StatelessWidget {
       final dialog = !landscape && staircase && const {'Discussion', 'Voting', 'VoteTie'}.contains(v.phase);
       final stripHeight = voting || say.active || (!dialog && _current != null) || _canSay(v) ? _SayStrip.height : 0.0;
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
-      final usable = dialog ? box.maxHeight * .66 : box.maxHeight;
-      final byHeight = box.maxHeight.isFinite ? (usable - 8 - stripHeight) / rows - gap : double.infinity;
+      // С разговором поле берёт две трети высоты под строкой, разговор — треть (см. flex ниже).
+      final usable = dialog ? (box.maxHeight - stripHeight) * 2 / 3 : box.maxHeight - stripHeight;
+      final byHeight = box.maxHeight.isFinite ? (usable - 12) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
@@ -524,7 +525,7 @@ class _TableArea extends StatelessWidget {
         return Column(children: [
           if (strip)
             if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: null, typing: typing),
-          Flexible(child: board),
+          Flexible(flex: 2, child: board),
           Expanded(child: _Dialog(screen: screen, typing: typing)),
         ]);
       }
