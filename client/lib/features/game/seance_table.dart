@@ -60,7 +60,8 @@ class _SeanceCircle extends StatelessWidget {
       // Места игроков — на краю стола, целиком внутри своего квадрата.
       final r = side / 2 - 24;
       final center = Offset(box.maxWidth / 2, box.maxHeight / 2);
-      final hint = (r * 0.2).clamp(16.0, 50.0).floorToDouble();
+      // Подсказки крупнее на большом экране; в тесном секторе — мельче, чтобы не налезали.
+      final hint = (r * 0.26).clamp(16.0, 80.0).floorToDouble();
       Offset at(double angle, double radius) => center + Offset(math.cos(angle), math.sin(angle)) * radius;
       double sectorStart(int i) => -math.pi / 2 + 2 * math.pi * i / sectors;
       final children = <Widget>[
@@ -95,14 +96,15 @@ class _SeanceCircle extends StatelessWidget {
           final a = cards.length == 1 ? mid : mid - spread / 2 + spread * k / (cards.length - 1);
           final p = at(a, r * 0.55);
           final c = cards[k];
+          final size = cards.length < 2 ? hint : math.max(16.0, math.min(hint, r * 0.55 * spread / (cards.length - 1) * 0.9)).floorToDouble();
           children.add(Positioned(
-            left: p.dx - hint / 2,
-            top: p.dy - hint / 2,
+            left: p.dx - size / 2,
+            top: p.dy - size / 2,
             child: GestureDetector(
               key: Key('hint-$c'),
               onTap: () => v.me == null ? showCardZoom(context, c) : HintSheet.show(context, screen, c, i),
               onLongPress: () => showCardZoom(context, c),
-              child: CardImage(cardId: c, size: hint, radius: 5),
+              child: CardImage(cardId: c, size: size, radius: 5),
             ),
           ));
         }

@@ -59,6 +59,12 @@ Future<void> _loadFonts() async {
 Future<void> _shot(WidgetTester tester, String name) async {
   const dir = String.fromEnvironment('TABLE_SCREENSHOTS');
   if (dir.isEmpty) return;
+  // Картинки карт декодируются по-настоящему асинхронно: даём им загрузиться, иначе на снимке пустые карты.
+  for (final element in find.byType(Image).evaluate()) {
+    final image = element.widget as Image;
+    await tester.runAsync(() => precacheImage(image.image, element));
+  }
+  await tester.pump();
   await tester.runAsync(() async {
     final boundary = _shotKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final image = await boundary.toImage();
