@@ -22,6 +22,9 @@ public static class BotPlayer
     /// <summary>Порог, с которого письмо «похоже» на улику.</summary>
     private const double Hint = 0.2;
 
+    /// <summary>Есть ли у бота ход, кроме пассивных (лайк, поднять руку, передать слово).</summary>
+    public static bool HasMove(PlayerView view) => view.Me is not null && view.AllowedCommands.Any(c => !Passive.Contains(c));
+
     /// <summary>Ход бота или null, если ходить не нужно.</summary>
     public static GameCommand? Decide(PlayerView view, Random rng, CardTags? tags = null, BotMind? mind = null)
     {

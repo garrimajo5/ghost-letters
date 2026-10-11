@@ -12,15 +12,34 @@ public sealed record CardSetDto(string Code, string Title, IReadOnlyList<string>
 public sealed record AdminCardPage(IReadOnlyList<AdminCardDto> Cards, int Total, IReadOnlyList<CardSetDto> Sets);
 public sealed record SaveCardRequest(string? Title, string SetCode, bool IsActive, int Version, CardAnnotation Annotation);
 
-/// <summary>Database overrides are loaded once per bot tick, not per comparison or per bot.</summary>
+/// <summary>
+/// Разметка из базы поверх базовой. Такт ботов идёт раз в 1,5 с, а разметка меняется только в админке:
+/// перечитываем её, лишь когда изменился отпечаток (число размеченных карт и сумма их версий).
+/// </summary>
 public sealed class CardTagStore(GhostLettersDbContext db, CardTags baseline)
 {
+    private static readonly object Gate = new();
+    private static (CardTags Baseline, string? Database, int Count, long Versions, CardTags Tags)? _cached;
+
     public async Task<CardTags> LoadAsync(CancellationToken ct)
     {
+        var print = await db.Cards.AsNoTracking().Where(c => c.Annotations != null)
+            .GroupBy(_ => 1).Select(g => new { Count = g.Count(), Versions = g.Sum(c => (long)c.MetadataVersion) })
+            .FirstOrDefaultAsync(ct);
+        var (count, versions) = (print?.Count ?? 0, print?.Versions ?? 0);
+        var database = db.Database.GetConnectionString();
+        lock (Gate)
+        {
+            if (_cached is { } hit && ReferenceEquals(hit.Baseline, baseline) && hit.Database == database && hit.Count == count && hit.Versions == versions)
+                return hit.Tags;
+        }
+
         var cards = await db.Cards.AsNoTracking().Where(c => c.Annotations != null)
             .Select(c => new { c.ImageKey, c.Annotations }).ToListAsync(ct);
-        return baseline.WithAnnotations(cards.ToDictionary(c => c.ImageKey,
+        var tags = baseline.WithAnnotations(cards.ToDictionary(c => c.ImageKey,
             c => GameJson.Deserialize<CardAnnotation>(c.Annotations!)));
+        lock (Gate) _cached = (baseline, database, count, versions, tags);
+        return tags;
     }
 }
 
