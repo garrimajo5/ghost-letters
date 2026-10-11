@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/core/theme.dart';
 import 'package:ghost_letters/features/game/game_screen.dart';
@@ -40,6 +41,21 @@ Future<TestApp> _open(WidgetTester tester, Size size,
 
 final _shotKey = GlobalKey();
 
+/// Для снимков — настоящие шрифты игры вместо тестовых квадратиков.
+Future<void> _loadFonts() async {
+  const families = {
+    'Oswald': ['400', '500', '600', '700'],
+    'GolosText': ['400', '500', '600', '700'],
+  };
+  for (final e in families.entries) {
+    final loader = FontLoader(e.key);
+    for (final w in e.value) {
+      loader.addFont(rootBundle.load('assets/fonts/${e.key}-$w.ttf'));
+    }
+    await loader.load();
+  }
+}
+
 /// Снимок экрана для проверки вида: только при --dart-define=TABLE_SCREENSHOTS=<папка>.
 Future<void> _shot(WidgetTester tester, String name) async {
   const dir = String.fromEnvironment('TABLE_SCREENSHOTS');
@@ -55,6 +71,9 @@ Future<void> _shot(WidgetTester tester, String name) async {
 }
 
 void main() {
+  setUpAll(() async {
+    if (const String.fromEnvironment('TABLE_SCREENSHOTS').isNotEmpty) await _loadFonts();
+  });
   const phone = Size(800, 360);
   const portrait = Size(390, 844);
 
