@@ -399,6 +399,17 @@ void main() {
     expect(call[1] as String, contains('не Место 2'));
   });
 
+  testWidgets('слово перешло ко мне — вместо чужой реплики крупная кнопка «Показать на столе»', (tester) async {
+    final app = await _open(tester, phone, edit: (view) => view['currentSpeaker'] = 'u2');
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'c1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Мотив 1.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 6));
+    expect(find.byKey(const Key('say-statement')), findsNothing);
+    expect(find.text('Показать на столе'), findsOneWidget);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
