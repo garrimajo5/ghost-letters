@@ -65,6 +65,9 @@ public sealed class SemanticTableTests
         BotService.WaitForNight(bot, now, now.AddSeconds(85), null, now.AddSeconds(80), new string('а', 400)).Should().BeTrue();
         BotService.WaitForNight(bot, now, now.AddMinutes(3), null, now.AddMinutes(3), "ещё").Should().BeFalse();
         BotService.WaitForNight(bot, now, now, now.AddSeconds(4)).Should().BeFalse();
+        // Один Убийца без Сообщников думает лишь несколько секунд.
+        BotService.WaitForNight(bot, now, now.AddSeconds(2), null, alone: true).Should().BeTrue();
+        BotService.WaitForNight(bot, now, now.AddSeconds(11), null, alone: true).Should().BeFalse();
     }
 
     [Fact]

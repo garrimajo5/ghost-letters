@@ -94,8 +94,11 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id &&
                     m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseSince)
                     .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+                // Один человек с ботами и без Сообщников: долгая ночь ничего не скрывает (Убийца — точно бот),
+                // обсуждать не с кем — Убийца лишь недолго «думает», человек не ждёт минуту.
+                var alone = solo && !state.Players.Any(p => p.Id != botId && p.Role == Role.Accomplice);
                 if (state.Player(botId).Role == Role.Killer && WaitForNight(botId, phaseSince, now, row.PhaseDeadline,
-                    recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct))) continue;
+                    recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct), alone)) continue;
             }
             if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
             {
@@ -131,9 +134,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     }
 
     public static bool WaitForNight(Guid bot, DateTimeOffset started, DateTimeOffset now, DateTimeOffset? deadline,
-        DateTimeOffset? lastSpeech = null, string? text = null, TimeSpan? speechTime = null)
+        DateTimeOffset? lastSpeech = null, string? text = null, TimeSpan? speechTime = null, bool alone = false)
     {
         if (deadline is { } end && end - now <= TimeSpan.FromSeconds(5)) return false;
+        if (alone) return now - started < TimeSpan.FromSeconds(4 + bot.ToByteArray()[0] % 7);
         if (now - started >= TimeSpan.FromMinutes(2)) return false;
         return now - started < TimeSpan.FromSeconds(60 + bot.ToByteArray()[0] % 21) ||
             (lastSpeech is { } at && now - at < (speechTime ?? BotDiscussion.SpeechTime(text ?? "")));
