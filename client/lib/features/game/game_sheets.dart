@@ -15,7 +15,9 @@ import 'game_state.dart';
 import 'chat_card_text.dart';
 import 'table_theory.dart';
 
-/// Пометки на карте поля: счётчики ✕ и ✓ и «считаю истинной».
+/// Карта поля крупно: сверху — поле «каруселью» (свайп влево-вправо по ряду, вверх-вниз по рядам; края соседних
+/// карт и жетон ряда видны), ниже — что о карте сказали в репликах (кто проверял и чем — можно не согласиться),
+/// свои счётчики ✕/✓ и «считаю истинной».
 class MarkSheet extends StatefulWidget {
   const MarkSheet({super.key, required this.screen, required this.cardId});
 
@@ -33,47 +35,148 @@ class MarkSheet extends StatefulWidget {
 }
 
 class _MarkSheetState extends State<MarkSheet> {
-  late CardMark mark = widget.screen.marks[widget.cardId] ?? const CardMark();
+  late String cardId = widget.cardId;
+  late final PageController _rows;
+  final _columns = <int, PageController>{};
+
+  GameView? get v => widget.screen.view;
+  CardMark get mark => widget.screen.marks[cardId] ?? const CardMark();
+
+  (int, int) _position(String id) {
+    final view = v;
+    if (view == null) return (0, 0);
+    for (var r = 0; r < view.board.length; r++) {
+      final c = view.board[r].cards.indexOf(id);
+      if (c >= 0) return (r, c);
+    }
+    return (0, 0);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _rows = PageController(initialPage: _position(cardId).$1, viewportFraction: .78);
+  }
+
+  @override
+  void dispose() {
+    _rows.dispose();
+    for (final c in _columns.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  PageController _columnsOf(int row) => _columns.putIfAbsent(row, () {
+        final (r, c) = _position(cardId);
+        // Страница 0 — жетон ряда, карты — с первой.
+        return PageController(initialPage: r == row ? c + 1 : 1, viewportFraction: .62);
+      });
 
   void _set(CardMark m) {
-    setState(() => mark = m);
-    widget.screen.saveMark(widget.cardId, m);
+    setState(() {});
+    widget.screen.saveMark(cardId, m);
+  }
+
+  void _focus(int row, int page) {
+    final view = v;
+    if (view == null || page == 0 || row >= view.board.length) return;
+    setState(() => cardId = view.board[row].cards[page - 1]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final v = widget.screen.view;
-    String? label;
-    if (v != null) {
-      for (var r = 0; r < v.board.length; r++) {
-        final c = v.board[r].cards.indexOf(widget.cardId);
-        if (c >= 0) label = '${T.category(v.board[r].category)}, карта ${c + 1}';
-      }
-    }
+    final view = v;
+    final (row, column) = _position(cardId);
+    final label = view == null || view.board.isEmpty ? 'Карта' : '${T.category(view.board[row].category)}, карта ${column + 1}';
+    final evidence = cardEvidence(widget.screen.chat, cardId);
+    final m = mark;
+    final size = (MediaQuery.sizeOf(context).height * .26).clamp(130.0, 210.0);
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            foregroundDecoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: mark.believed ? AppColors.believed : AppColors.border, width: mark.believed ? 4 : 2),
-            ),
-            child: CardImage(cardId: widget.cardId, size: 200, radius: 20),
-          ),
-          const SizedBox(height: 10),
-          Text('${label ?? 'Карта'} · пометки видите только вы', style: const TextStyle(fontSize: 13, color: AppColors.muted)),
-          if (v?.phase == 'Discussion' && v?.me != null && v?.me?.role != 'Ghost')
+          if (view != null && view.board.isNotEmpty)
+            SizedBox(
+              key: const Key('mark-carousel'),
+              height: size + 20,
+              child: PageView.builder(
+                controller: _rows,
+                scrollDirection: Axis.vertical,
+                itemCount: view.board.length,
+                onPageChanged: (r) => _focus(r, _columnsOf(r).hasClients ? (_columnsOf(r).page ?? 1).round() : 1),
+                itemBuilder: (context, r) => PageView.builder(
+                  key: Key('mark-row-$r'),
+                  controller: _columnsOf(r),
+                  itemCount: view.board[r].cards.length + 1,
+                  onPageChanged: (page) => _focus(r, page),
+                  itemBuilder: (context, page) {
+                    if (page == 0) {
+                      return Center(
+                        child: Container(
+                          key: Key('mark-token-$r'),
+                          width: size * .7,
+                          height: size * .7,
+                          decoration: BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle, border: Border.all(color: AppColors.border)),
+                          alignment: Alignment.center,
+                          child: Text(T.category(view.board[r].category).toUpperCase(), style: heading(14, color: AppColors.ice, spacing: 1.5)),
+                        ),
+                      );
+                    }
+                    final id = view.board[r].cards[page - 1];
+                    final current = id == cardId;
+                    final believed = (widget.screen.marks[id] ?? const CardMark()).believed;
+                    return Center(
+                      child: AnimatedOpacity(
+                        duration: const Duration(milliseconds: 150),
+                        opacity: current ? 1 : .45,
+                        child: Container(
+                          key: Key('mark-card-$id'),
+                          foregroundDecoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: believed ? AppColors.believed : AppColors.border, width: believed ? 4 : 2),
+                          ),
+                          child: CardImage(cardId: id, size: size, radius: 18),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            )
+          else
+            CardImage(cardId: cardId, size: size, radius: 18),
+          const SizedBox(height: 6),
+          Text('$label · свайп — соседние карты · пометки видите только вы',
+              key: const Key('mark-label'), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          if (view?.phase == 'Discussion' && view?.me != null && view?.me?.role != 'Ghost')
             TextButton.icon(icon: const Icon(Icons.account_tree_outlined), label: const Text('Объяснить эту карту всем'),
               onPressed: () async {
                 final screen = widget.screen;
-                final source = widget.cardId;
+                final source = cardId;
                 Navigator.pop(context);
                 await showModalBottomSheet<void>(context: screen.context, isScrollControlled: true, useSafeArea: true,
                   builder: (_) => TableTheorySheet(screen: screen, initialSource: source));
               }),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
+          if (evidence.isNotEmpty)
+            Container(
+              key: const Key('mark-evidence'),
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.fromLTRB(12, 8, 6, 6),
+              decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Из обсуждения — снимите галочку, если не согласны:', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                for (final e in evidence)
+                  _EvidenceRow(
+                    key: Key('evidence-${e.key}'),
+                    screen: widget.screen,
+                    evidence: e,
+                    counted: !m.ignored.contains(e.key),
+                    onChanged: (on) => _set(m.copyWith(ignored: on ? (m.ignored.where((k) => k != e.key).toList()) : [...m.ignored, e.key])),
+                  ),
+              ]),
+            ),
           Container(
             decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16)),
             child: Column(children: [
@@ -81,59 +184,55 @@ class _MarkSheetState extends State<MarkSheet> {
                 key: const Key('mark-crosses'),
                 badge: Icons.close,
                 color: AppColors.red,
-                label: 'Проверяли — подсказки не было',
-                value: mark.crosses,
-                onChanged: (v) => _set(mark.copyWith(crosses: v)),
+                label: 'Ещё проверяли — подсказки не было',
+                value: m.crosses,
+                onChanged: (x) => _set(m.copyWith(crosses: x)),
               ),
               SourceChips(
                 key: const Key('cross-by'),
                 screen: widget.screen,
                 label: 'Кто проверял:',
-                selected: mark.crossBy,
+                selected: m.crossBy,
                 color: AppColors.red,
-                onToggle: (id) => _set(mark.toggleSource(id, cross: true)),
+                onToggle: (id) => _set(m.toggleSource(id, cross: true)),
               ),
               const Divider(height: 1, color: AppColors.surface2),
               _Counter(
                 key: const Key('mark-checks'),
                 badge: Icons.check,
                 color: AppColors.green,
-                label: 'Подсказки указывают сюда',
-                value: mark.checks,
-                onChanged: (v) => _set(mark.copyWith(checks: v)),
+                label: 'Ещё подсказки указывают сюда',
+                value: m.checks,
+                onChanged: (x) => _set(m.copyWith(checks: x)),
               ),
               SourceChips(
                 key: const Key('check-by'),
                 screen: widget.screen,
                 label: 'Чьи подсказки:',
-                selected: mark.checkBy,
+                selected: m.checkBy,
                 color: AppColors.green,
-                onToggle: (id) => _set(mark.toggleSource(id, cross: false)),
+                onToggle: (id) => _set(m.toggleSource(id, cross: false)),
               ),
               Material(
-                color: mark.believed ? AppColors.green : Colors.transparent,
+                color: m.believed ? AppColors.green : Colors.transparent,
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                 child: InkWell(
                   key: const Key('mark-believed'),
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                  onTap: () => _set(mark.copyWith(believed: !mark.believed)),
+                  onTap: () => _set(m.copyWith(believed: !m.believed)),
                   child: SizedBox(
                     height: 52,
                     child: Center(
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(
-                          mark.believed ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          m.believed ? Icons.radio_button_checked : Icons.radio_button_unchecked,
                           size: 18,
-                          color: mark.believed ? Colors.white : AppColors.greenSoft,
+                          color: m.believed ? Colors.white : AppColors.greenSoft,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Считаю истинной',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: mark.believed ? Colors.white : AppColors.greenSoft,
-                          ),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: m.believed ? Colors.white : AppColors.greenSoft),
                         ),
                       ]),
                     ),
@@ -141,12 +240,6 @@ class _MarkSheetState extends State<MarkSheet> {
                 ),
               ),
             ]),
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'На поле подсветка включается удержанием карты',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.muted),
           ),
           const SizedBox(height: 12),
           FilledButton(
@@ -160,6 +253,50 @@ class _MarkSheetState extends State<MarkSheet> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Готово'),
           ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Одна проверка карты из реплики: кто, чем (миниатюра улики или письма), что вышло — и галочка «учитываю».
+class _EvidenceRow extends StatelessWidget {
+  const _EvidenceRow({super.key, required this.screen, required this.evidence, required this.counted, required this.onChanged});
+
+  final GameScreenState screen;
+  final CardEvidence evidence;
+  final bool counted;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = evidence;
+    final mine = e.authorId == screen.view?.me?.id;
+    return InkWell(
+      onTap: () => onChanged(!counted),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(children: [
+          Avatar(nickname: screen.nick(e.authorId), color: screen.colorOf(e.authorId), photoId: screen.photoOf(e.authorId), size: 26),
+          const SizedBox(width: 8),
+          if (e.sourceCard case final source?) ...[
+            CardImage(cardId: source, size: 32, radius: 5),
+            const Icon(Icons.arrow_forward, size: 14, color: AppColors.muted),
+          ],
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(color: e.negative ? AppColors.red : AppColors.green, shape: BoxShape.circle),
+            child: Icon(e.negative ? Icons.close : Icons.check, size: 12, color: Colors.white),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${mine ? 'Я' : screen.nick(e.authorId)}, р. ${e.round}: ${e.negative ? 'проверял — подсказки не было' : 'указывает сюда'}',
+              style: TextStyle(fontSize: 13, color: counted ? AppColors.text : AppColors.dim, decoration: counted ? null : TextDecoration.lineThrough),
+            ),
+          ),
+          Checkbox(value: counted, onChanged: (x) => onChanged(x ?? true)),
         ]),
       ),
     );
