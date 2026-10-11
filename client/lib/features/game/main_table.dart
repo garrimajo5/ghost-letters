@@ -551,6 +551,8 @@ class _TableArea extends StatelessWidget {
       final hintsWidth = staircase && !below ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
+      // Меня спросили — строка с ответами; вопрос про ряд — ряд подсвечен, нажатие на карту в нём — ответ.
+      final ask = !voting && !say.active && _canSpeakNow(v) ? _askedMe(screen, say) : null;
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       // Боком поле крупнее экрана: листается свайпом в обе стороны, подсказки — всегда видны слева.
       final pan = landscape && staircase && screen.bigBoard;
@@ -578,7 +580,7 @@ class _TableArea extends StatelessWidget {
               maxCard: fieldCard,
               order: order,
               vertical: true,
-              focusRow: voting ? stage.row : null,
+              focusRow: voting ? stage.row : ask?.row,
               reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
                 final color = _mark(id, statement);
@@ -622,7 +624,14 @@ class _TableArea extends StatelessWidget {
                 }
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
                 // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить.
-                if (say.active || _canSpeakNow(v)) {
+                if (ask?.row case final row? when v.board[row].cards.contains(id)) {
+                  out = GestureDetector(
+                    key: Key('ask-pick-$id'),
+                    onTap: () => _answerRow(context, screen, ask!.q, row, id),
+                    onLongPress: () => showCardZoom(context, id),
+                    child: out,
+                  );
+                } else if (say.active || _canSpeakNow(v)) {
                   out = GestureDetector(
                     onTap: () => _tapBoard(v, id),
                     onLongPress: () => showCardZoom(context, id),
@@ -683,14 +692,14 @@ class _TableArea extends StatelessWidget {
       if (dialog) {
         return Column(children: [
           if (strip)
-            if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: null, typing: typing),
+            if (voting) _VoteStrip(screen: screen, stage: stage) else if (ask != null) _AskStrip(screen: screen, say: say, ask: ask) else _SayStrip(screen: screen, say: say, statement: null, typing: typing),
           Flexible(flex: 2, child: board),
           Expanded(child: _Dialog(screen: screen, typing: typing)),
         ]);
       }
       if (!strip) return board;
       return Column(children: [
-        if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
+        if (voting) _VoteStrip(screen: screen, stage: stage) else if (ask != null) _AskStrip(screen: screen, say: say, ask: ask) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
         Expanded(child: board),
       ]);
     });
@@ -1281,6 +1290,17 @@ class _Say extends ChangeNotifier {
   /// Карта поля → (зелёная?, индекс источника или −1).
   final marks = <String, (bool, int)>{};
 
+  /// Показ — ответ на вопрос: текст начинается с обращения («Марпл, моя версия: …»), чтобы спросивший понял.
+  String? replyTo;
+
+  /// Вопросы мне, которые я закрыл, не ответив (id реплик).
+  final dismissed = <String>{};
+
+  void dismiss(String id) {
+    dismissed.add(id);
+    notifyListeners();
+  }
+
   /// Письма, которые исчезли: проверка ими — «не эта», первое нажатие сразу красное.
   Set<String> vanished = const {};
 
@@ -1301,6 +1321,7 @@ class _Say extends ChangeNotifier {
 
   void reset() {
     active = false;
+    replyTo = null;
     sources.clear();
     _hints.clear();
     current = -1;
@@ -1451,6 +1472,7 @@ String _sayText(GameView v, _Say say) {
 
   final parts = [for (var i = 0; i < say.sources.length; i++) part(i), if (say.marks.values.any((m) => m.$2 < 0)) part(-1)]
       .where((p) => p.isNotEmpty);
+  if (say.replyTo case final to?) return '$to, моя версия: ${parts.join('; ')}.';
   return '$tablePostPrefix${parts.join('; ')}.';
 }
 
@@ -2203,4 +2225,119 @@ String? _claimable(GameView v, String? hint) {
   final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
   if (round == null || !round.cards.contains(hint) || letter == null || letter.revealed != true) return null;
   return hint;
+}
+
+
+/// Вопрос мне: чья реплика, про какой ряд (если про ряд) и зовут ли голосовать вместе («Согласен?»).
+typedef _Ask = ({ChatMessage q, int? row, bool agree, bool version});
+
+/// Последний вопрос мне в этом раунде, на который я ещё не ответил: «Ватсон, за какую карту в ряду «Место» …?»
+_Ask? _askedMe(GameScreenState screen, _Say say) {
+  final v = screen.view!;
+  final me = v.me?.id;
+  if (me == null) return null;
+  final mine = screen.nick(me).trim().toLowerCase();
+  final short = mine.startsWith('бот ') ? mine.substring(4) : mine;
+  ChatMessage? q;
+  for (final m in screen.chat) {
+    if (m.channel != 'public' || m.round != v.round || m.authorId == null) continue;
+    if (m.authorId == me) {
+      q = null;
+      continue;
+    }
+    final text = (m.text ?? '').trim();
+    final head = text.split(',').first.trim().toLowerCase();
+    if (text.contains('?') && text.contains(',') && (head == mine || head == short)) q = m;
+  }
+  if (q == null || say.dismissed.contains(q.id)) return null;
+  final text = q.text ?? '';
+  int? row;
+  final named = RegExp(r'в ряду «([^»]+)»').firstMatch(text)?[1]?.toLowerCase();
+  if (named != null) {
+    for (var i = 0; i < v.board.length; i++) {
+      if (T.category(v.board[i].category).toLowerCase() == named) row = i;
+    }
+  }
+  return (q: q, row: row, agree: text.contains('Согласен?'), version: row == null && text.toLowerCase().contains('верси'));
+}
+
+/// Ответ на вопрос про ряд одним нажатием: «Марпл, в ряду «Место» голосую за Место 2.» и карта с заметкой.
+Future<void> _answerRow(BuildContext context, GameScreenState screen, ChatMessage q, int row, String id) async {
+  final v = screen.view!;
+  final to = _callName(screen.nick(q.authorId));
+  final category = T.category(v.board[row].category);
+  await runAction(
+    context,
+    () => screen.ref.read(apiProvider).sendChat(v.gameId, '$to, в ряду «$category» голосую за ${_cardName(v, id)}.',
+        channel: 'public', cards: [id], cardNotes: const ['думаю, эта']),
+  );
+}
+
+/// Обращение, как за столом: «Марпл», а не «Бот Марпл».
+String _callName(String nick) => nick.startsWith('Бот ') ? nick.substring(4) : nick;
+
+/// Строка над полем, когда меня спросили: кто и о чём, и кнопки ответа.
+class _AskStrip extends StatelessWidget {
+  const _AskStrip({required this.screen, required this.say, required this.ask});
+
+  final GameScreenState screen;
+  final _Say say;
+  final _Ask ask;
+
+  Future<void> _reply(BuildContext context, String text) async {
+    final v = screen.view!;
+    await runAction(context, () => screen.ref.read(apiProvider).sendChat(v.gameId, text, channel: 'public'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final q = ask.q;
+    final to = _callName(screen.nick(q.authorId));
+    final row = ask.row;
+    final label = row != null
+        ? '$to спрашивает про ряд «${T.category(v.board[row].category)}» — нажмите карту в подсвеченном ряду'
+        : ask.agree
+            ? '$to зовёт голосовать вместе'
+            : '$to спрашивает вас';
+    final buttons = <Widget>[
+      if (ask.agree) ...[
+        TextButton(key: const Key('ask-agree'), onPressed: () => _reply(context, '$to, согласен.'), child: const Text('Согласен')),
+        TextButton(key: const Key('ask-disagree'), onPressed: () => _reply(context, '$to, не согласен.'), child: const Text('Не согласен')),
+      ] else if (row == null)
+        FilledButton(
+          key: const Key('ask-version'),
+          onPressed: () {
+            say.start();
+            say.replyTo = to;
+          },
+          child: const Text('Показать версию'),
+        ),
+      if (row != null)
+        TextButton(key: const Key('ask-unsure'), onPressed: () => _reply(context, '$to, в этом ряду пока не уверен.'), child: const Text('Не уверен')),
+    ];
+    return Container(
+      key: const Key('ask-strip'),
+      height: _SayStrip.height,
+      margin: const EdgeInsets.fromLTRB(6, 0, 8, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3A2B12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.amber),
+      ),
+      child: Row(children: [
+        Avatar(nickname: screen.nick(q.authorId), color: screen.colorOf(q.authorId), photoId: screen.photoOf(q.authorId), size: 26),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Tooltip(
+            message: q.text ?? '',
+            child: Text(label, key: const Key('ask-label'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+          ),
+        ),
+        ...buttons,
+        IconButton(key: const Key('ask-close'), tooltip: 'Не отвечать', icon: const Icon(Icons.close, size: 18), onPressed: () => say.dismiss(q.id)),
+      ]),
+    );
+  }
 }
