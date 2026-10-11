@@ -1,0 +1,55 @@
+name: Table screens
+
+# Снимки нового стола и сеанса из виджет-тестов (настоящие шрифты, без эмодзи-шрифта).
+# Кладутся в ветку screens/<ветка> — их можно скачать через git, без артефактов.
+on:
+  push:
+    branches: ["feat/redesign-*"]
+    paths:
+      - client/lib/features/game/**
+      - client/test/main_table_test.dart
+      - client/test/seance_test.dart
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: table-screens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Capture
+        continue-on-error: true
+        run: |
+          flutter test --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/main_table_test.dart
+          flutter test --dart-define=DOSSIER_DESIGN=true --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/seance_test.dart
+
+      - name: Push to screens branch
+        run: |
+          ls screens/*.png
+          branch="screens/${GITHUB_REF_NAME}"
+          cd screens
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -q -b "$branch"
+          git add *.png
+          git commit -qm "Снимки стола: ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$branch"

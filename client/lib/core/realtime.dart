@@ -21,6 +21,7 @@ class Realtime {
   final _views = StreamController<({GameView view, DateTime? deadline})>.broadcast();
   final _snapshots = StreamController<GameSnapshot>.broadcast();
   final _chat = StreamController<ChatMessage>.broadcast();
+  final _reactions = StreamController<Reaction>.broadcast();
   final _connected = StreamController<bool>.broadcast();
 
   Stream<Lobby> get lobbyUpdates => _lobbyUpdates.stream;
@@ -33,6 +34,15 @@ class Realtime {
   Stream<GameSnapshot> get snapshots => _snapshots.stream;
 
   Stream<ChatMessage> get chat => _chat.stream;
+
+  /// Эмодзи за столом от игроков партии.
+  Stream<Reaction> get reactions => _reactions.stream;
+
+  /// Отправить эмодзи на стол; частоту ограничивает сервер.
+  Future<void> react(String gameId, String emoji) async {
+    final hub = await _connection();
+    await hub.invoke('React', args: <Object>[gameId, emoji]);
+  }
 
   Stream<bool> get connected => _connected.stream;
 
@@ -86,6 +96,10 @@ class Realtime {
     hub.on('ChatMessage', (args) {
       final j = _first(args);
       if (j != null) _chat.add(ChatMessage.fromJson(j));
+    });
+    hub.on('Reaction', (args) {
+      final j = _first(args);
+      if (j != null) _reactions.add(Reaction.fromJson(j));
     });
     hub.onreconnected(({connectionId}) async {
       _connected.add(true);

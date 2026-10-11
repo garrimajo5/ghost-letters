@@ -615,12 +615,43 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
               listenable: screen.chatChanges,
               builder: (context, _) {
                 final messages = screen.chat.where((m) => m.channel == _channel).toList();
+                // Лента по раундам: перед первым сообщением раунда — разделитель; в конце — выбор стола в голосовании.
+                final items = <Object>[];
+                int? round;
+                for (final m in messages) {
+                  if (m.round != round) items.add(m.round);
+                  round = m.round;
+                  items.add(m);
+                }
+                final outcomes = _channel == 'public' ? (screen.view?.finale?.outcomes ?? const <VoteOutcome>[]) : const <VoteOutcome>[];
+                if (outcomes.any((o) => o.kind == 'Row' && o.column != null)) {
+                  items
+                    ..add('Голосование')
+                    ..addAll(outcomes.where((o) => o.kind == 'Row' && o.column != null));
+                }
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.all(8),
-                  itemCount: messages.length,
+                  itemCount: items.length,
                   itemBuilder: (context, i) {
-                    final m = messages[messages.length - 1 - i];
+                    final item = items[items.length - 1 - i];
+                    if (item is int || item is String) {
+                      final label = item is int ? (item == 0 ? 'Начало партии' : 'Раунд $item') : item as String;
+                      return Padding(
+                        key: Key('chat-divider-$item'),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(children: [
+                          const Expanded(child: Divider(color: AppColors.border)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(label.toUpperCase(), style: sectionLabel(size: 11)),
+                          ),
+                          const Expanded(child: Divider(color: AppColors.border)),
+                        ]),
+                      );
+                    }
+                    if (item is VoteOutcome) return _OutcomeLine(screen: screen, outcome: item);
+                    final m = item as ChatMessage;
                     final author = screen.rosterOf(m.authorId);
                     final quotable = canWrite && m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
                     final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
@@ -636,6 +667,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                         ),
                       );
                     }
+                    final fromTable = (m.text ?? '').startsWith(tablePostPrefix);
                     final bubble = GestureDetector(
                       onLongPress: quotable ? () => _quoteToNote(m) : null,
                       child: Container(
@@ -651,10 +683,15 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           ),
                         ),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                          if (!mine)
+                          if (!mine || fromTable)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 2),
-                              child: Text(author?.nickname ?? '?', style: const TextStyle(fontSize: 12, color: AppColors.ice)),
+                              child: Wrap(spacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                                if (!mine) Text(author?.nickname ?? '?', style: const TextStyle(fontSize: 12, color: AppColors.ice)),
+                                if (author?.isBot == true) _ChatTag(key: Key('chat-bot-${m.id}'), icon: Icons.smart_toy_outlined, text: 'бот'),
+                                if (screen.view?.player(m.authorId!)?.isGhost == true) const _ChatTag(icon: Icons.blur_on, text: 'Призрак'),
+                                if (fromTable) _ChatTag(key: Key('chat-table-${m.id}'), icon: Icons.touch_app_outlined, text: 'со стола'),
+                              ]),
                             ),
                           if (m.isVoice)
                             _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
@@ -1186,4 +1223,50 @@ class _ClaimOption extends StatelessWidget {
           Text(label, style: TextStyle(fontSize: 11, color: selected ? AppColors.amber : AppColors.dim)),
         ]),
       );
+}
+
+/// Метка у автора в чате: «бот», «Призрак», «со стола».
+class _ChatTag extends StatelessWidget {
+  const _ChatTag({super.key, required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(99)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 11, color: AppColors.muted),
+          const SizedBox(width: 3),
+          Text(text, style: const TextStyle(fontSize: 10, color: AppColors.muted)),
+        ]),
+      );
+}
+
+/// Итог голосования по ряду в чате: только какую карту выбрал стол — верность до итогов закрыта.
+class _OutcomeLine extends StatelessWidget {
+  const _OutcomeLine({required this.screen, required this.outcome});
+
+  final GameScreenState screen;
+  final VoteOutcome outcome;
+
+  @override
+  Widget build(BuildContext context) {
+    final board = screen.view?.board ?? const <BoardRow>[];
+    final row = outcome.row;
+    final column = outcome.column;
+    if (column == null || row >= board.length || column >= board[row].cards.length) return const SizedBox.shrink();
+    final card = board[row].cards[column];
+    return Padding(
+      key: Key('chat-outcome-$row'),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        GestureDetector(onTap: () => showCardZoom(context, card), child: CardImage(cardId: card, size: 36, radius: 6)),
+        const SizedBox(width: 8),
+        Text('${T.category(board[row].category)}: стол выбрал карту ${column + 1}${outcome.byLot ? ' (жребий)' : ''}',
+            style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+      ]),
+    );
+  }
 }

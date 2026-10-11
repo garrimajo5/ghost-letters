@@ -131,7 +131,7 @@ jobs:
         # Тест «Досье» без флага пропускается; здесь он идёт в сборке с флагом, как на /download/dossier/.
         run: |
           set +e
-          flutter test --dart-define=DOSSIER_DESIGN=true --file-reporter json:dossier-results.json test/dossier_test.dart
+          flutter test --dart-define=DOSSIER_DESIGN=true --file-reporter json:dossier-results.json test/dossier_test.dart test/seance_test.dart
           status=$?
           python3 ../.github/scripts/flutter_annotations.py tests dossier-results.json
           exit $status

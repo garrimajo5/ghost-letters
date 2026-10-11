@@ -46,6 +46,8 @@ public static class DependencyInjection
         services.AddSingleton(sp => CardTags.FromConfiguration(
             sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<CardTags>()));
         services.AddScoped<ChatService>();
+        services.AddScoped<ReactionService>();
+        services.AddSingleton<ReactionLimiter>();
         services.AddScoped<MediaLimits>();
         services.AddScoped<NotesService>();
         services.AddScoped<ProfileService>();
