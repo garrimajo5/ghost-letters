@@ -929,6 +929,30 @@ public static class BotPlayer
 
             var card = Card(target, column);
             string Where(int r, int c) => $"{Name(view.Board[r].Category).ToLowerInvariant()} {c + 1}";
+            // Человек не называет версию наугад: без опоры на улики — только если в ряду остальное уже проверено.
+            if (!Classic && Evidence(card) <= 0.05 && !OnlyLeft(target, column))
+            {
+                var wait = claimCard is null
+                    ? new[] { "Улик пока мало — версию не строю, жду подсказок.", "Пока гадать рано: подсказок почти нет.", "Подожду улик, наугад называть не буду." }[rng.Next(3)]
+                    : "";
+                var silent = (wait + Accusation()).Trim();
+                if (claimCard is null) return (silent, new List<string>(), new List<string>());
+                var probes = Checked(claimCard);
+                var gone = claimText.Contains("исчезла", StringComparison.Ordinal);
+                var probeCards = new List<string> { claimCard };
+                var probeNotes = new List<string> { "кидал эту" };
+                foreach (var (r, c) in probes)
+                {
+                    probeCards.Add(Card(r, c));
+                    probeNotes.Add(gone ? "проверял эту, исчезла:0" : "проверял эту:0");
+                }
+                var probeNames = probes.Select(x => Where(x.Row, x.Column)).ToList();
+                var probeText = probes.Count == 0 ? "Проверял: явной связи с полем нет." :
+                    $"Проверял: {(probeNames.Count == 1 ? probeNames[0] : string.Join(", ", probeNames[..^1]) + " и " + probeNames[^1])}" +
+                    $" — {Connection(claimCard, Card(probes[0].Row, probes[0].Column))}.";
+                return (string.Join("\n", new[] { claimText, probeText, silent }.Where(x => x.Length > 0)), probeCards, probeNotes);
+            }
+
             var lines = Evidence(card) > 0
                 ? new[]
                 {
@@ -1024,6 +1048,10 @@ public static class BotPlayer
                 text = string.Join("\n", new[] { claimText, checkedText, conclusion, $"Версия: {Where(target, column)}." });
             return (text, cards, notes);
         }
+
+        /// <summary>Карта — последняя непроверенная в ряду: остальные уже ослаблены исчезнувшими письмами.</summary>
+        private bool OnlyLeft(int row, int column) =>
+            Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != column).All(c => Evidence(Card(row, c)) < -0.05);
 
         /// <summary>
         /// Отклик на последнее чужое мнение о том же ряду — как в живом разговоре: «Аня, согласен» или «Боб, не соглашусь».
