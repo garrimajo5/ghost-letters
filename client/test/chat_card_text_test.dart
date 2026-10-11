@@ -26,6 +26,13 @@ void main() {
     expect(m.text, contains('карта 1'), reason: 'цитата сохраняет исходный читаемый текст');
   });
 
+  test('«Зацепка» в реплике — карта первой улики Призрака', () {
+    final parts = ChatCardText.parse(message('Зацепка → мотив 1: цветы.'), board, const [HintGroup(0, ['orig_9']), ...hints]);
+    expect(parts.map((p) => p.cardId).whereType<String>(), ['orig_9', 'orig_2']);
+    // Без зацепки на столе слово остаётся текстом.
+    expect(ChatCardText.parse(message('Зацепка'), board, hints).single.cardId, isNull);
+  });
+
   test('неизвестные ссылки и обычные сообщения остаются текстом', () {
     for (final text in ['мотив 0; место 9; Подсказка р.9 №1', 'мотив 999999999999999999999999', 'мотив 1abc']) {
       final parts = ChatCardText.parse(message(text), board, hints);
