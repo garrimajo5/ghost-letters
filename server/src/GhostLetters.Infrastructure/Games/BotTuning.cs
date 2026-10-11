@@ -50,7 +50,7 @@ public sealed record BotTuning
     public double UnsureFollow { get; init; }
 
     /// <summary>Проверка: насколько важно правдоподобие карты и неясность ряда (степени).</summary>
-    public double ProbePlausible { get; init; } = 1;
+    public double ProbePlausible { get; init; } = 2;
     public double ProbeUnclear { get; init; } = 1;
 
     public static readonly BotTuning Default = new();
