@@ -418,6 +418,24 @@ void main() {
     expect(find.text('Показать на столе'), findsOneWidget);
   });
 
+  testWidgets('вертикально разговор идёт под полем: чужие слева, свои справа', (tester) async {
+    final app = await _open(tester, const Size(390, 844));
+    app.realtime.chatCtl
+      ..add(ChatMessage(id: 'd1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Ватсон, ты за что в мотиве?',
+          cardIds: const [], createdAt: DateTime.now(), round: 4))
+      ..add(ChatMessage(id: 'd2', channel: 'public', authorId: 'u2', kind: 'text', text: 'За карту 3.',
+          cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.byKey(const Key('main-dialog')), findsOneWidget);
+    final theirs = tester.getRect(find.byKey(const Key('dialog-d1')));
+    final mine = tester.getRect(find.byKey(const Key('dialog-d2')));
+    expect(theirs.center.dx, lessThan(195));
+    expect(mine.center.dx, greaterThan(195));
+    expect(theirs.top, greaterThan(tester.getRect(find.byKey(const Key('board-3-4'))).bottom));
+    await _shot(tester, 'dialog');
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
