@@ -5,18 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ghost_letters/core/config.dart';
+import 'package:ghost_letters/features/game/game_screen.dart';
 import 'package:ghost_letters/models/models.dart';
 
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
 
-/// Сеанс — только в сборке «Досье» (DOSSIER_DESIGN=true), как и dossier_test.
+/// Сеанс — вид стола, который игрок выбирает в меню партии.
 Future<TestApp> _open(WidgetTester tester, Size size, {String phase = 'Discussion', List<String> allowed = const []}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final app = await TestApp.create(user: watson, classicTable: false);
+  final app = await TestApp.create(user: watson, classicTable: false, seance: true);
   addTearDown(app.container.dispose);
   await tester.pumpWidget(RepaintBoundary(key: _shotKey, child: app.widget));
   await tester.pumpAndSettle();
@@ -98,7 +98,7 @@ void main() {
       expect(find.byKey(const Key('main-fan')), findsOneWidget);
       expect(find.byKey(const Key('ghost-badge-u1')), findsOneWidget);
       await _shot(tester, '${size.width.toInt()}x${size.height.toInt()}');
-    }, skip: !AppConfig.dossierDesign);
+    });
   }
 
   testWidgets('сеанс вертикально на планшете: все четыре ряда видны без прокрутки', (tester) async {
@@ -106,7 +106,7 @@ void main() {
     expect(tester.takeException(), isNull);
     final last = tester.getRect(find.byKey(const Key('board-3-4')));
     expect(last.bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const Key('main-fan'))).top));
-  }, skip: !AppConfig.dossierDesign);
+  });
 
   testWidgets('сеанс: пока дух читает письма, ящик светится', (tester) async {
     await _open(tester, portrait, phase: 'GhostPick');
@@ -114,13 +114,13 @@ void main() {
     expect(find.text('Дух читает письма'), findsOneWidget);
     await _shot(tester, 'ghostpick');
     await tester.pumpWidget(const SizedBox());
-  }, skip: !AppConfig.dossierDesign);
+  });
 
   testWidgets('сеанс: письма отправляют — ящик без свечения', (tester) async {
     await _open(tester, portrait, phase: 'Mailbox', allowed: const ['SendLetter']);
     expect(find.byKey(const Key('seance-mailbox')), findsOneWidget);
     expect(find.byKey(const Key('seance-mailbox-glow')), findsNothing);
-  }, skip: !AppConfig.dossierDesign);
+  });
 
   testWidgets('сеанс: в центре — карта, которую показал говорящий', (tester) async {
     final app = await _open(tester, portrait);
@@ -133,15 +133,17 @@ void main() {
     expect(find.byKey(const Key('seance-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
     await _shot(tester, 'statement');
-  }, skip: !AppConfig.dossierDesign);
+  });
 
-  testWidgets('сеанс: меню → «Прежнее досье» и обратно', (tester) async {
+  testWidgets('сеанс: меню → основной стол и обратно в любой момент', (tester) async {
     await _open(tester, portrait);
     await tester.tap(find.byKey(const Key('main-menu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Прежнее досье'));
+    await tester.tap(find.text('Вид: основной стол'));
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('seance-table')), findsNothing);
-    expect(find.text('ЗА СТОЛОМ'), findsOneWidget);
-  }, skip: !AppConfig.dossierDesign);
+    expect(find.byKey(const Key('main-table')), findsOneWidget);
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    expect(state.seance, isFalse);
+  });
 }
