@@ -412,6 +412,16 @@ void main() {
     expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
   });
 
+  testWidgets('длинная реплика: в строке видна строка, которую печатают сейчас', (tester) async {
+    final app = await _open(tester, phone);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'b2', channel: 'public', authorId: 'u3', kind: 'text', text: 'Строка один.\nСтрока два.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 3500));
+    expect(tester.widget<Text>(find.byKey(const Key('say-statement'))).data, 'Марпл: Строка два.');
+  });
+
   testWidgets('реплика бота подсвечивает карту, когда до неё доходит', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
