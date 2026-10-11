@@ -319,4 +319,30 @@ void main() {
     await tester.pump();
     expect(state.target, 'u3');
   });
+
+  testWidgets('карту вытаскивают из веера на стол — письмо отправлено', (tester) async {
+    final app = await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
+
+    final gesture = await tester.startGesture(tester.getCenter(find.byKey(const Key('hand-orig_0201'))));
+    await gesture.moveBy(const Offset(0, -40));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-80, -120));
+    await tester.pump();
+    expect(find.byKey(const Key('drop-zone')), findsOneWidget);
+    expect(find.text('Отправить письмо'), findsOneWidget);
+    await _shot(tester, 'drag');
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    final sent = app.api.named('command').where((c) => c.$2[0] == 'SendLetter').single.$2;
+    expect(sent[1], {'cardIds': ['orig_0201']});
+  });
+
+  testWidgets('в обсуждении карту не сыграть — вытащенная возвращается в веер', (tester) async {
+    final app = await _open(tester, phone);
+
+    await tester.drag(find.byKey(const Key('hand-orig_0200')), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(app.api.named('command'), isEmpty);
+  });
 }
