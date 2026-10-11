@@ -1013,6 +1013,9 @@ ChatMessage? _statement(GameScreenState screen) {
     last = m;
     if (m.authorId == v.currentSpeaker) speaker = m;
   }
+  // Слово у меня, а я ещё ничего не показал: строка свободна под крупную кнопку «Показать на столе»,
+  // а не занята прошлой чужой репликой с маленьким значком.
+  if (v.isRadio && v.me != null && v.currentSpeaker == v.me!.id && speaker == null) return null;
   return speaker ?? last;
 }
 
