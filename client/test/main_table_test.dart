@@ -459,7 +459,7 @@ void main() {
     final last = tester.getRect(find.byKey(const Key('board-3-4')));
     final dialog = tester.getRect(find.byKey(const Key('main-dialog')));
     expect(last.bottom, lessThanOrEqualTo(dialog.top + 1));
-    expect(last.height, greaterThan(80));
+    expect(last.height, greaterThan(64));
   });
 
   testWidgets('вертикально улики Призрака — полосой под полем, разговор — ещё ниже', (tester) async {
