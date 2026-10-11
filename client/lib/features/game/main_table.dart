@@ -81,7 +81,7 @@ class _MainTableState extends State<_MainTable> {
     final seance = widget.seance;
     final board = suspectVote
         ? _SuspectBoard(screen: screen)
-        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing);
+        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing, maxCard: seance ? 130 : 260);
     final Widget center;
     if (open) {
       center = _panelView(v);
@@ -90,10 +90,20 @@ class _MainTableState extends State<_MainTable> {
     } else {
       final circle = _SeanceCircle(screen: screen);
       center = landscape
-          ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              AspectRatio(aspectRatio: 1, child: circle),
-              Expanded(child: board),
-            ])
+          // Большой экран: круг и поле рядом, по центру, в спокойном масштабе — как в прототипе.
+          ? LayoutBuilder(builder: (context, box) {
+              final side = [box.maxHeight, box.maxWidth * .45, 560.0].reduce((a, b) => a < b ? a : b).floorToDouble();
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1360),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                    SizedBox(width: side, height: side, child: circle),
+                    const SizedBox(width: 16),
+                    Expanded(child: SizedBox(height: box.maxHeight, child: board)),
+                  ]),
+                ),
+              );
+            })
           : LayoutBuilder(builder: (context, box) {
               final side = (box.maxHeight * 0.44 < box.maxWidth ? box.maxHeight * 0.44 : box.maxWidth).floorToDouble();
               return Column(children: [
@@ -111,7 +121,7 @@ class _MainTableState extends State<_MainTable> {
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, dragDevices: PointerDeviceKind.values.toSet()),
       child: Scaffold(
         key: Key(seance ? 'seance-table' : 'main-table'),
-        backgroundColor: night || seance ? AppColors.night : AppColors.bg,
+        backgroundColor: seance ? _SeanceColors.bg : night ? AppColors.night : AppColors.bg,
         body: SafeArea(
           child: Stack(children: [
             Positioned.fill(child: Column(children: [
@@ -298,7 +308,9 @@ class _TopBar extends StatelessWidget {
           ],
         ),
         Text(
-          v.round > 0 ? 'Р. ${v.round}/${v.totalRounds}' : 'ПАРТИЯ',
+          seance
+              ? (v.round > 0 ? 'СЕАНС · РАУНД ${v.round} ИЗ ${v.totalRounds}' : 'СЕАНС')
+              : v.round > 0 ? 'Р. ${v.round}/${v.totalRounds}' : 'ПАРТИЯ',
           key: const Key('round'),
           style: heading(15, spacing: 1),
         ),
@@ -337,7 +349,10 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing});
+  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing, this.maxCard = 260});
+
+  /// Предел размера карты поля (на сеансе поле скромнее — главное место у круга).
+  final double maxCard;
 
   final GameScreenState screen;
   final bool landscape;
@@ -383,7 +398,7 @@ class _TableArea extends StatelessWidget {
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
-      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
+      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
       final hint = (card * 0.8).floorToDouble();
@@ -424,8 +439,22 @@ class _TableArea extends StatelessWidget {
               reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
                 final color = _mark(id, statement);
+                // На сеансе исключённая карта — тёмно-красная вуаль с крестом, как в прототипе.
                 Widget out = color == null
                     ? child
+                    : !staircase && color == AppColors.redBright
+                    ? Stack(key: Key('say-mark-$id'), children: [
+                        child,
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Container(
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(color: const Color(0x66B0261E), borderRadius: BorderRadius.circular(9)),
+                              child: const Center(child: Icon(Icons.close, color: Colors.white, size: 26)),
+                            ),
+                          ),
+                        ),
+                      ])
                     : Container(
                         key: Key('say-mark-$id'),
                         foregroundDecoration: BoxDecoration(
