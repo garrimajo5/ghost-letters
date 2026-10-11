@@ -16,9 +16,10 @@ class _SeanceCircle extends StatelessWidget {
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
       final side = box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight;
-      final r = side / 2;
+      // Места игроков — на краю стола, целиком внутри своего квадрата.
+      final r = side / 2 - 24;
       final center = Offset(box.maxWidth / 2, box.maxHeight / 2);
-      final hint = (r * 0.17).clamp(16.0, 46.0).floorToDouble();
+      final hint = (r * 0.2).clamp(16.0, 50.0).floorToDouble();
       Offset at(double angle, double radius) => center + Offset(math.cos(angle), math.sin(angle)) * radius;
       double sectorStart(int i) => -math.pi / 2 + 2 * math.pi * i / sectors;
       final children = <Widget>[
@@ -26,7 +27,7 @@ class _SeanceCircle extends StatelessWidget {
       ];
       // Свечи на границах секторов.
       for (var i = 0; i < sectors; i++) {
-        final p = at(sectorStart(i), r * 0.8);
+        final p = at(sectorStart(i), r * 0.86);
         children.add(Positioned(
           left: p.dx - 7,
           top: p.dy - 10,
@@ -36,7 +37,7 @@ class _SeanceCircle extends StatelessWidget {
       // Подписи и подсказки секторов.
       for (var i = 0; i < sectors; i++) {
         final mid = sectorStart(i) + math.pi / sectors;
-        final label = at(mid, r * 0.74);
+        final label = at(mid, r * 0.76);
         final group = v.hints.where((h) => h.round == i).firstOrNull;
         children.add(Positioned(
           left: label.dx - 30,
@@ -54,7 +55,7 @@ class _SeanceCircle extends StatelessWidget {
           // Несколько подсказок раунда — веером вдоль дуги своего сектора.
           final spread = (2 * math.pi / sectors) * 0.5;
           final a = cards.length == 1 ? mid : mid - spread / 2 + spread * k / (cards.length - 1);
-          final p = at(a, r * 0.54);
+          final p = at(a, r * 0.55);
           final c = cards[k];
           children.add(Positioned(
             left: p.dx - hint / 2,
@@ -71,7 +72,7 @@ class _SeanceCircle extends StatelessWidget {
       // Места игроков по кругу; первое место сверху.
       for (var i = 0; i < players.length; i++) {
         final p = players[i];
-        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r * 0.93);
+        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r);
         children.add(Positioned(
           left: pos.dx - 26,
           top: pos.dy - 22,
@@ -79,7 +80,7 @@ class _SeanceCircle extends StatelessWidget {
           child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false),
         ));
       }
-      final core = r * 0.62;
+      final core = r * 0.68;
       children.add(Positioned(
         left: center.dx - core / 2,
         top: center.dy - core / 2,
@@ -101,18 +102,18 @@ class _SeancePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final table = Rect.fromCircle(center: center, radius: radius * 0.86);
+    final table = Rect.fromCircle(center: center, radius: radius);
     canvas.drawCircle(
       center,
-      radius * 0.86,
+      radius,
       Paint()
         ..shader = const RadialGradient(colors: [Color(0xFF3A2A1C), Color(0xFF1E140D)]).createShader(table),
     );
-    canvas.drawCircle(center, radius * 0.86, Paint()
+    canvas.drawCircle(center, radius, Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = const Color(0xFF6B4A2E));
-    canvas.drawCircle(center, radius * 0.33, Paint()
+    canvas.drawCircle(center, radius * 0.36, Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
       ..color = AppColors.amber.withValues(alpha: 0.25));
@@ -122,7 +123,7 @@ class _SeancePainter extends CustomPainter {
     for (var i = 0; i < sectors; i++) {
       final a = -math.pi / 2 + 2 * math.pi * i / sectors;
       final dir = Offset(math.cos(a), math.sin(a));
-      canvas.drawLine(center + dir * radius * 0.33, center + dir * radius * 0.78, line);
+      canvas.drawLine(center + dir * radius * 0.36, center + dir * radius * 0.84, line);
     }
   }
 

@@ -84,7 +84,7 @@ class _MainTableState extends State<_MainTable> {
               Expanded(child: board),
             ])
           : LayoutBuilder(builder: (context, box) {
-              final side = (box.maxHeight * 0.5 < box.maxWidth ? box.maxHeight * 0.5 : box.maxWidth).floorToDouble();
+              final side = (box.maxHeight * 0.44 < box.maxWidth ? box.maxHeight * 0.44 : box.maxWidth).floorToDouble();
               return Column(children: [
                 SizedBox(height: side, child: circle),
                 Expanded(child: board),
@@ -208,8 +208,10 @@ class _TopBar extends StatelessWidget {
           style: heading(15, spacing: 1),
         ),
         const SizedBox(width: 8),
-        Flexible(
-          child: Container(
+        Expanded(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
             key: const Key('phase-pill'),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -223,8 +225,8 @@ class _TopBar extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: mine && !killerNight ? AppColors.onAmber : AppColors.text),
             ),
           ),
+          ),
         ),
-        const Spacer(),
         Countdown(deadline: screen._snap!.deadline),
         IconButton(
           key: const Key('main-eye'),
@@ -285,7 +287,7 @@ class _TableArea extends StatelessWidget {
       final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (staircase) SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -301,7 +303,10 @@ class _TableArea extends StatelessWidget {
                 ),
             ]),
           ),
-          Expanded(
+          // Поле ровно по своим картам — по центру свободного места, лесенка вплотную слева.
+          Flexible(
+            child: SizedBox(
+            width: _Board.verticalLabel + (card + gap) * columns + 1,
             child: _Board(
               screen: screen,
               maxCard: card,
@@ -323,6 +328,7 @@ class _TableArea extends StatelessWidget {
                 if (say.active) out = GestureDetector(onTap: () => say.cycle(id), child: out);
                 return out;
               },
+            ),
             ),
           ),
         ]),
@@ -364,7 +370,7 @@ class _HintStep extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 4),
                 decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
                 alignment: Alignment.center,
-                child: const Text('пусто', style: TextStyle(fontSize: 9, color: AppColors.dim)),
+                child: const Text('—', style: TextStyle(fontSize: 11, color: AppColors.dim)),
               )
             : ListView(
                 scrollDirection: Axis.horizontal,
@@ -600,7 +606,8 @@ class _Actions extends StatelessWidget {
               style: cta.danger ? FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white) : null,
               onPressed: cta.onPressed,
               icon: Icon(cta.icon ?? Icons.arrow_forward, size: 18),
-              label: Text(cta.label.toUpperCase(), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+              // Узкая колонка: надпись ужимается, а не рвётся посреди слова.
+              label: FittedBox(fit: BoxFit.scaleDown, child: Text(cta.label.toUpperCase(), maxLines: 1)),
             ),
           )
         : GestureDetector(onTap: onStatus, child: _StatusBar(text: actionHint(v), mine: needsMe(v), pulse: screen.turnPulse));
@@ -623,7 +630,7 @@ class _Fan extends StatelessWidget {
     final hand = isFinale(v) ? const <String>[] : v.me!.hand;
     final selectable = v.can('SendLetter') || v.can('Discard') || v.can('GiveFirstClue');
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
-    final card = height - 14;
+    final card = height - 20;
     // Во время показа на столе карта из веера — «кидал эту».
     bool raised(String c) => say.active ? say.source == c : screen.selectedHand.contains(c);
     return SizedBox(
