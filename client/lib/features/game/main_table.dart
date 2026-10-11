@@ -377,7 +377,9 @@ class _TableArea extends StatelessWidget {
   ChatMessage? get _current {
     if (!const {'Discussion', 'Voting', 'VoteTie'}.contains(screen.view!.phase)) return null;
     final typed = typing?.current;
-    return typed != null && typed.round == screen.view!.round ? typed : _statement(screen);
+    // Допечатанная чужая реплика уступает строку, когда слово перешло ко мне.
+    if (typed != null && typed.round == screen.view!.round && (typing!.busy || !_myFloorFree(screen))) return typed;
+    return _statement(screen);
   }
 
   /// Лесенка подсказок слева; на сеансе подсказки — в секторах круга.
@@ -1015,8 +1017,14 @@ ChatMessage? _statement(GameScreenState screen) {
   }
   // Слово у меня, а я ещё ничего не показал: строка свободна под крупную кнопку «Показать на столе»,
   // а не занята прошлой чужой репликой с маленьким значком.
-  if (v.isRadio && v.me != null && v.currentSpeaker == v.me!.id && speaker == null) return null;
+  if (speaker == null && _myFloorFree(screen)) return null;
   return speaker ?? last;
+}
+
+bool _myFloorFree(GameScreenState screen) {
+  final v = screen.view!;
+  if (!v.isRadio || v.me == null || v.currentSpeaker != v.me!.id) return false;
+  return !screen.chat.any((m) => m.channel == 'public' && m.round == v.round && m.authorId == v.me!.id);
 }
 
 /// Подпись карты поля для текста: «Мотив 2».
