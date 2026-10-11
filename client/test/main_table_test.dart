@@ -479,7 +479,7 @@ void main() {
     expect(find.byKey(const Key('main-board-pan')), findsOneWidget);
     final hint = tester.getRect(find.byKey(const Key('hint-orig_0100')));
     final last = tester.getRect(find.byKey(const Key('board-3-4')));
-    expect(last.bottom, greaterThan(457), reason: 'поле не помещается — его листают');
+    expect(last.bottom, greaterThan(tester.getRect(find.byKey(const Key('main-board-pan'))).bottom), reason: 'поле не помещается — его листают');
     await tester.drag(find.byKey(const Key('main-board-pan')), const Offset(0, -300));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byKey(const Key('hint-orig_0100'))).top, hint.top, reason: 'подсказки не уезжают');
