@@ -39,7 +39,7 @@ jobs:
         continue-on-error: true
         run: |
           flutter test --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/main_table_test.dart
-          flutter test --dart-define=DOSSIER_DESIGN=true --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/seance_test.dart
+          flutter test --dart-define=TABLE_SCREENSHOTS=$PWD/screens test/seance_test.dart
 
       - name: Push to screens branch
         run: |

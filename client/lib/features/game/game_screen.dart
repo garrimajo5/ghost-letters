@@ -26,8 +26,6 @@ import 'game_state.dart';
 import 'game_audio.dart';
 import 'table_theory.dart';
 
-part 'dossier_table.dart';
-part 'evidence_board.dart';
 part 'main_table.dart';
 part 'seance_table.dart';
 
@@ -329,7 +327,7 @@ class GameScreenState extends ConsumerState<GameScreen> {
       await Future.wait([
         section(loadHistory, 'историю чата'),
         // Ход мысли ботов показывает только стол «Досье»; без него партия работает как раньше.
-        if (AppConfig.dossierDesign) loadThoughts().catchError((Object _) {}),
+        loadThoughts().catchError((Object _) {}),
         if (snap.view.me != null) section(loadMarks, 'пометки карт'),
         if (snap.view.me != null) section(loadNotes, 'заметки'),
         loadLobby(),
@@ -500,6 +498,16 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
 
+  /// Вид стола игрока: основной или спиритический сеанс — переключается в меню партии в любой момент.
+  static const seanceKey = 'table.seance';
+
+  bool get seance => ref.read(prefsProvider).getBool(seanceKey) ?? false;
+
+  Future<void> setSeance(bool value) async {
+    await ref.read(prefsProvider).setBool(seanceKey, value);
+    if (mounted) setState(() {});
+  }
+
   Future<void> setClassicTable(bool value) async {
     await ref.read(prefsProvider).setBool(classicKey, value);
     if (mounted) setState(() {});
@@ -605,15 +613,10 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
     final v = snap.view;
     if (zoomed) return _ZoomedTable(screen: this);
-    if (AppConfig.dossierDesign && v.phase != 'RoleReveal') {
-      chatDocked = false;
-      // «Досье»: игрокам — сеанс; экрану стола и тем, кто выбрал прежний вид, — лента досье.
-      return v.me == null || classicTable ? _DossierTable(screen: this) : _MainTable(screen: this, seance: true);
-    }
-    // Новый стол — для игроков; экран стола (зрители, ТВ) остаётся прежним.
+    // Игрокам — новый стол: основной или сеанс по выбору в меню; экран стола (зрители, ТВ) остаётся прежним.
     if (v.me != null && v.phase != 'RoleReveal' && !classicTable) {
       chatDocked = false;
-      return _MainTable(screen: this);
+      return _MainTable(screen: this, seance: seance || AppConfig.dossierDesign);
     }
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final finale = isFinale(v);

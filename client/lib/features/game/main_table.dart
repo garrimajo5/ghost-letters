@@ -308,15 +308,15 @@ class _TopBar extends StatelessWidget {
                 context.push('/rules');
               case 'zoom':
                 screen.setZoomed(true);
-              case 'classic':
-                screen.setClassicTable(true);
+              case 'view':
+                screen.setSeance(!seance);
             }
           },
           itemBuilder: (_) => [
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             if (v.board.isNotEmpty) const PopupMenuItem(value: 'zoom', child: Text('Стол крупно')),
-            PopupMenuItem(value: 'classic', child: Text(seance ? 'Прежнее досье' : 'Классический стол')),
+            PopupMenuItem(value: 'view', key: const Key('menu-view'), child: Text(seance ? 'Вид: основной стол' : 'Вид: спиритический сеанс')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),
           ],
