@@ -617,6 +617,35 @@ void main() {
     expect(spans.single.style?.backgroundColor, ChatCardText.mentionMe);
   });
 
+  testWidgets('своё слово: нажатие по полю сразу показ; без улик — «Выдвинуть версию», с уликой — «Связать»', (tester) async {
+    final app = await _open(tester, phone, allowed: const ['EndTurn'], edit: (view) => view['currentSpeaker'] = 'u2');
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump();
+    expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
+    expect(find.text('Выдвинуть версию'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hint-orig_0100')));
+    await tester.pump();
+    expect(find.text('Связать'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('say-send')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('sendChat'), isNotEmpty);
+  });
+
+  testWidgets('своё слово: письмо раунда исчезло — первое нажатие по полю сразу красное', (tester) async {
+    final app = await _open(tester, phone, allowed: const ['EndTurn'], edit: (view) {
+      view['currentSpeaker'] = 'u2';
+      (view['me'] as Json)['letters'] = [
+        {'round': 4, 'cardId': 'orig_0200', 'revealed': false},
+      ];
+    });
+    await tester.tap(find.byKey(const Key('board-1-1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('say-send')));
+    await tester.pumpAndSettle();
+    final call = app.api.named('sendChat').single.$2;
+    expect(call[4], ['кидал', 'исключаю:0']);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(

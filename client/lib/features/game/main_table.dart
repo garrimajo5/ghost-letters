@@ -491,6 +491,17 @@ class _TableArea extends StatelessWidget {
     return (colors: colors, numbers: numbers);
   }
 
+  /// Нажатие на карту поля в своё слово: показ начинается сам. Письмо раунда исчезло и улика не выбрана —
+  /// источник по умолчанию моё письмо: карта сразу красная («проверял — не эта»).
+  void _tapBoard(GameView v, String id) {
+    if (!say.active) say.start();
+    if (say.sources.isEmpty) {
+      final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
+      if (letter != null && letter.revealed == false) say.pick(letter.cardId, hint: false);
+    }
+    say.cycle(id);
+  }
+
   /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
   Color? _mark(String id, ChatMessage? statement) {
     if (say.active) {
@@ -591,7 +602,16 @@ class _TableArea extends StatelessWidget {
                         return _LinkBorder(key: Key('say-mark-$id'), colors: l.colors.ifEmpty(color), numbers: l.numbers, child: child);
                       }();
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
-                if (say.active) out = GestureDetector(onTap: () => say.cycle(id), onLongPress: () => showCardZoom(context, id), child: out);
+                // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить,
+                // двойное нажатие — окно карты с проверками.
+                if (say.active || _canSpeakNow(v)) {
+                  out = GestureDetector(
+                    onTap: () => _tapBoard(v, id),
+                    onDoubleTap: () => MarkSheet.show(context, screen, id),
+                    onLongPress: () => showCardZoom(context, id),
+                    child: out,
+                  );
+                }
                 return out;
               },
             ),
@@ -710,7 +730,14 @@ class _HintStep extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 3),
                       child: GestureDetector(
                         key: Key('hint-$c'),
-                        onTap: () => say.active ? say.pick(c, hint: true) : HintSheet.show(context, screen, c, hint.round),
+                        onTap: () {
+                          if (say.active || _canSpeakNow(screen.view!)) {
+                            if (!say.active) say.start();
+                            say.pick(c, hint: true);
+                          } else {
+                            HintSheet.show(context, screen, c, hint.round);
+                          }
+                        },
                         onLongPress: () => showCardZoom(context, c),
                         child: Stack(clipBehavior: Clip.none, children: [
                           // Подсказка в показе — своим цветом и номером; все выбранные подсказки подсвечены одновременно.
@@ -919,6 +946,10 @@ class _SeatTile extends StatelessWidget {
     );
   }
 }
+
+/// Можно говорить прямо сейчас: обсуждение, я не Призрак, в рации — моё слово.
+bool _canSpeakNow(GameView v) =>
+    _canSay(v) && (!v.isRadio || v.currentSpeaker == v.me!.id || v.floorGrantedTo == v.me!.id);
 
 bool _canAsk(GameView v, PlayerInfo p) =>
     v.phase == 'Discussion' && v.me != null && v.me!.role != 'Ghost' && p.id != v.me!.id && !p.isGhost && p.knownRole != 'Ghost';
@@ -1243,6 +1274,12 @@ class _Say extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Подсказка раунда — моё письмо: дальше она источник «кидал эту», а не «улика».
+  void claim(String id) {
+    _hints.remove(id);
+    notifyListeners();
+  }
+
   void cycle(String id) {
     final m = marks[id];
     // Подсказка Призрака только указывает: нажатие — зелёная, ещё раз — снять.
@@ -1395,18 +1432,33 @@ class _SayStrip extends StatelessWidget {
         Expanded(
           child: Text(
             say.source == null
-                ? 'Улики слева или карта из веера; затем карты поля: раз — зелёная, два — красная'
-                : '${say.hint ? 'Улика' : 'Кидал эту'} → карты поля: раз — указывает, два — не эта. Ещё улика — ещё связи',
+                ? 'Карты поля — ваша версия; улика слева — связать её с картами'
+                : say.hint
+                    ? 'Улика → карты поля: нажатие — указывает сюда, ещё раз — снять. Ещё улика — своим цветом'
+                    : say.vanished.contains(say.source)
+                        ? 'Моё письмо исчезло → карты поля: нажатие — «не эта» (красная)'
+                        : 'Кидал эту → карты поля: раз — указывает, два — не эта',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11, color: AppColors.muted),
           ),
         ),
+        // Подсказку этого раунда никто не назвал своей — можно присвоить: она станет моим письмом.
+        if ((say.hint && screen.marks[say.source]?.claimedBy == null ? _claimable(v, say.source) : null) case final hint?)
+          TextButton(
+            key: const Key('say-claim'),
+            onPressed: () {
+              final letter = v.me!.letters.where((l) => l.round == v.round).last;
+              screen.saveMark(letter.cardId, (screen.marks[letter.cardId] ?? const CardMark()).copyWith(claim: hint));
+              say.claim(hint);
+            },
+            child: const Text('Присвоить'),
+          ),
         IconButton(key: const Key('say-cancel'), tooltip: 'Отменить показ', icon: const Icon(Icons.close), onPressed: say.stop),
         FilledButton(
           key: const Key('say-send'),
           onPressed: say.total == 0 ? null : () => _send(context),
-          child: const Text('На стол'),
+          child: Text(say.sources.isEmpty ? 'Выдвинуть версию' : 'Связать'),
         ),
       ]);
     } else {
@@ -2024,4 +2076,14 @@ class _SegmentsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SegmentsPainter old) => old.colors.length != colors.length || !old.colors.every(colors.contains);
+}
+
+/// Подсказку этого раунда можно присвоить: она открылась в этом раунде, её никто не назвал своей,
+/// а моё письмо раунда открылось и я его ещё ни с чем не связал.
+String? _claimable(GameView v, String? hint) {
+  if (hint == null) return null;
+  final round = v.hints.where((h) => h.round == v.round).firstOrNull;
+  final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
+  if (round == null || !round.cards.contains(hint) || letter == null || letter.revealed != true) return null;
+  return hint;
 }
