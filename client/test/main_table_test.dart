@@ -345,4 +345,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.api.named('command'), isEmpty);
   });
+
+  testWidgets('показ на столе: несколько улик, у каждой свои связи', (tester) async {
+    final app = await _open(tester, phone);
+
+    await tester.tap(find.byKey(const Key('say-start')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hint-orig_0100')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('hand-orig_0200')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-1-1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-1-1')));
+    await tester.pump();
+    expect(find.byKey(const Key('say-source-orig_0100')), findsOneWidget);
+    expect(find.byKey(const Key('say-source-orig_0200')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('say-send')));
+    await tester.pumpAndSettle();
+
+    final call = app.api.named('sendChat').single.$2;
+    expect(call[3], ['orig_0100', 'orig_0200', 'orig_0001', 'orig_0007']);
+    expect(call[4], ['улика', 'кидал', 'думаю, эта:0', 'исключаю:1']);
+    expect(call[1] as String, contains('зацепка указывает на Мотив 1'));
+    expect(call[1] as String, contains('не Место 2'));
+  });
+
+  testWidgets('реплика бота печатается по буквам', (tester) async {
+    final app = await _open(tester, phone);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'b1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Думаю, что мотив — вторая карта.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    final partial = tester.widget<Text>(find.descendant(of: find.byKey(const Key('say-statement')), matching: find.byType(Text))).data!;
+    expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
+    await tester.pumpAndSettle();
+    expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
+  });
 }

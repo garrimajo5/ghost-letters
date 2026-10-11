@@ -245,8 +245,15 @@ class TableTheorySheet extends ConsumerStatefulWidget {
 }
 
 class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
-  String? _source, _media;
-  final _targets = <String, bool>{};
+  String? _media;
+
+  /// Улики-источники (можно несколько: связать со столом все подсказки); текущая — последняя выбранная.
+  final _sources = <String>[];
+  String? get _source => _sources.isEmpty ? null : _sources.last;
+
+  /// Карта поля → (поддерживает?, индекс улики-источника или −1).
+  final _targets = <String, (bool, int)>{};
+  static const _maxCards = 12;
   final _text = TextEditingController();
   String _mode = 'source';
   String _cards = 'board';
@@ -260,7 +267,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
   void initState() {
     super.initState();
     _voice = ref.read(voiceProvider);
-    _source = widget.initialSource;
+    if (widget.initialSource case final source?) _sources.add(source);
     if (_source != null) _mode = 'support';
     final v = widget.screen.view!;
     _phase = v.phase;
@@ -282,15 +289,24 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
   void _pick(String id, {bool sourceOnly = false}) {
     setState(() {
       if (_mode == 'source' || sourceOnly) {
-        _source = _source == id ? null : id;
+        final i = _sources.indexOf(id);
+        if (i >= 0) {
+          _sources.removeAt(i);
+          for (final e in _targets.entries.toList()) {
+            final (support, link) = e.value;
+            _targets[e.key] = (support, link == i ? -1 : link > i ? link - 1 : link);
+          }
+        } else if (_sources.length + _targets.length < _maxCards) {
+          _sources.add(id);
+        }
         _targets.remove(id);
         _mode = 'support';
         _cards = 'board';
-      } else if (id != _source) {
-        if (_targets[id] == (_mode == 'support')) {
+      } else if (!_sources.contains(id)) {
+        if (_targets[id]?.$1 == (_mode == 'support')) {
           _targets.remove(id);
-        } else if (_targets.containsKey(id) || _targets.length < 4) {
-          _targets[id] = _mode == 'support';
+        } else if (_targets.containsKey(id) || _sources.length + _targets.length < _maxCards) {
+          _targets[id] = (_mode == 'support', _targets[id]?.$2 ?? _sources.length - 1);
         }
       }
     });
@@ -346,12 +362,11 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
                 ? 'Моя версия: показываю связи на столе. Это предположение.'
                 : _text.text.trim(),
             channel: _channel,
-            cards: [if (_source != null) _source!, ..._targets.keys],
+            cards: [..._sources, ..._targets.keys],
             cardNotes: [
-              if (_source != null) 'улика',
-              for (final support in _targets.values)
-                (support ? 'думаю, эта' : 'исключаю') +
-                    (_source != null ? ':0' : '')
+              for (var i = 0; i < _sources.length; i++) 'улика',
+              for (final (support, link) in _targets.values)
+                (support ? 'думаю, эта' : 'исключаю') + (link >= 0 ? ':$link' : ''),
             ],
             mediaId: _media));
     if (!mounted) return;
@@ -385,7 +400,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
             : shown;
     Widget card(String id, {bool sourceOnly = false}) => Semantics(
         label: 'Карта $id',
-        selected: _source == id || _targets.containsKey(id),
+        selected: _sources.contains(id) || _targets.containsKey(id),
         button: true,
         child: InkWell(
             key: ValueKey('theory-$id'),
@@ -395,11 +410,11 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
                 decoration: BoxDecoration(
                     border: Border.all(
                         width: 2,
-                        color: _source == id
+                        color: _sources.contains(id)
                             ? Colors.amber
-                            : _targets[id] == true
+                            : _targets[id]?.$1 == true
                                 ? Colors.green
-                                : _targets[id] == false
+                                : _targets[id]?.$1 == false
                                     ? Colors.red
                                     : Colors.transparent)),
                 child: CardImage(cardId: id, size: 56))));
@@ -412,7 +427,7 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
               child: Column(children: [
             const Text('Моя версия на столе', style: TextStyle(fontSize: 20)),
             const Text(
-                'Выберите улику, затем до четырёх карт: поддержать или исключить. Исчезнувшее письмо — тоже ваше предположение.'),
+                'Выберите улику, затем карты поля: поддержать или исключить. Можно связать несколько улик — каждая новая карта связывается с последней выбранной уликой. Исчезнувшее письмо — тоже ваше предположение.'),
             Wrap(spacing: 6, children: [
               for (final mode in const {
                 'source': 'Улика',
@@ -425,14 +440,15 @@ class _TableTheorySheetState extends ConsumerState<TableTheorySheet> {
                     onSelected:
                         _busy ? null : (_) => setState(() => _mode = mode.key)),
             ]),
-            if (_source != null)
-              Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
-                const Text('Связываю карту: '),
-                CardImage(cardId: _source!, size: 56),
+            if (_sources.isNotEmpty)
+              Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 4, children: [
+                const Text('Связываю улики: '),
+                for (final source in _sources)
+                  CardImage(cardId: source, size: source == _source ? 56 : 40),
                 IconButton(
-                    tooltip: 'Убрать исходную карту',
+                    tooltip: 'Убрать последнюю улику',
                     onPressed:
-                        _busy ? null : () => setState(() => _source = null),
+                        _busy ? null : () => _pick(_source!, sourceOnly: true),
                     icon: const Icon(Icons.close)),
               ]),
             Wrap(spacing: 6, children: [
