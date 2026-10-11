@@ -83,7 +83,21 @@ class _MainTableState extends State<_MainTable> {
         ? _SuspectBoard(screen: screen)
         : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing, maxCard: seance ? 130 : 260);
     final Widget center;
-    if (open) {
+    if (open && v.can('RevealHints') && _panel == null) {
+      // Призрак выбирает подсказки, глядя на стол: письма сверху, под ними — поле с истинными уликами.
+      center = LayoutBuilder(builder: (context, box) => Column(children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: box.maxHeight * 0.42),
+              child: SingleChildScrollView(
+                key: const Key('main-panel'),
+                controller: screen._scroll,
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                child: KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
+              ),
+            ),
+            Expanded(child: board),
+          ]));
+    } else if (open) {
       center = _panelView(v);
     } else if (!seance) {
       center = board;

@@ -96,6 +96,14 @@ void main() {
     }
   }
 
+  testWidgets('Призрак выбирает подсказки, видя стол: панель писем сверху, поле под ней', (tester) async {
+    await _open(tester, const Size(390, 844), phase: 'GhostPick', allowed: ['RevealHints']);
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('main-panel')), findsOneWidget);
+    expect(find.byKey(const Key('board-3-4')), findsOneWidget);
+    await _shot(tester, 'ghostpick');
+  });
+
   testWidgets('ряды сверху вниз как в партии; подсказки столбиком слева', (tester) async {
     await _open(tester, phone);
 
