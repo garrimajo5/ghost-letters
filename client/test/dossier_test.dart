@@ -178,6 +178,16 @@ void main() {
     expect(ops[2], {'kind': 'Endorse', 'thread': 1});
     expect(find.byKey(const Key('table-draft-0')), findsNothing);
 
+    // Ход мысли бота (канал table): карточка бота, кольцо фокуса, в обычный чат не попадает.
+    app.realtime.chatCtl.add(ChatMessage(id: 'thought-1', channel: 'table', authorId: 'u3', kind: 'text',
+      text: 'Смотрю на подсказку зацепка и сравниваю с картой «мотив 1»…', cardIds: ['orig_0100', 'orig_0001'],
+      cardNotes: ['улика', 'смотрю'], createdAt: DateTime.now(), round: 4));
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.byKey(const Key('bot-presence'))).data, startsWith('Смотрю на подсказку'));
+    expect(find.byKey(const ValueKey('table-focus-orig_0001')), findsOneWidget);
+    expect(find.text('Здесь появятся публичные реплики и версии игроков.'), findsOneWidget,
+      reason: 'мысль бота не становится репликой за столом');
+
     // Слой «Спорные»: приглушены карты без споров, ошибок отрисовки нет.
     await tapKey(const Key('layer-conflict'));
     expect(tester.takeException(), isNull);

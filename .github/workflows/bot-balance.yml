@@ -1,0 +1,63 @@
+name: Bot balance
+
+# Серия партий одних ботов в песочнице: винрейт сторон, ролей и характеров.
+# Запуск: число партий на состав в server/bot-balance.request и push ветки —
+# отчёт docs/bot-balance.md коммитится в ту же ветку, файл-запрос удаляется.
+# Или вручную: Actions → Bot balance → Run workflow.
+on:
+  push:
+    paths:
+      - server/bot-balance.request
+  workflow_dispatch:
+    inputs:
+      games:
+        description: Партий на каждый состав
+        default: "100"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot-balance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+
+      - name: Games per configuration
+        id: games
+        run: |
+          games="${{ github.event.inputs.games }}"
+          if [ -z "$games" ] && [ -f bot-balance.request ]; then games=$(head -n1 bot-balance.request | tr -cd '0-9'); fi
+          games=${games:-100}
+          if [ "$games" -gt 500 ]; then games=500; fi
+          echo "games=$games" >> "$GITHUB_OUTPUT"
+
+      - name: Run balance series
+        env:
+          BOT_BALANCE_GAMES: ${{ steps.games.outputs.games }}
+          BOT_BALANCE_OUT: ${{ github.workspace }}/docs/bot-balance.md
+        run: |
+          dotnet test tests/GhostLetters.Api.Tests -c Release --filter "FullyQualifiedName~BotBalanceTests.Balance_Report" --logger "console;verbosity=minimal"
+          test -s "$BOT_BALANCE_OUT"
+          echo "::notice title=Bot balance::$(head -c 3000 "$BOT_BALANCE_OUT" | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f bot-balance.request ]; then git rm -q bot-balance.request; fi
+          git add ../docs/bot-balance.md
+          git commit -m "Баланс ботов: ${{ steps.games.outputs.games }} партий на состав"
+          git push

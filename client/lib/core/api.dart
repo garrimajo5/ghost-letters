@@ -305,6 +305,10 @@ class Api {
   Future<List<ChatMessage>> chat(String gameId) async =>
       ((await get('/games/$gameId/chat')) as List).map((e) => ChatMessage.fromJson(e as Json)).toList();
 
+  /// Ход мысли ботов у доски улик (канал table), последние шаги.
+  Future<List<ChatMessage>> thoughts(String gameId) async =>
+      ((await get('/games/$gameId/chat?channel=table&limit=30')) as List).map((e) => ChatMessage.fromJson(e as Json)).toList();
+
   Future<ChatMessage> sendChat(String gameId, String text,
           {String channel = 'public', List<String> cards = const [], List<String> cardNotes = const [], String? mediaId}) async =>
       ChatMessage.fromJson(await post('/games/$gameId/chat', {
