@@ -1646,11 +1646,10 @@ class _LandscapeTable extends StatelessWidget {
 }
 
 class _Dock extends StatelessWidget {
-  const _Dock({required this.screen, this.showChat = true, this.compact = false});
+  const _Dock({required this.screen, this.showChat = true});
 
   final GameScreenState screen;
   final bool showChat;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1684,12 +1683,7 @@ class _Dock extends StatelessWidget {
               ),
           ]),
           const SizedBox(height: 6),
-          if (compact && !v.can('SendLetter'))
-            Material(color: AppColors.bg, child: ExpansionTile(title: const Text('Показать руку'),
-              visualDensity: VisualDensity.compact,
-              children: [_Hand(screen: screen)]))
-          else
-            _Hand(screen: screen),
+          _Hand(screen: screen),
           const SizedBox(height: 8),
         ],
         Row(children: [
