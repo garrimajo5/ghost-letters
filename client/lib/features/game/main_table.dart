@@ -62,7 +62,13 @@ class _MainTableState extends State<_MainTable> {
     final landscape = size.width > size.height;
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final open = _panelOpen(v);
-    final center = open ? _panelView(v) : _TableArea(screen: screen, landscape: landscape, say: _say);
+    final stage = v.finale?.currentStage;
+    final suspectVote = stage != null && !stage.isRow;
+    final center = open
+        ? _panelView(v)
+        : suspectVote
+            ? _SuspectBoard(screen: screen)
+            : _TableArea(screen: screen, landscape: landscape, say: _say);
     final hand = v.me != null;
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
@@ -940,6 +946,97 @@ class _Flying extends StatelessWidget {
         child: Opacity(opacity: t < .8 ? 1 : (1 - t) * 5, child: child),
       ),
       child: Text(reaction.emoji, key: Key('flying-${reaction.emoji}'), style: const TextStyle(fontSize: 34)),
+    );
+  }
+}
+
+/// «Кто Убийца?»: игроки столбцами, под каждым — карты, за которые он голосовал по рядам.
+/// Только выбор, без отметок верности: она закрыта до итогов. Нажатие на игрока — голос за него.
+class _SuspectBoard extends StatelessWidget {
+  const _SuspectBoard({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final finale = v.finale!;
+    final stage = finale.currentStage!;
+    final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
+    // Номер этапа → ряд; берём последнюю попытку голосования каждого игрока.
+    final rowOfStage = {for (final o in finale.outcomes) if (o.kind == 'Row') o.stage: o.row};
+    final picks = <String, Map<int, int>>{};
+    final attempts = <(String, int), int>{};
+    for (final vote in finale.votes) {
+      final row = rowOfStage[vote.stage];
+      if (row == null || vote.column == null) continue;
+      if ((attempts[(vote.voter, row)] ?? -1) > vote.attempt) continue;
+      attempts[(vote.voter, row)] = vote.attempt;
+      (picks[vote.voter] ??= {})[row] = vote.column!;
+    }
+    final order = _Board.tableOrder(v);
+    return LayoutBuilder(builder: (context, box) {
+      final card = ((box.maxHeight - 100) / (order.isEmpty ? 1 : order.length) - 4).clamp(22.0, 56.0).floorToDouble();
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          child: Text('КТО УБИЙЦА?', style: heading(16, spacing: 1)),
+        ),
+        Expanded(
+          child: ListView(
+            key: const Key('suspect-board'),
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            children: [
+              for (final p in players)
+                _suspect(context, v, stage, p, picks[p.id] ?? const {}, order, card),
+            ],
+          ),
+        ),
+      ]);
+    });
+  }
+
+  Widget _suspect(BuildContext context, GameView v, VoteStage stage, PlayerInfo p, Map<int, int> picks, List<int> order, double card) {
+    final candidate = stage.candidateSuspects.isEmpty || stage.candidateSuspects.contains(p.id);
+    final selected = screen.target == p.id;
+    final ghost = p.isGhost || p.knownRole == 'Ghost';
+    return Opacity(
+      opacity: candidate ? 1 : 0.45,
+      child: GestureDetector(
+        key: Key('suspect-${p.id}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: candidate ? () => screen.tapPlayer(p.id) : null,
+        child: Container(
+          width: card + 26,
+          margin: const EdgeInsets.only(right: 6),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF3A2B12) : AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? AppColors.amber : AppColors.border),
+          ),
+          child: Column(children: [
+            Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 30,
+                ring: selected ? AppColors.amber : (ghost ? AppColors.ice : null)),
+            const SizedBox(height: 2),
+            Text(p.id == v.me?.id ? 'Вы' : screen.nick(p.id), maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.text)),
+            const SizedBox(height: 4),
+            for (final r in order)
+              Padding(padding: const EdgeInsets.only(bottom: 4), child: _vote(context, v, p, r, picks[r], card)),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _vote(BuildContext context, GameView v, PlayerInfo p, int r, int? c, double card) {
+    if (c == null || c >= v.board[r].cards.length) return SizedBox(width: card, height: card);
+    final id = v.board[r].cards[c];
+    return GestureDetector(
+      onTap: () => showCardZoom(context, id, caption: '${screen.nick(p.id)} · ${T.category(v.board[r].category)}'),
+      child: CardImage(key: Key('suspect-vote-${p.id}-$r'), cardId: id, size: card, radius: 6),
     );
   }
 }

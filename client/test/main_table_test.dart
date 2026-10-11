@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/core/theme.dart';
 import 'package:ghost_letters/features/game/game_screen.dart';
 import 'package:ghost_letters/models/models.dart';
+import 'package:ghost_letters/widgets/common.dart';
 
 import 'support/fakes.dart';
 import 'support/fixtures.dart';
@@ -240,5 +241,37 @@ void main() {
     expect(find.byKey(const Key('chat-outcome-0')), findsOneWidget);
     expect(find.textContaining('стол выбрал карту 3'), findsOneWidget);
     expect(find.textContaining('верн'), findsNothing);
+  });
+
+  testWidgets('«Кто Убийца?»: под игроками столбцы их карт по рядам, выбор — нажатием', (tester) async {
+    await _open(tester, phone, phase: 'Voting', allowed: const ['CastVote'], edit: (view) {
+      final finale = Map<String, dynamic>.from((snapshotJson()['view'] as Json)['finale'] as Map);
+      finale['currentStage'] = {
+        'index': 1, 'kind': 'Killer', 'row': -1, 'attempt': 1, 'candidateColumns': <int>[], 'candidateSuspects': ['u3'],
+      };
+      finale['votes'] = [
+        {'stage': 0, 'attempt': 1, 'voter': 'u2', 'column': 2, 'suspect': null},
+        {'stage': 0, 'attempt': 1, 'voter': 'u3', 'column': 4, 'suspect': null},
+        {'stage': 0, 'attempt': 2, 'voter': 'u3', 'column': 1, 'suspect': null},
+      ];
+      view['finale'] = finale;
+    });
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('suspect-board')), findsOneWidget);
+    final u2 = tester.widget<CardImage>(find.byKey(const Key('suspect-vote-u2-0')));
+    expect(u2.cardId, 'orig_0003');
+    // Учитывается последняя попытка.
+    expect(tester.widget<CardImage>(find.byKey(const Key('suspect-vote-u3-0'))).cardId, 'orig_0002');
+    expect(find.byKey(const Key('suspect-vote-u1-0')), findsNothing);
+
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    await tester.tap(find.byKey(const Key('suspect-u3')));
+    await tester.pump();
+    expect(state.target, 'u3');
+    // Не кандидат — не выбирается.
+    await tester.tap(find.byKey(const Key('suspect-u1')));
+    await tester.pump();
+    expect(state.target, 'u3');
   });
 }
