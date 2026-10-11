@@ -264,9 +264,10 @@ public class FinaleTests
         state.VoteKiller(state.WithRole(Role.Detective));
 
         state.Run(killer, new HuntPick(state.WithRole(Role.Detective).Id));
-        state.Phase.Should().Be(Phase.BlackmailerHunt);
-        state.Run(killer, new BlackmailerPick(state.WithRole(Role.Witness).Id));
+        // Шантажиста не ищут: сразу его ход.
         state.Phase.Should().Be(Phase.BlackmailerClaim);
+        var pick = () => state.Run(killer, new BlackmailerPick(blackmailer.Id));
+        pick.Should().Throw<GameRuleException>();
 
         var partial = () => state.Run(blackmailer, new NameTruth([0, 0, 0]));
         partial.Should().Throw<GameRuleException>().Which.Code.Should().Be(GameRuleException.Codes.Validation);
@@ -285,7 +286,6 @@ public class FinaleTests
         state.VoteAllRows(Wrong);
         state.VoteKiller(state.WithRole(Role.Detective));
         state.Run(killer, new HuntPick(state.WithRole(Role.Detective).Id));
-        state.Run(killer, new BlackmailerPick(state.WithRole(Role.Witness).Id));
 
         state.Run(state.WithRole(Role.Blackmailer), new NameTruth([0, 0, 0, 1]));
 
@@ -343,7 +343,7 @@ public class FinaleTests
     }
 
     [Fact]
-    public void Blackmailer_Found_LosesWithoutClaim()
+    public void Blackmailer_IsNotHunted_SilentClaimMeansKillerTeamWins()
     {
         var state = FinaleGame.ToVoting(players: 8, FinaleGame.WithBlackmailer);
         var killer = state.WithRole(Role.Killer);
@@ -351,10 +351,12 @@ public class FinaleTests
         state.VoteKiller(state.WithRole(Role.Detective));
         state.Run(killer, new HuntPick(state.WithRole(Role.Detective).Id));
 
-        state.Run(killer, new BlackmailerPick(state.WithRole(Role.Blackmailer).Id));
+        state.Phase.Should().Be(Phase.BlackmailerClaim);
+        state.BlackmailerFound.Should().BeFalse();
+        state.Run(state.WithRole(Role.Blackmailer), new NameTruth([1, 1, 1, 1]));
 
-        state.Phase.Should().Be(Phase.AwardNomination);
         state.Result!.BlackmailerWon.Should().BeFalse();
+        state.Result.Side.Should().Be(WinningSide.Killer);
         state.Result.Winners.Should().NotContain(state.WithRole(Role.Blackmailer).Id);
     }
 

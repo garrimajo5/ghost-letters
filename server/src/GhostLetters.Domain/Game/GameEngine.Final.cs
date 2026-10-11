@@ -417,7 +417,10 @@ public static partial class GameEngine
         }
         else if (state.Solved == false && state.BlackmailerFound is null && roles.Contains(Role.Blackmailer))
         {
-            SetPhase(state, Phase.BlackmailerHunt, events);
+            // Команда Убийцы Шантажиста не ищет: он играет против детективов и сам называет улики.
+            // Фаза BlackmailerHunt остаётся только для партий, начатых до этого правила.
+            state.BlackmailerFound = false;
+            NextFinaleStep(state, events);
         }
         else if (state.BlackmailerFound == false && state.BlackmailerClaim is null)
         {
