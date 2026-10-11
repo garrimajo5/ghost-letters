@@ -485,6 +485,14 @@ public static class BotPlayer
             return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
         }
 
+        /// <summary>Отрыв истины от лучшей ложной карты ряда по публичным подсказкам.</summary>
+        private double TruthMargin(int row)
+        {
+            if (Truth is not { } truth) return 0;
+            var real = Evidence(Card(row, truth[row]));
+            return real - Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).Select(c => Evidence(Card(row, c))).DefaultIfEmpty(0).Max();
+        }
+
         /// <summary>Истина — явный лидер ряда по публичным подсказкам: отрыв от лучшей ложной больше, чем могут сдвинуть слова.</summary>
         private bool ClearTruth(int row, IReadOnlyList<int>? candidates = null)
         {
@@ -940,6 +948,20 @@ public static class BotPlayer
 
             // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
             var checkedCards = Checked(claimCard);
+            // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
+            // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
+            if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)
+                && rng.NextDouble() < BotTuning.Current.KillerFakeVanish * FakeChance)
+            {
+                var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
+                var real = Card(row, lieTruth[row]);
+                var cover = me.Hand.Where(h => !view.Board.Any(b => b.Cards.Contains(h))).OrderByDescending(h => Sim(h, real)).FirstOrDefault();
+                if (cover is not null && Sim(cover, real) > .1)
+                {
+                    claimCard = cover;
+                    checkedCards = [(row, lieTruth[row])];
+                }
+            }
             var cards = new List<string> { claimCard };
             var notes = new List<string> { "кидал эту" };
             foreach (var (r, c) in checkedCards)
