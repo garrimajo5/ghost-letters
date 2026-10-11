@@ -9,7 +9,6 @@ abstract final class _SeanceColors {
   static const candle = Color(0xFFF0B45A);
   static const flame = Color(0xFFFFD08A);
   static const wax = Color(0xFFEDE6F7);
-  static const spirit = Color(0xFF9EE6D8);
   static const label = Color(0xFFC9BDE0);
   static const dashed = Color(0xFF5B4A72);
 }

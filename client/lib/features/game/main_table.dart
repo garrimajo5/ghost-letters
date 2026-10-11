@@ -435,7 +435,7 @@ class _TableArea extends StatelessWidget {
               maxCard: card,
               order: order,
               vertical: true,
-              focusRow: voting ? stage!.row : null,
+              focusRow: voting ? stage.row : null,
               reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
                 final color = _mark(id, statement);
@@ -474,7 +474,7 @@ class _TableArea extends StatelessWidget {
       );
       if (!strip) return board;
       return Column(children: [
-        if (voting) _VoteStrip(screen: screen, stage: stage!) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
+        if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
         Expanded(child: board),
       ]);
     });
