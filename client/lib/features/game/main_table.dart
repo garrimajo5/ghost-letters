@@ -410,7 +410,8 @@ class _TableArea extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
-      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.8);
+      final labels = staircase ? _HintStep.labelWidth : 0.0;
+      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6) - labels) / (columns + hintCards * 0.8);
       final stage = v.finale?.currentStage;
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
@@ -420,7 +421,7 @@ class _TableArea extends StatelessWidget {
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
       final hint = (card * 0.8).floorToDouble();
-      final hintsWidth = staircase ? hintCards * (hint + 3) + 6 : 0.0;
+      final hintsWidth = staircase ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
       final strip = voting || say.active || statement != null || _canSay(v);
@@ -508,11 +509,26 @@ class _HintStep extends StatelessWidget {
   final HintGroup hint;
   final double size;
 
+  /// Ширина полосы с подписью раунда слева от карт.
+  static const labelWidth = 11.0;
+
   @override
   Widget build(BuildContext context) {
     final label = hint.round == 0 ? 'зацепка' : 'р. ${hint.round}';
-    return Stack(clipBehavior: Clip.none, alignment: Alignment.topRight, children: [
+    // Подпись раунда — узкой полосой слева от карт, а не поверх них: картинку ничто не заслоняет.
+    return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
       SizedBox(
+        width: labelWidth,
+        height: size,
+        child: RotatedBox(
+          quarterTurns: 3,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
+          ),
+        ),
+      ),
+      Flexible(child: SizedBox(
         height: size,
         child: hint.cards.isEmpty
             ? Container(
@@ -552,18 +568,7 @@ class _HintStep extends StatelessWidget {
                     ),
                 ],
               ),
-      ),
-      Positioned(
-        top: 2,
-        right: 6,
-        child: IgnorePointer(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(color: AppColors.bg.withValues(alpha: .75), borderRadius: BorderRadius.circular(6)),
-            child: Text(label, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
-          ),
-        ),
-      ),
+      )),
     ]);
   }
 }

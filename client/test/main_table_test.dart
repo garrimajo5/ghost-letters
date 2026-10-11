@@ -418,6 +418,13 @@ void main() {
     expect(find.text('Показать на столе'), findsOneWidget);
   });
 
+  testWidgets('подпись раунда — сбоку от подсказки, не поверх картинки', (tester) async {
+    await _open(tester, const Size(390, 844));
+    final label = tester.getRect(find.byKey(const Key('hint-label-0')));
+    final card = tester.getRect(find.byKey(const Key('hint-orig_0100')));
+    expect(label.right, lessThanOrEqualTo(card.left + 0.5));
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
