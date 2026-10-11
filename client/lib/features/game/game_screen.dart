@@ -493,7 +493,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
   bool zoomed = false;
 
   /// Настройка «Классический стол»: прежняя раскладка вместо нового стола по наброску.
-  static const classicKey = 'table.classic';
+  // Основной адрес и «Досье» открываются с одного сайта и делят настройки браузера —
+  // поэтому у каждой сборки свой ключ («Прежнее досье» не должно включать классический стол).
+  static String get classicKey => AppConfig.dossierDesign ? 'dossier.classic' : 'table.classic.v2';
 
   bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
 
@@ -1000,7 +1002,13 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false});
+  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false, this.focusRow, this.reveal = false});
+
+  /// Итоги: истина показана отдельно (золотая рамка и «истина»), своя версия — значком, а не рамкой.
+  final bool reveal;
+
+  /// Голосование по ряду на новом столе: этот ряд подсвечен, остальные приглушены.
+  final int? focusRow;
 
   final GameScreenState screen;
   final double maxCard;
@@ -1016,12 +1024,9 @@ class _Board extends StatelessWidget {
   static const labelWidth = 46.0;
   static const verticalLabel = 18.0;
 
-  /// Тайна, Мотив, Способ, Место — порядок рядов на новом столе.
-  static List<int> tableOrder(GameView v) {
-    const rank = {'Secret': 0, 'Motive': 1, 'Method': 2, 'Place': 3};
-    return [for (var i = 0; i < v.board.length; i++) i]
-      ..sort((a, b) => (rank[v.board[a].category] ?? 9).compareTo(rank[v.board[b].category] ?? 9));
-  }
+  /// Порядок рядов на новом столе — как в партии: названия рядов случайны, а загадывают
+  /// и голосуют всегда сверху вниз.
+  static List<int> tableOrder(GameView v) => [for (var i = 0; i < v.board.length; i++) i];
 
   @override
   Widget build(BuildContext context) {
@@ -1064,7 +1069,7 @@ class _Board extends StatelessWidget {
         ]),
         const SizedBox(height: 4)],
         for (final r in rowsOrder)
-          Padding(
+          _focus(r, Padding(
             padding: const EdgeInsets.only(bottom: gap),
             child: Row(children: [
               if (vertical)
@@ -1125,6 +1130,7 @@ class _Board extends StatelessWidget {
                       mark: screen.marks[v.board[r].cards[c]],
                       isTruth: v.truth != null && v.truth!.length > r && v.truth![r] == c,
                       thumbs: thumbs(r, c),
+                      reveal: reveal,
                       chosen: (!suggesting && screen.truth[r] == c) ||
                           (stage != null && stage.isRow && stage.row == r && (screen.voteColumn ?? v.finale?.myVoteColumn) == c),
                       chosenColor: killerNight ? AppColors.redBright : AppColors.amber,
@@ -1135,9 +1141,23 @@ class _Board extends StatelessWidget {
                   ),
                 ),
             ]),
-          ),
+          )),
       ]);
     });
+  }
+
+  Widget _focus(int row, Widget child) {
+    final f = focusRow;
+    if (f == null) return child;
+    if (row != f) return Opacity(opacity: .4, child: child);
+    return Container(
+      key: Key('focus-row-$row'),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: .35), blurRadius: 16, spreadRadius: 1)],
+      ),
+      child: child,
+    );
   }
 
   Widget _decorate(String id, Widget child) => decorate?.call(id, child) ?? child;
@@ -1157,7 +1177,11 @@ class BoardCard extends StatelessWidget {
     this.dimmed = false,
     this.active = false,
     this.thumbs = const [],
+    this.reveal = false,
   });
+
+  /// Итоги партии: истина — золотой рамкой с подписью, своя версия («считаю истинной») — значком.
+  final bool reveal;
 
   /// Кто из команды Убийцы советует эту карту ночью (значок «большой палец»).
   final List<String> thumbs;
@@ -1176,7 +1200,9 @@ class BoardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = mark;
     final believed = m?.believed == true;
-    final (Color borderColor, double borderWidth) = chosen
+    final (Color borderColor, double borderWidth) = reveal
+        ? (isTruth ? (AppColors.amberLight, 4) : (AppColors.border, 1))
+        : chosen
         ? (chosenColor, 3)
         : believed
             ? (AppColors.believed, 3)
@@ -1196,7 +1222,9 @@ class BoardCard extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
-          boxShadow: chosen || believed
+          boxShadow: reveal
+              ? (isTruth ? [BoxShadow(color: AppColors.amber.withValues(alpha: 0.55), blurRadius: 14, spreadRadius: 2)] : null)
+              : chosen || believed
               ? [BoxShadow(color: (chosen ? chosenColor : AppColors.believed).withValues(alpha: 0.35), blurRadius: 0, spreadRadius: 2)]
               : null,
         ),
@@ -1223,6 +1251,33 @@ class BoardCard extends StatelessWidget {
                   Icon(Icons.thumb_up, size: size * 0.2, color: AppColors.onAmber),
                   if (thumbs.length > 1) Text(' ${thumbs.length}', style: TextStyle(fontSize: size * 0.16, color: AppColors.onAmber, fontWeight: FontWeight.w700)),
                 ]),
+              ),
+            ),
+          if (reveal && isTruth)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                key: Key('truth-$cardId'),
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.amber,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
+                ),
+                alignment: Alignment.center,
+                child: Text('ИСТИНА', style: TextStyle(fontSize: (size * 0.11).clamp(8.0, 14.0), color: AppColors.onAmber, fontWeight: FontWeight.w700, letterSpacing: 1)),
+              ),
+            ),
+          if (reveal && believed)
+            Positioned(
+              left: 2,
+              top: 2,
+              child: Container(
+                key: Key('mine-$cardId'),
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: AppColors.believed, shape: BoxShape.circle),
+                child: Icon(Icons.person, size: size * 0.16, color: AppColors.bg),
               ),
             ),
           if (voted)

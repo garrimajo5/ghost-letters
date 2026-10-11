@@ -33,8 +33,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 join u in db.Users.AsNoTracking() on p.UserId equals u.Id
                 join g in db.Games.AsNoTracking() on p.GameId equals g.Id
                 where u.IsBot && (g.Status == GameStatuses.Active ||
+                    // Разбор Призрака — уже после конца партии (после наград): играющие могут спокойно выйти.
                     (g.Status == GameStatuses.Finished && g.FinishedAt >= recentFinish && p.Role == "Ghost" &&
-                     db.ChatMessages.Any(m => m.GameId == g.Id && m.AuthorId == p.UserId && m.Text != null && m.Text.StartsWith(GhostDebrief.Prefix)) &&
                      !db.ChatMessages.Any(m => m.GameId == g.Id && m.AuthorId == p.UserId && m.Text != null && m.Text.EndsWith(GhostDebrief.Completed))))
                 select new { p.GameId, p.UserId })
             .ToListAsync(ct);
@@ -171,13 +171,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var view = GameProjection.For(state, botId);
         // Боту нечего делать (ночь чужой команды, ждёт других, не его слово) — не собираем «мнение»:
         // это пять запросов к базе и разбор всего чата партии на каждом такте.
-        var ghostDebrief = state.Result is not null && view.Me?.Role == Role.Ghost;
+        var ghostDebrief = state.Phase == Phase.Finished && state.Result is not null && view.Me?.Role == Role.Ghost;
         var mayTalk = state.Phase == Phase.Discussion && view.Me is { } me && me.Role != Role.Ghost;
         var mayTable = state.Phase is Phase.Discussion or Phase.Voting && view.Table is { CanPost: true };
         if (!ghostDebrief && !mayTalk && !mayTable && !BotPlayer.HasMove(view)) return false;
         var mind = await MindAsync(state, botId, ct);
-        if (state.Result is not null && view.Me?.Role == Role.Ghost &&
-            await DebriefAsync(state, botId, mind, ct) is { } debrief) return debrief;
+        if (ghostDebrief && await DebriefAsync(state, botId, mind, ct) is { } debrief) return debrief;
         if (await TrySpeakAsync(state, view, botId, rng, mind, ct))
         {
             return true;

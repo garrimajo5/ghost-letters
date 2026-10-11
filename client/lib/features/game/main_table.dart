@@ -55,8 +55,9 @@ class _MainTableState extends State<_MainTable> {
     super.dispose();
   }
 
-  static bool _panelPhase(GameView v) =>
-      v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+  // Охота на Свидетеля видна всем: панель показывает, кого ищет команда Убийцы.
+  static bool _panelPhase(GameView v) => v.can('RevealHints') ||
+      const {'VoteTie', 'Hunt', 'BlackmailerHunt', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
 
   bool _panelOpen(GameView v) => _panel ?? _panelPhase(v);
 
@@ -80,7 +81,7 @@ class _MainTableState extends State<_MainTable> {
     final seance = widget.seance;
     final board = suspectVote
         ? _SuspectBoard(screen: screen)
-        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing);
+        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing, maxCard: seance ? 130 : 260);
     final Widget center;
     if (open) {
       center = _panelView(v);
@@ -89,10 +90,20 @@ class _MainTableState extends State<_MainTable> {
     } else {
       final circle = _SeanceCircle(screen: screen);
       center = landscape
-          ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              AspectRatio(aspectRatio: 1, child: circle),
-              Expanded(child: board),
-            ])
+          // Большой экран: круг и поле рядом, по центру, в спокойном масштабе — как в прототипе.
+          ? LayoutBuilder(builder: (context, box) {
+              final side = [box.maxHeight, box.maxWidth * .45, 560.0].reduce((a, b) => a < b ? a : b).floorToDouble();
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1360),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                    SizedBox(width: side, height: side, child: circle),
+                    const SizedBox(width: 16),
+                    Expanded(child: SizedBox(height: box.maxHeight, child: board)),
+                  ]),
+                ),
+              );
+            })
           : LayoutBuilder(builder: (context, box) {
               final side = (box.maxHeight * 0.44 < box.maxWidth ? box.maxHeight * 0.44 : box.maxWidth).floorToDouble();
               return Column(children: [
@@ -110,7 +121,7 @@ class _MainTableState extends State<_MainTable> {
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, dragDevices: PointerDeviceKind.values.toSet()),
       child: Scaffold(
         key: Key(seance ? 'seance-table' : 'main-table'),
-        backgroundColor: night || seance ? AppColors.night : AppColors.bg,
+        backgroundColor: seance ? _SeanceColors.bg : night ? AppColors.night : AppColors.bg,
         body: SafeArea(
           child: Stack(children: [
             Positioned.fill(child: Column(children: [
@@ -297,7 +308,10 @@ class _TopBar extends StatelessWidget {
           ],
         ),
         Text(
-          v.round > 0 ? 'Р. ${v.round}/${v.totalRounds}' : 'ПАРТИЯ',
+          seance
+              ? (v.round <= 0 ? 'СЕАНС' : MediaQuery.sizeOf(context).width >= 700
+                  ? 'СЕАНС · РАУНД ${v.round} ИЗ ${v.totalRounds}' : 'СЕАНС · ${v.round}/${v.totalRounds}')
+              : v.round > 0 ? 'Р. ${v.round}/${v.totalRounds}' : 'ПАРТИЯ',
           key: const Key('round'),
           style: heading(15, spacing: 1),
         ),
@@ -336,7 +350,10 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing});
+  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing, this.maxCard = 260});
+
+  /// Предел размера карты поля (на сеансе поле скромнее — главное место у круга).
+  final double maxCard;
 
   final GameScreenState screen;
   final bool landscape;
@@ -377,17 +394,19 @@ class _TableArea extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
-      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.85);
-      final stripHeight = say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
+      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.8);
+      final stage = v.finale?.currentStage;
+      final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
+      final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
-      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
+      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
-      final hint = (card * 0.85).floorToDouble();
+      final hint = (card * 0.8).floorToDouble();
       final hintsWidth = staircase ? hintCards * (hint + 3) + 6 : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
-      final strip = say.active || statement != null || _canSay(v);
+      final strip = voting || say.active || statement != null || _canSay(v);
       final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
@@ -395,10 +414,11 @@ class _TableArea extends StatelessWidget {
           if (staircase) SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              for (var i = 0; i < v.hints.length || i < order.length; i++)
-                SizedBox(
-                  height: card + gap,
-                  child: i < v.hints.length ? _HintStep(screen: screen, say: say, hint: v.hints[i], size: hint) : null,
+              // Подсказки раунда относятся ко всему столу, а не к ряду: столбик вплотную, без сетки поля.
+              for (final group in v.hints)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint)),
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -416,10 +436,26 @@ class _TableArea extends StatelessWidget {
               maxCard: card,
               order: order,
               vertical: true,
+              focusRow: voting ? stage.row : null,
+              reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
                 final color = _mark(id, statement);
+                // На сеансе исключённая карта — тёмно-красная вуаль с крестом, как в прототипе.
                 Widget out = color == null
                     ? child
+                    : !staircase && color == AppColors.redBright
+                    ? Stack(key: Key('say-mark-$id'), children: [
+                        child,
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: Container(
+                              margin: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(color: const Color(0x66B0261E), borderRadius: BorderRadius.circular(9)),
+                              child: const Center(child: Icon(Icons.close, color: Colors.white, size: 26)),
+                            ),
+                          ),
+                        ),
+                      ])
                     : Container(
                         key: Key('say-mark-$id'),
                         foregroundDecoration: BoxDecoration(
@@ -439,7 +475,7 @@ class _TableArea extends StatelessWidget {
       );
       if (!strip) return board;
       return Column(children: [
-        _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
+        if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
         Expanded(child: board),
       ]);
     });
@@ -719,7 +755,22 @@ class _Actions extends StatelessWidget {
             ),
           )
         : GestureDetector(onTap: onStatus, child: _StatusBar(text: actionHint(v), mine: needsMe(v), pulse: screen.turnPulse));
-    return Row(children: [Expanded(child: main), SizedBox(width: row ? 10 : 6), _ChatButton(screen: screen)]);
+    // После результата можно сразу выйти: награды и разбор Призрака не держат за столом.
+    final over = const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+    return Row(children: [
+      if (over) ...[
+        IconButton.filledTonal(
+          key: const Key('main-home'),
+          tooltip: 'В главное меню',
+          onPressed: () => context.go('/'),
+          icon: const Icon(Icons.home_outlined),
+        ),
+        const SizedBox(width: 6),
+      ],
+      Expanded(child: main),
+      SizedBox(width: row ? 10 : 6),
+      _ChatButton(screen: screen),
+    ]);
   }
 }
 
@@ -1109,6 +1160,47 @@ class _SayStrip extends StatelessWidget {
         border: Border.all(color: say.active ? AppColors.amber : AppColors.border),
       ),
       child: Row(children: children),
+    );
+  }
+}
+
+/// Голосование по ряду прямо на поле: какой ряд, сколько проголосовали, «Воздержаться».
+class _VoteStrip extends StatelessWidget {
+  const _VoteStrip({required this.screen, required this.stage});
+
+  final GameScreenState screen;
+  final VoteStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final finale = v.finale!;
+    final voted = v.players.where((p) => p.hasActed).length;
+    final can = v.can('CastVote');
+    final label = 'Этап ${stage.index + 1} из ${finale.stagesTotal}: ${T.category(v.board[stage.row].category)}'
+        '${stage.attempt > 1 ? ' · переголосование' : ''} — ${can ? 'выберите карту в подсвеченном ряду' : finale.hasMyVote ? 'ваш голос принят' : 'голосуют'}';
+    return Container(
+      key: const Key('vote-strip'),
+      height: _SayStrip.height,
+      margin: const EdgeInsets.fromLTRB(6, 0, 8, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: can ? const Color(0xFF3A2B12) : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: can ? AppColors.amber : AppColors.border),
+      ),
+      child: Row(children: [
+        const Icon(Icons.how_to_vote_outlined, size: 18, color: AppColors.amber),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+        Text('$voted из ${v.players.length}', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+        if (can)
+          TextButton(
+            key: const Key('vote-abstain'),
+            onPressed: () => screen.send('CastVote', {'column': null, 'suspect': null}),
+            child: const Text('Воздержаться'),
+          ),
+      ]),
     );
   }
 }

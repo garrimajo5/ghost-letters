@@ -1,5 +1,46 @@
 part of 'game_screen.dart';
 
+/// Палитра сеанса из прототипа: густая фиолетовая ночь, свечи, мятный свет духа.
+abstract final class _SeanceColors {
+  static const bg = Color(0xFF120D1C);
+  static const wood = Color(0xFF2A1D16);
+  static const woodDark = Color(0xFF17100C);
+  static const rim = Color(0xFF6B4A2E);
+  static const candle = Color(0xFFF0B45A);
+  static const flame = Color(0xFFFFD08A);
+  static const wax = Color(0xFFEDE6F7);
+  static const label = Color(0xFFC9BDE0);
+  static const dashed = Color(0xFF5B4A72);
+}
+
+/// Свеча на границе секторов: пламя с ореолом и столбик воска.
+class _Candle extends StatelessWidget {
+  const _Candle({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: size * .55,
+            height: size * .8,
+            decoration: BoxDecoration(
+              color: _SeanceColors.flame,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(size), bottom: Radius.circular(size * .45)),
+              boxShadow: [BoxShadow(color: _SeanceColors.candle.withValues(alpha: .65), blurRadius: size * .9, spreadRadius: size * .2)],
+            ),
+          ),
+          SizedBox(height: size * .08),
+          Container(
+            width: size * .55,
+            height: size,
+            decoration: BoxDecoration(color: _SeanceColors.wax, borderRadius: BorderRadius.circular(2)),
+          ),
+        ]),
+      );
+}
+
 /// Сеанс («Досье»): круглый стол. По краю — места игроков; внутри — сектора подсказок
 /// (зацепка, раунд 1, 2, 3…), разделённые свечами и подписанные; в центре — только
 /// текущее: ящик писем (светится, пока дух читает), показ говорящего, голосование.
@@ -26,13 +67,10 @@ class _SeanceCircle extends StatelessWidget {
         Positioned.fill(child: CustomPaint(painter: _SeancePainter(sectors: sectors, radius: r, center: center))),
       ];
       // Свечи на границах секторов.
+      final candle = (r * .07).clamp(10.0, 20.0);
       for (var i = 0; i < sectors; i++) {
         final p = at(sectorStart(i), r * 0.86);
-        children.add(Positioned(
-          left: p.dx - 7,
-          top: p.dy - 10,
-          child: const IgnorePointer(child: Icon(Icons.local_fire_department, size: 14, color: AppColors.amberLight)),
-        ));
+        children.add(Positioned(left: p.dx - candle * .28, top: p.dy - candle, child: _Candle(size: candle)));
       }
       // Подписи и подсказки секторов.
       for (var i = 0; i < sectors; i++) {
@@ -40,14 +78,14 @@ class _SeanceCircle extends StatelessWidget {
         final label = at(mid, r * 0.76);
         final group = v.hints.where((h) => h.round == i).firstOrNull;
         children.add(Positioned(
-          left: label.dx - 30,
-          top: label.dy - 7,
-          width: 60,
+          left: label.dx - 45,
+          top: label.dy - 8,
+          width: 90,
           child: IgnorePointer(
             child: Text(i == 0 ? 'зацепка' : 'раунд $i',
                 key: Key('seance-sector-$i'),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 9, color: group == null ? AppColors.dim : AppColors.ice, letterSpacing: 0.5)),
+                style: heading((r * .045).clamp(9.0, 14.0), color: group == null ? _SeanceColors.dashed : _SeanceColors.label, spacing: 1.2)),
           ),
         ));
         final cards = group?.cards ?? const <String>[];
@@ -74,10 +112,10 @@ class _SeanceCircle extends StatelessWidget {
         final p = players[i];
         final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r);
         children.add(Positioned(
-          left: pos.dx - 26,
+          left: pos.dx - 32,
           top: pos.dy - 22,
-          width: 52,
-          child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false),
+          width: 64,
+          child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: side >= 300),
         ));
       }
       final core = r * 0.68;
@@ -107,16 +145,23 @@ class _SeancePainter extends CustomPainter {
       center,
       radius,
       Paint()
-        ..shader = const RadialGradient(colors: [Color(0xFF3A2A1C), Color(0xFF1E140D)]).createShader(table),
+        ..shader = const RadialGradient(colors: [_SeanceColors.wood, _SeanceColors.woodDark]).createShader(table),
     );
     canvas.drawCircle(center, radius, Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
-      ..color = const Color(0xFF6B4A2E));
-    canvas.drawCircle(center, radius * 0.36, Paint()
+      ..color = _SeanceColors.rim);
+    // Пунктирный круг в центре — место духа.
+    final inner = radius * 0.36;
+    final dash = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..color = AppColors.amber.withValues(alpha: 0.25));
+      ..color = _SeanceColors.dashed;
+    const dashes = 48;
+    for (var i = 0; i < dashes; i++) {
+      final a = 2 * math.pi * i / dashes;
+      canvas.drawArc(Rect.fromCircle(center: center, radius: inner), a, math.pi / dashes, false, dash);
+    }
     final line = Paint()
       ..color = AppColors.amber.withValues(alpha: 0.18)
       ..strokeWidth = 1;
@@ -195,7 +240,7 @@ class _SeanceCenter extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 9, fontStyle: FontStyle.italic, color: AppColors.dim)),
+                    style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.ice)),
               ),
           ]),
         ),
