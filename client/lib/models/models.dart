@@ -1267,7 +1267,7 @@ class Reaction {
       );
 
   /// Тот же набор, что принимает сервер.
-  static const allowed = ['👍', '👎', '😂', '😮', '🤔', '👻', '🔥', '❤️', '😱', '🙈'];
+  static const allowed = ['👍', '👎', '😂', '😮', '🤔', '👻', '🔥', '❤️', '😱', '🙈', '🤡', '🥷'];
 
   final String gameId;
   final String userId;

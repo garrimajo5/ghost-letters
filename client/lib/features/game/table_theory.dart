@@ -132,7 +132,8 @@ class _TableStatementsState extends State<TableStatements> {
                 spacing: 8,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  if (view.me != null && view.me!.role != 'Ghost')
+                  // На новом столе версию показывают на поле, а просят — нажатием на игрока.
+                  if (view.me != null && view.me!.role != 'Ghost' && widget.screen.classicTable)
                     OutlinedButton.icon(
                         key: const Key('show-table-theory'),
                         icon: const Icon(Icons.account_tree_outlined),
