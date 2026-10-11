@@ -845,8 +845,10 @@ class _Fan extends StatelessWidget {
         final width = card + step * (n - 1);
         final left = ((room - width) / 2).clamp(4.0, double.infinity);
         final mid = (n - 1) / 2;
+        // Призрак говорит только картами: до итогов реакций у него нет.
+        final silent = v.me?.role == 'Ghost' && !const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
         return Stack(clipBehavior: Clip.none, children: [
-          Positioned(
+          if (!silent) Positioned(
             right: 8,
             top: 14,
             child: GestureDetector(
