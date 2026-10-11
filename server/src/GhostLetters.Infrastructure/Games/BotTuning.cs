@@ -59,9 +59,6 @@ public sealed record BotTuning
     /// <summary>Чёрные смелее лгут за большим столом (больше подозреваемых) и осторожнее — за маленьким.</summary>
     public bool KillerSizeAware { get; init; } = true;
 
-    /// <summary>Случайная добавка к подозрению при голосовании за Убийцу.</summary>
-    public double SuspectNoise { get; init; } = .5;
-
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -97,7 +94,6 @@ public sealed record BotTuning
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(Probe) => t with { Probe = B() },
-                nameof(SuspectNoise) => t with { SuspectNoise = D() },
                 nameof(KillerSizeAware) => t with { KillerSizeAware = B() },
                 nameof(KillerFakeVanish) => t with { KillerFakeVanish = D() },
                 nameof(ProbePlausible) => t with { ProbePlausible = D() },
