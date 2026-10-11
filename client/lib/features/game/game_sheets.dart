@@ -602,6 +602,9 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
   bool get _autoScroll => ref.read(prefsProvider).getBool(autoScrollKey) ?? false;
   bool _opened = false;
 
+  /// Шторка чата развёрнута на весь экран.
+  bool _full = false;
+
   void _toEnd({bool animate = true}) => WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_scroll.hasClients) return;
         final end = _scroll.position.maxScrollExtent;
@@ -631,6 +634,13 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
 
   String get _gameId => widget.screen.widget.gameId;
 
+  /// Свой канал команды Убийцы — только пока ищут Свидетеля, Эксперта или Шантажиста.
+  bool get _teamTalk =>
+      (_killerTeam || widget.screen.view?.isGhost == true) && const {'Hunt', 'BlackmailerHunt'}.contains(widget.screen.view?.phase);
+
+  /// Канал, куда пишу и который читаю сейчас.
+  String get _ch => _teamTalk ? _channel : 'public';
+
   bool get _killerTeam => const {'Killer', 'Accomplice'}.contains(widget.screen.view?.me?.role);
 
   Future<void> _send() async {
@@ -638,7 +648,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     if (text.isEmpty && _cards.isEmpty) return;
     final sent = await runAction(
       context,
-      () => ref.read(apiProvider).sendChat(_gameId, text.isEmpty ? '🃏' : text, channel: _channel, cards: List.of(_cards)),
+      () => ref.read(apiProvider).sendChat(_gameId, text.isEmpty ? '🃏' : text, channel: _ch, cards: List.of(_cards)),
     );
     if (sent != null && mounted) {
       _text.clear();
@@ -681,7 +691,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     await runAction(context, () async {
       final api = ref.read(apiProvider);
       final mediaId = await api.uploadVoice(take.file, take.durationMs);
-      await api.sendChat(_gameId, '', channel: _channel, cards: List.of(_cards), mediaId: mediaId);
+      await api.sendChat(_gameId, '', channel: _ch, cards: List.of(_cards), mediaId: mediaId);
     });
     if (mounted) {
       setState(() {
@@ -721,7 +731,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
       ...?v.me?.hand,
       for (final letter in v.me?.letters ?? <MyLetter>[]) letter.cardId,
       for (final message in widget.screen.chat)
-        if (message.channel == 'public' || (_channel == 'killer_team' && message.channel == 'killer_team')) ...message.cardIds,
+        if (message.channel == 'public' || (_ch == 'killer_team' && message.channel == 'killer_team')) ...message.cardIds,
     }.toList();
     final picked = await showModalBottomSheet<String>(
       context: context,
@@ -752,46 +762,64 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     final screen = widget.screen;
     final canWrite = screen.view?.me != null;
     final voice = _voice;
+    final teamTalk = _teamTalk;
+    final channel = _ch;
     return Padding(
       padding: EdgeInsets.only(bottom: widget.embedded ? 0 : MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
-        height: widget.embedded ? null : MediaQuery.of(context).size.height * 0.75,
+        height: widget.embedded ? null : MediaQuery.of(context).size.height * (_full ? 1 : 0.75),
         child: Column(children: [
-          if (widget.embedded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-              child: Align(alignment: Alignment.centerLeft, child: Text('ЧАТ', style: sectionLabel(size: 13))),
-            ),
-          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            const Text('Прокручивать к новым', style: TextStyle(fontSize: 12, color: AppColors.muted)),
-            Switch(
-              key: const Key('chat-autoscroll'),
-              value: _autoScroll,
-              onChanged: (on) async {
-                await ref.read(prefsProvider).setBool(autoScrollKey, on);
-                if (on) _toEnd();
-                setState(() {});
-              },
-            ),
-            const SizedBox(width: 8),
-          ]),
-          if (_killerTeam || screen.view?.isGhost == true)
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'public', label: Text('Общий')),
-                  ButtonSegment(value: 'killer_team', label: Text('Команда Убийцы')),
-                ],
-                selected: {_channel},
-                onSelectionChanged: (v) => setState(() => _channel = v.first),
+          // Шапка в одну строку: «ЧАТ», развернуть на весь экран, в углу — прокрутка к новым.
+          Padding(
+            padding: EdgeInsets.fromLTRB(12, widget.embedded ? 8 : 0, 4, 0),
+            child: Row(children: [
+              if (widget.embedded) Text('ЧАТ', style: sectionLabel(size: 13)),
+              if (teamTalk)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                      segments: const [
+                        ButtonSegment(value: 'public', label: Text('Общий')),
+                        ButtonSegment(value: 'killer_team', label: Text('Команда Убийцы')),
+                      ],
+                      selected: {channel},
+                      onSelectionChanged: (v) => setState(() => _channel = v.first),
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
+              if (!widget.embedded)
+                IconButton(
+                  key: const Key('chat-fullscreen'),
+                  tooltip: _full ? 'Свернуть чат' : 'Чат на весь экран',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(_full ? Icons.fullscreen_exit : Icons.fullscreen, size: 20),
+                  onPressed: () => setState(() => _full = !_full),
+                ),
+              IconButton(
+                key: const Key('chat-autoscroll'),
+                tooltip: _autoScroll ? 'Прокрутка к новым: вкл' : 'Прокрутка к новым: выкл',
+                visualDensity: VisualDensity.compact,
+                isSelected: _autoScroll,
+                icon: Icon(Icons.vertical_align_bottom, size: 20, color: _autoScroll ? AppColors.amber : AppColors.dim),
+                onPressed: () async {
+                  final on = !_autoScroll;
+                  await ref.read(prefsProvider).setBool(autoScrollKey, on);
+                  if (on) _toEnd();
+                  setState(() {});
+                },
               ),
-            ),
+            ]),
+          ),
           Expanded(
             child: ListenableBuilder(
               listenable: screen.chatChanges,
               builder: (context, _) {
-                final messages = screen.chat.where((m) => m.channel == _channel).toList();
+                final messages = screen.chat.where((m) => m.channel == channel).toList();
                 // Лента по раундам: перед первым сообщением раунда — разделитель; в конце — выбор стола в голосовании.
                 final items = <Object>[];
                 int? round;
@@ -800,7 +828,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                   round = m.round;
                   items.add(m);
                 }
-                final outcomes = _channel == 'public' ? (screen.view?.finale?.outcomes ?? const <VoteOutcome>[]) : const <VoteOutcome>[];
+                final outcomes = _ch == 'public' ? (screen.view?.finale?.outcomes ?? const <VoteOutcome>[]) : const <VoteOutcome>[];
                 if (outcomes.any((o) => o.kind == 'Row' && o.column != null)) {
                   // Итоги голосования — перед рассказом Призрака: он разбирает партию уже после них.
                   final debrief = items.indexWhere((x) => x is ChatMessage && (x.text ?? '').startsWith('Разбор Призрака'));
@@ -965,7 +993,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           minLines: 1,
                           maxLines: 4,
                           decoration: InputDecoration(
-                            hintText: _channel == 'public' ? 'Сообщение всем' : 'Сообщение команде',
+                            hintText: _ch == 'public' ? 'Сообщение всем' : 'Сообщение команде',
                             counterText: '',
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: const BorderSide(color: AppColors.border)),

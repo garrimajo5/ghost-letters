@@ -314,7 +314,8 @@ class _MainTableState extends State<_MainTable> {
   Widget _panelView(GameView v) => ListView(
         key: const Key('main-panel'),
         controller: screen._scroll,
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+        // Снизу запас: последние строки прокручиваются выше кнопок и веера, ничего не закрыто.
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 120),
         children: [
           KeyedSubtree(key: screen._panelKey, child: ActionPanel(screen: screen)),
           TableStatements(screen: screen),
