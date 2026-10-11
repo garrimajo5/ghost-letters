@@ -1,2 +1,0 @@
-150
-variants: правдоподобие ×2: ProbePlausible=2 | правдоподобие ×0.5: ProbePlausible=0.5 | неясность 0: ProbeUnclear=0 | неясность ×2: ProbeUnclear=2 | терпимость 0.4: GhostTolerance=0.4
