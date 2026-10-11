@@ -1333,6 +1333,20 @@ class _Say extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Карту, которую называю своим письмом, сменил: тот же источник, связи остаются.
+  void replace(String from, String to) {
+    final i = sources.indexOf(from);
+    if (i < 0 || from == to) return;
+    if (sources.contains(to)) {
+      current = i;
+      pick(from, hint: false);
+      return;
+    }
+    sources[i] = to;
+    _hints.remove(from);
+    notifyListeners();
+  }
+
   /// Подсказка раунда — моё письмо: дальше она источник «кидал эту», а не «улика».
   void claim(String id) {
     _hints.remove(id);
@@ -1465,6 +1479,15 @@ class _SayStrip extends StatelessWidget {
     final children = <Widget>[];
     if (say.active) {
       final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
+      // Что я называю своим письмом: если заранее сменил — сразу она; удержание — сменить.
+      final thrown = letter == null ? null : screen.marks[letter.cardId]?.claim ?? letter.cardId;
+      Future<void> change() async {
+        if (letter == null) return;
+        final before = screen.marks[letter.cardId]?.claim ?? letter.cardId;
+        await LetterSheet.show(context, screen, letter);
+        final after = screen.marks[letter.cardId]?.claim ?? letter.cardId;
+        say.replace(before, after);
+      }
       children.addAll([
         for (final id in say.sources)
           Padding(
@@ -1472,6 +1495,7 @@ class _SayStrip extends StatelessWidget {
             child: GestureDetector(
               key: Key('say-source-$id'),
               onTap: () => say.pick(id, hint: say.isHint(id)),
+              onLongPress: id == thrown ? change : () => showCardZoom(context, id),
               child: Container(
                 foregroundDecoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
@@ -1481,11 +1505,15 @@ class _SayStrip extends StatelessWidget {
               ),
             ),
           ),
-        if (say.sources.isEmpty && letter != null)
+        if (say.sources.isEmpty && thrown != null)
           GestureDetector(
             key: const Key('say-my-letter'),
-            onTap: () => say.pick(letter.cardId, hint: false),
-            child: Opacity(opacity: 0.7, child: CardImage(cardId: letter.cardId, size: 36, radius: 6)),
+            onTap: () => say.pick(thrown, hint: false),
+            onLongPress: change,
+            child: Tooltip(
+              message: 'Моё письмо. Удержание — сменить карту, которую называю своей',
+              child: Opacity(opacity: 0.7, child: CardImage(cardId: thrown, size: 36, radius: 6)),
+            ),
           ),
         const SizedBox(width: 4),
         Expanded(
@@ -1514,11 +1542,13 @@ class _SayStrip extends StatelessWidget {
             child: const Text('Присвоить'),
           ),
         IconButton(key: const Key('say-cancel'), tooltip: 'Отменить показ', icon: const Icon(Icons.close), onPressed: say.stop),
-        FilledButton(
-          key: const Key('say-send'),
-          onPressed: say.total == 0 ? null : () => _send(context),
-          child: Text(say.sources.isEmpty ? 'Выдвинуть версию' : 'Связать'),
-        ),
+        // Кнопка появляется, когда есть что отправить: отмеченные карты поля — «Выдвинуть версию».
+        if (say.total > 0)
+          FilledButton(
+            key: const Key('say-send'),
+            onPressed: () => _send(context),
+            child: Text(say.sources.isEmpty ? 'Выдвинуть версию' : 'Связать'),
+          ),
       ]);
     } else {
       final m = statement;
