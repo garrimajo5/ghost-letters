@@ -85,6 +85,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var since = Changed.AddOrUpdate(gameId, _ => (state.Version, now), (_, old) => old.Version == state.Version ? old : (state.Version, now)).Since;
         // Один человек с ботами — таймеров нет, боты ждут человека.
         var solo = state.Players.Count - bots.Count <= 1;
+        // Люди уже нажали «Готов» в финальном обсуждении — боты договаривают коротко, а не по шесть реплик.
+        var humansReady = state.Phase == Phase.Discussion && state.Investigators.Any(p => !bots.Contains(p.Id)) &&
+            state.Investigators.Where(p => !bots.Contains(p.Id)).All(p => state.Done.Contains(p.Id));
         foreach (var botId in bots.OrderBy(_ => rng.Next()))
         {
             if (state.Phase == Phase.Night && state.Player(botId).Role.IsKillerTeam())
@@ -105,7 +108,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 continue;
             }
 
-            if (await TryMoveAsync(state, botId, rng, ct))
+            if (await TryMoveAsync(state, botId, rng, ct, humansReady))
             {
                 return 1;
             }
@@ -202,7 +205,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
     }
 
-    private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct)
+    private async Task<bool> TryMoveAsync(GameState state, Guid botId, Random rng, CancellationToken ct, bool humansReady = false)
     {
         var view = GameProjection.For(state, botId);
         await TryReactAsync(state, view, botId, rng, ct);
@@ -214,7 +217,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (!ghostDebrief && !mayTalk && !mayTable && !BotPlayer.HasMove(view)) return false;
         var mind = await MindAsync(state, botId, ct);
         if (ghostDebrief && await DebriefAsync(state, botId, mind, ct) is { } debrief) return debrief;
-        if (await TrySpeakAsync(state, view, botId, rng, mind, ct))
+        if (await TrySpeakAsync(state, view, botId, rng, mind, ct, humansReady))
         {
             return true;
         }
@@ -223,7 +226,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (tabled) return true;
 
         if (state.Phase == Phase.Discussion && state.Round >= state.TotalRounds && view.Me?.Role != Role.Ghost &&
-            BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow())) return false;
+            BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow(), humansReady)) return false;
 
         if (state.Phase == Phase.Discussion && BotLetterTactics.Pending(botId, await DiscussionAsync(state, ct))) return false;
         if (await SpeakerStillReadingAsync(state, view, botId, ct)) return false;
@@ -321,7 +324,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     }
 
     /// <summary>Раз за раунд обсуждения бот говорит, что думает (в рации — когда у него слово).</summary>
-    private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, BotMind? mind, CancellationToken ct)
+    private async Task<bool> TrySpeakAsync(GameState state, PlayerView view, Guid botId, Random rng, BotMind? mind, CancellationToken ct,
+        bool humansReady = false)
     {
         if (state.Phase != Phase.Discussion ||
             (view.Discussion == DiscussionMode.Radio && view.CurrentSpeaker != botId && view.FloorGrantedTo != botId))
@@ -352,6 +356,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             var now = time.GetUtcNow();
             if (messages.Count > 0 && now - messages[^1].At < BotDiscussion.SpeechTime(messages[^1].Text, messages[^1].DurationMs)) return false;
             if (own.Count > 0 && now - own[^1].At < TimeSpan.FromSeconds(12)) return false;
+            if (humansReady && own.Count >= BotDiscussion.WrapUpMessages) return false;
             if (mind is null)
             {
                 var ids = state.Players.Select(p => p.Id).ToList();

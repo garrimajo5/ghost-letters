@@ -12,6 +12,8 @@ public sealed record DiscussionLine(Guid Author, string Text, IReadOnlyList<stri
 public static class BotDiscussion
 {
     public const int MaxMessages = 6;
+    /// <summary>Сколько реплик бот успевает сказать, если люди уже готовы голосовать.</summary>
+    public const int WrapUpMessages = 2;
     private static readonly Regex Who = Words(@"\bкто\b");
 
     /// <summary>Ссылка на подсказку в реплике: первая улика — «Зацепка», остальные — «Подсказка р.N №M» (клиент рисует их картой).</summary>
@@ -62,11 +64,12 @@ public static class BotDiscussion
         return attached.Count == 1 ? attached[0] : null;
     }
 
-    public static bool ShouldWait(Guid botId, IReadOnlyList<DiscussionLine> messages, DateTimeOffset now)
+    public static bool ShouldWait(Guid botId, IReadOnlyList<DiscussionLine> messages, DateTimeOffset now, bool humansReady = false)
     {
         var own = messages.Where(m => m.Author == botId).ToList();
         if (own.Count == 0) return true;
         if (now - messages[^1].At < SpeechTime(messages[^1].Text, messages[^1].DurationMs)) return true;
+        if (humansReady && own.Count >= WrapUpMessages) return false;
         if (own.Count >= MaxMessages || now - own[0].At >= TimeSpan.FromMinutes(2)) return false;
         return now - own[0].At < TimeSpan.FromSeconds(30) || now - messages[^1].At < TimeSpan.FromSeconds(12);
     }
