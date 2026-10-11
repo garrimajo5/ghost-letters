@@ -46,6 +46,9 @@ public sealed record BotTuning
     /// <summary>С какого отрыва истины от лучшей ложной карты ряд считается ясным.</summary>
     public double KillerClearMargin { get; init; } = .15;
 
+    /// <summary>Мирный следует мнению стола, если отрыв двух его лучших карт меньше этого (0 — по характеру).</summary>
+    public double UnsureFollow { get; init; }
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -81,6 +84,7 @@ public sealed record BotTuning
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(Probe) => t with { Probe = B() },
+                nameof(UnsureFollow) => t with { UnsureFollow = D() },
                 nameof(KillerBlend) => t with { KillerBlend = B() },
                 nameof(KillerBlendChance) => t with { KillerBlendChance = D() },
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },

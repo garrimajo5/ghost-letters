@@ -1,0 +1,2 @@
+150
+variants: следовать при отрыве 0.05: UnsureFollow=0.05 | следовать при отрыве 0.15: UnsureFollow=0.15 | следовать при отрыве 0.3: UnsureFollow=0.3 | маскировка 0.08 и следовать 0.15: KillerClearMargin=0.08, UnsureFollow=0.15

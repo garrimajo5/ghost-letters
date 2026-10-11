@@ -375,7 +375,13 @@ public static class BotPlayer
             }
 
             var i = columns.ToList().IndexOf(column);
-            var c = Classic ? 0 : P.Compromise * (social.Any(s => Math.Abs(s) > 1e-9) ? 1 : 0);
+            var compromise = P.Compromise;
+            // Сам не уверен (две лучшие карты почти равны) — сильнее держусь общего мнения стола,
+            // чтобы мирные не разбрелись по разным картам.
+            var sorted = own.OrderByDescending(x => x).ToList();
+            if (!Classic && !KillerTeam && sorted.Count > 1 && sorted[0] - sorted[1] < BotTuning.Current.UnsureFollow)
+                compromise = Math.Max(compromise, .8);
+            var c = Classic ? 0 : compromise * (social.Any(s => Math.Abs(s) > 1e-9) ? 1 : 0);
             return (1 - c) * Norm(own[i], own) + c * Norm(social[i], social);
         }
 
