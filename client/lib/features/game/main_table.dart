@@ -234,7 +234,8 @@ class _TableArea extends StatelessWidget {
       final stripHeight = say.active || _statement(screen) != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 150.0).floorToDouble();
-      final hint = (card * 0.7).floorToDouble();
+      // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
+      final hint = (card * 0.7 < card + gap - 15 ? card * 0.7 : card + gap - 15).floorToDouble();
       final hintsWidth = hintCards * (hint + 4) + 10;
       final order = _Board.tableOrder(v);
       final statement = _statement(screen);
@@ -306,9 +307,12 @@ class _HintStep extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = hint.round == 0 ? 'зацепка' : 'р. ${hint.round}';
     return Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-      Padding(
-        padding: const EdgeInsets.only(right: 4),
-        child: Text(label, style: const TextStyle(fontSize: 9, color: AppColors.muted, height: 1.1)),
+      SizedBox(
+        height: 14,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Text(label, maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.muted, height: 1.2)),
+        ),
       ),
       SizedBox(
         height: size,

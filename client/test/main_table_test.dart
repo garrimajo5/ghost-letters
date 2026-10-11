@@ -181,7 +181,7 @@ void main() {
         cardNotes: const ['улика', 'думаю, эта:0', 'исключаю:0'],
         createdAt: DateTime.now(),
         round: 4));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('say-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
