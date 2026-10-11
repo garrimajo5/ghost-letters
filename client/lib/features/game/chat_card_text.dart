@@ -23,9 +23,10 @@ class ChatCardText extends StatelessWidget {
   static List<({String text, String? cardId})> parse(
     ChatMessage message,
     List<BoardRow> board,
-    List<HintGroup> hints,
-  ) {
-    final text = message.text ?? '';
+    List<HintGroup> hints, {
+    String? text,
+  }) {
+    text ??= message.text ?? '';
     if (message.cardNotes.isEmpty) return [(text: text, cardId: null)];
     final pattern = RegExp(
       r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',

@@ -601,6 +601,24 @@ class _TableArea extends StatelessWidget {
                         final l = _linksOf(id, statement);
                         return _LinkBorder(key: Key('say-mark-$id'), colors: l.colors.ifEmpty(color), numbers: l.numbers, child: child);
                       }();
+                // Чья отметка: портрет говорящего на карте, пока его слово (видно, кто её связал или отклонил).
+                if (!say.active && statement != null && color != null) {
+                  final a = statement.authorId;
+                  out = Stack(clipBehavior: Clip.none, children: [
+                    out,
+                    Positioned(
+                      left: 2,
+                      bottom: 2,
+                      child: IgnorePointer(
+                        child: Container(
+                          key: Key('say-who-$id'),
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 1.5)),
+                          child: Avatar(nickname: screen.nick(a), color: screen.colorOf(a), photoId: screen.photoOf(a), size: (fieldCard * .3).clamp(16, 26).toDouble()),
+                        ),
+                      ),
+                    ),
+                  ]);
+                }
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
                 // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить.
                 if (say.active || _canSpeakNow(v)) {
@@ -1520,13 +1538,40 @@ class _SayStrip extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: typing?.complete,
-              child: Text(
-                typing?.current?.id == m.id ? _Typing.tail(screen, m, typing!.text) : _Typing.fullText(screen, m),
-                key: const Key('say-statement'),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12),
-              ),
+              child: () {
+                final text = typing?.current?.id == m.id ? _Typing.tail(screen, m, typing!.text) : _Typing.fullText(screen, m);
+                // Карты в реплике («место 2», «Подсказка р.2 №1») — картинками, а не словами.
+                final parts = ChatCardText.parse(m, v.board, v.hints, text: text);
+                if (parts.every((p) => p.cardId == null)) {
+                  return Text(text, key: const Key('say-statement'), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12));
+                }
+                return Text.rich(
+                  TextSpan(children: [
+                    for (var i = 0; i < parts.length; i++)
+                      if (parts[i].cardId case final id?)
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 1),
+                            child: Tooltip(
+                              message: parts[i].text,
+                              child: GestureDetector(
+                                key: Key('say-inline-${m.id}-$i'),
+                                onTap: () => showCardZoom(context, id, caption: parts[i].text),
+                                child: CardImage(cardId: id, size: 20, radius: 3),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        TextSpan(text: parts[i].text),
+                  ]),
+                  key: const Key('say-statement'),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12),
+                );
+              }(),
             ),
           ),
         ]);
