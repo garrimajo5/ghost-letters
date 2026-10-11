@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ import 'table_theory.dart';
 part 'dossier_table.dart';
 part 'evidence_board.dart';
 part 'main_table.dart';
+part 'seance_table.dart';
 
 /// Экран партии: шапка, игроки, поле, подсказки по раундам, рука и главная кнопка хода.
 class GameScreen extends ConsumerStatefulWidget {
@@ -602,7 +604,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
     if (zoomed) return _ZoomedTable(screen: this);
     if (AppConfig.dossierDesign && v.phase != 'RoleReveal') {
       chatDocked = false;
-      return _DossierTable(screen: this);
+      // «Досье»: игрокам — сеанс; экрану стола и тем, кто выбрал прежний вид, — лента досье.
+      return v.me == null || classicTable ? _DossierTable(screen: this) : _MainTable(screen: this, seance: true);
     }
     // Новый стол — для игроков; экран стола (зрители, ТВ) остаётся прежним.
     if (v.me != null && v.phase != 'RoleReveal' && !classicTable) {
@@ -850,8 +853,8 @@ class _Header extends StatelessWidget {
           itemBuilder: (_) => [
             if (v.me == null && screen.lobbyId != null)
               const PopupMenuItem(value: 'leave-viewing', child: Text('Завершить просмотр')),
-            if (v.me != null && !AppConfig.dossierDesign)
-              const PopupMenuItem(value: 'new-table', child: Text('Новый стол')),
+            if (v.me != null)
+              PopupMenuItem(value: 'new-table', child: Text(AppConfig.dossierDesign ? 'Сеанс' : 'Новый стол')),
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),

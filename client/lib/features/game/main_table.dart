@@ -6,9 +6,12 @@ part of 'game_screen.dart';
 /// кнопка и чат под веером. Ход партии (панель) открывается глазиком на месте стола;
 /// выбор карт и игроков при этом сохраняется — он хранится в экране партии.
 class _MainTable extends StatefulWidget {
-  const _MainTable({required this.screen});
+  const _MainTable({required this.screen, this.seance = false});
 
   final GameScreenState screen;
+
+  /// Сборка «Досье»: спиритический сеанс — круглый стол, сектора подсказок, игроки по кругу.
+  final bool seance;
 
   @override
   State<_MainTable> createState() => _MainTableState();
@@ -64,25 +67,46 @@ class _MainTableState extends State<_MainTable> {
     final open = _panelOpen(v);
     final stage = v.finale?.currentStage;
     final suspectVote = stage != null && !stage.isRow;
-    final center = open
-        ? _panelView(v)
-        : suspectVote
-            ? _SuspectBoard(screen: screen)
-            : _TableArea(screen: screen, landscape: landscape, say: _say);
+    final seance = widget.seance;
+    final board = suspectVote
+        ? _SuspectBoard(screen: screen)
+        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance);
+    final Widget center;
+    if (open) {
+      center = _panelView(v);
+    } else if (!seance) {
+      center = board;
+    } else {
+      final circle = _SeanceCircle(screen: screen);
+      center = landscape
+          ? Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              AspectRatio(aspectRatio: 1, child: circle),
+              Expanded(child: board),
+            ])
+          : LayoutBuilder(builder: (context, box) {
+              final side = (box.maxHeight * 0.5 < box.maxWidth ? box.maxHeight * 0.5 : box.maxWidth).floorToDouble();
+              return Column(children: [
+                SizedBox(height: side, child: circle),
+                Expanded(child: board),
+              ]);
+            });
+    }
     final hand = v.me != null;
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
       behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, dragDevices: PointerDeviceKind.values.toSet()),
       child: Scaffold(
-        key: const Key('main-table'),
-        backgroundColor: night ? AppColors.night : AppColors.bg,
+        key: Key(seance ? 'seance-table' : 'main-table'),
+        backgroundColor: night || seance ? AppColors.night : AppColors.bg,
         body: SafeArea(
           child: Stack(children: [
             Positioned.fill(child: Column(children: [
             const ConnectionBanner(),
-            _TopBar(screen: screen, panelOpen: open, onEye: () => _toggle(v)),
+            _TopBar(screen: screen, panelOpen: open, seance: seance, onEye: () => _toggle(v)),
             if (_emoji) _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
-            if (landscape)
+            if (seance)
+              Expanded(child: center)
+            else if (landscape)
               Expanded(
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   Expanded(child: center),
@@ -103,7 +127,7 @@ class _MainTableState extends State<_MainTable> {
               Expanded(child: center),
             ],
             if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
-            if (!landscape)
+            if (!landscape || seance)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
                 child: _Actions(screen: screen, row: true, onStatus: () => setState(() => _panel = true)),
@@ -134,10 +158,11 @@ class _MainTableState extends State<_MainTable> {
 
 /// Верхняя строка: меню слева, раунд и фаза, таймер, глазик «стол / ход партии» всегда на одном месте.
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.screen, required this.panelOpen, required this.onEye});
+  const _TopBar({required this.screen, required this.panelOpen, required this.onEye, this.seance = false});
 
   final GameScreenState screen;
   final bool panelOpen;
+  final bool seance;
   final VoidCallback onEye;
 
   @override
@@ -172,7 +197,7 @@ class _TopBar extends StatelessWidget {
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             if (v.board.isNotEmpty) const PopupMenuItem(value: 'zoom', child: Text('Стол крупно')),
-            const PopupMenuItem(value: 'classic', child: Text('Классический стол')),
+            PopupMenuItem(value: 'classic', child: Text(seance ? 'Прежнее досье' : 'Классический стол')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),
           ],
@@ -215,11 +240,14 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape, required this.say});
+  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true});
 
   final GameScreenState screen;
   final bool landscape;
   final _Say say;
+
+  /// Лесенка подсказок слева; на сеансе подсказки — в секторах круга.
+  final bool staircase;
 
   /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
   Color? _mark(String id, ChatMessage? statement) {
@@ -240,7 +268,7 @@ class _TableArea extends StatelessWidget {
     final v = screen.view!;
     final rows = v.board.isEmpty ? 4 : v.board.length;
     final columns = v.board.isEmpty ? 5 : v.board.first.cards.length;
-    final hintCards = v.hints.fold<int>(1, (m, h) => h.cards.length > m ? h.cards.length : m).clamp(1, 2);
+    final hintCards = staircase ? v.hints.fold<int>(1, (m, h) => h.cards.length > m ? h.cards.length : m).clamp(1, 2) : 0;
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
@@ -250,7 +278,7 @@ class _TableArea extends StatelessWidget {
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 150.0).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       final hint = (card * 0.7 < card + gap - 15 ? card * 0.7 : card + gap - 15).floorToDouble();
-      final hintsWidth = hintCards * (hint + 4) + 10;
+      final hintsWidth = staircase ? hintCards * (hint + 4) + 10 : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _statement(screen);
       final strip = say.active || statement != null || _canSay(v);
@@ -258,7 +286,7 @@ class _TableArea extends StatelessWidget {
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(
+          if (staircase) SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               for (var i = 0; i < v.hints.length || i < order.length; i++)
