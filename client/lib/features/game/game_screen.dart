@@ -493,7 +493,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
   bool zoomed = false;
 
   /// Настройка «Классический стол»: прежняя раскладка вместо нового стола по наброску.
-  static const classicKey = 'table.classic';
+  // Основной адрес и «Досье» открываются с одного сайта и делят настройки браузера —
+  // поэтому у каждой сборки свой ключ («Прежнее досье» не должно включать классический стол).
+  static String get classicKey => AppConfig.dossierDesign ? 'dossier.classic' : 'table.classic.v2';
 
   bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
 
