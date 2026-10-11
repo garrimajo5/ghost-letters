@@ -57,7 +57,7 @@ public sealed record BotTuning
     public double KillerFakeVanish { get; init; }
 
     /// <summary>Чёрные смелее лгут за большим столом (больше подозреваемых) и осторожнее — за маленьким.</summary>
-    public bool KillerSizeAware { get; init; }
+    public bool KillerSizeAware { get; init; } = true;
 
     public static readonly BotTuning Default = new();
 
