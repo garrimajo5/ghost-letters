@@ -640,7 +640,9 @@ public static class BotPlayer
             var unclear = 1 - weights.Max() / weights.Sum();
             var tested = me.Letters.Any(l => view.Board.SelectMany(r => r.Cards).Where(c => c != l.CardId)
                 .MaxBy(c => Sim(l.CardId, c)) == top.Card);
-            return (tested ? .3 : 1) * (.25 + share) * (.2 + unclear) * Math.Min(1, margin / .15) * Math.Min(1, top.S / .25);
+            var t = BotTuning.Current;
+            return (tested ? .3 : 1) * Math.Pow(.25 + share, t.ProbePlausible) * Math.Pow(.2 + unclear, t.ProbeUnclear)
+                * Math.Min(1, margin / .15) * Math.Min(1, top.S / .25);
         }
 
         public string? CardToDiscard()
