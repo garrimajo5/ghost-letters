@@ -418,6 +418,11 @@ void main() {
     expect(find.text('Показать на столе'), findsOneWidget);
   });
 
+  testWidgets('у Призрака нет карты-эмодзи: он подсказывает только картами', (tester) async {
+    await _open(tester, phone, edit: (view) => (view['me'] as Json)['role'] = 'Ghost');
+    expect(find.byKey(const Key('fan-emoji')), findsNothing);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(

@@ -1,3 +1,4 @@
+using GhostLetters.Domain.Roles;
 using System.Collections.Concurrent;
 using GhostLetters.Application;
 using GhostLetters.Infrastructure.Persistence;
@@ -22,6 +23,10 @@ public sealed class ReactionService(GhostLettersDbContext db, IRealtimeNotifier 
         var players = await db.GamePlayers.AsNoTracking().Where(p => p.GameId == gameId).Select(p => p.UserId).ToListAsync(ct);
         if (players.Count == 0) throw AppException.NotFound("Партия не найдена.");
         if (!players.Contains(userId)) throw AppException.Forbidden("Реагировать могут только игроки партии.");
+        // Призрак говорит только картами: реакция во время партии — подсказка мимо правил.
+        var row = await db.Games.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gameId, ct);
+        if (row is not null && GameStore.Read(row) is { Result: null } state && state.Players.Any(p => p.Id == userId && p.Role == Role.Ghost))
+            throw AppException.Forbidden("Призрак не ставит реакции до конца партии.");
         var now = time.GetUtcNow();
         if (!limiter.TryAcquire(gameId, userId, now)) throw AppException.Conflict("RATE_LIMIT", "Не так часто — подождите пару секунд.");
         var reaction = new ReactionDto(gameId, userId, emoji, now);
