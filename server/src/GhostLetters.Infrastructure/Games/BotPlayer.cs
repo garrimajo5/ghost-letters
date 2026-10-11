@@ -941,7 +941,7 @@ public static class BotPlayer
                     $"Пока не ясно. Проверил бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
-            var opinion = "Версия: " + Tone(lines[rng.Next(lines.Length)]);
+            var opinion = Reply(target, card) + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
             var links = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
                 .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
                 .Select(h => $"Подсказка р.{h.Round} №{h.Number} → {Where(target, column)} ({Connection(h.Id, card)}).");
@@ -1018,6 +1018,18 @@ public static class BotPlayer
             if (text.Length > ChatService.MaxTextLength)
                 text = string.Join("\n", new[] { claimText, checkedText, conclusion, $"Версия: {Where(target, column)}." });
             return (text, cards, notes);
+        }
+
+        /// <summary>
+        /// Отклик на последнее чужое мнение о том же ряду — как в живом разговоре: «Аня, согласен» или «Боб, не соглашусь».
+        /// </summary>
+        private string Reply(int row, string card)
+        {
+            if (mind is null) return "";
+            var last = mind.Opinions.LastOrDefault(o => !o.IsCheck && o.Strength > 0 && o.Author != me.Id
+                && view.Board[row].Cards.Contains(o.CardId));
+            if (last is null || NameOf(last.Author) is not { } who) return "";
+            return last.CardId == card ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
         }
 
         /// <summary>

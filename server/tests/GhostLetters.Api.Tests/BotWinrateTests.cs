@@ -122,4 +122,16 @@ public sealed class BotWinrateTests
             Enumerable.Range(0, 200).Count(s => ((CastVote)BotPlayer.Decide(view, new Random(s), Tags, risky)!).Column == 1)
                 .Should().BeLessThan(honest);
     }
+
+    [Fact]
+    public void Bot_RepliesToAnotherPlayersVersion_ByName()
+    {
+        // Аня высказалась о каждой карте поля — бот, говоря о любом ряду, откликается ей по имени.
+        var view = View(Role.Detective, [], ["stone"], phase: Phase.Discussion);
+        string[] board = ["ring", "wallet", "boat", "sword", "cat", "rose"];
+        var opinions = board.Select(c => new ChatOpinion(Ann, c, .5)).ToList();
+        var text = BotPlayer.Say(view, new Random(3), Tags, Mind(opinions: opinions))!.Value.Text;
+        text.Should().Match(t => t.Contains("Аня, согласен.") || t.Contains("Аня, тут не соглашусь."));
+        BotPlayer.Say(view, new Random(3), Tags, Mind())!.Value.Text.Should().NotContain("Аня,");
+    }
 }
