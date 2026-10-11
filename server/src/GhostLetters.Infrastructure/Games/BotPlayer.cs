@@ -452,6 +452,12 @@ public static class BotPlayer
                     return real;
                 }
 
+                // Ряд, где стол и так ясно видит истину: голос против выдаст, а исход не изменит — голосуем «как все».
+                if (KillerTeam && !Classic && BotTuning.Current.KillerBlend && candidates.Contains(real) && ClearTruth(stage.Row, candidates))
+                {
+                    return real;
+                }
+
                 // Уводим голоса: самая убедительная на вид, но ложная карта. Осторожный иногда голосует
                 // «как все», чтобы не выделяться.
                 if (KillerTeam && (Classic || rng.NextDouble() < FakeChance))
@@ -470,6 +476,16 @@ public static class BotPlayer
             }
 
             return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
+        }
+
+        /// <summary>Истина — явный лидер ряда по публичным подсказкам: отрыв от лучшей ложной больше, чем могут сдвинуть слова.</summary>
+        private bool ClearTruth(int row, IReadOnlyList<int>? candidates = null)
+        {
+            if (Truth is not { } truth) return false;
+            var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
+            var real = Evidence(Card(row, truth[row]));
+            var fake = columns.Where(c => c != truth[row]).Select(c => Evidence(Card(row, c))).DefaultIfEmpty(double.MinValue).Max();
+            return real - fake > BotTuning.Current.KillerClearMargin;
         }
 
         public Guid? SuspectVote(VoteStageView stage)
@@ -855,6 +871,13 @@ public static class BotPlayer
             if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
             {
                 target = rng.Next(view.Board.Count);
+                if (!Classic && BotTuning.Current.KillerBlend)
+                {
+                    // Спорим там, где ложная карта правдоподобна: в ясном ряду ложь видна и выдаёт.
+                    var open = Enumerable.Range(0, view.Board.Count).Where(r => !ClearTruth(r)).ToList();
+                    if (open.Count > 0) target = open[rng.Next(open.Count)];
+                }
+
                 var fakes = Enumerable.Range(0, view.Board[target].Cards.Count).Where(c => c != truth[target]).ToList();
                 column = fakes.OrderByDescending(c => Evidence(Card(target, c)) + Noise()).First();
             }

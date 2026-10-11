@@ -37,6 +37,12 @@ public sealed record BotTuning
     /// <summary>Вес чужих исчезнувших писем (по их публичным «кидал эту — проверял…») относительно своих.</summary>
     public double OthersVanished { get; init; } = .5;
 
+    /// <summary>Команда Убийцы не спорит с ясными рядами: голосует «как все» и лжёт только там, где ложь правдоподобна.</summary>
+    public bool KillerBlend { get; init; } = true;
+
+    /// <summary>С какого отрыва истины от лучшей ложной карты ряд считается ясным.</summary>
+    public double KillerClearMargin { get; init; } = .15;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -72,6 +78,8 @@ public sealed record BotTuning
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(Probe) => t with { Probe = B() },
+                nameof(KillerBlend) => t with { KillerBlend = B() },
+                nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
