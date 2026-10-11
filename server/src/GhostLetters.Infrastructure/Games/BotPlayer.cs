@@ -1072,20 +1072,38 @@ public static class BotPlayer
             };
         }
 
-        private static readonly string[] Awards = ["sherlock", "best_liar", "steel_balls", "ghost_whisperer"];
-
-        /// <summary>Выдвижение: в половине случаев — случайная ачивка случайному игроку (не себе), иначе пропуск.</summary>
+        /// <summary>
+        /// Выдвижение по делу, как сделал бы человек после открытия ролей: «Лучший лжец» — кому-то из команды Убийцы,
+        /// «Шерлок» — тому, кто вычислил Убийцу, «Голос Призрака» — кто угадал больше рядов, «Стальные яйца» — любому.
+        /// Иногда бот пропускает.
+        /// </summary>
         public Nominate Nomination()
         {
             var others = view.Players.Where(p => p.Id != me.Id).ToList();
-            if (others.Count == 0 || rng.Next(2) == 0)
+            if (others.Count == 0 || rng.NextDouble() < 0.35)
             {
                 return new Nominate(null, null);
             }
 
-            var nominee = others[rng.Next(others.Count)];
-            var code = nominee.IsGhost ? "ghost_whisperer" : Awards[rng.Next(Awards.Length - 1)];
-            return new Nominate(code, nominee.Id);
+            var finale = view.Finale;
+            var rows = (finale?.Outcomes ?? []).Where(o => o.Kind == VoteStageKind.Row).ToDictionary(o => o.Stage, o => o.Row);
+            var killer = view.Players.FirstOrDefault(p => p.KnownRole == Role.Killer)?.Id;
+            int RowsRight(Guid id) => Truth is not { } t ? 0 : (finale?.Votes ?? []).Count(v => v.Voter == id && v.Column is { } c &&
+                rows.TryGetValue(v.Stage, out var r) && r < t.Count && t[r] == c);
+            bool FoundKiller(Guid id) => killer is { } k && (finale?.Votes ?? []).Any(v => v.Voter == id && v.Suspect == k);
+            var liars = others.Where(p => p.KnownRole?.IsKillerTeam() == true).ToList();
+            var sleuths = others.Where(p => !p.IsGhost && p.KnownRole?.IsKillerTeam() != true).ToList();
+            var options = new List<(string Code, Guid Id)>();
+            if (liars.Count > 0) options.Add(("best_liar", liars[rng.Next(liars.Count)].Id));
+            var finders = sleuths.Where(p => FoundKiller(p.Id)).ToList();
+            if (finders.Count > 0) options.Add(("sherlock", finders[rng.Next(finders.Count)].Id));
+            var best = sleuths.OrderByDescending(p => RowsRight(p.Id) + rng.NextDouble() * .5).FirstOrDefault();
+            if (best is not null && RowsRight(best.Id) > 0) options.Add(("ghost_whisperer", best.Id));
+            var players = others.Where(p => !p.IsGhost).ToList();
+            if (players.Count > 0) options.Add(("steel_balls", players[rng.Next(players.Count)].Id));
+            if (options.Count == 0) return new Nominate(null, null);
+            var (code, nominee) = options[rng.Next(options.Count)];
+            return new Nominate(code, nominee);
         }
 
         /// <summary>Голос за чужое выдвижение не себя; нечего выбрать — пропуск.</summary>
