@@ -699,7 +699,11 @@ class ActionPanel extends StatelessWidget {
     if (v.can('Nominate')) {
       widgets.addAll([
         const Divider(),
-        Text('ВЫДВИЖЕНИЕ НА АЧИВКУ', style: sectionLabel()),
+        Row(children: [
+          Expanded(child: Text('ВЫДВИЖЕНИЕ НА АЧИВКУ', style: sectionLabel())),
+          // «Пропустить» — сразу, не листая список ачивок.
+          TextButton(key: const Key('nominate-skip'), onPressed: () => screen.send('Nominate', {'code': null, 'nominee': null}), child: const Text('Пропустить')),
+        ]),
         const SizedBox(height: 4),
         const Text('Выберите ачивку, затем игрока. Одно выдвижение на игрока.', style: TextStyle(fontSize: 13, color: AppColors.muted)),
         const SizedBox(height: 8),
@@ -714,14 +718,17 @@ class ActionPanel extends StatelessWidget {
               onTap: () => _nominate(context, n.key),
             ),
           ),
-        TextButton(onPressed: () => screen.send('Nominate', {'code': null, 'nominee': null}), child: const Text('Пропустить')),
       ]);
     }
 
     if (finale != null && finale.awards.isNotEmpty) {
       widgets.addAll([
         const Divider(),
-        Text(v.phase == 'AwardVoting' ? 'ГОЛОСОВАНИЕ ЗА АЧИВКИ' : 'АЧИВКИ', style: sectionLabel()),
+        Row(children: [
+          Expanded(child: Text(v.phase == 'AwardVoting' ? 'ГОЛОСОВАНИЕ ЗА АЧИВКИ' : 'АЧИВКИ', style: sectionLabel())),
+          if (v.can('AwardVote'))
+            TextButton(key: const Key('award-skip'), onPressed: () => screen.send('AwardVote', {'entry': null}), child: const Text('Пропустить')),
+        ]),
         const SizedBox(height: 6),
         for (final a in finale.awards)
           Padding(
@@ -755,7 +762,6 @@ class ActionPanel extends StatelessWidget {
               ]),
             ),
           ),
-        if (v.can('AwardVote')) TextButton(onPressed: () => screen.send('AwardVote', {'entry': null}), child: const Text('Пропустить')),
       ]);
     }
 

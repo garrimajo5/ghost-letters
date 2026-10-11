@@ -164,7 +164,7 @@ bool isFinale(GameView v) => const {
 
 /// Что сказали о карте поля в репликах: кто проверял её своим письмом или уликой и что вышло.
 class CardEvidence {
-  const CardEvidence({required this.key, required this.authorId, required this.negative, required this.round, this.sourceCard});
+  const CardEvidence({required this.key, required this.authorId, required this.negative, required this.round, this.sourceCard, this.contradicted = false});
 
   /// «id реплики:номер карты» — чтобы можно было не согласиться с конкретной проверкой.
   final String key;
@@ -172,10 +172,13 @@ class CardEvidence {
   final bool negative;
   final int round;
   final String? sourceCard;
+
+  /// «Письмо исчезло», а эта карта потом лежит среди открытых подсказок — заявление ложное, не учитываем.
+  final bool contradicted;
 }
 
 /// Проверки карты из публичных реплик (заметки к картам: «проверял эту:0», «исключаю:1», «думаю, эта:0»…).
-List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId) => [
+List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId, {Set<String> revealed = const {}}) => [
       for (final m in chat)
         if (m.channel == 'public' && m.authorId != null && m.cardNotes.isNotEmpty)
           ...() {
@@ -191,6 +194,7 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId) => [
                       negative: theoryNote(m, i).$2,
                       round: m.round,
                       sourceCard: m.cardIds[sources[_linkOf(m, i)!]],
+                      contradicted: theoryNote(m, i).$2 && revealed.contains(m.cardIds[sources[_linkOf(m, i)!]]),
                     );
                   }(),
             ];

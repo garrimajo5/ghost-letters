@@ -535,7 +535,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
   /// Пометка карты вместе с проверками из реплик (кроме тех, с которыми я не согласен).
   CardMark? effectiveMark(String id) {
     final base = marks[id];
-    final auto = cardEvidence(chat, id).where((e) => !(base?.ignored.contains(e.key) ?? false)).toList();
+    final revealed = {for (final h in view?.hints ?? const <HintGroup>[]) ...h.cards};
+    final auto = cardEvidence(chat, id, revealed: revealed).where((e) => !e.contradicted && !(base?.ignored.contains(e.key) ?? false)).toList();
     if (auto.isEmpty) return base;
     final m = base ?? const CardMark();
     // Считаем улики и письма, а не реплики: одно исчезнувшее письмо — один ✕, одна подсказка — одна ✓,
@@ -669,7 +670,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
         child: Column(children: [
           const ConnectionBanner(),
           _Header(screen: this, deadline: snap.deadline),
-          if (!landscape) _PlayersStrip(screen: this),
+          // Раздача ролей на телефоне боком: карта роли важнее полосы игроков.
+          if (!landscape && !(v.phase == 'RoleReveal' && isCompactLandscape(context))) _PlayersStrip(screen: this),
           if (v.phase == 'RoleReveal' && v.me != null)
             Expanded(child: _RoleScreen(screen: this))
           else if (landscape)

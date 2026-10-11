@@ -757,7 +757,7 @@ class _PlayersColumn extends StatelessWidget {
         child: circles
             ? Wrap(alignment: WrapAlignment.end, spacing: 6, children: [
                 for (final p in players)
-                  SizedBox(width: 42, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false)),
+                  SizedBox(width: 50, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false)),
               ])
             : Column(children: [
                 for (final p in players) _SeatTile(screen: screen, player: p, first: first == p.id, compact: false),
@@ -786,7 +786,7 @@ class _PlayersRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         children: [
           for (final p in players)
-            SizedBox(width: 62, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true)),
+            SizedBox(width: 66, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true)),
         ],
       ),
     );
@@ -832,7 +832,8 @@ class _SeatTile extends StatelessWidget {
             nickname: screen.nick(p.id),
             color: screen.colorOf(p.id),
             photoId: screen.photoOf(p.id),
-            size: compact ? 30 : 34,
+            // Портреты крупнее: ботов и людей должно быть хорошо видно.
+            size: compact ? 38 : 44,
             ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
           ),
         ),
@@ -1116,7 +1117,7 @@ class _FanState extends State<_Fan> {
                       : selectable
                           ? () => _toggleHand(screen, items[i], limit)
                           : null,
-                  onLongPress: () => showCardZoom(context, items[i], caption: 'Карта на руке'),
+                  onLongPress: () => showHandGallery(context, hand, hand.indexOf(items[i])),
                   child: _draggable(
                     items[i],
                     card,

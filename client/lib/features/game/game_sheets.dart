@@ -67,10 +67,13 @@ class _MarkSheetState extends State<MarkSheet> {
     super.dispose();
   }
 
+  /// Доля ширины на одну карту: карта и узкий зазор — соседние видны по краям.
+  double _fraction = .62;
+
   PageController _columnsOf(int row) => _columns.putIfAbsent(row, () {
         final (r, c) = _position(cardId);
         // Страница 0 — жетон ряда, карты — с первой.
-        return PageController(initialPage: r == row ? c + 1 : 1, viewportFraction: .62);
+        return PageController(initialPage: r == row ? c + 1 : 1, viewportFraction: _fraction);
       });
 
   void _set(CardMark m) {
@@ -89,7 +92,7 @@ class _MarkSheetState extends State<MarkSheet> {
     final view = v;
     final (row, column) = _position(cardId);
     final label = view == null || view.board.isEmpty ? 'Карта' : '${T.category(view.board[row].category)}, карта ${column + 1}';
-    final evidence = cardEvidence(widget.screen.chat, cardId);
+    final evidence = cardEvidence(widget.screen.chat, cardId, revealed: {for (final h in view?.hints ?? const <HintGroup>[]) ...h.cards});
     final m = mark;
     final size = (MediaQuery.sizeOf(context).height * .26).clamp(130.0, 210.0);
     return SafeArea(
@@ -100,7 +103,9 @@ class _MarkSheetState extends State<MarkSheet> {
             SizedBox(
               key: const Key('mark-carousel'),
               height: size + 20,
-              child: PageView.builder(
+              child: LayoutBuilder(builder: (context, box) {
+                if (_columns.isEmpty) _fraction = ((size + 14) / box.maxWidth).clamp(.25, .9);
+                return PageView.builder(
                 controller: _rows,
                 scrollDirection: Axis.vertical,
                 itemCount: view.board.length,
@@ -142,7 +147,8 @@ class _MarkSheetState extends State<MarkSheet> {
                     );
                   },
                 ),
-              ),
+              );
+              }),
             )
           else
             CardImage(cardId: cardId, size: size, radius: 18),
@@ -172,7 +178,7 @@ class _MarkSheetState extends State<MarkSheet> {
                     key: Key('evidence-${e.key}'),
                     screen: widget.screen,
                     evidence: e,
-                    counted: !m.ignored.contains(e.key),
+                    counted: !e.contradicted && !m.ignored.contains(e.key),
                     onChanged: (on) => _set(m.copyWith(ignored: on ? (m.ignored.where((k) => k != e.key).toList()) : [...m.ignored, e.key])),
                   ),
               ]),
@@ -273,7 +279,7 @@ class _EvidenceRow extends StatelessWidget {
     final e = evidence;
     final mine = e.authorId == screen.view?.me?.id;
     return InkWell(
-      onTap: () => onChanged(!counted),
+      onTap: e.contradicted ? null : () => onChanged(!counted),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(children: [
@@ -292,11 +298,12 @@ class _EvidenceRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              '${mine ? 'Я' : screen.nick(e.authorId)}, р. ${e.round}: ${e.negative ? 'проверял — подсказки не было' : 'указывает сюда'}',
+              '${mine ? 'Я' : screen.nick(e.authorId)}, р. ${e.round}: ${e.negative ? 'проверял — подсказки не было' : 'указывает сюда'}'
+              '${e.contradicted ? ' — но эта карта лежит среди открытых подсказок: заявление ложное' : ''}',
               style: TextStyle(fontSize: 13, color: counted ? AppColors.text : AppColors.dim, decoration: counted ? null : TextDecoration.lineThrough),
             ),
           ),
-          Checkbox(value: counted, onChanged: (x) => onChanged(x ?? true)),
+          Checkbox(value: counted, onChanged: e.contradicted ? null : (x) => onChanged(x ?? true)),
         ]),
       ),
     );
