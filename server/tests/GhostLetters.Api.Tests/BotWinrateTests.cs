@@ -134,4 +134,23 @@ public sealed class BotWinrateTests
         text.Should().Match(t => t.Contains("Аня, согласен.") || t.Contains("Аня, тут не соглашусь."));
         BotPlayer.Say(view, new Random(3), Tags, Mind())!.Value.Text.Should().NotContain("Аня,");
     }
+
+    [Fact]
+    public void Nominations_FollowWhatHappened()
+    {
+        // Роли открыты: Аня — Убийца, Боб угадал оба ряда и указал на Аню.
+        var finale = new FinaleView(null, 3, null,
+            [new VoteRecordView(0, 1, Bob, 1, null), new VoteRecordView(1, 1, Bob, 0, null), new VoteRecordView(2, 1, Bob, null, Ann)],
+            [new VoteOutcomeView(0, VoteStageKind.Row, 0, 1, null, true, false, null), new VoteOutcomeView(1, VoteStageKind.Row, 1, 0, null, true, false, null)],
+            [], null, null, null, [], []);
+        var view = View(Role.Detective, [nameof(Nominate)], [], truth: [1, 0], phase: Phase.AwardNomination, finale: finale);
+        view = view with { Players = view.Players.Select(p => p.Id == Ann ? p with { KnownRole = Role.Killer }
+            : p.Id == Bob ? p with { KnownRole = Role.Detective } : p).ToList() };
+        var picks = Enumerable.Range(0, 200).Select(seed => (Nominate)BotPlayer.Decide(view, new Random(seed), Tags, Mind())!)
+            .Where(n => n.Code is not null).ToList();
+        picks.Should().NotBeEmpty();
+        picks.Where(n => n.Code == "best_liar").Should().OnlyContain(n => n.Nominee == Ann);
+        picks.Where(n => n.Code is "sherlock" or "ghost_whisperer").Should().OnlyContain(n => n.Nominee == Bob);
+        picks.Should().NotContain(n => n.Nominee == Ghost);
+    }
 }
