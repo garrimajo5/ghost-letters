@@ -16,7 +16,10 @@ public sealed record BotTuning
     public bool GhostPlans { get; init; } = true;
 
     /// <summary>Сколько вреда для стола рискованный Призрак готов стерпеть ради сомнительного письма (× риск²).</summary>
-    public double GhostTolerance { get; init; } = .4;
+    public double GhostTolerance { get; init; } = 0;
+
+    /// <summary>Призрак моделирует стол «средним» взглядом на карты, а не своим.</summary>
+    public bool GhostTableDefault { get; init; }
 
     /// <summary>Призрак подстраивает свою модель стола под ширину чтения игроков.</summary>
     public bool GhostBreadth { get; init; } = true;
@@ -59,6 +62,7 @@ public sealed record BotTuning
                 nameof(GhostPlans) => t with { GhostPlans = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
+                nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },

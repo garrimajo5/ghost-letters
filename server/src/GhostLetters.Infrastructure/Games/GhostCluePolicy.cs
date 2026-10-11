@@ -52,7 +52,7 @@ public static class GhostCluePolicy
         if (candidates.Count == 0) return [];
         var memo = new Dictionary<(string, string), double>();
         double Sim(string a, string b) => memo.TryGetValue((a, b), out var v) ? v
-            : memo[(a, b)] = tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
+            : memo[(a, b)] = tuning.GhostTableDefault ? tags.Similarity(a, b) : tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
         var shown = view.Hints.SelectMany(h => h.Cards).ToList();
         var all = candidates.Select(c => c.Card).ToList();
         // Как широко стол читает подсказку: строгий стол «объясняет» письмо одной картой, широкий — несколькими.
@@ -66,7 +66,7 @@ public static class GhostCluePolicy
         {
             var best = candidates.Where(c => !chosen.Contains(c.Card))
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim, focus) - current))
-                .Where(c => (c.Value.Reveal && c.Gain > cost - tuning.GhostTolerance * risk * risk) || c.Gain >= .35)
+                .Where(c => (c.Value.Reveal && c.Gain >= cost - tuning.GhostTolerance * risk * risk && c.Gain > -1e-9 - tuning.GhostTolerance * risk * risk) || c.Gain >= .35)
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (best.Card is null) break;

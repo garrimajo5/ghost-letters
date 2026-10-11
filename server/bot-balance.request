@@ -1,0 +1,2 @@
+120
+variants: терпимость 0.4: GhostTolerance=0.4 | средний взгляд: GhostTableDefault=true | письма строже: LetterBase=0.8 | фокус сильнее: FocusBase=8, FocusStrict=8 | фокус слабее: FocusBase=2, FocusStrict=4

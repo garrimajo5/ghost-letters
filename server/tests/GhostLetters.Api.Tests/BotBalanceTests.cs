@@ -166,7 +166,7 @@ public sealed class BotBalanceTests
         var commit = Environment.GetEnvironmentVariable("GITHUB_SHA") is { Length: >= 7 } sha ? sha[..7] : "локально";
         md.AppendLine("# Эксперименты с ботами").AppendLine();
         md.AppendLine($"Сборка {commit}, {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC. По {games} партий на состав, одинаковые seed для всех вариантов.").AppendLine();
-        md.AppendLine("Ячейка: победы детективов · угаданные ряды · все ряды.").AppendLine();
+        md.AppendLine("Ячейка: победы детективов · угаданные ряды · все ряды · ряды с прямой подсказкой (самое похожее на открытое письмо — истина) → точность на них / на остальных.").AppendLine();
         md.AppendLine("| Вариант | " + string.Join(" | ", configs.Select(c => c.Name)) + " |");
         md.AppendLine("|---|" + string.Concat(configs.Select(_ => "---|")));
         foreach (var (name, tuning) in variants)
@@ -174,7 +174,7 @@ public sealed class BotBalanceTests
             var cells = new List<string>();
             foreach (var config in configs)
             {
-                int det = 0, finished = 0, correct = 0, rows = 0, all = 0;
+                int det = 0, finished = 0, correct = 0, rows = 0, all = 0, covered = 0, coveredOk = 0, bareOk = 0;
                 using (BotTuning.Use(tuning))
                 {
                     for (var seed = 1; seed <= games; seed++)
@@ -186,10 +186,20 @@ public sealed class BotBalanceTests
                         correct += report.CorrectRows;
                         rows += report.TotalRows;
                         if (report.TotalRows > 0 && report.CorrectRows == report.TotalRows) all++;
+                        if (state.Truth is not { } truth) continue;
+                        var board = state.Board.SelectMany(b => b.Cards).ToList();
+                        var pointed = state.Hints.SelectMany(h => h.Cards)
+                            .Select(h => board.Where(c => c != h).MaxBy(c => tags.Similarity(h, c))).ToHashSet();
+                        for (var r = 0; r < state.Board.Count; r++)
+                        {
+                            var ok = state.VoteOutcomes.LastOrDefault(o => o.Kind == VoteStageKind.Row && o.Row == r)?.Correct == true;
+                            if (pointed.Contains(state.Board[r].Cards[truth[r]])) { covered++; if (ok) coveredOk++; }
+                            else if (ok) bareOk++;
+                        }
                     }
                 }
 
-                cells.Add($"{Pct(det, finished)} · {Pct(correct, rows)} · {Pct(all, finished)}");
+                cells.Add($"{Pct(det, finished)} · {Pct(correct, rows)} · {Pct(all, finished)} · {Pct(covered, rows)} → {Pct(coveredOk, covered)} / {Pct(bareOk, rows - covered)}");
             }
 
             md.AppendLine($"| {name} | {string.Join(" | ", cells)} |");
