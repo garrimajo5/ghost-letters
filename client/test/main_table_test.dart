@@ -218,4 +218,27 @@ void main() {
     expect(find.byKey(const Key('flying-😂')), findsNothing);
     expect(find.byKey(const Key('react-badge-u3')), findsNothing);
   });
+
+  testWidgets('чат по раундам: разделители, метки «бот» и «со стола», выбор стола без верности', (tester) async {
+    final app = await _open(tester, portrait, edit: (view) => view['finale'] = (snapshotJson()['view'] as Json)['finale']);
+
+    ChatMessage msg(String id, int round, String text, {List<String> cards = const [], List<String> notes = const []}) => ChatMessage(
+        id: id, channel: 'public', authorId: 'u3', kind: 'text', text: text, cardIds: cards, cardNotes: notes,
+        createdAt: DateTime.now(), round: round);
+    app.realtime.chatCtl
+      ..add(msg('a', 3, 'Думаю про мотив'))
+      ..add(msg('b', 4, 'Со стола: эта улика; указывает на Мотив 1.', cards: const ['orig_0100', 'orig_0001'], notes: const ['улика', 'думаю, эта:0']));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Чат'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('chat-divider-3')), findsOneWidget);
+    expect(find.byKey(const Key('chat-divider-4')), findsOneWidget);
+    expect(find.byKey(const Key('chat-bot-b')), findsOneWidget);
+    expect(find.byKey(const Key('chat-table-b')), findsOneWidget);
+    expect(find.byKey(const Key('chat-table-a')), findsNothing);
+    expect(find.byKey(const Key('chat-outcome-0')), findsOneWidget);
+    expect(find.textContaining('стол выбрал карту 3'), findsOneWidget);
+    expect(find.textContaining('верн'), findsNothing);
+  });
 }
