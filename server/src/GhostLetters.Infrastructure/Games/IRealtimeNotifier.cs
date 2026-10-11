@@ -15,6 +15,9 @@ public interface IRealtimeNotifier
 
     /// <summary>Сообщение чата: адресатам по id и, если toTable, экрану стола.</summary>
     Task ChatAsync(ChatMessageDto message, IReadOnlyList<Guid> recipients, bool toTable, CancellationToken ct);
+
+    /// <summary>Эмодзи-реакция: игрокам партии и экрану стола.</summary>
+    Task ReactionAsync(ReactionDto reaction, IReadOnlyList<Guid> recipients, CancellationToken ct);
 }
 
 /// <summary>Заглушка, когда реалтайм не подключён.</summary>
@@ -29,4 +32,6 @@ public sealed class NullRealtimeNotifier : IRealtimeNotifier
 
     public Task ChatAsync(ChatMessageDto message, IReadOnlyList<Guid> recipients, bool toTable, CancellationToken ct) =>
         Task.CompletedTask;
+
+    public Task ReactionAsync(ReactionDto reaction, IReadOnlyList<Guid> recipients, CancellationToken ct) => Task.CompletedTask;
 }

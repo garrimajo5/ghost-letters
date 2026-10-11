@@ -736,10 +736,14 @@ class GameView {
 }
 
 class RosterEntry {
-  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat, [this.avatarId]);
+  const RosterEntry(this.id, this.nickname, this.avatarColor, this.seat, [this.avatarId, this.isBot = false]);
 
   factory RosterEntry.fromJson(Json j) => RosterEntry(
-      j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt(), j['avatarId'] as String?);
+      j['id'] as String, j['nickname'] as String, j['avatarColor'] as String, (j['seat'] as num).toInt(), j['avatarId'] as String?,
+      j['isBot'] as bool? ?? false);
+
+  /// Игрок-бот: на столе помечается значком робота и подписью «бот».
+  final bool isBot;
 
   final String? avatarId;
   final String id;
@@ -1249,4 +1253,24 @@ class TableView {
   final bool pinsOnly;
 
   bool get isEmpty => threads.isEmpty && pins.isEmpty && checks.isEmpty && claims.isEmpty;
+}
+
+/// Эмодзи-реакция за столом: не хранится на сервере, просто пролетает по столу.
+class Reaction {
+  const Reaction({required this.gameId, required this.userId, required this.emoji, required this.at});
+
+  factory Reaction.fromJson(Json j) => Reaction(
+        gameId: j['gameId'] as String,
+        userId: j['userId'] as String,
+        emoji: j['emoji'] as String,
+        at: DateTime.tryParse(j['at'] as String? ?? '') ?? DateTime.now(),
+      );
+
+  /// Тот же набор, что принимает сервер.
+  static const allowed = ['👍', '👎', '😂', '😮', '🤔', '👻', '🔥', '❤️', '😱', '🙈'];
+
+  final String gameId;
+  final String userId;
+  final String emoji;
+  final DateTime at;
 }
