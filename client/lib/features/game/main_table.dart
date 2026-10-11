@@ -1136,7 +1136,7 @@ class _SayStrip extends StatelessWidget {
             child: GestureDetector(
               onTap: typing?.complete,
               child: Text(
-                typing?.current?.id == m.id ? typing!.text : _Typing.fullText(screen, m),
+                typing?.current?.id == m.id ? _Typing.tail(screen, m, typing!.text) : _Typing.fullText(screen, m),
                 key: const Key('say-statement'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -1251,6 +1251,15 @@ class _Typing extends ChangeNotifier {
   bool isRevealed(int index) => revealed.contains(index);
 
   static String prefixOf(GameScreenState screen, ChatMessage m) => '${screen.nick(m.authorId)}: ';
+
+  /// В строке две строки текста: пока реплика печатается, видна строка, которую пишут сейчас (с именем),
+  /// а не застывшее начало длинного объяснения.
+  static String tail(GameScreenState screen, ChatMessage m, String typed) {
+    final lines = typed.split('\n');
+    if (lines.length < 2) return typed;
+    final last = lines.last.isEmpty ? lines[lines.length - 2] : lines.last;
+    return prefixOf(screen, m) + last;
+  }
 
   static String fullText(GameScreenState screen, ChatMessage m) =>
       prefixOf(screen, m) + (m.text ?? '').replaceFirst(tablePostPrefix, '');
