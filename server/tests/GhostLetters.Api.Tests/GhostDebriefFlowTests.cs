@@ -71,7 +71,8 @@ public sealed class GhostDebriefFlowTests(PostgresFixture postgres) : IAsyncLife
     [Fact]
     public async Task SavedBluffCanBePublished_WithoutReadingOtherPlayersPrivateClaims()
     {
-        var game = await GameHarness.StartAsync(_factory, 4, new LobbySettings { Rounds = 1 });
+        // Свободный чат: писать может любой (в рации последний раунд сначала идёт по кругу).
+        var game = await GameHarness.StartAsync(_factory, 4, new LobbySettings { Rounds = 1, Discussion = DiscussionMode.FreeChat });
         await new GameDriver(game).RunUntilAsync(p => p == "Discussion");
         var player = await game.WithRoleAsync("Detective");
         var other = await game.WithRoleAsync("Killer");
