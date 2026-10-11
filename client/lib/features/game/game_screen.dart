@@ -20,6 +20,7 @@ import '../../widgets/common.dart';
 import '../../widgets/connection_banner.dart';
 import '../lobby/settings_sheet.dart';
 import 'action_panel.dart';
+import 'chat_card_text.dart';
 import 'game_sheets.dart';
 import 'game_state.dart';
 import 'game_audio.dart';

@@ -447,9 +447,12 @@ class _TableArea extends StatelessWidget {
       final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6) - labels) / (columns + hintCards * 0.8);
       final stage = v.finale?.currentStage;
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
-      final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
+      // Вертикально под полем много места: там идёт разговор — пузырями, как в мессенджере.
+      final dialog = !landscape && staircase && const {'Discussion', 'Voting', 'VoteTie'}.contains(v.phase);
+      final stripHeight = voting || say.active || (!dialog && _current != null) || _canSay(v) ? _SayStrip.height : 0.0;
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
-      final byHeight = box.maxHeight.isFinite ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
+      final usable = dialog ? box.maxHeight * .66 : box.maxHeight;
+      final byHeight = box.maxHeight.isFinite ? (usable - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
@@ -457,7 +460,7 @@ class _TableArea extends StatelessWidget {
       final hintsWidth = staircase ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
-      final strip = voting || say.active || statement != null || _canSay(v);
+      final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
@@ -517,6 +520,14 @@ class _TableArea extends StatelessWidget {
           ),
         ]),
       );
+      if (dialog) {
+        return Column(children: [
+          if (strip)
+            if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: null, typing: typing),
+          Flexible(child: board),
+          Expanded(child: _Dialog(screen: screen, typing: typing)),
+        ]);
+      }
       if (!strip) return board;
       return Column(children: [
         if (voting) _VoteStrip(screen: screen, stage: stage) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
@@ -1271,6 +1282,84 @@ class _VoteStrip extends StatelessWidget {
 /// Реплики за столом в человеческом темпе, как в визуальной новелле: печатаются по буквам со звуком,
 /// карты подсвечиваются в тот момент, когда реплика до них доходит («Мотив 2»), остальные — по одной
 /// после текста. Пришло несколько реплик подряд — идут по очереди, с паузой на чтение.
+/// Разговор раунда под полем: чужие реплики слева с аватаром, свои — справа, как в мессенджере.
+/// Реплику, которую ещё «печатают», видно по буквам; ждущие в очереди появятся, когда до них дойдёт.
+class _Dialog extends StatelessWidget {
+  const _Dialog({required this.screen, this.typing});
+
+  final GameScreenState screen;
+  final _Typing? typing;
+
+  @override
+  Widget build(BuildContext context) {
+    final typing = this.typing;
+    if (typing == null) return const SizedBox.shrink();
+    return ListenableBuilder(
+      listenable: typing,
+      builder: (context, _) {
+        final v = screen.view!;
+        final queued = typing.queuedIds;
+        final lines = [
+          for (final m in screen.chat)
+            if (m.channel == 'public' && m.authorId != null && m.round == v.round && !queued.contains(m.id) &&
+                (m.cardIds.isNotEmpty || (m.text ?? '').trim().isNotEmpty || m.kind != 'text'))
+              m,
+        ];
+        if (lines.isEmpty) return const SizedBox.shrink();
+        return ListView.builder(
+          key: const Key('main-dialog'),
+          reverse: true,
+          padding: const EdgeInsets.fromLTRB(10, 4, 10, 6),
+          itemCount: lines.length,
+          itemBuilder: (context, i) => _bubble(context, lines[lines.length - 1 - i], typing),
+        );
+      },
+    );
+  }
+
+  Widget _bubble(BuildContext context, ChatMessage m, _Typing typing) {
+    final v = screen.view!;
+    final mine = m.authorId == v.me?.id;
+    final typed = typing.current?.id == m.id && typing.busy;
+    final text = (m.text ?? '').replaceFirst(tablePostPrefix, '');
+    final Widget body = typed
+        ? Text(typing.text.startsWith(_Typing.prefixOf(screen, m)) ? typing.text.substring(_Typing.prefixOf(screen, m).length) : typing.text,
+            style: const TextStyle(fontSize: 13))
+        : m.kind != 'text' && text.isEmpty
+            ? const Text('🎤 голосовое', style: TextStyle(fontSize: 13))
+            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints), keyPrefix: 'dialog-inline');
+    final bubble = Container(
+      key: Key('dialog-${m.id}'),
+      constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
+      padding: const EdgeInsets.fromLTRB(10, 6, 10, 7),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      decoration: BoxDecoration(
+        color: mine ? AppColors.amber.withValues(alpha: .16) : AppColors.surface2,
+        border: Border.all(color: mine ? AppColors.amber.withValues(alpha: .4) : AppColors.border),
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(12),
+          topRight: const Radius.circular(12),
+          bottomLeft: Radius.circular(mine ? 12 : 3),
+          bottomRight: Radius.circular(mine ? 3 : 12),
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        if (!mine)
+          Text(screen.nick(m.authorId), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: colorFromHex(screen.colorOf(m.authorId)))),
+        body,
+      ]),
+    );
+    final avatar = Avatar(nickname: screen.nick(m.authorId), color: screen.colorOf(m.authorId), photoId: screen.photoOf(m.authorId), size: 26);
+    return Row(
+      mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: mine
+          ? [Flexible(child: bubble)]
+          : [avatar, const SizedBox(width: 6), Flexible(child: bubble)],
+    );
+  }
+}
+
 class _Typing extends ChangeNotifier {
   _Typing(this.screen);
 
@@ -1289,6 +1378,9 @@ class _Typing extends ChangeNotifier {
   bool _disposed = false;
 
   bool get busy => _timer != null;
+
+  /// Реплики, до которых очередь ещё не дошла: в разговоре их пока не видно.
+  Set<String> get queuedIds => {for (final m in _queue) m.id};
 
   /// Перед репликой — «печатает…», как в мессенджере: человек не выдаёт абзац мгновенно.
   String get text => _pause > 0 && current != null
