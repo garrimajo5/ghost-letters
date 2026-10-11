@@ -312,13 +312,19 @@ class _PlayersColumn extends StatelessWidget {
     final players = [...v.players]..sort((a, b) => a.seat.compareTo(b.seat));
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
-      final compact = box.maxHeight / (players.isEmpty ? 1 : players.length) < 40;
-      return ListView(
+      // Строка игрока ~46 dp; не помещаются все — сжимаем до кружков у края, по несколько в ряд.
+      final circles = (box.maxHeight - 8) / (players.isEmpty ? 1 : players.length) < 46;
+      return SingleChildScrollView(
         key: const Key('main-players'),
         padding: const EdgeInsets.fromLTRB(4, 4, 6, 4),
-        children: [
-          for (final p in players) _SeatTile(screen: screen, player: p, first: first == p.id, compact: compact),
-        ],
+        child: circles
+            ? Wrap(alignment: WrapAlignment.end, spacing: 6, children: [
+                for (final p in players)
+                  SizedBox(width: 42, child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: false)),
+              ])
+            : Column(children: [
+                for (final p in players) _SeatTile(screen: screen, player: p, first: first == p.id, compact: false),
+              ]),
       );
     });
   }
@@ -351,12 +357,15 @@ class _PlayersRow extends StatelessWidget {
 }
 
 class _SeatTile extends StatelessWidget {
-  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact});
+  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact, this.names = true});
 
   final GameScreenState screen;
   final PlayerInfo player;
   final bool first;
   final bool compact;
+
+  /// Кружок без подписи — когда игроки не помещаются (имя — во всплывающей подсказке).
+  final bool names;
 
   @override
   Widget build(BuildContext context) {
@@ -423,11 +432,13 @@ class _SeatTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: compact
-              ? Column(mainAxisSize: MainAxisSize.min, children: [
-                  avatar,
-                  const SizedBox(height: 2),
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle.copyWith(fontSize: 10)),
-                ])
+              ? names
+                  ? Column(mainAxisSize: MainAxisSize.min, children: [
+                      avatar,
+                      const SizedBox(height: 2),
+                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle.copyWith(fontSize: 10)),
+                    ])
+                  : Tooltip(message: name, child: avatar)
               : Row(children: [
                   avatar,
                   const SizedBox(width: 8),
@@ -470,14 +481,7 @@ class _Actions extends StatelessWidget {
             ),
           )
         : GestureDetector(onTap: onStatus, child: _StatusBar(text: actionHint(v), mine: needsMe(v), pulse: screen.turnPulse));
-    if (row) {
-      return Row(children: [Expanded(child: main), const SizedBox(width: 10), _ChatButton(screen: screen)]);
-    }
-    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      main,
-      const SizedBox(height: 6),
-      Align(alignment: Alignment.centerRight, child: _ChatButton(screen: screen)),
-    ]);
+    return Row(children: [Expanded(child: main), SizedBox(width: row ? 10 : 6), _ChatButton(screen: screen)]);
   }
 }
 
