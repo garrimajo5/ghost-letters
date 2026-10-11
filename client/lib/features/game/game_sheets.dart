@@ -833,7 +833,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           if (m.isVoice)
                             _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
                           else if ((m.text ?? '').isNotEmpty)
-                            ChatCardText(message: m, parts: inlineParts),
+                            ChatCardText(message: m, parts: inlineParts, mentions: screen.mentions),
                           if (m.cardIds.any((id) => !inlineCards.contains(id)))
                             Padding(
                               padding: const EdgeInsets.only(top: 6),

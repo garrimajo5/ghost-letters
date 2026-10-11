@@ -518,13 +518,31 @@ class GameScreenState extends ConsumerState<GameScreen> {
     if (mounted) setState(() {});
   }
 
+  /// Имена игроков для подсветки упоминаний в репликах: «Бот Ватсон» и «Ватсон»; моё имя — особым цветом.
+  Map<String, Color> get mentions {
+    final v = view;
+    if (v == null) return const {};
+    final out = <String, Color>{};
+    for (final p in v.players) {
+      final nick = this.nick(p.id);
+      final color = p.id == v.me?.id ? ChatCardText.mentionMe : colorFromHex(colorOf(p.id));
+      out[nick] = color;
+      if (nick.startsWith('Бот ')) out[nick.substring(4)] = color;
+    }
+    return out;
+  }
+
   /// Пометка карты вместе с проверками из реплик (кроме тех, с которыми я не согласен).
   CardMark? effectiveMark(String id) {
     final base = marks[id];
     final auto = cardEvidence(chat, id).where((e) => !(base?.ignored.contains(e.key) ?? false)).toList();
     if (auto.isEmpty) return base;
     final m = base ?? const CardMark();
-    return m.copyWith(crosses: m.crosses + auto.where((e) => e.negative).length, checks: m.checks + auto.where((e) => !e.negative).length);
+    // Считаем улики и письма, а не реплики: одно исчезнувшее письмо — один ✕, одна подсказка — одна ✓,
+    // сколько бы раз и кто бы о них ни говорил.
+    final crosses = {for (final e in auto) if (e.negative) e.sourceCard}.length;
+    final checks = {for (final e in auto) if (!e.negative) e.sourceCard}.length;
+    return m.copyWith(crosses: m.crosses + crosses, checks: m.checks + checks);
   }
 
   Future<void> setClassicTable(bool value) async {
