@@ -126,6 +126,12 @@ void main() {
     expect(find.byKey(const Key('main-panel')), findsNothing);
     expect(find.byKey(const Key('vote-strip')), findsOneWidget);
     expect(find.byKey(const Key('focus-row-1')), findsOneWidget);
+    // Прошлый ряд приглушён, кроме карты, которую выбрал стол.
+    bool dimmed(String key) => find.ancestor(of: find.byKey(Key(key)), matching: find.byType(Opacity)).evaluate()
+        .any((e) => (e.widget as Opacity).opacity < 1);
+    expect(dimmed('board-0-1'), isTrue);
+    expect(dimmed('board-0-2'), isFalse);
+    expect(dimmed('board-1-3'), isFalse);
     await tester.tap(find.byKey(const Key('board-1-3')));
     await tester.pump();
     final state = tester.state<GameScreenState>(find.byType(GameScreen));

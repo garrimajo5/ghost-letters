@@ -1073,7 +1073,7 @@ class _Board extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: gap),
             child: Row(children: [
               if (vertical)
-                SizedBox(
+                _dimOutside(r, false, SizedBox(
                   width: label,
                   height: size,
                   child: RotatedBox(
@@ -1091,7 +1091,7 @@ class _Board extends StatelessWidget {
                       ),
                     ),
                   ),
-                )
+                ))
               else
               SizedBox(
                 width: label,
@@ -1124,7 +1124,7 @@ class _Board extends StatelessWidget {
                             HapticFeedback.selectionClick();
                             screen.saveMark(id, m.copyWith(believed: !m.believed));
                           },
-                    child: _decorate(v.board[r].cards[c], BoardCard(
+                    child: _dimOutside(r, outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c), _decorate(v.board[r].cards[c], BoardCard(
                       cardId: v.board[r].cards[c],
                       size: size,
                       mark: screen.marks[v.board[r].cards[c]],
@@ -1137,7 +1137,7 @@ class _Board extends StatelessWidget {
                       voted: outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c),
                       dimmed: stage != null && stage.isRow && stage.row == r && !stage.candidateColumns.contains(c),
                       active: stage != null && stage.isRow && stage.row == r && stage.candidateColumns.contains(c),
-                    )),
+                    ))),
                   ),
                 ),
             ]),
@@ -1146,10 +1146,17 @@ class _Board extends StatelessWidget {
     });
   }
 
+  /// Голосуем по ряду: остальные ряды приглушены, но выбранная столом карта прошлых рядов остаётся яркой —
+  /// видно, на чём стол уже сошёлся.
+  Widget _dimOutside(int row, bool voted, Widget child) {
+    final f = focusRow;
+    if (f == null || row == f || voted) return child;
+    return Opacity(opacity: .4, child: child);
+  }
+
   Widget _focus(int row, Widget child) {
     final f = focusRow;
-    if (f == null) return child;
-    if (row != f) return Opacity(opacity: .4, child: child);
+    if (f == null || row != f) return child;
     return Container(
       key: Key('focus-row-$row'),
       decoration: BoxDecoration(
