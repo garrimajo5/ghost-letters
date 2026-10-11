@@ -418,6 +418,20 @@ void main() {
     expect(find.text('Показать на столе'), findsOneWidget);
   });
 
+  testWidgets('две улики показа — два цвета; карта, на которую указывают обе, в составной рамке', (tester) async {
+    final app = await _open(tester, phone);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'l1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Со стола: улики указывают на Мотив 1 и Мотив 2.',
+        cardIds: const ['orig_0100', 'orig_0200', 'orig_0002', 'orig_0002'],
+        cardNotes: const ['улика', 'кидал эту', 'думаю, эта:0', 'думаю, эта:1'],
+        createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.byKey(const Key('hint-link-orig_0100')), findsOneWidget);
+    final both = find.byKey(const Key('say-mark-orig_0002'));
+    expect(find.descendant(of: both, matching: find.byWidgetPredicate((w) => w is CustomPaint && w.foregroundPainter != null)), findsWidgets);
+  });
+
   testWidgets('вертикально разговор идёт под полем: чужие слева, свои справа', (tester) async {
     final app = await _open(tester, const Size(390, 844));
     app.realtime.chatCtl
