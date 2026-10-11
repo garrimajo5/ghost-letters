@@ -96,7 +96,7 @@ void main() {
     }
   }
 
-  testWidgets('ряды сверху вниз как в партии; подсказки на высоте своих рядов', (tester) async {
+  testWidgets('ряды сверху вниз как в партии; подсказки столбиком слева', (tester) async {
     await _open(tester, phone);
 
     double y(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
@@ -104,10 +104,8 @@ void main() {
     expect(y('row-label-0'), lessThan(y('row-label-1')));
     expect(y('row-label-1'), lessThan(y('row-label-2')));
     expect(y('row-label-2'), lessThan(y('row-label-3')));
-    // Первая зацепка — на высоте первого ряда.
-    final hint = tester.getCenter(find.byKey(const Key('hint-orig_0100'))).dy;
-    expect(hint, greaterThan(y('board-0-0')));
-    expect(hint, lessThan(tester.getBottomLeft(find.byKey(const Key('board-0-0'))).dy + 6));
+    // Подсказки — столбиком вплотную слева от поля (они ко всему столу, не к рядам).
+    expect(tester.getTopRight(find.byKey(const Key('hint-orig_0100'))).dx, lessThan(tester.getTopLeft(find.byKey(const Key('board-0-0'))).dx));
     // Игроки справа от поля.
     expect(tester.getTopLeft(find.byKey(const Key('main-players'))).dx,
         greaterThan(tester.getTopRight(find.byKey(const Key('board-0-4'))).dx));

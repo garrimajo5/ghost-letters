@@ -55,8 +55,9 @@ class _MainTableState extends State<_MainTable> {
     super.dispose();
   }
 
-  static bool _panelPhase(GameView v) =>
-      v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+  // Охота на Свидетеля видна всем: панель показывает, кого ищет команда Убийцы.
+  static bool _panelPhase(GameView v) => v.can('RevealHints') ||
+      const {'VoteTie', 'Hunt', 'BlackmailerHunt', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
 
   bool _panelOpen(GameView v) => _panel ?? _panelPhase(v);
 
@@ -377,7 +378,7 @@ class _TableArea extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
-      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.85);
+      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.8);
       final stage = v.finale?.currentStage;
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
@@ -385,7 +386,7 @@ class _TableArea extends StatelessWidget {
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
-      final hint = (card * 0.85).floorToDouble();
+      final hint = (card * 0.8).floorToDouble();
       final hintsWidth = staircase ? hintCards * (hint + 3) + 6 : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
@@ -397,10 +398,11 @@ class _TableArea extends StatelessWidget {
           if (staircase) SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              for (var i = 0; i < v.hints.length || i < order.length; i++)
-                SizedBox(
-                  height: card + gap,
-                  child: i < v.hints.length ? _HintStep(screen: screen, say: say, hint: v.hints[i], size: hint) : null,
+              // Подсказки раунда относятся ко всему столу, а не к ряду: столбик вплотную, без сетки поля.
+              for (final group in v.hints)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint)),
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -419,6 +421,7 @@ class _TableArea extends StatelessWidget {
               order: order,
               vertical: true,
               focusRow: voting ? stage!.row : null,
+              reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
                 final color = _mark(id, statement);
                 Widget out = color == null
@@ -722,7 +725,22 @@ class _Actions extends StatelessWidget {
             ),
           )
         : GestureDetector(onTap: onStatus, child: _StatusBar(text: actionHint(v), mine: needsMe(v), pulse: screen.turnPulse));
-    return Row(children: [Expanded(child: main), SizedBox(width: row ? 10 : 6), _ChatButton(screen: screen)]);
+    // После результата можно сразу выйти: награды и разбор Призрака не держат за столом.
+    final over = const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
+    return Row(children: [
+      if (over) ...[
+        IconButton.filledTonal(
+          key: const Key('main-home'),
+          tooltip: 'В главное меню',
+          onPressed: () => context.go('/'),
+          icon: const Icon(Icons.home_outlined),
+        ),
+        const SizedBox(width: 6),
+      ],
+      Expanded(child: main),
+      SizedBox(width: row ? 10 : 6),
+      _ChatButton(screen: screen),
+    ]);
   }
 }
 

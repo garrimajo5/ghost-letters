@@ -1000,7 +1000,10 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false, this.focusRow});
+  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false, this.focusRow, this.reveal = false});
+
+  /// Итоги: истина показана отдельно (золотая рамка и «истина»), своя версия — значком, а не рамкой.
+  final bool reveal;
 
   /// Голосование по ряду на новом столе: этот ряд подсвечен, остальные приглушены.
   final int? focusRow;
@@ -1125,6 +1128,7 @@ class _Board extends StatelessWidget {
                       mark: screen.marks[v.board[r].cards[c]],
                       isTruth: v.truth != null && v.truth!.length > r && v.truth![r] == c,
                       thumbs: thumbs(r, c),
+                      reveal: reveal,
                       chosen: (!suggesting && screen.truth[r] == c) ||
                           (stage != null && stage.isRow && stage.row == r && (screen.voteColumn ?? v.finale?.myVoteColumn) == c),
                       chosenColor: killerNight ? AppColors.redBright : AppColors.amber,
@@ -1171,7 +1175,11 @@ class BoardCard extends StatelessWidget {
     this.dimmed = false,
     this.active = false,
     this.thumbs = const [],
+    this.reveal = false,
   });
+
+  /// Итоги партии: истина — золотой рамкой с подписью, своя версия («считаю истинной») — значком.
+  final bool reveal;
 
   /// Кто из команды Убийцы советует эту карту ночью (значок «большой палец»).
   final List<String> thumbs;
@@ -1190,7 +1198,9 @@ class BoardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = mark;
     final believed = m?.believed == true;
-    final (Color borderColor, double borderWidth) = chosen
+    final (Color borderColor, double borderWidth) = reveal
+        ? (isTruth ? (AppColors.amberLight, 4) : (AppColors.border, 1))
+        : chosen
         ? (chosenColor, 3)
         : believed
             ? (AppColors.believed, 3)
@@ -1210,7 +1220,9 @@ class BoardCard extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
-          boxShadow: chosen || believed
+          boxShadow: reveal
+              ? (isTruth ? [BoxShadow(color: AppColors.amber.withValues(alpha: 0.55), blurRadius: 14, spreadRadius: 2)] : null)
+              : chosen || believed
               ? [BoxShadow(color: (chosen ? chosenColor : AppColors.believed).withValues(alpha: 0.35), blurRadius: 0, spreadRadius: 2)]
               : null,
         ),
@@ -1237,6 +1249,33 @@ class BoardCard extends StatelessWidget {
                   Icon(Icons.thumb_up, size: size * 0.2, color: AppColors.onAmber),
                   if (thumbs.length > 1) Text(' ${thumbs.length}', style: TextStyle(fontSize: size * 0.16, color: AppColors.onAmber, fontWeight: FontWeight.w700)),
                 ]),
+              ),
+            ),
+          if (reveal && isTruth)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                key: Key('truth-$cardId'),
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.amber,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
+                ),
+                alignment: Alignment.center,
+                child: Text('ИСТИНА', style: TextStyle(fontSize: (size * 0.11).clamp(8.0, 14.0), color: AppColors.onAmber, fontWeight: FontWeight.w700, letterSpacing: 1)),
+              ),
+            ),
+          if (reveal && believed)
+            Positioned(
+              left: 2,
+              top: 2,
+              child: Container(
+                key: Key('mine-$cardId'),
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(color: AppColors.believed, shape: BoxShape.circle),
+                child: Icon(Icons.person, size: size * 0.16, color: AppColors.bg),
               ),
             ),
           if (voted)
