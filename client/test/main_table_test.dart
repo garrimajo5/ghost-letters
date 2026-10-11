@@ -77,7 +77,7 @@ void main() {
   const phone = Size(800, 360);
   const portrait = Size(390, 844);
 
-  for (final size in const [phone, portrait, Size(1280, 800)]) {
+  for (final size in const [phone, portrait, Size(1280, 800), Size(1600, 900)]) {
     for (final (phase, allowed) in const [
       ('Discussion', ['RaiseHand']),
       ('Mailbox', ['SendLetter']),
@@ -240,7 +240,7 @@ void main() {
         round: 4));
     await tester.pumpAndSettle();
     // Реплика печатается по буквам — даём ей допечататься.
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 6));
 
     expect(find.byKey(const Key('say-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
@@ -400,7 +400,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     final partial = tester.widget<Text>(find.byKey(const Key('say-statement'))).data!;
     expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 6));
     expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
   });
 
@@ -413,7 +413,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('say-mark-orig_0001')), findsNothing, reason: 'до карты реплика ещё не дошла');
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 7));
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
   });
 

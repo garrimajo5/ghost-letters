@@ -1222,12 +1222,17 @@ class _Typing extends ChangeNotifier {
   final _queue = <ChatMessage>[];
   final _seen = <String>{};
   Timer? _timer;
-  int _cue = 0, _hold = 0;
+  int _cue = 0, _hold = 0, _pause = 0;
   bool _disposed = false;
 
   bool get busy => _timer != null;
 
-  String get text => _letters.take(shown).join();
+  /// Перед репликой — «печатает…», как в мессенджере: человек не выдаёт абзац мгновенно.
+  String get text => _pause > 0 && current != null
+      ? '${prefixOf(screen, current!)}печатает${'.' * (1 + (_pause ~/ 6) % 3)}'
+      : _letters.take(shown).join();
+
+  bool get thinking => _pause > 0;
 
   bool isRevealed(int index) => revealed.contains(index);
 
@@ -1297,6 +1302,8 @@ class _Typing extends ChangeNotifier {
     shown = prefixOf(screen, m).characters.length.clamp(0, _letters.length);
     _cue = 0;
     _hold = 0;
+    // Пауза «печатает…» — от длины реплики: 0,6–2 с.
+    _pause = (15 + _letters.length ~/ 12).clamp(15, 50);
     _timer = Timer.periodic(tick, (_) => _step());
     _notify();
   }
@@ -1304,6 +1311,11 @@ class _Typing extends ChangeNotifier {
   void _step() {
     final m = current;
     if (m == null || _disposed) return;
+    if (_pause > 0) {
+      _pause--;
+      if (_pause % 6 == 0) _notify();
+      return;
+    }
     if (shown < _letters.length) {
       shown++;
       if (shown % 5 == 0 && _letters[shown - 1].trim().isNotEmpty) screen.ref.read(soundProvider).play(Sfx.typing);
@@ -1333,6 +1345,7 @@ class _Typing extends ChangeNotifier {
 
   /// Новая фаза: прежняя реплика больше не «текущая» (без уведомления — вызывается при сборке).
   void reset() {
+    _pause = 0;
     _timer?.cancel();
     _timer = null;
     _queue.clear();
@@ -1343,6 +1356,7 @@ class _Typing extends ChangeNotifier {
   void complete() {
     final m = current;
     if (m == null) return;
+    _pause = 0;
     shown = _letters.length;
     revealed.addAll(List.generate(m.cardIds.length, (i) => i));
     _hold = 0;

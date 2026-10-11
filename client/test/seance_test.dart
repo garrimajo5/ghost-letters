@@ -76,7 +76,7 @@ void main() {
   const portrait = Size(390, 844);
   const phone = Size(800, 360);
 
-  for (final size in const [portrait, phone]) {
+  for (final size in const [portrait, phone, Size(1440, 900)]) {
     testWidgets('сеанс ${size.width.toInt()}×${size.height.toInt()}: круг, сектора со свечами, поле и веер', (tester) async {
       await _open(tester, size);
 
@@ -116,7 +116,7 @@ void main() {
         cardIds: const ['orig_0100', 'orig_0001'], cardNotes: const ['улика', 'думаю, эта:0'], createdAt: DateTime.now(), round: 4));
     await tester.pump();
     // Реплика печатается в человеческом темпе — карты подсвечиваются, когда она до них доходит.
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const Duration(seconds: 7));
     expect(find.byKey(const Key('seance-shown-orig_0100')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
     await _shot(tester, 'statement');
