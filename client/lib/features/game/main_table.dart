@@ -442,9 +442,12 @@ class _TableArea extends StatelessWidget {
     final hintCards = staircase ? v.hints.fold<int>(1, (m, h) => h.cards.length > m ? h.cards.length : m).clamp(1, 2) : 0;
     return LayoutBuilder(builder: (context, box) {
       const gap = _Board.gap;
-      // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
-      final labels = staircase ? _HintStep.labelWidth : 0.0;
-      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6) - labels) / (columns + hintCards * 0.8);
+      // Вертикально улики Призрака — полосой под полем (ниже — разговор), сбоку — столбиком слева.
+      final below = !landscape && staircase;
+      final side = below ? 0 : hintCards;
+      // Ширина: подсказки сбоку (до двух карт по 0.8) + подпись + столбцы поля.
+      final labels = staircase && !below ? _HintStep.labelWidth : 0.0;
+      final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (side * 3 + 6) - labels) / (columns + side * 0.8);
       final stage = v.finale?.currentStage;
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       // Вертикально под полем много места: там идёт разговор — пузырями, как в мессенджере.
@@ -453,20 +456,21 @@ class _TableArea extends StatelessWidget {
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
       // С разговором поле берёт две трети высоты под строкой, разговор — треть (см. flex ниже).
       final usable = dialog ? (box.maxHeight - stripHeight) * 2 / 3 : box.maxHeight - stripHeight;
-      final byHeight = box.maxHeight.isFinite ? (usable - 12) / rows - gap : double.infinity;
+      final byHeight = box.maxHeight.isFinite ? (usable - 12 - (below ? 10 : 0)) / (rows + (below ? 0.75 : 0)) - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
-      final hint = (card * 0.8).floorToDouble();
-      final hintsWidth = staircase ? hintCards * (hint + 3) + 6 + labels : 0.0;
+      final hint = (card * (below ? 0.75 : 0.8)).floorToDouble();
+      final hintsWidth = staircase && !below ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (staircase) SizedBox(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (staircase && !below) SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               // Подсказки раунда относятся ко всему столу, а не к ряду: столбик вплотную, без сетки поля.
@@ -517,6 +521,31 @@ class _TableArea extends StatelessWidget {
                 return out;
               },
             ),
+            ),
+          ),
+        ]),
+        if (below && v.hints.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: SingleChildScrollView(
+              key: const Key('main-hints-below'),
+              scrollDirection: Axis.horizontal,
+              child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                for (final group in v.hints)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: SizedBox(
+                      height: hint,
+                      width: _HintStep.labelWidth + (group.cards.isEmpty ? 1 : group.cards.length) * (hint + 3) + 4,
+                      child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _links(id, statement)),
+                    ),
+                  ),
+                if (v.vanishedCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 2),
+                    child: Text('исчезло ×${v.vanishedCount}', key: const Key('main-vanished'), style: const TextStyle(fontSize: 10, color: AppColors.dim)),
+                  ),
+              ]),
             ),
           ),
         ]),

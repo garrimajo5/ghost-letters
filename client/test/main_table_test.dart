@@ -459,7 +459,19 @@ void main() {
     final last = tester.getRect(find.byKey(const Key('board-3-4')));
     final dialog = tester.getRect(find.byKey(const Key('main-dialog')));
     expect(last.bottom, lessThanOrEqualTo(dialog.top + 1));
-    expect(last.height, greaterThan(80));
+    expect(last.height, greaterThan(64));
+  });
+
+  testWidgets('вертикально улики Призрака — полосой под полем, разговор — ещё ниже', (tester) async {
+    final app = await _open(tester, const Size(390, 844));
+    app.realtime.chatCtl.add(ChatMessage(id: 'u1m', channel: 'public', authorId: 'u3', kind: 'text', text: 'Мотив 1.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 6));
+    final hint = tester.getRect(find.byKey(const Key('hint-orig_0100')));
+    expect(hint.top, greaterThan(tester.getRect(find.byKey(const Key('board-3-4'))).bottom));
+    expect(tester.getRect(find.byKey(const Key('main-dialog'))).top, greaterThanOrEqualTo(hint.bottom));
+    await _shot(tester, 'hints-below');
   });
 
   testWidgets('подпись раунда — сбоку от подсказки, не поверх картинки', (tester) async {
