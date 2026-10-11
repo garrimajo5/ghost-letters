@@ -145,22 +145,24 @@ class _MainTableState extends State<_MainTable> {
             if (seance)
               Expanded(child: dropCenter)
             else if (landscape)
+              // Веер и кнопки лежат поверх стола: под картами виден стол, а не отдельная полоса (стол листается).
               Expanded(
-                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Expanded(child: dropCenter),
-                  // Справа — игроки; кнопка хода и чат опустились к вееру (эмодзи теперь — карта в руке).
-                  SizedBox(
-                    width: (size.width * 0.24).clamp(150.0, 260.0),
-                    child: _PlayersColumn(screen: screen),
+                child: Stack(children: [
+                  Positioned.fill(
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Expanded(child: dropCenter),
+                      // Справа — игроки; кнопка хода и чат — внизу у веера (эмодзи теперь — карта в руке).
+                      SizedBox(
+                        width: (size.width * 0.24).clamp(150.0, 260.0),
+                        child: Padding(padding: EdgeInsets.only(bottom: fanHeight * .7), child: _PlayersColumn(screen: screen)),
+                      ),
+                    ]),
                   ),
-                ]),
-              )
-            else ...[
-              _PlayersRow(screen: screen),
-              Expanded(child: dropCenter),
-            ],
-            if (landscape && !seance)
-              // В итогах карт на руке нет (только эмодзи) — веер узкий, а строке хода с длинной подписью — вся ширина.
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: // В итогах карт на руке нет (только эмодзи) — веер узкий, а строке хода с длинной подписью — вся ширина.
               Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 if (isFinale(v))
                   SizedBox(
@@ -202,8 +204,15 @@ class _MainTableState extends State<_MainTable> {
                     child: _Actions(screen: screen, onStatus: () => setState(() => _panel = true)),
                   ),
                 ),
-              ])
-            else if (hand)
+              ]),
+                  ),
+                ]),
+              )
+            else ...[
+              _PlayersRow(screen: screen),
+              Expanded(child: dropCenter),
+            ],
+            if (hand && (!landscape || seance))
               _Fan(
                 screen: screen,
                 say: _say,
@@ -519,7 +528,9 @@ class _TableArea extends StatelessWidget {
       final stripHeight = voting || say.active || (!dialog && _current != null) || _canSay(v) ? _SayStrip.height : 0.0;
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
       // С разговором поле берёт две трети высоты под строкой, разговор — треть (см. flex ниже).
-      final usable = dialog ? (box.maxHeight - stripHeight) * 2 / 3 : box.maxHeight - stripHeight;
+      // Боком веер лежит поверх нижнего края стола: поле считаем без этой полосы (кроме сеанса — там веер отдельно).
+      final fanOver = landscape && staircase ? (MediaQuery.sizeOf(context).height * 0.17).clamp(50.0, 130.0) * .75 : 0.0;
+      final usable = dialog ? (box.maxHeight - stripHeight) * 2 / 3 : box.maxHeight - stripHeight - fanOver;
       final byHeight = box.maxHeight.isFinite ? (usable - 12 - (below ? 10 : 0)) / (rows + (below ? 0.75 : 0)) - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
@@ -587,11 +598,12 @@ class _TableArea extends StatelessWidget {
             );
       final board = pan
           ? Row(key: const Key('main-board'), crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SingleChildScrollView(padding: const EdgeInsets.fromLTRB(4, 2, 4, 8), child: hintsColumn),
+              SingleChildScrollView(padding: EdgeInsets.fromLTRB(4, 2, 4, 8 + fanOver / .75), child: hintsColumn),
               Expanded(
                 child: SingleChildScrollView(
                   key: const Key('main-board-pan'),
-                  padding: const EdgeInsets.fromLTRB(0, 2, 8, 8),
+                  // Снизу запас под веер: последний ряд можно поднять над картами руки.
+                  padding: EdgeInsets.fromLTRB(0, 2, 8, 8 + fanOver / .75),
                   child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: field),
                 ),
               ),
