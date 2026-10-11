@@ -845,12 +845,20 @@ class _SayStrip extends StatelessWidget {
         children.add(const Spacer());
       }
       if (_canSay(v))
-        children.add(TextButton.icon(
-          key: const Key('say-start'),
-          onPressed: say.start,
-          icon: const Icon(Icons.touch_app_outlined, size: 18),
-          label: const Text('Показать на столе'),
-        ));
+        // Рядом с чужим заявлением места мало — только значок; на пустой строке — с подписью.
+        children.add(m != null
+            ? IconButton(
+                key: const Key('say-start'),
+                tooltip: 'Показать на столе',
+                onPressed: say.start,
+                icon: const Icon(Icons.touch_app_outlined, color: AppColors.amber),
+              )
+            : TextButton.icon(
+                key: const Key('say-start'),
+                onPressed: say.start,
+                icon: const Icon(Icons.touch_app_outlined, size: 18),
+                label: const Text('Показать на столе'),
+              ));
     }
     return Container(
       height: height,
