@@ -340,9 +340,10 @@ class TestApp {
   FakeRealtime get realtime => container.read(realtimeProvider) as FakeRealtime;
 
   /// [classicTable] — прежний стол (старые тесты завязаны на его раскладку); новый стол — false.
-  static Future<TestApp> create({User? user, bool classicTable = true}) async {
+  static Future<TestApp> create({User? user, bool classicTable = true, bool seance = false}) async {
     SharedPreferences.setMockInitialValues({
       if (classicTable) GameScreenState.classicKey: true,
+      if (seance) GameScreenState.seanceKey: true,
       if (user != null)
         'session': jsonEncode({'user': user.toJson(), 'accessToken': 'access', 'refreshToken': 'refresh'}),
     });

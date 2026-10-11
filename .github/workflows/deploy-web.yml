@@ -39,11 +39,6 @@ jobs:
             --dart-define=APP_VERSION=$name --dart-define=APP_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           printf '{"version": "%s", "build": %s, "date": "%s"}\n' "$name" "${{ github.run_number }}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > build/web/version.json
           tar -czf ../web.tgz -C build/web .
-          # Тестовая сборка «Досье» (сеанс) — /download/dossier/, те же API и аккаунты.
-          flutter build web --release --base-href=/download/dossier/ --pwa-strategy=none --output=build/dossier \
-            --dart-define=DOSSIER_DESIGN=true --dart-define=APP_VERSION=$name-dossier \
-            --dart-define=APP_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          tar -czf ../dossier.tgz -C build/dossier .
 
       - name: Upload
         env:
@@ -60,14 +55,12 @@ jobs:
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "set -e; cd $APP_DIR; mkdir -p www; rm -rf www/web.new; mkdir www/web.new; \
             tar -xzf /tmp/ghost-web.tgz -C www/web.new; rm -f /tmp/ghost-web.tgz; \
             rm -rf www/web.old; [ -d www/web ] && mv www/web www/web.old; mv www/web.new www/web; rm -rf www/web.old"
-          scp -i ~/.ssh/deploy dossier.tgz "$SSH_USER@$HOST:/tmp/ghost-dossier.tgz"
-          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "set -e; cd $APP_DIR/www; mkdir -p download; cd download; rm -rf dossier.new; mkdir dossier.new; \
-            tar -xzf /tmp/ghost-dossier.tgz -C dossier.new; rm -f /tmp/ghost-dossier.tgz; \
-            rm -rf dossier.old; [ -d dossier ] && mv dossier dossier.old; mv dossier.new dossier; rm -rf dossier.old"
+          # Сеанс теперь — вид стола в меню партии; прежняя сборка «Досье» убрана.
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "rm -rf $APP_DIR/www/download/dossier"
           domain="${{ vars.DEPLOY_DOMAIN }}"; domain="${domain:-$(echo "$HOST" | tr . -).sslip.io}"
           for i in $(seq 1 10); do
-            if curl -fsS "https://$domain/" | grep -q flutter_bootstrap && curl -fsS "https://$domain/download/dossier/" | grep -q flutter_bootstrap; then
-              echo "Веб-версия: https://$domain/ · «Досье»: https://$domain/download/dossier/"; exit 0
+            if curl -fsS "https://$domain/" | grep -q flutter_bootstrap; then
+              echo "Веб-версия: https://$domain/"; exit 0
             fi
             sleep 3
           done

@@ -194,21 +194,13 @@ void main() {
     expect(find.byKey(const Key('main-panel')), findsOneWidget);
   });
 
-  testWidgets('меню: «Классический стол» возвращает прежнюю раскладку и обратно', (tester) async {
+  testWidgets('меню: вид стола переключается на сеанс', (tester) async {
     await _open(tester, phone);
-
     await tester.tap(find.byKey(const Key('main-menu')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Классический стол'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('main-table')), findsNothing);
-    expect(find.byKey(const Key('landscape-board')), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Меню партии'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Новый стол'));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('main-table')), findsOneWidget);
+    await tester.tap(find.text('Вид: спиритический сеанс'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('seance-table')), findsOneWidget);
   });
 
   testWidgets('показ на столе: кидал эту, зелёная и красная — уходит в чат заметками для ботов', (tester) async {
