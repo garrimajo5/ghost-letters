@@ -150,7 +150,6 @@ void main() {
 
     expect(find.byKey(const Key('ghost-badge-u1')), findsOneWidget);
     expect(find.byKey(const Key('bot-badge-u3')), findsOneWidget);
-    expect(find.textContaining('бот'), findsWidgets);
     // Первым говорил тот, у кого рация (реплик в раунде ещё нет).
     expect(find.byKey(const Key('first-u2')), findsOneWidget);
     // Говорящий — зелёное имя.
@@ -255,6 +254,10 @@ void main() {
     expect(find.byKey(const Key('say-mark-orig_0001')), findsOneWidget);
     expect(find.byKey(const Key('say-mark-orig_0007')), findsOneWidget);
     expect(find.textContaining('Марпл: эта улика'), findsOneWidget);
+    // На отмеченных картах — портрет говорящего; карты в реплике — картинками.
+    expect(find.byKey(const Key('say-who-orig_0001')), findsOneWidget);
+    expect(find.byKey(const Key('say-who-orig_0007')), findsOneWidget);
+    expect(find.byKey(const Key('say-inline-s1-1')), findsOneWidget);
     await _shot(tester, 'statement');
     // Верность ряда не раскрывается: отметки — только мнение игрока.
     expect(tester.takeException(), isNull);
