@@ -500,6 +500,15 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
 
+  /// Пометка карты вместе с проверками из реплик (кроме тех, с которыми я не согласен).
+  CardMark? effectiveMark(String id) {
+    final base = marks[id];
+    final auto = cardEvidence(chat, id).where((e) => !(base?.ignored.contains(e.key) ?? false)).toList();
+    if (auto.isEmpty) return base;
+    final m = base ?? const CardMark();
+    return m.copyWith(crosses: m.crosses + auto.where((e) => e.negative).length, checks: m.checks + auto.where((e) => !e.negative).length);
+  }
+
   Future<void> setClassicTable(bool value) async {
     await ref.read(prefsProvider).setBool(classicKey, value);
     if (mounted) setState(() {});
@@ -1128,7 +1137,7 @@ class _Board extends StatelessWidget {
                     child: _dimOutside(r, outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c), _decorate(v.board[r].cards[c], BoardCard(
                       cardId: v.board[r].cards[c],
                       size: size,
-                      mark: screen.marks[v.board[r].cards[c]],
+                      mark: screen.effectiveMark(v.board[r].cards[c]),
                       isTruth: v.truth != null && v.truth!.length > r && v.truth![r] == c,
                       thumbs: thumbs(r, c),
                       reveal: reveal,

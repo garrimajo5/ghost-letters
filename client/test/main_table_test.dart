@@ -474,6 +474,28 @@ void main() {
     expect(find.byKey(const Key('fan-emoji')), findsNothing);
   });
 
+  testWidgets('карта поля: проверки из реплик подставлены сами, с ними можно не согласиться; свайп — соседняя карта', (tester) async {
+    final app = await _open(tester, const Size(390, 844));
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'e1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Отправлял вот эту — исчезла. Проверял: мотив 1.',
+        cardIds: const ['orig_0200', 'orig_0001'], cardNotes: const ['кидал эту', 'проверял эту, исчезла:0'],
+        createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    await tester.tap(find.byKey(const Key('board-0-0')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mark-evidence')), findsOneWidget);
+    expect(find.byKey(const Key('evidence-e1:1')), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byKey(const Key('evidence-e1:1')), matching: find.byType(Checkbox)));
+    await tester.pump();
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    expect(state.marks['orig_0001']?.ignored, ['e1:1']);
+    expect(find.byKey(const Key('mark-token-0')), findsOneWidget, reason: 'слева от первой карты виден жетон ряда');
+    await tester.drag(find.byKey(const Key('mark-row-0')), const Offset(-220, 0));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Мотив, карта 2'), findsOneWidget);
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
