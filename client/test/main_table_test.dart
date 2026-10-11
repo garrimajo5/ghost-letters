@@ -15,11 +15,11 @@ import 'support/fixtures.dart';
 
 /// Новый стол по наброску: телефон боком и вертикально.
 Future<TestApp> _open(WidgetTester tester, Size size,
-    {String phase = 'Discussion', List<String> allowed = const ['RaiseHand'], void Function(Json view)? edit}) async {
+    {String phase = 'Discussion', List<String> allowed = const ['RaiseHand'], void Function(Json view)? edit, bool big = false}) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final app = await TestApp.create(user: watson, classicTable: false);
+  final app = await TestApp.create(user: watson, classicTable: false, bigBoard: big);
   addTearDown(app.container.dispose);
   await tester.pumpWidget(RepaintBoundary(key: _shotKey, child: app.widget));
   await tester.pumpAndSettle();
@@ -472,6 +472,17 @@ void main() {
   testWidgets('у Призрака нет карты-эмодзи: он подсказывает только картами', (tester) async {
     await _open(tester, phone, edit: (view) => (view['me'] as Json)['role'] = 'Ghost');
     expect(find.byKey(const Key('fan-emoji')), findsNothing);
+  });
+
+  testWidgets('боком поле крупнее экрана и листается, подсказки остаются слева', (tester) async {
+    await _open(tester, const Size(1076, 457), big: true);
+    expect(find.byKey(const Key('main-board-pan')), findsOneWidget);
+    final hint = tester.getRect(find.byKey(const Key('hint-orig_0100')));
+    final last = tester.getRect(find.byKey(const Key('board-3-4')));
+    expect(last.bottom, greaterThan(457), reason: 'поле не помещается — его листают');
+    await tester.drag(find.byKey(const Key('main-board-pan')), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(const Key('hint-orig_0100'))).top, hint.top, reason: 'подсказки не уезжают');
   });
 
   testWidgets('реплика бота печатается по буквам', (tester) async {

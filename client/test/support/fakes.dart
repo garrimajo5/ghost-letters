@@ -340,9 +340,11 @@ class TestApp {
   FakeRealtime get realtime => container.read(realtimeProvider) as FakeRealtime;
 
   /// [classicTable] — прежний стол (старые тесты завязаны на его раскладку); новый стол — false.
-  static Future<TestApp> create({User? user, bool classicTable = true}) async {
+  static Future<TestApp> create({User? user, bool classicTable = true, bool bigBoard = false}) async {
     SharedPreferences.setMockInitialValues({
       if (classicTable) GameScreenState.classicKey: true,
+      // Старые тесты нажимают карты поля без прокрутки — поле целиком на экране.
+      GameScreenState.bigBoardKey: bigBoard,
       if (user != null)
         'session': jsonEncode({'user': user.toJson(), 'accessToken': 'access', 'refreshToken': 'refresh'}),
     });

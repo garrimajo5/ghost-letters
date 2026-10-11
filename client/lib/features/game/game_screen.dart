@@ -500,6 +500,16 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   bool get classicTable => ref.read(prefsProvider).getBool(classicKey) ?? false;
 
+  /// Боком поле крупнее экрана и листается свайпом (по умолчанию) или целиком на экране.
+  static const bigBoardKey = 'table.big';
+
+  bool get bigBoard => ref.read(prefsProvider).getBool(bigBoardKey) ?? true;
+
+  Future<void> setBigBoard(bool value) async {
+    await ref.read(prefsProvider).setBool(bigBoardKey, value);
+    if (mounted) setState(() {});
+  }
+
   Future<void> setClassicTable(bool value) async {
     await ref.read(prefsProvider).setBool(classicKey, value);
     if (mounted) setState(() {});
