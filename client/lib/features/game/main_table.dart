@@ -378,7 +378,9 @@ class _TableArea extends StatelessWidget {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
       final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 3 + 6)) / (columns + hintCards * 0.85);
-      final stripHeight = say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
+      final stage = v.finale?.currentStage;
+      final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
+      final stripHeight = voting || say.active || _current != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
@@ -387,7 +389,7 @@ class _TableArea extends StatelessWidget {
       final hintsWidth = staircase ? hintCards * (hint + 3) + 6 : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
-      final strip = say.active || statement != null || _canSay(v);
+      final strip = voting || say.active || statement != null || _canSay(v);
       final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
@@ -416,6 +418,7 @@ class _TableArea extends StatelessWidget {
               maxCard: card,
               order: order,
               vertical: true,
+              focusRow: voting ? stage!.row : null,
               decorate: (id, child) {
                 final color = _mark(id, statement);
                 Widget out = color == null
@@ -439,7 +442,7 @@ class _TableArea extends StatelessWidget {
       );
       if (!strip) return board;
       return Column(children: [
-        _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
+        if (voting) _VoteStrip(screen: screen, stage: stage!) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
         Expanded(child: board),
       ]);
     });
@@ -1109,6 +1112,47 @@ class _SayStrip extends StatelessWidget {
         border: Border.all(color: say.active ? AppColors.amber : AppColors.border),
       ),
       child: Row(children: children),
+    );
+  }
+}
+
+/// Голосование по ряду прямо на поле: какой ряд, сколько проголосовали, «Воздержаться».
+class _VoteStrip extends StatelessWidget {
+  const _VoteStrip({required this.screen, required this.stage});
+
+  final GameScreenState screen;
+  final VoteStage stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final finale = v.finale!;
+    final voted = v.players.where((p) => p.hasActed).length;
+    final can = v.can('CastVote');
+    final label = 'Этап ${stage.index + 1} из ${finale.stagesTotal}: ${T.category(v.board[stage.row].category)}'
+        '${stage.attempt > 1 ? ' · переголосование' : ''} — ${can ? 'выберите карту в подсвеченном ряду' : finale.hasMyVote ? 'ваш голос принят' : 'голосуют'}';
+    return Container(
+      key: const Key('vote-strip'),
+      height: _SayStrip.height,
+      margin: const EdgeInsets.fromLTRB(6, 0, 8, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: can ? const Color(0xFF3A2B12) : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: can ? AppColors.amber : AppColors.border),
+      ),
+      child: Row(children: [
+        const Icon(Icons.how_to_vote_outlined, size: 18, color: AppColors.amber),
+        const SizedBox(width: 8),
+        Expanded(child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12))),
+        Text('$voted из ${v.players.length}', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+        if (can)
+          TextButton(
+            key: const Key('vote-abstain'),
+            onPressed: () => screen.send('CastVote', {'column': null, 'suspect': null}),
+            child: const Text('Воздержаться'),
+          ),
+      ]),
     );
   }
 }

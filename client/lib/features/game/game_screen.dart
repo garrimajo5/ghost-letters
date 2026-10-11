@@ -1000,7 +1000,10 @@ class _Radio extends StatelessWidget {
 
 /// Поле улик: жетоны категорий слева, номера столбцов сверху. Карты всегда умещаются по ширине.
 class _Board extends StatelessWidget {
-  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false});
+  const _Board({required this.screen, this.maxCard = 96, this.decorate, this.order, this.vertical = false, this.focusRow});
+
+  /// Голосование по ряду на новом столе: этот ряд подсвечен, остальные приглушены.
+  final int? focusRow;
 
   final GameScreenState screen;
   final double maxCard;
@@ -1016,12 +1019,9 @@ class _Board extends StatelessWidget {
   static const labelWidth = 46.0;
   static const verticalLabel = 18.0;
 
-  /// Тайна, Мотив, Способ, Место — порядок рядов на новом столе.
-  static List<int> tableOrder(GameView v) {
-    const rank = {'Secret': 0, 'Motive': 1, 'Method': 2, 'Place': 3};
-    return [for (var i = 0; i < v.board.length; i++) i]
-      ..sort((a, b) => (rank[v.board[a].category] ?? 9).compareTo(rank[v.board[b].category] ?? 9));
-  }
+  /// Порядок рядов на новом столе — как в партии: названия рядов случайны, а загадывают
+  /// и голосуют всегда сверху вниз.
+  static List<int> tableOrder(GameView v) => [for (var i = 0; i < v.board.length; i++) i];
 
   @override
   Widget build(BuildContext context) {
@@ -1064,7 +1064,7 @@ class _Board extends StatelessWidget {
         ]),
         const SizedBox(height: 4)],
         for (final r in rowsOrder)
-          Padding(
+          _focus(r, Padding(
             padding: const EdgeInsets.only(bottom: gap),
             child: Row(children: [
               if (vertical)
@@ -1135,9 +1135,23 @@ class _Board extends StatelessWidget {
                   ),
                 ),
             ]),
-          ),
+          )),
       ]);
     });
+  }
+
+  Widget _focus(int row, Widget child) {
+    final f = focusRow;
+    if (f == null) return child;
+    if (row != f) return Opacity(opacity: .4, child: child);
+    return Container(
+      key: Key('focus-row-$row'),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: .35), blurRadius: 16, spreadRadius: 1)],
+      ),
+      child: child,
+    );
   }
 
   Widget _decorate(String id, Widget child) => decorate?.call(id, child) ?? child;

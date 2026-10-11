@@ -96,21 +96,38 @@ void main() {
     }
   }
 
-  testWidgets('ряды по порядку: Тайна, Мотив, Способ, Место; подсказки на высоте своих рядов', (tester) async {
+  testWidgets('ряды сверху вниз как в партии; подсказки на высоте своих рядов', (tester) async {
     await _open(tester, phone);
 
     double y(String key) => tester.getTopLeft(find.byKey(Key(key))).dy;
-    // board: 0 Motive, 1 Place, 2 Method, 3 Secret.
-    expect(y('row-label-3'), lessThan(y('row-label-0')));
-    expect(y('row-label-0'), lessThan(y('row-label-2')));
-    expect(y('row-label-2'), lessThan(y('row-label-1')));
-    // Первая зацепка — в ряду Тайны.
+    // Названия рядов случайны — порядок как пришёл с сервера: 0, 1, 2, 3.
+    expect(y('row-label-0'), lessThan(y('row-label-1')));
+    expect(y('row-label-1'), lessThan(y('row-label-2')));
+    expect(y('row-label-2'), lessThan(y('row-label-3')));
+    // Первая зацепка — на высоте первого ряда.
     final hint = tester.getCenter(find.byKey(const Key('hint-orig_0100'))).dy;
-    expect(hint, greaterThan(y('board-3-0')));
-    expect(hint, lessThan(tester.getBottomLeft(find.byKey(const Key('board-3-0'))).dy + 6));
+    expect(hint, greaterThan(y('board-0-0')));
+    expect(hint, lessThan(tester.getBottomLeft(find.byKey(const Key('board-0-0'))).dy + 6));
     // Игроки справа от поля.
     expect(tester.getTopLeft(find.byKey(const Key('main-players'))).dx,
         greaterThan(tester.getTopRight(find.byKey(const Key('board-0-4'))).dx));
+  });
+
+  testWidgets('голосование по ряду — прямо на поле: ряд подсвечен, карта выбирается нажатием', (tester) async {
+    final app = await _open(tester, phone, phase: 'Voting', allowed: const ['CastVote'],
+        edit: (view) => view['finale'] = (snapshotJson()['view'] as Json)['finale']);
+
+    expect(find.byKey(const Key('main-panel')), findsNothing);
+    expect(find.byKey(const Key('vote-strip')), findsOneWidget);
+    expect(find.byKey(const Key('focus-row-1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('board-1-3')));
+    await tester.pump();
+    final state = tester.state<GameScreenState>(find.byType(GameScreen));
+    expect(state.voteColumn, 3);
+    await tester.tap(find.byKey(const Key('cta')));
+    await tester.pumpAndSettle();
+    final vote = app.api.named('command').where((c) => c.$2[0] == 'CastVote').single.$2;
+    expect(vote[1], {'column': 3});
   });
 
   testWidgets('игроки: Призрак, бот и говорящий отмечены', (tester) async {
