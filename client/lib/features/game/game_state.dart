@@ -181,23 +181,28 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId) => [
           ...() {
             final sources = [for (var i = 0; i < m.cardIds.length; i++) if (theoryNote(m, i).$1) i];
             return [
+              // Только проверки, связанные с уликой или письмом («:N»); голая версия «думаю, эта» — мнение, не проверка.
               for (var i = 0; i < m.cardIds.length; i++)
-                if (m.cardIds[i] == cardId && !theoryNote(m, i).$1)
+                if (m.cardIds[i] == cardId && !theoryNote(m, i).$1 && (_linkOf(m, i) ?? sources.length) < sources.length)
                   () {
-                    final raw = i < m.cardNotes.length ? m.cardNotes[i] : '';
-                    final link = RegExp(r':(\d+)$').firstMatch(raw);
-                    final n = link != null ? int.parse(link[1]!) : (sources.length == 1 ? 0 : -1);
                     return CardEvidence(
                       key: '${m.id}:$i',
                       authorId: m.authorId!,
                       negative: theoryNote(m, i).$2,
                       round: m.round,
-                      sourceCard: n >= 0 && n < sources.length ? m.cardIds[sources[n]] : null,
+                      sourceCard: m.cardIds[sources[_linkOf(m, i)!]],
                     );
                   }(),
             ];
           }(),
     ];
+
+/// Номер улики, с которой связана карта [index] («думаю, эта:1» → 1), или null.
+int? _linkOf(ChatMessage m, int index) {
+  final raw = index < m.cardNotes.length ? m.cardNotes[index] : '';
+  final link = RegExp(r':(\d+)$').firstMatch(raw);
+  return link == null ? null : int.parse(link[1]!);
+}
 
 /// (улика ли это, отрицательная ли заметка) для карты [index] реплики.
 (bool, bool) theoryNote(ChatMessage m, int index) {

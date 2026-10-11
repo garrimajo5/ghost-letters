@@ -407,40 +407,58 @@ class _TableArea extends StatelessWidget {
   /// Лесенка подсказок слева; на сеансе подсказки — в секторах круга.
   final bool staircase;
 
-  /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
-  /// Цвета связей показа: у каждой улики свой цвет (первая — зелёная), карты поля, на которые она указывает, —
-  /// того же цвета; на карту указывают несколько улик — рамка из нескольких цветов. Исключённая — красная
-  /// (при нескольких уликах — вместе с цветом улики, которая её исключила).
-  List<Color> _links(String id, ChatMessage? statement) {
-    if (say.active || statement == null) return const [];
-    final sources = [for (var i = 0; i < statement.cardIds.length; i++) if (theorySource(statement.noteFor(i) ?? '')) i];
-    final out = <Color>[];
-    void add(Color c) {
-      if (!out.contains(c)) out.add(c);
+  /// Связи карты в показе: цвета рамки и номера улик (номера — когда улик несколько: цвета похожи, номер — нет).
+  /// У каждой улики свой цвет (первая — зелёная), карты поля — цветами указавших на них улик; исключённая — красная.
+  /// Работает и во время своего показа, и для чужой реплики.
+  ({List<Color> colors, List<int> numbers}) _linksOf(String id, ChatMessage? statement) {
+    final colors = <Color>[];
+    final numbers = <int>[];
+    void add(Color c, [int? n]) {
+      if (!colors.contains(c)) colors.add(c);
+      if (n != null && !numbers.contains(n)) numbers.add(n);
     }
+    if (say.active) {
+      final many = say.sources.length > 1;
+      final k = say.sources.indexOf(id);
+      if (k >= 0) add(linkColor(k), many ? k + 1 : null);
+      final m = say.marks[id];
+      if (m != null) {
+        final (green, link) = m;
+        if (!green) add(AppColors.redBright);
+        if (link >= 0) add(green || many ? linkColor(link) : AppColors.redBright, many ? link + 1 : null);
+        if (green && link < 0) add(AppColors.believed);
+      }
+      return (colors: colors, numbers: numbers);
+    }
+    if (statement == null) return (colors: colors, numbers: numbers);
+    final sources = [for (var i = 0; i < statement.cardIds.length; i++) if (theorySource(statement.noteFor(i) ?? '')) i];
+    final many = sources.length > 1;
     for (var i = 0; i < statement.cardIds.length; i++) {
       if (statement.cardIds[i] != id) continue;
       if (typing?.current?.id == statement.id && !typing!.isRevealed(i)) continue;
       final note = statement.noteFor(i) ?? '';
       final k = sources.indexOf(i);
       if (k >= 0) {
-        add(linkColor(k));
+        add(linkColor(k), many ? k + 1 : null);
         continue;
       }
       // noteFor убирает «:N» — номер улики читаем из исходной заметки.
       final raw = i < statement.cardNotes.length ? statement.cardNotes[i] : '';
       final link = RegExp(r':(\d+)$').firstMatch(raw);
-      final n = link != null ? int.parse(link[1]!) : (sources.length == 1 ? 0 : -1);
+      // Без «:N» карта ни с какой уликой не связана — это просто версия говорящего.
+      final n = link != null ? int.parse(link[1]!) : -1;
+      final linked = n >= 0 && n < sources.length;
       if (theoryNegative(note)) {
         add(AppColors.redBright);
-        if (sources.length > 1 && n >= 0 && n < sources.length) add(linkColor(n));
+        if (many && linked) add(linkColor(n), n + 1);
       } else {
-        add(n >= 0 && n < sources.length ? linkColor(n) : AppColors.believed);
+        add(linked ? linkColor(n) : AppColors.believed, many && linked ? n + 1 : null);
       }
     }
-    return out;
+    return (colors: colors, numbers: numbers);
   }
 
+  /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
   Color? _mark(String id, ChatMessage? statement) {
     if (say.active) {
       final m = say.marks[id];
@@ -497,7 +515,7 @@ class _TableArea extends StatelessWidget {
               for (final group in v.hints)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _links(id, statement))),
+                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _linksOf(id, statement))),
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -533,7 +551,10 @@ class _TableArea extends StatelessWidget {
                           ),
                         ),
                       ])
-                    : _LinkBorder(key: Key('say-mark-$id'), colors: say.active ? [color] : _links(id, statement).ifEmpty(color), child: child);
+                    : () {
+                        final l = _linksOf(id, statement);
+                        return _LinkBorder(key: Key('say-mark-$id'), colors: l.colors.ifEmpty(color), numbers: l.numbers, child: child);
+                      }();
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
                 if (say.active) out = GestureDetector(onTap: () => say.cycle(id), onLongPress: () => showCardZoom(context, id), child: out);
                 return out;
@@ -573,7 +594,7 @@ class _TableArea extends StatelessWidget {
                     child: SizedBox(
                       height: hint,
                       width: _HintStep.labelWidth + (group.cards.isEmpty ? 1 : group.cards.length) * (hint + 3) + 4,
-                      child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _links(id, statement)),
+                      child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _linksOf(id, statement)),
                     ),
                   ),
                 if (v.vanishedCount > 0)
@@ -611,8 +632,8 @@ class _HintStep extends StatelessWidget {
   final _Say say;
   final HintGroup hint;
   final double size;
-  /// Цвет улики в показе говорящего — тот же, что у карт поля, на которые она указывает.
-  final List<Color> Function(String id)? links;
+  /// Цвет (и номер) улики в показе — те же, что у карт поля, на которые она указывает.
+  final ({List<Color> colors, List<int> numbers}) Function(String id)? links;
 
   /// Ширина полосы с подписью раунда слева от карт.
   static const labelWidth = 11.0;
@@ -656,14 +677,16 @@ class _HintStep extends StatelessWidget {
                         onTap: () => say.active ? say.pick(c, hint: true) : HintSheet.show(context, screen, c, hint.round),
                         onLongPress: () => showCardZoom(context, c),
                         child: Stack(clipBehavior: Clip.none, children: [
-                          Container(
-                            foregroundDecoration: say.active && say.isSource(c)
-                                ? BoxDecoration(border: Border.all(color: AppColors.amber, width: 3), borderRadius: BorderRadius.circular(7))
-                                : null,
-                            child: say.active || (links?.call(c) ?? const []).isEmpty
-                                ? CardImage(cardId: c, size: size, radius: 7)
-                                : _LinkBorder(key: Key('hint-link-$c'), colors: links!(c), radius: 7, child: CardImage(cardId: c, size: size, radius: 7)),
-                          ),
+                          // Подсказка в показе — своим цветом и номером; все выбранные подсказки подсвечены одновременно.
+                          (links?.call(c).colors ?? const []).isEmpty
+                              ? CardImage(cardId: c, size: size, radius: 7)
+                              : _LinkBorder(
+                                  key: Key('hint-link-$c'),
+                                  colors: links!(c).colors,
+                                  numbers: links!(c).numbers,
+                                  radius: 7,
+                                  child: CardImage(cardId: c, size: size, radius: 7),
+                                ),
                           if (screen.marks[c]?.claimedBy case final who?)
                             Positioned(
                               right: -3,
@@ -1889,9 +1912,9 @@ Color linkColor(int n) => const [
       AppColors.believed,
       Color(0xFF4FC3F7),
       Color(0xFFF2B33D),
-      Color(0xFFE57CD8),
       Color(0xFFB39DDB),
-      Color(0xFFFF8A65),
+      Color(0xFFF5F5F5),
+      Color(0xFF80CBC4),
     ][n % 6];
 
 extension _OrFallback on List<Color> {
@@ -1900,19 +1923,46 @@ extension _OrFallback on List<Color> {
 
 /// Рамка карты из одного или нескольких цветов (по цвету на каждую улику).
 class _LinkBorder extends StatelessWidget {
-  const _LinkBorder({super.key, required this.colors, required this.child, this.radius = 10});
+  const _LinkBorder({super.key, required this.colors, required this.child, this.radius = 10, this.numbers = const []});
 
   final List<Color> colors;
   final Widget child;
   final double radius;
 
+  /// Номера улик кружками в углу: цвета многих улик похожи, номер различим всегда.
+  final List<int> numbers;
+
   @override
-  Widget build(BuildContext context) => colors.length == 1
-      ? Container(
-          foregroundDecoration: BoxDecoration(border: Border.all(color: colors.first, width: 3), borderRadius: BorderRadius.circular(radius)),
-          child: child,
-        )
-      : CustomPaint(foregroundPainter: _SegmentsPainter(colors, radius), child: child);
+  Widget build(BuildContext context) {
+    final framed = colors.length == 1
+        ? Container(
+            foregroundDecoration: BoxDecoration(border: Border.all(color: colors.first, width: 3), borderRadius: BorderRadius.circular(radius)),
+            child: child,
+          )
+        : CustomPaint(foregroundPainter: _SegmentsPainter(colors, radius), child: child);
+    if (numbers.isEmpty) return framed;
+    return Stack(clipBehavior: Clip.none, children: [
+      framed,
+      Positioned(
+        left: 2,
+        top: 2,
+        child: IgnorePointer(
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final n in numbers)
+              Container(
+                key: Key('link-number-$n'),
+                margin: const EdgeInsets.only(right: 2),
+                width: 16,
+                height: 16,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: linkColor(n - 1), shape: BoxShape.circle, border: Border.all(color: AppColors.bg, width: 1.5)),
+                child: Text('$n', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.bg)),
+              ),
+          ]),
+        ),
+      ),
+    ]);
+  }
 }
 
 class _SegmentsPainter extends CustomPainter {
