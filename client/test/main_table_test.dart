@@ -398,7 +398,7 @@ void main() {
         cardIds: const [], createdAt: DateTime.now(), round: 4));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    final partial = tester.widget<Text>(find.descendant(of: find.byKey(const Key('say-statement')), matching: find.byType(Text))).data!;
+    final partial = tester.widget<Text>(find.byKey(const Key('say-statement'))).data!;
     expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
     await tester.pump(const Duration(seconds: 3));
     expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
