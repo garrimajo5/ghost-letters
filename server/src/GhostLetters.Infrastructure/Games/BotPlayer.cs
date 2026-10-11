@@ -453,7 +453,8 @@ public static class BotPlayer
                 }
 
                 // Ряд, где стол и так ясно видит истину: голос против выдаст, а исход не изменит — голосуем «как все».
-                if (KillerTeam && !Classic && BotTuning.Current.KillerBlend && candidates.Contains(real) && ClearTruth(stage.Row, candidates))
+                if (KillerTeam && !Classic && BotTuning.Current.KillerBlend && candidates.Contains(real) && ClearTruth(stage.Row, candidates)
+                    && rng.NextDouble() < BotTuning.Current.KillerBlendChance)
                 {
                     return real;
                 }

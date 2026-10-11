@@ -40,6 +40,9 @@ public sealed record BotTuning
     /// <summary>Команда Убийцы не спорит с ясными рядами: голосует «как все» и лжёт только там, где ложь правдоподобна.</summary>
     public bool KillerBlend { get; init; } = true;
 
+    /// <summary>Как часто в ясном ряду голос «как все» (иначе — обычная ложь по характеру).</summary>
+    public double KillerBlendChance { get; init; } = .8;
+
     /// <summary>С какого отрыва истины от лучшей ложной карты ряд считается ясным.</summary>
     public double KillerClearMargin { get; init; } = .15;
 
@@ -79,6 +82,7 @@ public sealed record BotTuning
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(Probe) => t with { Probe = B() },
                 nameof(KillerBlend) => t with { KillerBlend = B() },
+                nameof(KillerBlendChance) => t with { KillerBlendChance = D() },
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
