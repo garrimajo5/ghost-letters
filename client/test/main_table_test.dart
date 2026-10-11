@@ -474,6 +474,17 @@ void main() {
     expect(find.byKey(const Key('fan-emoji')), findsNothing);
   });
 
+  testWidgets('веер: карты внахлёст, низ спрятан; выбранная выдвигается целиком', (tester) async {
+    await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
+    final fan = tester.getRect(find.byKey(const Key('main-fan')));
+    final a = tester.getRect(find.byKey(const Key('hand-orig_0200')));
+    expect(a.bottom, greaterThan(fan.bottom), reason: 'нижний край карты за краем веера');
+    await tester.tap(find.byKey(const Key('hand-orig_0200')));
+    await tester.pumpAndSettle();
+    final up = tester.getRect(find.byKey(const Key('hand-orig_0200')));
+    expect(up.bottom, lessThanOrEqualTo(fan.bottom));
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(

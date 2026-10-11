@@ -128,7 +128,7 @@ class _MainTableState extends State<_MainTable> {
     }
     final hand = v.me != null;
     // Большой экран: веер крупнее, чтобы рука не терялась внизу.
-    final fanHeight = landscape ? (size.height * 0.2).clamp(56.0, 150.0) : 96.0;
+    final fanHeight = landscape ? (size.height * 0.17).clamp(50.0, 130.0) : 84.0;
     final dropCenter = _dropZone(v, center);
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
@@ -839,7 +839,7 @@ class _Actions extends StatelessWidget {
 }
 
 /// Рука веером снизу: выбранная карта приподнята; долгое нажатие — карта крупно.
-class _Fan extends StatelessWidget {
+class _Fan extends StatefulWidget {
   const _Fan({required this.screen, required this.say, required this.onEmoji, required this.height, this.onDrag});
 
   final GameScreenState screen;
@@ -849,6 +849,21 @@ class _Fan extends StatelessWidget {
   /// Карту тянут из веера (true) или отпустили (false) — стол показывает, куда её нести.
   final ValueChanged<bool>? onDrag;
   final double height;
+
+  @override
+  State<_Fan> createState() => _FanState();
+}
+
+/// Веер «как в руке»: карты крупнее и внахлёст, нижний край спрятан за краем экрана;
+/// карта под мышью или выбранная выдвигается целиком и увеличивается.
+class _FanState extends State<_Fan> {
+  int? _hover;
+
+  GameScreenState get screen => widget.screen;
+  _Say get say => widget.say;
+  VoidCallback get onEmoji => widget.onEmoji;
+  ValueChanged<bool>? get onDrag => widget.onDrag;
+  double get height => widget.height;
 
   /// Карту можно вытащить из веера на стол — как настоящую: отпустили над столом — сыграна.
   Widget _draggable(String id, double card, {required bool enabled, required Widget child}) {
@@ -878,17 +893,22 @@ class _Fan extends StatelessWidget {
     final hand = isFinale(v) ? const <String>[] : v.me!.hand;
     final selectable = v.can('SendLetter') || v.can('Discard') || v.can('GiveFirstClue');
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
-    final card = height - 20;
+    // Карты крупнее полосы веера: нижняя четверть уходит за край, как карты в руке.
+    final card = (height * 1.3).floorToDouble();
+    final emoji = height - 20;
     // Во время показа на столе карта из веера — «кидал эту».
     bool raised(String c) => say.active ? say.isSource(c) : screen.selectedHand.contains(c);
     return SizedBox(
       key: const Key('main-fan'),
       height: height,
-      child: LayoutBuilder(builder: (context, box) {
+      child: ClipRect(
+        clipper: const _ClipBelow(),
+        child: LayoutBuilder(builder: (context, box) {
         final n = hand.length;
         // Справа от веера — карта-эмодзи.
-        final room = box.maxWidth - card * 0.8 - 12;
-        final step = n <= 1 ? 0.0 : ((room - card - 24) / (n - 1)).clamp(12.0, card + 6);
+        final room = box.maxWidth - emoji * 0.8 - 12;
+        // Внахлёст: шаг меньше карты, но не меньше трети её ширины.
+        final step = n <= 1 ? 0.0 : ((room - card - 24) / (n - 1)).clamp(card * .33, card * .72);
         final width = card + step * (n - 1);
         final left = ((room - width) / 2).clamp(4.0, double.infinity);
         final mid = (n - 1) / 2;
@@ -904,24 +924,36 @@ class _Fan extends StatelessWidget {
               child: Transform.rotate(
                 angle: 0.12,
                 child: Container(
-                  width: card * 0.8,
-                  height: card * 0.8,
+                  width: emoji * 0.8,
+                  height: emoji * 0.8,
                   decoration: BoxDecoration(
                     color: AppColors.surface2,
                     borderRadius: BorderRadius.circular(9),
                     border: Border.all(color: AppColors.border),
                   ),
                   alignment: Alignment.center,
-                  child: Text('😊', style: TextStyle(fontSize: card * 0.4)),
+                  child: Text('😊', style: TextStyle(fontSize: emoji * 0.4)),
                 ),
               ),
             ),
           ),
-          for (var i = 0; i < n; i++)
-            Positioned(
+          // Выдвинутая карта рисуется последней — поверх соседей.
+          for (final i in [for (var j = 0; j < n; j++) if (j != _hover && !raised(hand[j])) j, for (var j = 0; j < n; j++) if (j == _hover || raised(hand[j])) j])
+            AnimatedPositioned(
+              key: ValueKey('fan-slot-${hand[i]}'),
+              duration: const Duration(milliseconds: 140),
               left: left + step * i,
-              top: 12 + ((i - mid).abs() * 2.0) - (raised(hand[i]) ? 12 : 0),
-              child: Transform.rotate(
+              top: _hover == i || raised(hand[i])
+                  ? height - card - 4
+                  : height - card * .62 + ((i - mid).abs() * 2.0),
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _hover = i),
+                onExit: (_) => setState(() => _hover = _hover == i ? null : _hover),
+                child: AnimatedScale(
+                duration: const Duration(milliseconds: 140),
+                scale: _hover == i ? 1.12 : 1,
+                alignment: Alignment.bottomCenter,
+                child: Transform.rotate(
                 angle: (i - mid) * 0.06,
                 alignment: Alignment.bottomCenter,
                 child: GestureDetector(
@@ -956,11 +988,25 @@ class _Fan extends StatelessWidget {
                   ),
                 ),
               ),
+                ),
+              ),
             ),
         ]);
       }),
+      ),
     );
   }
+}
+
+/// Обрезаем только снизу: выдвинутая карта может подняться над полосой веера.
+class _ClipBelow extends CustomClipper<Rect> {
+  const _ClipBelow();
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(-2000, -2000, size.width + 2000, size.height);
+
+  @override
+  bool shouldReclip(_ClipBelow oldClipper) => false;
 }
 
 /// Показ на столе, пока игрок его собирает: карты-источники (из веера — «кидал эту», подсказки — «улика»)
