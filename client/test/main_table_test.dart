@@ -707,6 +707,8 @@ void main() {
         authorId: 'u3',
         kind: 'text',
         text: 'Ватсон, за какую карту в ряду «Место» будешь голосовать? Я выбираю Место 2.',
+        cardIds: const [],
+        cardNotes: const [],
         createdAt: DateTime.now(),
         round: 4));
     await tester.pumpAndSettle();
