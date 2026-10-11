@@ -191,7 +191,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         Reacted[(state.Id, botId, round, state.Phase)] = true;
         string? emoji = null;
         if (state.Phase == Phase.Discussion && state.Hints.LastOrDefault(h => h.Round == state.Round) is { } hints && rng.NextDouble() < .35)
-            emoji = view.Me?.Role == Role.Ghost ? "👻" : hints.Cards.Count == 0 ? "😱" : hints.Cards.Count >= 2 ? "😮" : "🤔";
+            emoji = view.Me?.Role == Role.Ghost ? null : hints.Cards.Count == 0 ? "😱" : hints.Cards.Count >= 2 ? "😮" : "🤔";
         else if (state.Phase == Phase.AwardNomination && state.Result is { } result && rng.NextDouble() < .6)
             emoji = result.Winners.Contains(botId) ? (rng.Next(2) == 0 ? "🔥" : "❤️") : (rng.Next(2) == 0 ? "🙈" : "😱");
         if (emoji is null) return;
