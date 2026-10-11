@@ -78,6 +78,8 @@ public static class BotDiscussion
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
         string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
+        // Обращаются, как люди за столом: «Ватсон, …», а не «Бот Ватсон, …».
+        string Call(Guid id) => Name(id).StartsWith("Бот ", StringComparison.Ordinal) ? Name(id)[4..] : Name(id);
         string Revision(int row)
         {
             // Read only this bot's previous public choices. A multi-card comparison
@@ -118,7 +120,9 @@ public static class BotDiscussion
             return text.Length <= ChatService.MaxTextLength ? text : prefix + "\n" +
                 string.Join("; ", view.Board.Select((_, r) => Where(r, plan[r]))) + ". Опираюсь на улики всех раундов.";
         }
-        if (own.Count == 0) return Line(Summary("Собрал версию по всем открытым уликам за партию:"));
+        string[] openers = ["Собрал версию по всем открытым уликам за партию:", "Если сложить все улики, у меня выходит так:",
+            "Вот как я вижу дело целиком:", "Моя версия по всей партии:"];
+        if (own.Count == 0) return Line(Summary(openers[me.Id.ToByteArray()[2] % openers.Length]));
 
         var fresh = messages.Where(m => m.Author != me.Id && m.At > own[^1].At).ToList();
         bool Addresses(DiscussionLine m, Guid target) => m.Text.StartsWith(Name(target) + ",", StringComparison.OrdinalIgnoreCase) ||
@@ -138,7 +142,8 @@ public static class BotDiscussion
                      o.Text.Contains("договорились", StringComparison.OrdinalIgnoreCase)))
         {
             var answered = pending.LastOrDefault(q => q.At < response.At &&
-                response.Text.StartsWith(Name(q.Author) + ",", StringComparison.OrdinalIgnoreCase));
+                (response.Text.StartsWith(Name(q.Author) + ",", StringComparison.OrdinalIgnoreCase) ||
+                 response.Text.StartsWith(Call(q.Author) + ",", StringComparison.OrdinalIgnoreCase)));
             if (answered is not null) pending.Remove(answered);
         }
         var question = pending.LastOrDefault();
@@ -155,21 +160,21 @@ public static class BotDiscussion
             {
                 var shared = question.Cards.Intersect(cards).ToList();
                 if (shared.Count > 0)
-                    return ($"{Name(question.Author)}, договорились поддержать эти карты. По остальным пунктам ещё сверю улики." + suspicion,
+                    return ($"{Call(question.Author)}, договорились поддержать эти карты. По остальным пунктам ещё сверю улики." + suspicion,
                         shared, shared.Select(_ => "думаю, эта").ToList());
-                return Line($"{Name(question.Author)}, пока не договорились: мои улики ведут к другим картам. Показываю свою версию." + suspicion);
+                return Line($"{Call(question.Author)}, пока не договорились: мои улики ведут к другим картам. Показываю свою версию." + suspicion);
             }
             var mentioned = MentionedRows(view, incoming);
             var asksSuspect = question is not null &&
                 (question.Text.Contains("за кого", StringComparison.OrdinalIgnoreCase) || question.Text.Contains("кого подозрева", StringComparison.OrdinalIgnoreCase));
             // Attachments supply context, not a replacement for an explicit question about players.
             if (asksSuspect && mentioned.Count == 0)
-                return Line($"{Name(incoming.Author)}, отвечаю про подозрения.{suspicion}");
+                return Line($"{Call(incoming.Author)}, отвечаю про подозрения.{suspicion}");
             if (question is not null && mentioned.Count > 1)
             {
                 // A direct question may name several rows. Answer each once, without
                 // turning a whole-version attachment into a request about unrelated rows.
-                var prefix = $"{Name(incoming.Author)}, отвечаю по названным рядам:";
+                var prefix = $"{Call(incoming.Author)}, отвечаю по названным рядам:";
                 var lines = mentioned.Select(row =>
                 {
                     var chosen = view.Board[row].Cards[plan[row]];
@@ -189,17 +194,17 @@ public static class BotDiscussion
             {
                 if (question is null || incoming.Text.Contains("верси", StringComparison.OrdinalIgnoreCase) ||
                     incoming.Text.Contains("всем ряд", StringComparison.OrdinalIgnoreCase))
-                    return Line(Summary($"{Name(incoming.Author)}, отвечаю по всей версии; вот мой выбор и основания:"));
+                    return Line(Summary($"{Call(incoming.Author)}, отвечаю по всей версии; вот мой выбор и основания:"));
                 // Do not invent the subject of a vague question or attach an arbitrary first-row card.
-                return ($"{Name(incoming.Author)}, уточню: ты спрашиваешь про какой ряд? Назови его или приложи карту — сравним улики.", [], []);
+                return ($"{Call(incoming.Author)}, уточню: ты спрашиваешь про какой ряд? Назови его или приложи карту — сравним улики.", [], []);
             }
             var row = focus.Value;
             var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
             var comparison = offered is null ? "вот мой текущий выбор" : offered == view.Board[row].Cards[plan[row]] ? "здесь наши версии совпадают" : "здесь я пока не согласен";
-            var text = $"{Name(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
+            var text = $"{Call(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
                 $"{Revision(row)}Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
                 "Остальные ряды моей версии — на прикреплённых картах." + suspicion;
-            return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Name(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
+            return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Call(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
         }
         if (!own.Any(m => m.Text.Contains('?')))
         {
@@ -211,7 +216,7 @@ public static class BotDiscussion
             if (target is null) return null;
             var row = me.Id.GetHashCode() % view.Board.Count;
             row = Math.Abs(row);
-            return Line($"{Name(target.Id)}, за какую карту в ряду «{Where(row, plan[row]).Split(' ')[0]}» будешь голосовать? " +
+            return Line($"{Call(target.Id)}, за какую карту в ряду «{Where(row, plan[row]).Split(' ')[0]}» будешь голосовать? " +
                 $"Я выбираю {Where(row, plan[row])}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
         }
         if (own.Count >= 2 && !own.Any(m => m.Text.Contains("Предлагаю голосовать вместе", StringComparison.Ordinal)))
@@ -227,7 +232,7 @@ public static class BotDiscussion
             {
                 var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Name(ally.Message.Author)} из", StringComparison.Ordinal)
                     ? " По подозрениям у нас могут быть разногласия." : suspicion;
-                return ($"{Name(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты; " +
+                return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты; " +
                     "если появится новая улика, пересмотрим договорённость." + sharedSuspicion +
                     (sharedSuspicion.Contains("Подозреваю", StringComparison.Ordinal) ? " Предлагаю вместе голосовать и против этого подозреваемого." : "") + " Согласен?",
                     ally.Shared, ally.Shared.Select(_ => "думаю, эта").ToList());
