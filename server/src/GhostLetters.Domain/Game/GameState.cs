@@ -117,8 +117,17 @@ public sealed partial class GameState
     [JsonIgnore]
     public bool HasKillerVote => HasKiller || Settings.Roles.RandomKillerOmission;
 
+    /// <summary>
+    /// Идёт финальное общее обсуждение перед голосованием. В рации последний раунд сначала обсуждают как обычно
+    /// (по кругу), и только потом — общее обсуждение; в свободном чате обсуждение последнего раунда и есть финальное.
+    /// </summary>
+    public bool FinalTalk { get; set; }
+
     [JsonIgnore]
-    public DiscussionMode EffectiveDiscussion => Round >= TotalRounds ? DiscussionMode.FreeChat : Settings.Discussion;
+    public bool IsFinalTalk => Round >= TotalRounds && (FinalTalk || Settings.Discussion != DiscussionMode.Radio);
+
+    [JsonIgnore]
+    public DiscussionMode EffectiveDiscussion => IsFinalTalk ? DiscussionMode.FreeChat : Settings.Discussion;
 
     [JsonIgnore]
     public Guid? CurrentSpeaker =>

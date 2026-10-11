@@ -527,7 +527,16 @@ public static partial class GameEngine
 
     private static void EndDiscussion(GameState state, List<GameEvent> events)
     {
-        if (state.Round >= state.TotalRounds)
+        if (state.Round >= state.TotalRounds && !state.IsFinalTalk)
+        {
+            // Последний раунд обсудили по кругу — теперь общее обсуждение перед голосованием.
+            state.FinalTalk = true;
+            state.FloorGrantedTo = null;
+            state.RaisedHands.Clear();
+            SetPhase(state, Phase.Discussion, events);
+            events.Add(new GameEvent("FinalDiscussion"));
+        }
+        else if (state.Round >= state.TotalRounds)
         {
             StartVoting(state, events);
         }

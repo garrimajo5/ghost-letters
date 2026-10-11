@@ -129,7 +129,7 @@ public static class BotSandboxRunner
                     var mayReply = own.Count == 1 && discussion.Any(m => m.Author != seat.Id && m.At > own[0].At);
                     var now = clock;
                     var tactic = own.Count < BotDiscussion.MaxMessages ? BotLetterTactics.Compose(view, mind, discussion, rng, now) : null;
-                    var line = tactic ?? (BotLetterTactics.Pending(seat.Id, discussion) ? null : state.Round >= state.TotalRounds
+                    var line = tactic ?? (BotLetterTactics.Pending(seat.Id, discussion) ? null : state.IsFinalTalk
                         ? BotDiscussion.Compose(view, tags, mind, discussion, rng)
                         : own.Count == 0 ? BotPlayer.Say(view, rng, tags, mind)
                         : mayReply ? BotPlayer.Reply(view, rng, tags, mind) : null);

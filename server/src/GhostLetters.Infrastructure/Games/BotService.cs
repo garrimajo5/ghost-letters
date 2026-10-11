@@ -225,7 +225,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var (tabled, tablePending) = await TryTableAsync(state, view, botId, mind, ct);
         if (tabled) return true;
 
-        if (state.Phase == Phase.Discussion && state.Round >= state.TotalRounds && view.Me?.Role != Role.Ghost &&
+        if (state.Phase == Phase.Discussion && state.IsFinalTalk && view.Me?.Role != Role.Ghost &&
             BotDiscussion.ShouldWait(botId, await DiscussionAsync(state, ct), time.GetUtcNow(), humansReady)) return false;
 
         if (state.Phase == Phase.Discussion && BotLetterTactics.Pending(botId, await DiscussionAsync(state, ct))) return false;
@@ -349,7 +349,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             catch (AppException e) { logger.LogDebug("Заявление о письме пропущено: {Error}", e.Message); return false; }
         }
         if (BotLetterTactics.Pending(botId, letterDiscussion)) return false;
-        if (state.Round >= state.TotalRounds)
+        if (state.IsFinalTalk)
         {
             var messages = await DiscussionAsync(state, ct);
             var own = messages.Where(m => m.Author == botId).ToList();
