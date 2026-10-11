@@ -18,8 +18,27 @@ class _MainTableState extends State<_MainTable> {
   /// null — по фазе: панель сама открывается там, где действие только в ней.
   bool? _panel;
   String? _phase;
+  final _say = _Say();
 
   GameScreenState get screen => widget.screen;
+
+  @override
+  void initState() {
+    super.initState();
+    _say.addListener(_refresh);
+    screen.chatChanges.addListener(_refresh);
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    screen.chatChanges.removeListener(_refresh);
+    _say.dispose();
+    super.dispose();
+  }
 
   static bool _panelPhase(GameView v) =>
       v.can('RevealHints') || const {'VoteTie', 'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase);
@@ -34,12 +53,13 @@ class _MainTableState extends State<_MainTable> {
     if (_phase != v.phase) {
       _phase = v.phase;
       _panel = null;
+      _say.reset();
     }
     final size = MediaQuery.sizeOf(context);
     final landscape = size.width > size.height;
     final night = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     final open = _panelOpen(v);
-    final center = open ? _panelView(v) : _TableArea(screen: screen, landscape: landscape);
+    final center = open ? _panelView(v) : _TableArea(screen: screen, landscape: landscape, say: _say);
     final hand = v.me != null && v.me!.hand.isNotEmpty && !isFinale(v);
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
@@ -71,7 +91,7 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: center),
             ],
-            if (hand) _Fan(screen: screen, height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
+            if (hand) _Fan(screen: screen, say: _say, height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
             if (!landscape)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
@@ -181,10 +201,25 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape});
+  const _TableArea({required this.screen, required this.landscape, required this.say});
 
   final GameScreenState screen;
   final bool landscape;
+  final _Say say;
+
+  /// Отметка карты поля: свой показ (пока не отправлен) или последнее заявление говорящего.
+  Color? _mark(String id, ChatMessage? statement) {
+    if (say.active) {
+      final m = say.marks[id];
+      return m == null ? null : (m ? AppColors.believed : AppColors.redBright);
+    }
+    if (statement == null) return null;
+    final i = statement.cardIds.indexOf(id);
+    if (i < 0) return null;
+    final note = statement.noteFor(i) ?? '';
+    if (theorySource(note)) return null;
+    return theoryNegative(note) ? AppColors.redBright : AppColors.believed;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,12 +231,15 @@ class _TableArea extends StatelessWidget {
       const gap = _Board.gap;
       // Ширина: подсказки (до двух карт по 0.7) + подпись + столбцы поля.
       final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 4 + 10)) / (columns + hintCards * 0.7);
-      final byHeight = landscape ? (box.maxHeight - 8) / rows - gap : double.infinity;
+      final stripHeight = say.active || _statement(screen) != null || _canSay(v) ? _SayStrip.height : 0.0;
+      final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 150.0).floorToDouble();
       final hint = (card * 0.7).floorToDouble();
       final hintsWidth = hintCards * (hint + 4) + 10;
       final order = _Board.tableOrder(v);
-      return SingleChildScrollView(
+      final statement = _statement(screen);
+      final strip = say.active || statement != null || _canSay(v);
+      final board = SingleChildScrollView(
         key: const Key('main-board'),
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -211,7 +249,7 @@ class _TableArea extends StatelessWidget {
               for (var i = 0; i < v.hints.length || i < order.length; i++)
                 SizedBox(
                   height: card + gap,
-                  child: i < v.hints.length ? _HintStep(screen: screen, hint: v.hints[i], size: hint) : null,
+                  child: i < v.hints.length ? _HintStep(screen: screen, say: say, hint: v.hints[i], size: hint) : null,
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -226,19 +264,41 @@ class _TableArea extends StatelessWidget {
               maxCard: card,
               order: order,
               vertical: true,
+              decorate: (id, child) {
+                final color = _mark(id, statement);
+                Widget out = color == null
+                    ? child
+                    : Container(
+                        key: Key('say-mark-$id'),
+                        foregroundDecoration: BoxDecoration(
+                          border: Border.all(color: color, width: 3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: child,
+                      );
+                // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
+                if (say.active) out = GestureDetector(onTap: () => say.cycle(id), child: out);
+                return out;
+              },
             ),
           ),
         ]),
       );
+      if (!strip) return board;
+      return Column(children: [
+        _SayStrip(screen: screen, say: say, statement: statement),
+        Expanded(child: board),
+      ]);
     });
   }
 }
 
 /// Ступенька лесенки: подпись раунда и его подсказки; лишние карты листаются свайпом.
 class _HintStep extends StatelessWidget {
-  const _HintStep({required this.screen, required this.hint, required this.size});
+  const _HintStep({required this.screen, required this.say, required this.hint, required this.size});
 
   final GameScreenState screen;
+  final _Say say;
   final HintGroup hint;
   final double size;
 
@@ -270,10 +330,15 @@ class _HintStep extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 4),
                       child: GestureDetector(
                         key: Key('hint-$c'),
-                        onTap: () => HintSheet.show(context, screen, c, hint.round),
+                        onTap: () => say.active ? say.pick(c, hint: true) : HintSheet.show(context, screen, c, hint.round),
                         onLongPress: () => showCardZoom(context, c),
                         child: Stack(clipBehavior: Clip.none, children: [
-                          CardImage(cardId: c, size: size, radius: 7),
+                          Container(
+                            foregroundDecoration: say.active && say.source == c
+                                ? BoxDecoration(border: Border.all(color: AppColors.amber, width: 3), borderRadius: BorderRadius.circular(7))
+                                : null,
+                            child: CardImage(cardId: c, size: size, radius: 7),
+                          ),
                           if (screen.marks[c]?.claimedBy case final who?)
                             Positioned(
                               right: -3,
@@ -487,9 +552,10 @@ class _Actions extends StatelessWidget {
 
 /// Рука веером снизу: выбранная карта приподнята; долгое нажатие — карта крупно.
 class _Fan extends StatelessWidget {
-  const _Fan({required this.screen, required this.height});
+  const _Fan({required this.screen, required this.say, required this.height});
 
   final GameScreenState screen;
+  final _Say say;
   final double height;
 
   @override
@@ -499,6 +565,8 @@ class _Fan extends StatelessWidget {
     final selectable = v.can('SendLetter') || v.can('Discard') || v.can('GiveFirstClue');
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
     final card = height - 14;
+    // Во время показа на столе карта из веера — «кидал эту».
+    bool raised(String c) => say.active ? say.source == c : screen.selectedHand.contains(c);
     return SizedBox(
       key: const Key('main-fan'),
       height: height,
@@ -512,20 +580,24 @@ class _Fan extends StatelessWidget {
           for (var i = 0; i < n; i++)
             Positioned(
               left: left + step * i,
-              top: 12 + ((i - mid).abs() * 2.0) - (screen.selectedHand.contains(hand[i]) ? 12 : 0),
+              top: 12 + ((i - mid).abs() * 2.0) - (raised(hand[i]) ? 12 : 0),
               child: Transform.rotate(
                 angle: (i - mid) * 0.06,
                 alignment: Alignment.bottomCenter,
                 child: GestureDetector(
                   key: Key('hand-${hand[i]}'),
-                  onTap: selectable ? () => _toggleHand(screen, hand[i], limit) : null,
+                  onTap: say.active
+                      ? () => say.pick(hand[i], hint: false)
+                      : selectable
+                          ? () => _toggleHand(screen, hand[i], limit)
+                          : null,
                   onLongPress: () => showCardZoom(context, hand[i], caption: 'Карта на руке'),
                   child: Container(
                     foregroundDecoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(9),
                       border: Border.all(
-                        color: screen.selectedHand.contains(hand[i]) ? AppColors.amber : AppColors.border,
-                        width: screen.selectedHand.contains(hand[i]) ? 3 : 1,
+                        color: raised(hand[i]) ? AppColors.amber : AppColors.border,
+                        width: raised(hand[i]) ? 3 : 1,
                       ),
                     ),
                     decoration: BoxDecoration(
@@ -533,7 +605,7 @@ class _Fan extends StatelessWidget {
                       boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2))],
                     ),
                     child: Opacity(
-                      opacity: selectable || !needsMe(v) ? 1 : 0.6,
+                      opacity: selectable || say.active || !needsMe(v) ? 1 : 0.6,
                       child: CardImage(cardId: hand[i], size: card, radius: 9),
                     ),
                   ),
@@ -542,6 +614,205 @@ class _Fan extends StatelessWidget {
             ),
         ]);
       }),
+    );
+  }
+}
+
+/// Показ на столе, пока игрок его собирает: карта, которую «кидал» (из веера или письмо),
+/// или улика-подсказка, и до четырёх карт поля — зелёные («указывает») и красные («не эта»).
+class _Say extends ChangeNotifier {
+  bool active = false;
+  String? source;
+  bool hint = false;
+  final marks = <String, bool>{};
+
+  void start() {
+    active = true;
+    notifyListeners();
+  }
+
+  void reset() {
+    active = false;
+    source = null;
+    marks.clear();
+  }
+
+  void stop() {
+    reset();
+    notifyListeners();
+  }
+
+  void pick(String id, {required bool hint}) {
+    if (source == id) {
+      source = null;
+    } else {
+      source = id;
+      this.hint = hint;
+    }
+    notifyListeners();
+  }
+
+  void cycle(String id) {
+    final m = marks[id];
+    if (m == null) {
+      if (marks.length < 4) marks[id] = true;
+    } else if (m) {
+      marks[id] = false;
+    } else {
+      marks.remove(id);
+    }
+    notifyListeners();
+  }
+}
+
+/// Сообщения, собранные на столе, начинаются так — в чате они помечаются «со стола».
+const tablePostPrefix = 'Со стола: ';
+
+/// Может ли игрок сейчас показывать на столе: обсуждение, не Призрак.
+bool _canSay(GameView v) => v.phase == 'Discussion' && v.me != null && v.me!.role != 'Ghost';
+
+/// Последнее публичное заявление с картами в этом раунде: говорящего, а без него — любое.
+ChatMessage? _statement(GameScreenState screen) {
+  final v = screen.view!;
+  if (!const {'Discussion', 'Voting', 'VoteTie'}.contains(v.phase)) return null;
+  ChatMessage? last, speaker;
+  for (final m in screen.chat) {
+    if (m.channel != 'public' || m.authorId == null || m.cardIds.isEmpty || m.round != v.round) continue;
+    last = m;
+    if (m.authorId == v.currentSpeaker) speaker = m;
+  }
+  return speaker ?? last;
+}
+
+/// Подпись карты поля для текста: «Мотив 2».
+String _cardName(GameView v, String id) {
+  for (final row in v.board) {
+    final c = row.cards.indexOf(id);
+    if (c >= 0) return '${T.category(row.category)} ${c + 1}';
+  }
+  return 'карта';
+}
+
+/// Текст показа для чата: люди читают его, боты — заметки к картам.
+String _sayText(GameView v, _Say say) {
+  final green = [for (final e in say.marks.entries) if (e.value) _cardName(v, e.key)];
+  final red = [for (final e in say.marks.entries) if (!e.value) _cardName(v, e.key)];
+  final source = say.source != null;
+  final parts = <String>[
+    if (source) say.hint ? 'эта улика' : 'кидал эту карту',
+    if (green.isNotEmpty) '${source ? 'указывает на' : 'думаю, это'} ${green.join(', ')}',
+    if (red.isNotEmpty) '${source && !say.hint ? 'её не вытащили — ' : ''}не ${red.join(', ')}',
+  ];
+  return '$tablePostPrefix${parts.join('; ')}.';
+}
+
+/// Строка над полем: что говорящий показал на столе, а во время своего показа — подсказка и «Отправить».
+class _SayStrip extends StatelessWidget {
+  const _SayStrip({required this.screen, required this.say, required this.statement});
+
+  static const height = 46.0;
+
+  final GameScreenState screen;
+  final _Say say;
+  final ChatMessage? statement;
+
+  Future<void> _send(BuildContext context) async {
+    final v = screen.view!;
+    final link = say.source != null ? ':0' : '';
+    final sent = await runAction(
+      context,
+      () => screen.ref.read(apiProvider).sendChat(
+            v.gameId,
+            _sayText(v, say),
+            channel: 'public',
+            cards: [if (say.source != null) say.source!, ...say.marks.keys],
+            cardNotes: [
+              if (say.source != null) say.hint ? 'улика' : 'кидал',
+              for (final green in say.marks.values) (green ? 'думаю, эта' : 'исключаю') + link,
+            ],
+          ),
+    );
+    if (sent != null) say.stop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = screen.view!;
+    final children = <Widget>[];
+    if (say.active) {
+      final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
+      children.addAll([
+        if (say.source != null)
+          CardImage(key: const Key('say-source'), cardId: say.source!, size: 36, radius: 6)
+        else if (letter != null)
+          GestureDetector(
+            key: const Key('say-my-letter'),
+            onTap: () => say.pick(letter.cardId, hint: false),
+            child: Opacity(opacity: 0.7, child: CardImage(cardId: letter.cardId, size: 36, radius: 6)),
+          ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            say.source == null
+                ? 'Карта, которую кидали (веер), или улика слева; затем карты поля: раз — зелёная, два — красная'
+                : '${say.hint ? 'Улика' : 'Кидал эту'} → нажмите карты поля: раз — указывает, два — не эта',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: AppColors.muted),
+          ),
+        ),
+        IconButton(key: const Key('say-cancel'), tooltip: 'Отменить показ', icon: const Icon(Icons.close), onPressed: say.stop),
+        FilledButton(
+          key: const Key('say-send'),
+          onPressed: say.source == null && say.marks.isEmpty ? null : () => _send(context),
+          child: const Text('На стол'),
+        ),
+      ]);
+    } else {
+      final m = statement;
+      if (m != null) {
+        final source = m.cardNotes.isNotEmpty && theorySource(m.cardNotes.first) ? m.cardIds.first : null;
+        children.addAll([
+          Avatar(nickname: screen.nick(m.authorId), color: screen.colorOf(m.authorId), photoId: screen.photoOf(m.authorId), size: 26),
+          const SizedBox(width: 6),
+          if (source != null) ...[
+            GestureDetector(
+              onTap: () => showCardZoom(context, source),
+              child: CardImage(key: Key('say-shown-$source'), cardId: source, size: 36, radius: 6),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(
+              '${screen.nick(m.authorId)}: ${(m.text ?? '').replaceFirst(tablePostPrefix, '')}',
+              key: const Key('say-statement'),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ]);
+      } else {
+        children.add(const Spacer());
+      }
+      if (_canSay(v))
+        children.add(TextButton.icon(
+          key: const Key('say-start'),
+          onPressed: say.start,
+          icon: const Icon(Icons.touch_app_outlined, size: 18),
+          label: const Text('Показать на столе'),
+        ));
+    }
+    return Container(
+      height: height,
+      margin: const EdgeInsets.fromLTRB(6, 0, 8, 2),
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: say.active ? const Color(0xFF3A2B12) : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: say.active ? AppColors.amber : AppColors.border),
+      ),
+      child: Row(children: children),
     );
   }
 }
