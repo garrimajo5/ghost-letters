@@ -81,15 +81,13 @@ class GameScreenState extends ConsumerState<GameScreen> {
   static const reactionLife = Duration(seconds: 4);
 
   void addReaction(Reaction r) {
-    final now = DateTime.now();
-    reactions
-      ..removeWhere((x) => now.difference(x.at) > reactionLife)
-      ..add(Reaction(gameId: r.gameId, userId: r.userId, emoji: r.emoji, at: now));
-    if (reactions.length > 40) reactions.removeRange(0, reactions.length - 40);
+    final entry = Reaction(gameId: r.gameId, userId: r.userId, emoji: r.emoji, at: DateTime.now());
+    reactions.add(entry);
+    if (reactions.length > 40) reactions.removeAt(0);
     reactionChanges.value++;
-    Timer(reactionLife + const Duration(milliseconds: 50), () {
-      if (!mounted) return;
-      reactions.removeWhere((x) => DateTime.now().difference(x.at) > reactionLife);
+    // Каждое эмодзи живёт свои секунды и исчезает само.
+    Timer(reactionLife, () {
+      if (!mounted || !reactions.remove(entry)) return;
       reactionChanges.value++;
     });
   }

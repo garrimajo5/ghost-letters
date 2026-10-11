@@ -902,10 +902,8 @@ class _FlyingReactions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
-        final now = DateTime.now();
         return Stack(children: [
           for (final r in screen.reactions)
-            if (now.difference(r.at) < GameScreenState.reactionLife)
               _Flying(
                 key: ValueKey('fly-${r.userId}-${r.at.microsecondsSinceEpoch}'),
                 reaction: r,
