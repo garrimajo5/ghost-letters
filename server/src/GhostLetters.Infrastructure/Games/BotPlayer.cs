@@ -958,7 +958,7 @@ public static class BotPlayer
                     var best = BestColumn(r, options);
                     if (Evidence(Card(r, best)) > 0.05) version.Add(Where(r, best));
                 }
-                if (version.Count > 1) opinion += "\nСвязная версия: " + string.Join("; ", version) + ".";
+                if (version.Count > 1) opinion += "\nЦеликом думаю так: " + string.Join(", ", version) + ".";
             }
             opinion += Accusation();
             if (claimCard is null)
@@ -999,13 +999,15 @@ public static class BotPlayer
                 notes.Add("думаю, эта");
             }
 
+            // Одной фразой, как сказал бы человек: что проверял и почему (по первой связи).
+            var checkedNames = checkedCards.Select(x => Where(x.Row, x.Column)).ToList();
             var checkedText = checkedCards.Count == 0 ? "Проверял: явной связи с полем нет." :
-                $"Проверял: {string.Join(", ", checkedCards.Select(x => Where(x.Row, x.Column)))}.\n" +
-                string.Join("\n", checkedCards.Select(x => $"• {Where(x.Row, x.Column)} — {Connection(claimCard, Card(x.Row, x.Column))}."));
+                $"Проверял: {(checkedNames.Count == 1 ? checkedNames[0] : string.Join(", ", checkedNames[..^1]) + " и " + checkedNames[^1])}" +
+                $" — {Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))}.";
             var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
             var conclusion = vanished
                 ? checkedCards.Count == 0 ? "Письмо исчезло, но явных связей с картами поля я не вижу."
-                    : NegativeWeight > 0 ? "Письмо исчезло: это ослабляет эти версии, но не исключает карты — другие улики могут перевесить."
+                    : NegativeWeight > 0 ? "Раз исчезло — это ослабляет эти версии, но не исключает: другие улики могут перевесить."
                         : "Письмо исчезло, но я не считаю это исключением карт."
                 : claimText.Contains("открыл", StringComparison.Ordinal)
                     ? checkedCards.Count > 0 ? "Открытие письма усиливает эти связи." : "Письмо открыто, но явных связей с картами поля я не вижу."
