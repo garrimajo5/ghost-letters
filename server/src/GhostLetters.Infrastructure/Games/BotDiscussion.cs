@@ -238,8 +238,8 @@ public static class BotDiscussion
             {
                 var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Name(ally.Message.Author)} из", StringComparison.Ordinal)
                     ? " По подозрениям у нас могут быть разногласия." : suspicion;
-                return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты; " +
-                    "если появится новая улика, пересмотрим договорённость." + sharedSuspicion +
+                // Финальное обсуждение — после последнего раунда: новых улик уже не будет.
+                return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты." + sharedSuspicion +
                     (sharedSuspicion.Contains("Подозреваю", StringComparison.Ordinal) ? " Предлагаю вместе голосовать и против этого подозреваемого." : "") + " Согласен?",
                     ally.Shared, ally.Shared.Select(_ => "думаю, эта").ToList());
             }

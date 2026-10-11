@@ -287,6 +287,34 @@ class ErrorRetry extends StatelessWidget {
 }
 
 /// Карта крупно поверх экрана: нажмите в любом месте, чтобы закрыть.
+/// Карты руки во весь экран: свайп — соседняя карта, нажатие — закрыть.
+Future<void> showHandGallery(BuildContext context, List<String> cards, int index) => showDialog<void>(
+      context: context,
+      barrierColor: const Color(0xF2050A10),
+      builder: (context) {
+        final size = (MediaQuery.sizeOf(context).shortestSide - 40).clamp(160.0, 520.0);
+        final controller = PageController(initialPage: index.clamp(0, cards.length - 1), viewportFraction: .86);
+        return GestureDetector(
+          key: const Key('hand-gallery'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => Navigator.pop(context),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            SizedBox(
+              height: size,
+              child: PageView.builder(
+                controller: controller,
+                itemCount: cards.length,
+                itemBuilder: (context, i) => Center(child: CardImage(key: Key('gallery-${cards[i]}'), cardId: cards[i], size: size, radius: 22)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text('Карты на руке · свайп — следующая · нажмите, чтобы закрыть',
+                style: TextStyle(fontSize: 12, color: AppColors.dim), textAlign: TextAlign.center),
+          ]),
+        );
+      },
+    );
+
 Future<void> showCardZoom(BuildContext context, String cardId, {String? caption, String? actionLabel, VoidCallback? onAction}) =>
     showDialog<void>(
       context: context,
