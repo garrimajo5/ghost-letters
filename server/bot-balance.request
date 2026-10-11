@@ -1,0 +1,2 @@
+150
+variants: по размеру стола: KillerSizeAware=true | по размеру + маскировка 0.08: KillerSizeAware=true, KillerClearMargin=0.08

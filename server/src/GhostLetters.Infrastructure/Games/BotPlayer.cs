@@ -135,7 +135,16 @@ public static class BotPlayer
 
         /// <summary>Чёрные: как часто врут о своём письме, голосуют и пишут под ложную карту.</summary>
 
-        private double FakeChance => Classic ? 1 : 0.25 + 0.75 * P.Risk;
+        private double FakeChance => Classic ? 1 : Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1);
+
+        /// <summary>
+        /// Чем больше за столом подозреваемых, тем безопаснее лгать: за маленьким столом ложь видна сразу,
+        /// за большим — теряется среди голосов. 1 — как раньше (без поправки).
+        /// </summary>
+        private double SizeBoldness => BotTuning.Current.KillerSizeAware
+            ? Math.Clamp(0.5 + 0.15 * Suspects, 0.7, 1.3) : 1;
+
+        private int Suspects => Math.Max(0, view.Players.Count(p => !p.IsGhost) - 1);
 
         /// <summary>Сколько карт поля бот «проверяет» одним письмом и читает за одной подсказкой (строгий — 1, широкий — 4).</summary>
         private int MyBreadth => Classic ? 3 : P.CheckBreadth;
@@ -484,6 +493,10 @@ public static class BotPlayer
 
             return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
         }
+
+        private double FakeVanishChance => BotTuning.Current.KillerSizeAware
+            ? Math.Max(BotTuning.Current.KillerFakeVanish, Math.Clamp((Suspects - 3) / 2.0, 0, 1))
+            : BotTuning.Current.KillerFakeVanish;
 
         /// <summary>Отрыв истины от лучшей ложной карты ряда по публичным подсказкам.</summary>
         private double TruthMargin(int row)
@@ -951,7 +964,7 @@ public static class BotPlayer
             // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
             // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
             if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)
-                && rng.NextDouble() < BotTuning.Current.KillerFakeVanish * FakeChance)
+                && rng.NextDouble() < FakeVanishChance * FakeChance)
             {
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
                 var real = Card(row, lieTruth[row]);

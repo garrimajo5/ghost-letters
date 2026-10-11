@@ -56,6 +56,9 @@ public sealed record BotTuning
     /// <summary>Как часто чёрный выдаёт за своё исчезнувшее письмо другую карту — похожую на истину (× его склонность ко лжи).</summary>
     public double KillerFakeVanish { get; init; }
 
+    /// <summary>Чёрные смелее лгут за большим столом (больше подозреваемых) и осторожнее — за маленьким.</summary>
+    public bool KillerSizeAware { get; init; }
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -91,6 +94,7 @@ public sealed record BotTuning
                 nameof(VanishedFocus) => t with { VanishedFocus = B() },
                 nameof(LetterBase) => t with { LetterBase = D() },
                 nameof(Probe) => t with { Probe = B() },
+                nameof(KillerSizeAware) => t with { KillerSizeAware = B() },
                 nameof(KillerFakeVanish) => t with { KillerFakeVanish = D() },
                 nameof(ProbePlausible) => t with { ProbePlausible = D() },
                 nameof(ProbeUnclear) => t with { ProbeUnclear = D() },
