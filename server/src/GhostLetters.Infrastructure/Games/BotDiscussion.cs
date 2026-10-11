@@ -14,6 +14,9 @@ public static class BotDiscussion
     public const int MaxMessages = 6;
     private static readonly Regex Who = Words(@"\bкто\b");
 
+    /// <summary>Ссылка на подсказку в реплике: первая улика — «Зацепка», остальные — «Подсказка р.N №M» (клиент рисует их картой).</summary>
+    public static string HintRef(int round, int number) => round == 0 ? "Зацепка" : $"Подсказка р.{round} №{number}";
+
     public static TimeSpan SpeechTime(string text, int? durationMs = null) => TimeSpan.FromSeconds(
         Math.Max(Math.Clamp(2 + text.Length / 14.0, 4, 45), Math.Clamp((durationMs ?? 0) / 1000.0, 0, 60)));
 
@@ -101,7 +104,7 @@ public static class BotDiscussion
             if (hint.Id is null || tags.Similarity(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings) <= 0)
                 return "связь с открытыми уликами слабая, пока предположение";
             var reason = tags.Explain(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings);
-            return $"Подсказка р.{hint.Round} №{hint.Number}: {(reason.Length <= 120 ? reason : "сходство изображений")}";
+            return $"{HintRef(hint.Round, hint.Number)}: {(reason.Length <= 120 ? reason : "сходство изображений")}";
         }
         (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line(string text, int? focus = null) =>
             (text, focus is { } r ? cards.OrderByDescending(c => c == view.Board[r].Cards[plan[r]]).ToList() : cards,

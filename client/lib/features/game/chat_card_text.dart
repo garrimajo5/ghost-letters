@@ -20,7 +20,7 @@ class ChatCardText extends StatelessWidget {
     final text = message.text ?? '';
     if (message.cardNotes.isEmpty) return [(text: text, cardId: null)];
     final pattern = RegExp(
-      r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу])(?![а-яёa-z])',
+      r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',
       caseSensitive: false,
     );
     final parts = <({String text, String? cardId})>[];
@@ -44,6 +44,15 @@ class ChatCardText extends StatelessWidget {
           if (T.categories[row.category]?.toLowerCase() == match[4]!.toLowerCase() && index >= 0 && index < row.cards.length) {
             cardId = row.cards[index];
             label = match[4]!;
+            break;
+          }
+        }
+      } else if (match[6] != null) {
+        // Первая улика Призрака: «Зацепка» в реплике — та же карта, что «Подсказка р.0 №1».
+        for (final hint in hints) {
+          if (hint.round == 0 && hint.cards.isNotEmpty) {
+            cardId = hint.cards.first;
+            label = match[6]!;
             break;
           }
         }
