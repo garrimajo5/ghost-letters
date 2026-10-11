@@ -73,7 +73,7 @@ public static class BotTable
                 if (pin is null || pin.Column != plan[r]) cards.Add(Target(r));
             }
             if (cards.Count == 0) return null;
-            cards = cards.Take(Math.Min(ChatService.MaxCards, GameEngine.MaxTableOps)).ToList();
+            cards = cards.Take(Math.Min(5, GameEngine.MaxTableOps)).ToList();
             var text = (table.PinsOnly ? "Переставляю булавки: " : "Закрепляю версию: ") + string.Join(", ", cards.Select(Where)) + ".";
             return new(text, cards, cards.Select(_ => "версия").ToList(),
                 cards.Select(c => new TableOp(TableOpKind.Pin, Target: c)).ToList());

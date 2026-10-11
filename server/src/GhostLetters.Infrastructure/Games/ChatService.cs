@@ -41,7 +41,8 @@ public sealed class ChatService(
     TimeProvider time)
 {
     public const int MaxTextLength = 1000;
-    public const int MaxCards = 5;
+    /// <summary>Карт в одном сообщении: показ на столе может связать все подсказки Призрака с полем.</summary>
+    public const int MaxCards = 12;
     public const int MaxNoteLength = 30;
     public const int MaxVoiceMs = 60_000;
     public const long MaxVoiceBytes = 2 * 1024 * 1024;

@@ -92,6 +92,8 @@ class _MainTableState extends State<_MainTable> {
             });
     }
     final hand = v.me != null;
+    // Большой экран: веер крупнее, чтобы рука не терялась внизу.
+    final fanHeight = landscape ? (size.height * 0.2).clamp(56.0, 150.0) : 96.0;
     final dropCenter = _dropZone(v, center);
     return ScrollConfiguration(
       // Никаких полос прокрутки: ленты листаются пальцем или мышью.
@@ -104,7 +106,6 @@ class _MainTableState extends State<_MainTable> {
             Positioned.fill(child: Column(children: [
             const ConnectionBanner(),
             _TopBar(screen: screen, panelOpen: open, seance: seance, onEye: () => _toggle(v)),
-            if (_emoji) _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
             if (seance)
               Expanded(child: dropCenter)
             else if (landscape)
@@ -127,7 +128,7 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: dropCenter),
             ],
-            if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: landscape ? (size.height * 0.2).clamp(56.0, 96.0) : 96),
+            if (hand) _Fan(screen: screen, say: _say, onEmoji: () => setState(() => _emoji = !_emoji), height: fanHeight),
             if (!landscape || seance)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
@@ -136,6 +137,13 @@ class _MainTableState extends State<_MainTable> {
             ])),
             // Эмодзи проплывают по столу снизу вверх и не мешают нажатиям.
             Positioned.fill(child: IgnorePointer(child: _FlyingReactions(screen: screen))),
+            // Выбор эмодзи — прямо над картой-смайликом (может перекрыть стол — это нестрашно).
+            if (_emoji)
+              Positioned(
+                right: 8,
+                bottom: fanHeight + (!landscape || seance ? 70 : 0) - 6,
+                child: _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
+              ),
           ]),
         ),
       ),
@@ -153,7 +161,7 @@ class _MainTableState extends State<_MainTable> {
 
   void _played(GameView v, String card) {
     if (_say.active) {
-      if (_say.source != card) _say.pick(card, hint: false);
+      if (!_say.isSource(card)) _say.pick(card, hint: false);
       return;
     }
     if (_dropLabel(v) == null) return;
@@ -301,7 +309,7 @@ class _TableArea extends StatelessWidget {
   Color? _mark(String id, ChatMessage? statement) {
     if (say.active) {
       final m = say.marks[id];
-      return m == null ? null : (m ? AppColors.believed : AppColors.redBright);
+      return m == null ? null : (m.$1 ? AppColors.believed : AppColors.redBright);
     }
     if (statement == null) return null;
     final i = statement.cardIds.indexOf(id);
@@ -323,7 +331,7 @@ class _TableArea extends StatelessWidget {
       final byWidth = (box.maxWidth - 16 - _Board.verticalLabel - gap * columns - (hintCards * 4 + 10)) / (columns + hintCards * 0.7);
       final stripHeight = say.active || _statement(screen) != null || _canSay(v) ? _SayStrip.height : 0.0;
       final byHeight = landscape ? (box.maxHeight - 8 - stripHeight) / rows - gap : double.infinity;
-      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 150.0).floorToDouble();
+      final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, 260.0).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       final hint = (card * 0.7 < card + gap - 15 ? card * 0.7 : card + gap - 15).floorToDouble();
       final hintsWidth = staircase ? hintCards * (hint + 4) + 10 : 0.0;
@@ -432,7 +440,7 @@ class _HintStep extends StatelessWidget {
                         onLongPress: () => showCardZoom(context, c),
                         child: Stack(clipBehavior: Clip.none, children: [
                           Container(
-                            foregroundDecoration: say.active && say.source == c
+                            foregroundDecoration: say.active && say.isSource(c)
                                 ? BoxDecoration(border: Border.all(color: AppColors.amber, width: 3), borderRadius: BorderRadius.circular(7))
                                 : null,
                             child: CardImage(cardId: c, size: size, radius: 7),
@@ -698,7 +706,7 @@ class _Fan extends StatelessWidget {
     final limit = v.can('SendLetter') ? lettersPerPlayer(v) : 1;
     final card = height - 20;
     // Во время показа на столе карта из веера — «кидал эту».
-    bool raised(String c) => say.active ? say.source == c : screen.selectedHand.contains(c);
+    bool raised(String c) => say.active ? say.isSource(c) : screen.selectedHand.contains(c);
     return SizedBox(
       key: const Key('main-fan'),
       height: height,
@@ -779,13 +787,30 @@ class _Fan extends StatelessWidget {
   }
 }
 
-/// Показ на столе, пока игрок его собирает: карта, которую «кидал» (из веера или письмо),
-/// или улика-подсказка, и до четырёх карт поля — зелёные («указывает») и красные («не эта»).
+/// Показ на столе, пока игрок его собирает: карты-источники (из веера — «кидал эту», подсказки — «улика»)
+/// и карты поля — зелёные («указывает») и красные («не эта»), каждая связана со своим источником.
+/// Источников может быть сколько угодно: можно связать со столом все подсказки Призрака.
 class _Say extends ChangeNotifier {
+  /// Сколько карт уходит в одно сообщение (как на сервере).
+  static const maxCards = 12;
+
   bool active = false;
-  String? source;
-  bool hint = false;
-  final marks = <String, bool>{};
+  final sources = <String>[];
+  final _hints = <String>{};
+  int current = -1;
+
+  /// Карта поля → (зелёная?, индекс источника или −1).
+  final marks = <String, (bool, int)>{};
+
+  String? get source => current >= 0 && current < sources.length ? sources[current] : null;
+
+  bool get hint => source != null && _hints.contains(source);
+
+  bool isHint(String id) => _hints.contains(id);
+
+  bool isSource(String id) => sources.contains(id);
+
+  int get total => sources.length + marks.length;
 
   void start() {
     active = true;
@@ -794,7 +819,9 @@ class _Say extends ChangeNotifier {
 
   void reset() {
     active = false;
-    source = null;
+    sources.clear();
+    _hints.clear();
+    current = -1;
     marks.clear();
   }
 
@@ -803,12 +830,24 @@ class _Say extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Нажатие на источник: новый — добавить и сделать текущим; текущий — убрать; другой — сделать текущим.
   void pick(String id, {required bool hint}) {
-    if (source == id) {
-      source = null;
+    final i = sources.indexOf(id);
+    if (i < 0) {
+      if (total >= maxCards) return;
+      sources.add(id);
+      if (hint) _hints.add(id);
+      current = sources.length - 1;
+    } else if (i == current) {
+      sources.removeAt(i);
+      _hints.remove(id);
+      for (final e in marks.entries.toList()) {
+        final (green, link) = e.value;
+        marks[e.key] = (green, link == i ? -1 : link > i ? link - 1 : link);
+      }
+      current = sources.isEmpty ? -1 : sources.length - 1;
     } else {
-      source = id;
-      this.hint = hint;
+      current = i;
     }
     notifyListeners();
   }
@@ -816,14 +855,21 @@ class _Say extends ChangeNotifier {
   void cycle(String id) {
     final m = marks[id];
     if (m == null) {
-      if (marks.length < 4) marks[id] = true;
-    } else if (m) {
-      marks[id] = false;
+      if (total < maxCards) marks[id] = (true, current);
+    } else if (m.$1) {
+      marks[id] = (false, m.$2);
     } else {
       marks.remove(id);
     }
     notifyListeners();
   }
+
+  List<String> get cards => [...sources, ...marks.keys];
+
+  List<String> get notes => [
+        for (final c in sources) _hints.contains(c) ? 'улика' : 'кидал',
+        for (final (green, link) in marks.values) (green ? 'думаю, эта' : 'исключаю') + (link >= 0 ? ':$link' : ''),
+      ];
 }
 
 /// Сообщения, собранные на столе, начинаются так — в чате они помечаются «со стола».
@@ -832,13 +878,14 @@ const tablePostPrefix = 'Со стола: ';
 /// Может ли игрок сейчас показывать на столе: обсуждение, не Призрак.
 bool _canSay(GameView v) => v.phase == 'Discussion' && v.me != null && v.me!.role != 'Ghost';
 
-/// Последнее публичное заявление с картами в этом раунде: говорящего, а без него — любое.
+/// Последняя публичная реплика раунда: говорящего, а без него — любая (с картами или без).
 ChatMessage? _statement(GameScreenState screen) {
   final v = screen.view!;
   if (!const {'Discussion', 'Voting', 'VoteTie'}.contains(v.phase)) return null;
   ChatMessage? last, speaker;
   for (final m in screen.chat) {
-    if (m.channel != 'public' || m.authorId == null || m.cardIds.isEmpty || m.round != v.round) continue;
+    if (m.channel != 'public' || m.authorId == null || m.round != v.round) continue;
+    if (m.cardIds.isEmpty && (m.text ?? '').trim().isEmpty) continue;
     last = m;
     if (m.authorId == v.currentSpeaker) speaker = m;
   }
@@ -856,18 +903,31 @@ String _cardName(GameView v, String id) {
 
 /// Текст показа для чата: люди читают его, боты — заметки к картам.
 String _sayText(GameView v, _Say say) {
-  final green = [for (final e in say.marks.entries) if (e.value) _cardName(v, e.key)];
-  final red = [for (final e in say.marks.entries) if (!e.value) _cardName(v, e.key)];
-  final source = say.source != null;
-  final parts = <String>[
-    if (source) say.hint ? 'эта улика' : 'кидал эту карту',
-    if (green.isNotEmpty) '${source ? 'указывает на' : 'думаю, это'} ${green.join(', ')}',
-    if (red.isNotEmpty) '${source && !say.hint ? 'её не вытащили — ' : ''}не ${red.join(', ')}',
-  ];
+  String sourceName(int i) {
+    final id = say.sources[i];
+    if (!say.isHint(id)) return 'кидал эту карту';
+    final round = v.hints.where((h) => h.cards.contains(id)).firstOrNull?.round;
+    return round == null ? 'улика' : round == 0 ? 'зацепка' : 'улика р.$round';
+  }
+
+  String part(int link) {
+    final green = [for (final e in say.marks.entries) if (e.value.$1 && e.value.$2 == link) _cardName(v, e.key)];
+    final red = [for (final e in say.marks.entries) if (!e.value.$1 && e.value.$2 == link) _cardName(v, e.key)];
+    final linked = link >= 0;
+    final thrown = linked && !say.isHint(say.sources[link]);
+    return [
+      if (linked) sourceName(link),
+      if (green.isNotEmpty) '${linked ? 'указывает на' : 'думаю, это'} ${green.join(', ')}',
+      if (red.isNotEmpty) '${thrown ? 'её не вытащили — ' : ''}не ${red.join(', ')}',
+    ].join(' ');
+  }
+
+  final parts = [for (var i = 0; i < say.sources.length; i++) part(i), if (say.marks.values.any((m) => m.$2 < 0)) part(-1)]
+      .where((p) => p.isNotEmpty);
   return '$tablePostPrefix${parts.join('; ')}.';
 }
 
-/// Строка над полем: что говорящий показал на столе, а во время своего показа — подсказка и «Отправить».
+/// Строка над полем: что говорящий показал на столе, а во время своего показа — источники и «Отправить».
 class _SayStrip extends StatelessWidget {
   const _SayStrip({required this.screen, required this.say, required this.statement});
 
@@ -879,19 +939,9 @@ class _SayStrip extends StatelessWidget {
 
   Future<void> _send(BuildContext context) async {
     final v = screen.view!;
-    final link = say.source != null ? ':0' : '';
     final sent = await runAction(
       context,
-      () => screen.ref.read(apiProvider).sendChat(
-            v.gameId,
-            _sayText(v, say),
-            channel: 'public',
-            cards: [if (say.source != null) say.source!, ...say.marks.keys],
-            cardNotes: [
-              if (say.source != null) say.hint ? 'улика' : 'кидал',
-              for (final green in say.marks.values) (green ? 'думаю, эта' : 'исключаю') + link,
-            ],
-          ),
+      () => screen.ref.read(apiProvider).sendChat(v.gameId, _sayText(v, say), channel: 'public', cards: say.cards, cardNotes: say.notes),
     );
     if (sent != null) say.stop();
   }
@@ -903,20 +953,33 @@ class _SayStrip extends StatelessWidget {
     if (say.active) {
       final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
       children.addAll([
-        if (say.source != null)
-          CardImage(key: const Key('say-source'), cardId: say.source!, size: 36, radius: 6)
-        else if (letter != null)
+        for (final id in say.sources)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: GestureDetector(
+              key: Key('say-source-$id'),
+              onTap: () => say.pick(id, hint: say.isHint(id)),
+              child: Container(
+                foregroundDecoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: id == say.source ? AppColors.amber : AppColors.border, width: id == say.source ? 2.5 : 1),
+                ),
+                child: CardImage(key: id == say.source ? const Key('say-source') : null, cardId: id, size: 36, radius: 6),
+              ),
+            ),
+          ),
+        if (say.sources.isEmpty && letter != null)
           GestureDetector(
             key: const Key('say-my-letter'),
             onTap: () => say.pick(letter.cardId, hint: false),
             child: Opacity(opacity: 0.7, child: CardImage(cardId: letter.cardId, size: 36, radius: 6)),
           ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         Expanded(
           child: Text(
             say.source == null
-                ? 'Карта, которую кидали (веер), или улика слева; затем карты поля: раз — зелёная, два — красная'
-                : '${say.hint ? 'Улика' : 'Кидал эту'} → нажмите карты поля: раз — указывает, два — не эта',
+                ? 'Улики слева или карта из веера; затем карты поля: раз — зелёная, два — красная'
+                : '${say.hint ? 'Улика' : 'Кидал эту'} → карты поля: раз — указывает, два — не эта. Ещё улика — ещё связи',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11, color: AppColors.muted),
@@ -925,31 +988,30 @@ class _SayStrip extends StatelessWidget {
         IconButton(key: const Key('say-cancel'), tooltip: 'Отменить показ', icon: const Icon(Icons.close), onPressed: say.stop),
         FilledButton(
           key: const Key('say-send'),
-          onPressed: say.source == null && say.marks.isEmpty ? null : () => _send(context),
+          onPressed: say.total == 0 ? null : () => _send(context),
           child: const Text('На стол'),
         ),
       ]);
     } else {
       final m = statement;
       if (m != null) {
-        final source = m.cardNotes.isNotEmpty && theorySource(m.cardNotes.first) ? m.cardIds.first : null;
+        final sources = [for (var i = 0; i < m.cardIds.length; i++) if (theorySource(m.noteFor(i) ?? '')) m.cardIds[i]];
         children.addAll([
           Avatar(nickname: screen.nick(m.authorId), color: screen.colorOf(m.authorId), photoId: screen.photoOf(m.authorId), size: 26),
           const SizedBox(width: 6),
-          if (source != null) ...[
+          for (final source in sources.take(3)) ...[
             GestureDetector(
               onTap: () => showCardZoom(context, source),
               child: CardImage(key: Key('say-shown-$source'), cardId: source, size: 36, radius: 6),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
           ],
           Expanded(
-            child: Text(
-              '${screen.nick(m.authorId)}: ${(m.text ?? '').replaceFirst(tablePostPrefix, '')}',
+            child: _TypedLine(
               key: const Key('say-statement'),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12),
+              screen: screen,
+              message: m,
+              text: '${screen.nick(m.authorId)}: ${(m.text ?? '').replaceFirst(tablePostPrefix, '')}',
             ),
           ),
         ]);
@@ -986,7 +1048,93 @@ class _SayStrip extends StatelessWidget {
   }
 }
 
-/// Полоска эмодзи над столом: каждое нажатие — реакция, можно спамить.
+/// Реплика печатается по буквам со звуком, как в визуальной новелле. Свои реплики и те, что были до
+/// открытия стола, показываются сразу; нажатие — показать целиком.
+class _TypedLine extends StatefulWidget {
+  const _TypedLine({super.key, required this.screen, required this.message, required this.text});
+
+  final GameScreenState screen;
+  final ChatMessage message;
+  final String text;
+
+  @override
+  State<_TypedLine> createState() => _TypedLineState();
+}
+
+class _TypedLineState extends State<_TypedLine> {
+  late List<String> _letters = widget.text.characters.toList();
+  late int _shown = _letters.length;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Только что пришедшая реплика печатается и при первом показе строки.
+    if (DateTime.now().difference(widget.message.createdAt).abs() < const Duration(seconds: 15)) _animate();
+  }
+
+  @override
+  void didUpdateWidget(_TypedLine old) {
+    super.didUpdateWidget(old);
+    if (old.message.id == widget.message.id) {
+      _letters = widget.text.characters.toList();
+      if (_timer == null) _shown = _letters.length;
+      return;
+    }
+    _letters = widget.text.characters.toList();
+    _animate();
+  }
+
+  void _animate() {
+    final mine = widget.message.authorId == widget.screen.view?.me?.id;
+    if (mine) {
+      _timer?.cancel();
+      _timer = null;
+      _shown = _letters.length;
+      return;
+    }
+    // Имя автора видно сразу, текст — по буквам.
+    _shown = '${widget.screen.nick(widget.message.authorId)}: '.characters.length.clamp(0, _letters.length);
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 32), (timer) {
+      if (!mounted) return;
+      if (_shown >= _letters.length) {
+        timer.cancel();
+        _timer = null;
+        return;
+      }
+      setState(() => _shown++);
+      if (_shown % 5 == 0 && _letters[_shown - 1].trim().isNotEmpty) {
+        widget.screen.ref.read(soundProvider).play(Sfx.typing);
+      }
+    });
+  }
+
+  void _complete() {
+    _timer?.cancel();
+    _timer = null;
+    setState(() => _shown = _letters.length);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: _complete,
+        child: Text(
+          _letters.take(_shown).join(),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12),
+        ),
+      );
+}
+
+/// Выбор эмодзи — облачко над картой-смайликом: каждое нажатие — реакция, можно спамить.
 class _EmojiBar extends StatelessWidget {
   const _EmojiBar({required this.screen, required this.onClose});
 
@@ -994,23 +1142,34 @@ class _EmojiBar extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => Material(
         key: const Key('emoji-bar'),
-        height: 44,
-        child: Row(children: [
-          Expanded(
-            child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 8), children: [
-              for (final e in Reaction.allowed)
-                InkWell(
-                  key: Key('emoji-$e'),
-                  borderRadius: BorderRadius.circular(99),
-                  onTap: () => screen.react(e),
-                  child: Padding(padding: const EdgeInsets.all(6), child: Text(e, style: const TextStyle(fontSize: 24))),
-                ),
-            ]),
-          ),
-          IconButton(tooltip: 'Скрыть эмодзи', icon: const Icon(Icons.close, size: 18), onPressed: onClose),
-        ]),
+        color: AppColors.surface2,
+        elevation: 8,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 4, 2, 4),
+          child: Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              width: 5 * 44,
+              child: Wrap(children: [
+                for (final e in Reaction.allowed)
+                  InkWell(
+                    key: Key('emoji-$e'),
+                    borderRadius: BorderRadius.circular(99),
+                    onTap: () => screen.react(e),
+                    child: SizedBox(width: 44, height: 44, child: Center(child: Text(e, style: const TextStyle(fontSize: 26)))),
+                  ),
+              ]),
+            ),
+            IconButton(
+              tooltip: 'Скрыть эмодзи',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: onClose,
+            ),
+          ]),
+        ),
       );
 }
 
