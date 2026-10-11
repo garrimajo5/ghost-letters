@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
 import '../../core/card_catalog.dart';
+import '../../core/session.dart' show prefsProvider;
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../core/voice.dart';
@@ -595,14 +596,33 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
   Timer? _ticker;
   late final Voice _voice;
 
+  /// Лента сверху вниз; к новым сообщениям — только если включён флажок «Прокручивать к новым».
+  final _scroll = ScrollController();
+  static const autoScrollKey = 'chat.autoscroll';
+  bool get _autoScroll => ref.read(prefsProvider).getBool(autoScrollKey) ?? false;
+  bool _opened = false;
+
+  void _toEnd({bool animate = true}) => WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scroll.hasClients) return;
+        final end = _scroll.position.maxScrollExtent;
+        animate ? _scroll.animateTo(end, duration: const Duration(milliseconds: 250), curve: Curves.easeOut) : _scroll.jumpTo(end);
+      });
+
+  void _onChat() {
+    if (_autoScroll) _toEnd();
+  }
+
   @override
   void initState() {
     super.initState();
     _voice = ref.read(voiceProvider);
+    widget.screen.chatChanges.addListener(_onChat);
   }
 
   @override
   void dispose() {
+    widget.screen.chatChanges.removeListener(_onChat);
+    _scroll.dispose();
     _ticker?.cancel();
     if (_recording) _voice.cancel();
     _text.dispose();
@@ -742,6 +762,19 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
               child: Align(alignment: Alignment.centerLeft, child: Text('ЧАТ', style: sectionLabel(size: 13))),
             ),
+          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            const Text('Прокручивать к новым', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            Switch(
+              key: const Key('chat-autoscroll'),
+              value: _autoScroll,
+              onChanged: (on) async {
+                await ref.read(prefsProvider).setBool(autoScrollKey, on);
+                if (on) _toEnd();
+                setState(() {});
+              },
+            ),
+            const SizedBox(width: 8),
+          ]),
           if (_killerTeam || screen.view?.isGhost == true)
             Padding(
               padding: const EdgeInsets.all(8),
@@ -769,16 +802,22 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                 }
                 final outcomes = _channel == 'public' ? (screen.view?.finale?.outcomes ?? const <VoteOutcome>[]) : const <VoteOutcome>[];
                 if (outcomes.any((o) => o.kind == 'Row' && o.column != null)) {
-                  items
-                    ..add('Голосование')
-                    ..addAll(outcomes.where((o) => o.kind == 'Row' && o.column != null));
+                  // Итоги голосования — перед рассказом Призрака: он разбирает партию уже после них.
+                  final debrief = items.indexWhere((x) => x is ChatMessage && (x.text ?? '').startsWith('Разбор Призрака'));
+                  final at = debrief < 0 ? items.length : debrief;
+                  items.insertAll(at, ['Голосование', ...outcomes.where((o) => o.kind == 'Row' && o.column != null)]);
+                }
+                // Открыли чат — сразу к последнему сообщению; дальше лента сама не прокручивается без флажка.
+                if (!_opened) {
+                  _opened = true;
+                  _toEnd(animate: false);
                 }
                 return ListView.builder(
-                  reverse: true,
+                  controller: _scroll,
                   padding: const EdgeInsets.all(8),
                   itemCount: items.length,
                   itemBuilder: (context, i) {
-                    final item = items[items.length - 1 - i];
+                    final item = items[i];
                     if (item is int || item is String) {
                       final label = item is int ? (item == 0 ? 'Начало партии' : 'Раунд $item') : item as String;
                       return Padding(
