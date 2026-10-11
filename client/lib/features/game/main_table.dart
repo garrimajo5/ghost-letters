@@ -1034,8 +1034,9 @@ class _SuspectBoard extends StatelessWidget {
   Widget _vote(BuildContext context, GameView v, PlayerInfo p, int r, int? c, double card) {
     if (c == null || c >= v.board[r].cards.length) return SizedBox(width: card, height: card);
     final id = v.board[r].cards[c];
+    // Нажатие по столбцу — голос за игрока; карту крупно — долгим нажатием.
     return GestureDetector(
-      onTap: () => showCardZoom(context, id, caption: '${screen.nick(p.id)} · ${T.category(v.board[r].category)}'),
+      onLongPress: () => showCardZoom(context, id, caption: '${screen.nick(p.id)} · ${T.category(v.board[r].category)}'),
       child: CardImage(key: Key('suspect-vote-${p.id}-$r'), cardId: id, size: card, radius: 6),
     );
   }
