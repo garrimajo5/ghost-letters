@@ -170,7 +170,10 @@ public static class BotPlayer
                 var rejected = o.Strength < 0 ||
                     (o.IsCheck && o.SourceCard is { } src && !shown.Contains(src) && !view.Board.Any(r => r.Cards.Contains(src)));
                 if (!rejected) continue;
-                var support = shown.Where(h => h != o.SourceCard && Rank(h, o.CardId) == 0).Sum(h => HintWeight(h, o.CardId));
+                // Подсказка указывает именно на эту карту: она — единственное явное лучшее совпадение, а не одна из равных.
+                var support = shown.Where(h => h != o.SourceCard && Rank(h, o.CardId) == 0 && Sim(h, o.CardId) - view.Board.SelectMany(r => r.Cards)
+                        .Where(c => c != h && c != o.CardId).Select(c => Sim(h, c)).DefaultIfEmpty(0).Max() > .1)
+                    .Sum(h => HintWeight(h, o.CardId));
                 if (support > .3) sum += Math.Min(1, support);
             }
             return _lies[id] = sum;
@@ -907,8 +910,8 @@ public static class BotPlayer
                 && NameOf(killer.Id) is { } name)
             {
                 // Стол и так побеждает по картам или уже подозревает Убийцу — Свидетель молчит, чтобы его не вычислили.
-                if (BotTuning.Current.WitnessQuiet && (Accused(killer.Id) >= .5 ||
-                        Enumerable.Range(0, view.Board.Count).Count(r => Certainty(r) > .15) >= view.Board.Count - 1))
+                if (BotTuning.Current.WitnessQuiet && (Accused(killer.Id) >= .5 || (view.Board.Count > 1 &&
+                        Enumerable.Range(0, view.Board.Count).Count(r => Certainty(r) > .15) >= view.Board.Count - 1)))
                 {
                     return "";
                 }

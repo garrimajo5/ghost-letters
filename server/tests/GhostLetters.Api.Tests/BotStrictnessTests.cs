@@ -131,6 +131,8 @@ public sealed class BotStrictnessTests
             Board = [new BoardRowView(Category.Motive, ["ring", "wallet"])],
         };
 
+        // Эксперт здесь целит письмом в истину каждый раунд (без «осторожного» Эксперта, который иногда шлёт проверки).
+        using var _ = BotTuning.Use(BotTuning.Default with { ExpertSubtle = false });
         var strict = (SendLetter)BotPlayer.Decide(view, new Random(4), tags, Mind(new BotPersonality { Strictness = 1 }))!;
         var loose = (SendLetter)BotPlayer.Decide(view, new Random(4), tags, Mind(new BotPersonality { Strictness = 0 }))!;
 

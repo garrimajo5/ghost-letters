@@ -351,6 +351,23 @@ public sealed class BotPersonalityTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public void VanishedCheckRefutedByLaterHint_MakesAuthorSuspicious(bool lieDetect)
+    {
+        // Боб сказал: «кидал монету — исчезла, проверял нож». Потом Призрак открыл меч — явно про нож.
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["knife"] = ["weapon", "blade"], ["rose"] = ["flower"], ["sword"] = ["weapon", "blade"], ["boat"] = ["water"], ["sea"] = ["water"] });
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword", "sea"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = 1, Strictness = 0.5, Memory = 0 },
+            [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", 1, IsCheck: true, SourceCard: "coin")]);
+        using var _ = BotTuning.Use(BotTuning.Default with { LieDetect = lieDetect ? 2 : 0 });
+        var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
+        if (lieDetect) reply.Should().Contain("Бот Боб из чёрных", "отверг карту, на которую потом ясно указала подсказка");
+        else reply.Should().NotContain("Бот Боб из чёрных");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public void RejectingOneOfEquallySupportedCardsIsNotSuspicious(bool tied)
     {
         var tags = new CardTags(new Dictionary<string, HashSet<string>> {
