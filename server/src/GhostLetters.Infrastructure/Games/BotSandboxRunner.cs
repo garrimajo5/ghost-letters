@@ -175,12 +175,13 @@ public static class BotSandboxRunner
     {
         var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
         var others = messages.Where(m => m.Author != seat.Id).ToList();
-        var opinions = others.SelectMany(m => TableReasoning.Read(m.Author, m.Cards, m.Notes, board))
+        var perMessage = others.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.Author, m.Cards, m.Notes, board).ToList()).ToList();
+        var opinions = perMessage.SelectMany(o => o)
             .GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
         var accusations = parsedAccusations.Where(a => a.Author != seat.Id)
             .GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
         return new(seat.Personality, new Dictionary<Guid, PlayerHistory>(), opinions, names, accusations,
             BotService.Breadth(others.Select(m => (m.Author, m.Notes))),
-            RoleClaims: PublicRoleClaims.Read(others.Select(m => (m.Author, m.Text))));
+            RoleClaims: PublicRoleClaims.Read(others.Select(m => (m.Author, m.Text))), LatestVersions: BotMind.Latest(perMessage));
     }
 }

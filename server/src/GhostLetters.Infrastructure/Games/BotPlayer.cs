@@ -325,8 +325,18 @@ public static class BotPlayer
                 return 0;
             }
 
+            // Главное — последняя версия игрока: что он отстаивает сейчас, а не что говорил раунд назад.
+            var k = BotTuning.Current.LatestVersionWeight;
+            var all = Contrary(mind!.Opinions.Where(o => o.Author == id && !o.IsCheck && o.Strength != 0));
+            var latest = mind.LatestOf(id);
+            return latest.Count == 0 || k <= 0 ? all : (1 - k) * all + 2 * k * Contrary(latest);
+        }
+
+        /// <summary>Насколько мнения расходятся с уликами (по моей оценке; Эксперт и команда Убийцы сверяют с истиной).</summary>
+        private double Contrary(IEnumerable<ChatOpinion> opinions)
+        {
             var count = 0.0;
-            foreach (var o in mind!.Opinions.Where(o => o.Author == id && !o.IsCheck && o.Strength != 0))
+            foreach (var o in opinions)
             {
                 var (row, column) = Position(o.CardId);
                 if (row < 0)

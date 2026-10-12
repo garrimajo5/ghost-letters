@@ -156,8 +156,24 @@ public sealed record BotMind(
     IReadOnlyList<Accusation>? Accusations = null,
     IReadOnlyDictionary<Guid, double>? Breadth = null,
     IReadOnlyDictionary<Guid, int>? Affinities = null,
-    IReadOnlyDictionary<Guid, GhostLetters.Domain.Roles.Role>? RoleClaims = null)
+    IReadOnlyDictionary<Guid, GhostLetters.Domain.Roles.Role>? RoleClaims = null,
+    IReadOnlyDictionary<Guid, IReadOnlyList<ChatOpinion>>? LatestVersions = null)
 {
+    /// <summary>Последняя версия игрока: мнения о картах из его последней реплики с картами поля.</summary>
+    public IReadOnlyList<ChatOpinion> LatestOf(Guid author) => LatestVersions?.GetValueOrDefault(author) ?? [];
+
+    /// <summary>Последняя версия каждого автора по сообщениям в порядке времени.</summary>
+    public static IReadOnlyDictionary<Guid, IReadOnlyList<ChatOpinion>> Latest(IEnumerable<IReadOnlyList<ChatOpinion>> messages)
+    {
+        var latest = new Dictionary<Guid, IReadOnlyList<ChatOpinion>>();
+        foreach (var m in messages)
+        {
+            var version = m.Where(o => !o.IsCheck && o.Strength != 0).ToList();
+            if (version.Count > 0) latest[version[0].Author] = version;
+        }
+        return latest;
+    }
+
     public double AffinityBias(Guid id) => Math.Clamp(Affinities?.GetValueOrDefault(id) ?? 0, -100, 100) / 100.0 * Personality.Social.Influence;
 
     public double TrustMultiplier(Guid id) => 1 + .5 * AffinityBias(id);
