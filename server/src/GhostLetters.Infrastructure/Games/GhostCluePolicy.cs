@@ -74,6 +74,19 @@ public static class GhostCluePolicy
             current += best.Gain;
         }
 
+        // Ничего не открыть — стол остаётся без единой улики, обсуждать нечего. Если ни одно письмо не помогает,
+        // но лучшее почти не вредит и всё же похоже на истину, Призрак открывает его (зацепку — всегда).
+        if (chosen.Count == 0 && tuning.GhostFallback > 0)
+        {
+            var fallback = candidates
+                .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, c.Card], all.Where(x => x != c.Card).ToList(), Sim, focus) - current))
+                // Только письмо, которое на истину похоже сильнее, чем на любую ложную карту: двусмысленное не открываем.
+                .Where(c => c.Value.TrueMatch >= .08 && c.Value.TrueMatch > c.Value.FalseMatch && c.Gain > -tuning.GhostFallback)
+                .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
+                .FirstOrDefault();
+            if (fallback.Card is not null) chosen.Add(fallback.Card);
+        }
+
         return chosen;
     }
 
