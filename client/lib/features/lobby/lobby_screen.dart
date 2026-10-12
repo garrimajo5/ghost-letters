@@ -88,6 +88,21 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     });
   }
 
+  Future<void> _addSameBots(Lobby lobby, List<String> botIds) async {
+    final api = ref.read(apiProvider);
+    var free = 12 - lobby.players.length;
+    for (final id in botIds) {
+      if (free-- <= 0 || !mounted) break;
+      // Бот мог пропасть из кабинета — тогда зовём случайного, чтобы состав не уменьшился.
+      try {
+        final next = await api.addBot(lobby.id, botId: id);
+        if (mounted) setState(() => _lobby = next);
+      } catch (_) {
+        await _apply((api) => api.addBot(lobby.id));
+      }
+    }
+  }
+
   /// Выбор бота: из кабинета (с характером) или случайный. Если кабинет пуст — сразу случайный.
   Future<void> _pickBot(Lobby lobby, List<LobbyMember> players) async {
     final api = ref.read(apiProvider);
@@ -168,6 +183,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final spectators = lobby.members.where((m) => m.isSpectator).toList();
     final allReady = players.every((p) => p.userId == lobby.hostUserId || p.isReady);
 
+    final lastBots = isHost && lobby.status == 'open' && !players.any((p) => p.isBot)
+        ? ref.read(lobbyPreferencesProvider).lastBots(me.id)
+        : const <String>[];
     final readyCount = players.where((p) => p.userId == lobby.hostUserId || p.isReady).length;
     Widget? bottom;
     if (isHost) {
@@ -176,6 +194,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56), textStyle: heading(18, spacing: 2)),
         onPressed: players.length >= 2 && allReady
             ? () => runAction(context, () async {
+                  await ref.read(lobbyPreferencesProvider).saveBots(me.id, [for (final p in players) if (p.isBot) p.userId]);
                   final gameId = await ref.read(apiProvider).startGame(lobby.id);
                   if (context.mounted) context.go('/game/$gameId');
                 })
@@ -317,6 +336,17 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                       onPressed: () => runAction(context, () => ref.read(apiProvider).kick(lobby.id, p.userId)),
                     ),
                 ]),
+              ),
+            ),
+          // Те же боты, что в прошлой партии, — одной кнопкой, без выбора по одному.
+          if (lastBots.isNotEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('same-bots'),
+                onPressed: () => _addSameBots(lobby, lastBots),
+                icon: const Icon(Icons.replay),
+                label: Text('Те же боты, что в прошлый раз (${lastBots.length})'),
               ),
             ),
           if (isHost && players.length < 12 && lobby.status == 'open')

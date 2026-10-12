@@ -34,4 +34,14 @@ class LobbyPreferences {
     await prefs.setString(_key(userId),
         jsonEncode(settings.copyWith(clearGhost: true).toJson()));
   }
+
+  String _botsKey(String userId) => 'last_lobby_bots:${AppConfig.apiUrl}:$userId';
+
+  /// Боты последней начатой партии — чтобы позвать тех же одной кнопкой.
+  List<String> lastBots(String userId) => prefs.getStringList(_botsKey(userId)) ?? const [];
+
+  Future<void> saveBots(String userId, List<String> botIds) async {
+    if (botIds.isEmpty) return;
+    await prefs.setStringList(_botsKey(userId), botIds);
+  }
 }

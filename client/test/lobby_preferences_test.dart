@@ -31,4 +31,15 @@ void main() {
     await prefs.setString(prefs.getKeys().single, '{broken');
     expect(store.read('one').presetLabel, 'Классика');
   });
+
+  test('last bots are remembered per account, empty list keeps the previous', () async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    final store = LobbyPreferences(prefs);
+    expect(store.lastBots('one'), isEmpty);
+    await store.saveBots('one', ['b1', 'b2']);
+    await store.saveBots('one', []);
+    expect(LobbyPreferences(prefs).lastBots('one'), ['b1', 'b2']);
+    expect(store.lastBots('two'), isEmpty);
+  });
 }

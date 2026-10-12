@@ -12,7 +12,8 @@ import '../../core/config.dart';
 import '../../core/sound.dart';
 import '../../core/sound_settings_sheet.dart';
 import '../../core/realtime.dart';
-import '../../core/session.dart' show prefsProvider;
+import '../../core/lobby_preferences.dart';
+import '../../core/session.dart' show prefsProvider, sessionProvider;
 import '../../core/texts.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
@@ -446,6 +447,11 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final s = await SettingsSheet.show(context, l.settings, inGame: true, players: view?.players.length);
     if (s == null || !mounted) return;
     final updated = await runAction(context, () => ref.read(apiProvider).saveSettings(l.id, s));
+    // Настройки, поменянные посреди партии, тоже запоминаются на следующие столы.
+    if (updated != null) {
+      final user = ref.read(sessionProvider).user;
+      if (user != null) await ref.read(lobbyPreferencesProvider).save(user.id, s);
+    }
     if (updated != null && mounted) setState(() => lobby = updated);
   }
 
