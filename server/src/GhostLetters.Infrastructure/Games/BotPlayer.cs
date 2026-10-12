@@ -921,7 +921,8 @@ public static class BotPlayer
                 return "Не уверен, но " + char.ToLowerInvariant(line[0]) + line[1..];
             }
 
-            return P.Risk > 0.75 && rng.Next(2) == 0 ? line.TrimEnd('.', '?') + " — уверен." : line;
+            // Вопрос («Кто против?») уверенностью не заканчивают.
+            return P.Risk > 0.75 && rng.Next(2) == 0 && !line.TrimEnd().EndsWith('?') ? line.TrimEnd('.') + " — уверен." : line;
         }
 
         /// <summary>

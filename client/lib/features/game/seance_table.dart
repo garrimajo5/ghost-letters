@@ -57,8 +57,8 @@ class _SeanceCircle extends StatelessWidget {
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
       final side = box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight;
-      // Места игроков — на краю стола, целиком внутри своего квадрата.
-      final r = side / 2 - 24;
+      // Стол чуть меньше квадрата: игроки сидят снаружи, на краю, и не закрывают подписи и подсказки секторов.
+      final r = side / 2 - 44;
       final center = Offset(box.maxWidth / 2, box.maxHeight / 2);
       // Подсказки крупнее на большом экране; в тесном секторе — мельче, чтобы не налезали.
       final hint = (r * 0.26).clamp(16.0, 80.0).floorToDouble();
@@ -76,7 +76,7 @@ class _SeanceCircle extends StatelessWidget {
       // Подписи и подсказки секторов.
       for (var i = 0; i < sectors; i++) {
         final mid = sectorStart(i) + math.pi / sectors;
-        final label = at(mid, r * 0.76);
+        final label = at(mid, r * 0.8);
         final group = v.hints.where((h) => h.round == i).firstOrNull;
         children.add(Positioned(
           left: label.dx - 45,
@@ -94,7 +94,7 @@ class _SeanceCircle extends StatelessWidget {
           // Несколько подсказок раунда — веером вдоль дуги своего сектора.
           final spread = (2 * math.pi / sectors) * 0.5;
           final a = cards.length == 1 ? mid : mid - spread / 2 + spread * k / (cards.length - 1);
-          final p = at(a, r * 0.55);
+          final p = at(a, r * 0.52);
           final c = cards[k];
           final size = cards.length < 2 ? hint : math.max(16.0, math.min(hint, r * 0.55 * spread / (cards.length - 1) * 0.9)).floorToDouble();
           children.add(Positioned(
@@ -112,7 +112,7 @@ class _SeanceCircle extends StatelessWidget {
       // Места игроков по кругу; первое место сверху.
       for (var i = 0; i < players.length; i++) {
         final p = players[i];
-        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r);
+        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r + 16);
         children.add(Positioned(
           left: pos.dx - 32,
           top: pos.dy - 22,
