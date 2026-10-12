@@ -46,7 +46,7 @@ public sealed class CardTags
     private double Salience(string card, string tag, double secondary)
     {
         var weight = _meaningWeights.GetValueOrDefault(card)?.GetValueOrDefault(tag, 1) ?? 1;
-        return weight >= 1 ? 1 : weight * Math.Clamp(secondary, 0, 1);
+        return weight >= 1 ? 1 : Math.Clamp(weight * Math.Clamp(secondary, 0, 1) * BotTuning.Current.AssociationScale, 0, 1);
     }
 
     private IReadOnlyCollection<string> Visible(string card, double secondary) => Of(card).Where(t => Salience(card, t, secondary) > 0).ToList();
