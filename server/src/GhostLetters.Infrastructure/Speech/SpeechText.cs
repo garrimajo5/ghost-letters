@@ -27,8 +27,9 @@ public static partial class SpeechText
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
 
+    /// <param name="namesUsed">Сюда складываются подставленные названия карт (для проверки пересказа).</param>
     public static string For(string? text, IReadOnlyList<string> cardIds, IReadOnlyList<string>? notes,
-        IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints, CardTags tags)
+        IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints, CardTags tags, ICollection<string>? namesUsed = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
         var source = text.Trim();
@@ -48,6 +49,7 @@ public static partial class SpeechText
                 var hint = hints.FirstOrDefault(h => h.Round == round);
                 var name = hint is not null && index >= 0 && index < hint.Cards.Count ? tags.NameOf(hint.Cards[index]) : null;
                 var which = round == 0 ? "зацепка" : $"подсказка {(round < Ordinals.Length ? Ordinals[round] : round.ToString())} раунда";
+                if (name is not null) namesUsed?.Add(name);
                 return name is null ? which : $"{which} — {name}";
             }
 
@@ -57,6 +59,7 @@ public static partial class SpeechText
                 var column = int.Parse(m.Groups[5].Value) - 1;
                 var row = board.FirstOrDefault(r => string.Equals(CategoryWord(r.Category), word, StringComparison.OrdinalIgnoreCase));
                 var name = row is not null && column >= 0 && column < row.Cards.Count ? tags.NameOf(row.Cards[column]) : null;
+                if (name is not null) namesUsed?.Add(name);
                 return name is null ? m.Value : $"{word} — {name}";
             }
 
@@ -64,10 +67,12 @@ public static partial class SpeechText
             {
                 var first = hints.FirstOrDefault(h => h.Round == 0)?.Cards.FirstOrDefault();
                 var name = first is null ? null : tags.NameOf(first);
+                if (name is not null) namesUsed?.Add(name);
                 return name is null ? m.Value : $"{m.Value} — {name}";
             }
 
             var own = claimed is null ? null : tags.NameOf(claimed);
+            if (own is not null) namesUsed?.Add(own);
             return own is null ? m.Value : $"{m.Value} — {own}";
         });
 

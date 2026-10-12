@@ -30,6 +30,7 @@ services:
       Proxy__KnownProxies: "172.29.214.2"
       Admin__UserIds: ${ADMIN_USER_IDS:-}
       Speech__ApiKey: ${YANDEX_SPEECHKIT_API_KEY:-}
+      Speech__FolderId: ${YANDEX_FOLDER_ID:-}
     volumes:
       - ./cards.json:/app/cards/cards.json:ro
       - ./tags.json:/app/cards/tags.json:ro

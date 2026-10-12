@@ -68,8 +68,8 @@ jobs:
           SPEECHKIT_KEY: ${{ secrets.YANDEX_SPEECHKIT_API_KEY }}
         run: |
           {
-            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q ADMIN_USER_IDS=%q YANDEX_SPEECHKIT_API_KEY=%q\n' \
-              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR" "${{ vars.ADMIN_USER_IDS }}" "$SPEECHKIT_KEY"
+            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q ADMIN_USER_IDS=%q YANDEX_SPEECHKIT_API_KEY=%q YANDEX_FOLDER_ID=%q\n' \
+              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR" "${{ vars.ADMIN_USER_IDS }}" "$SPEECHKIT_KEY" "${{ vars.YANDEX_FOLDER_ID }}"
             cat deploy/remote-deploy.sh
           } | ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" 'bash -s'
 

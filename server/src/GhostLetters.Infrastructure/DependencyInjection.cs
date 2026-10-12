@@ -47,6 +47,7 @@ public static class DependencyInjection
             sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<CardTags>()));
         services.AddScoped<ChatService>();
         services.AddSingleton<Speech.SpeechKit>();
+        services.AddSingleton<Speech.SpeechWriter>();
         services.AddScoped<ReactionService>();
         services.AddSingleton<ReactionLimiter>();
         services.AddScoped<MediaLimits>();

@@ -46,6 +46,15 @@ if [ -n "${YANDEX_SPEECHKIT_API_KEY:-}" ]; then
   fi
 fi
 
+# Каталог Yandex Cloud (переменная репозитория YANDEX_FOLDER_ID) — живые формулировки реплик через YandexGPT.
+if [ -n "${YANDEX_FOLDER_ID:-}" ]; then
+  if grep -q '^YANDEX_FOLDER_ID=' .env; then
+    sed -i "s|^YANDEX_FOLDER_ID=.*|YANDEX_FOLDER_ID=$YANDEX_FOLDER_ID|" .env
+  else
+    echo "YANDEX_FOLDER_ID=$YANDEX_FOLDER_ID" >> .env
+  fi
+fi
+
 # Веб-версия и APK (их выкладывают workflow «Deploy web» и «Release Android»).
 mkdir -p www/web www/download
 [ -f www/web/index.html ] || echo '<!doctype html><meta charset="utf-8"><title>Письма призрака</title><p>Веб-версия ещё не выложена.</p>' > www/web/index.html
