@@ -597,6 +597,7 @@ class Finale {
     required this.arrested,
     required this.huntTarget,
     required this.huntSuccess,
+    this.huntGuess,
     required this.result,
     required this.awards,
     required this.likes,
@@ -616,6 +617,7 @@ class Finale {
       arrested: _strings(j['arrested']),
       huntTarget: hunt?['target'] as String?,
       huntSuccess: hunt?['success'] as bool?,
+      huntGuess: hunt?['guess'] as String?,
       result: j['result'] is Map ? GameResult.fromJson(Map<String, dynamic>.from(j['result'] as Map)) : null,
       awards: _list(j['awards'], AwardEntry.fromJson),
       likes: _list(j['likes'], LikeCount.fromJson),
@@ -632,6 +634,9 @@ class Finale {
   final List<String> arrested;
   final String? huntTarget;
   final bool? huntSuccess;
+
+  /// Какую роль Убийца назвал на охоте (Witness / Expert); null — одна роль, достаточно указать игрока.
+  final String? huntGuess;
   final GameResult? result;
   final List<AwardEntry> awards;
   final List<LikeCount> likes;

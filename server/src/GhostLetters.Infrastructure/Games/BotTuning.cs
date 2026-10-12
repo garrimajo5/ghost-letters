@@ -96,6 +96,9 @@ public sealed record BotTuning
     /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
     public double AssociationScale { get; init; } = .5;
 
+    /// <summary>Доля подозрения по последней версии игрока (0 — все его мнения за партию одинаково).</summary>
+    public double LatestVersionWeight { get; init; } = .8;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -150,6 +153,7 @@ public sealed record BotTuning
                 nameof(AssociationScale) => t with { AssociationScale = D() },
                 nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
                 nameof(GhostFallback) => t with { GhostFallback = D() },
+                nameof(LatestVersionWeight) => t with { LatestVersionWeight = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),

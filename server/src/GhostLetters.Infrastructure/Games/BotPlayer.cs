@@ -325,8 +325,18 @@ public static class BotPlayer
                 return 0;
             }
 
+            // Главное — последняя версия игрока: что он отстаивает сейчас, а не что говорил раунд назад.
+            var k = BotTuning.Current.LatestVersionWeight;
+            var all = Contrary(mind!.Opinions.Where(o => o.Author == id && !o.IsCheck && o.Strength != 0));
+            var latest = mind.LatestOf(id);
+            return latest.Count == 0 || k <= 0 ? all : (1 - k) * all + 2 * k * Contrary(latest);
+        }
+
+        /// <summary>Насколько мнения расходятся с уликами (по моей оценке; Эксперт и команда Убийцы сверяют с истиной).</summary>
+        private double Contrary(IEnumerable<ChatOpinion> opinions)
+        {
             var count = 0.0;
-            foreach (var o in mind!.Opinions.Where(o => o.Author == id && !o.IsCheck && o.Strength != 0))
+            foreach (var o in opinions)
             {
                 var (row, column) = Position(o.CardId);
                 if (row < 0)
@@ -1068,6 +1078,8 @@ public static class BotPlayer
                 .Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
             if (links.Count > 0) opinion += "\n" + string.Join("\n", links);
             else if (!exclude) opinion += " Связь с открытыми уликами слабая — это только предположение.";
+            // Карты «целиком думаю так» прикладываются к реплике — их подсвечивает стол.
+            var versionCards = new List<string>();
             if (!Classic && view.Board.Count > 1)
             {
                 var version = new List<string>();
@@ -1077,9 +1089,14 @@ public static class BotPlayer
                         .Where(c => !KillerTeam || Truth is null || Truth[r] != c).ToList();
                     if (options.Count == 0) continue;
                     var best = BestColumn(r, options);
-                    if (Evidence(Card(r, best)) > 0.05) version.Add(Where(r, best));
+                    if (Evidence(Card(r, best)) > 0.05)
+                    {
+                        version.Add(Where(r, best));
+                        versionCards.Add(Card(r, best));
+                    }
                 }
                 if (version.Count > 1) opinion += "\nЦеликом думаю так: " + string.Join(", ", version) + ".";
+                else versionCards.Clear();
             }
             var accusation = Accusation();
             opinion += accusation;
@@ -1092,7 +1109,15 @@ public static class BotPlayer
             }
             if (claimCard is null)
             {
-                return blind ? (opinion, new List<string>(), new List<string>()) : (opinion, new List<string> { card }, new List<string> { exclude ? "исключаю" : "думаю, эта" });
+                if (blind) return (opinion, new List<string>(), new List<string>());
+                var only = new List<string> { card };
+                var onlyNotes = new List<string> { exclude ? "исключаю" : "думаю, эта" };
+                foreach (var c in versionCards.Where(c => !only.Contains(c)).Take(ChatService.MaxCards - 1))
+                {
+                    only.Add(c);
+                    onlyNotes.Add("думаю, эта");
+                }
+                return (opinion, only, onlyNotes);
             }
 
             // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
@@ -1126,6 +1151,16 @@ public static class BotPlayer
             {
                 cards.Add(card);
                 notes.Add(exclude ? "исключаю" : "думаю, эта");
+            }
+
+            if (!blind)
+            {
+                foreach (var c in versionCards.Where(c => !cards.Contains(c)))
+                {
+                    if (cards.Count >= ChatService.MaxCards) break;
+                    cards.Add(c);
+                    notes.Add("думаю, эта");
+                }
             }
 
             // Одной фразой, как сказал бы человек: что проверял и почему (по первой связи).
