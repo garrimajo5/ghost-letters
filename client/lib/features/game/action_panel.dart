@@ -644,6 +644,21 @@ class ActionPanel extends StatelessWidget {
               style: const TextStyle(color: AppColors.muted),
             ),
             if (result.imitatorWon) const Text('Подражатель добился ареста и тоже победил!'),
+            // Охота: кого Убийца назвал Свидетелем (Экспертом) и угадал ли.
+            if (finale?.huntTarget case final target?) ...[
+              const SizedBox(height: 6),
+              Row(key: const Key('hunt-result'), children: [
+                Avatar(nickname: screen.nick(target), color: screen.colorOf(target), photoId: screen.photoOf(target), size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Охота: Убийца назвал ${screen.nick(target)} ${switch (finale!.huntGuess) { 'Expert' => 'Экспертом', 'Witness' => 'Свидетелем', _ => 'Свидетелем' }}'
+                    ' — ${finale.huntSuccess == true ? 'угадал' : 'промахнулся'}',
+                    style: TextStyle(color: finale.huntSuccess == true ? AppColors.redSoft : AppColors.greenSoft),
+                  ),
+                ),
+              ]),
+            ],
             if (me != null) ...[
               const SizedBox(height: 6),
               Text(won ? 'Вы победили' : 'Вы проиграли',

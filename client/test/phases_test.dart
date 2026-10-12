@@ -79,6 +79,13 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets('итоги: видно, кого Убийца назвал на охоте и угадал ли', (tester) async {
+    await openGame(tester, phaseSnapshot('Finished', const ['Like'], finale: {
+      'currentStage': null, 'result': result, 'hunt': {'target': 'u3', 'guess': 'Witness', 'success': true}}));
+    expect(find.byKey(const Key('hunt-result')), findsOneWidget);
+    expect(find.textContaining('Свидетелем — угадал'), findsOneWidget);
+  });
+
   testWidgets('после наград доступны реванш и главное меню', (tester) async {
     await openGame(tester, phaseSnapshot('Finished', const ['Like'], finale: {'currentStage': null, 'result': result}));
     expect(find.text('РЕВАНШ'), findsOneWidget);
