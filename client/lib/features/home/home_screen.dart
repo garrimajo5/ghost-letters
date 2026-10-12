@@ -260,18 +260,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 style: const TextStyle(fontSize: 12, color: AppColors.dim),
               ),
             ];
-            // Компьютер: слева создание и вход, справа партии.
-            if (box.maxWidth >= 1100) {
-              final side = ((box.maxWidth - 1160) / 2).clamp(24.0, double.infinity);
+            // Компьютер и телефон боком: слева создание и вход, справа партии (иначе партии уходят за нижний край).
+            final landscape = box.maxWidth >= 640 && box.maxWidth > box.maxHeight * 1.4;
+            if (box.maxWidth >= 1100 || landscape) {
+              final wide = box.maxWidth >= 1100;
+              final side = wide ? ((box.maxWidth - 1160) / 2).clamp(24.0, double.infinity) : 16.0;
+              final top = wide ? 24.0 : 8.0;
               return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 SizedBox(width: side),
                 SizedBox(
-                  width: 440,
-                  child: ListView(padding: const EdgeInsets.fromLTRB(0, 24, 0, 24), children: actions),
+                  width: wide ? 440 : (box.maxWidth * .45).clamp(280.0, 440.0),
+                  child: ListView(padding: EdgeInsets.fromLTRB(0, top, 0, 24), children: actions),
                 ),
-                const SizedBox(width: 40),
+                SizedBox(width: wide ? 40 : 20),
                 Expanded(
-                  child: ListView(key: const Key('home-games-column'), padding: const EdgeInsets.fromLTRB(0, 24, 0, 24), children: gamesList),
+                  child: ListView(key: const Key('home-games-column'), padding: EdgeInsets.fromLTRB(0, top, 0, 24), children: gamesList),
                 ),
                 SizedBox(width: side),
               ]);

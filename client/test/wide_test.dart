@@ -66,4 +66,17 @@ void main() {
     expect(find.byKey(const Key('home-games-column')), findsOneWidget);
     expect(find.text('СОЗДАТЬ ИГРУ'), findsOneWidget);
   });
+
+  testWidgets('главная на телефоне боком: партии справа, а не за нижним краем', (tester) async {
+    tester.view.physicalSize = const Size(844, 390);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('home-games-column')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

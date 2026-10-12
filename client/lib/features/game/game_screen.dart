@@ -781,7 +781,9 @@ class _RoleScreen extends StatelessWidget {
           const SizedBox(height: 16),
           RoleReveal(
             role: me.role,
-            width: (box.maxHeight * 0.5 / 1.42).clamp(140.0, 260.0),
+            // Боком (телефон) текст роли — справа от карты, а не под ней за краем экрана.
+            horizontal: box.maxWidth > box.maxHeight * 1.4,
+            width: (box.maxHeight * (box.maxWidth > box.maxHeight * 1.4 ? 0.62 : 0.5) / 1.42).clamp(110.0, 260.0),
             footer: Column(children: [
               if (ghost != null) pill(ghost.id, 'Призрак — ${screen.nick(ghost.id)}. Видит истинные улики.'),
               for (final p in team) ...[
