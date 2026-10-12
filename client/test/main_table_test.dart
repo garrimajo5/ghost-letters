@@ -79,14 +79,17 @@ void main() {
   const phone = Size(800, 360);
   const portrait = Size(390, 844);
 
-  for (final size in const [phone, portrait, Size(1280, 800), Size(1600, 900)]) {
+  // Размеры: телефон боком/стоя, маленький телефон, планшет, ноутбук, браузер во весь экран Full HD и 2K.
+  for (final size in const [phone, portrait, Size(844, 390), Size(360, 740), Size(1024, 768), Size(768, 1024),
+    Size(1280, 800), Size(1366, 768), Size(1600, 900), Size(1880, 950), Size(2560, 1300)]) {
     for (final (phase, allowed) in const [
       ('Discussion', ['RaiseHand']),
       ('Mailbox', ['SendLetter']),
       ('Night', <String>[]),
     ]) {
       testWidgets('новый стол ${size.width.toInt()}×${size.height.toInt()}, $phase: без переполнений', (tester) async {
-        await _open(tester, size, phase: phase, allowed: allowed);
+        // Как у игроков по умолчанию: «крупное поле» включено.
+        await _open(tester, size, phase: phase, allowed: allowed, big: true);
 
         expect(tester.takeException(), isNull);
         expect(find.byKey(const Key('main-table')), findsOneWidget);

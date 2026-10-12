@@ -153,7 +153,7 @@ class _MainTableState extends State<_MainTable> {
                       Expanded(child: dropCenter),
                       // Справа — игроки; кнопка хода и чат — внизу у веера (эмодзи теперь — карта в руке).
                       SizedBox(
-                        width: (size.width * 0.24).clamp(150.0, 260.0),
+                        width: _sideWidth(size),
                         child: Padding(padding: EdgeInsets.only(bottom: fanHeight * .7), child: _PlayersColumn(screen: screen)),
                       ),
                     ]),
@@ -198,7 +198,7 @@ class _MainTableState extends State<_MainTable> {
                   )
                 else
                 SizedBox(
-                  width: (size.width * 0.24).clamp(150.0, 260.0),
+                  width: _sideWidth(size),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(6, 4, 8, 8),
                     child: _Actions(screen: screen, onStatus: () => setState(() => _panel = true)),
@@ -232,7 +232,7 @@ class _MainTableState extends State<_MainTable> {
             if (_emoji)
               Positioned(
                 left: landscape && !seance && isFinale(v) ? 8 : null,
-                right: landscape && !seance && isFinale(v) ? null : landscape && !seance ? (size.width * 0.24).clamp(150.0, 260.0) + 8 : 8,
+                right: landscape && !seance && isFinale(v) ? null : landscape && !seance ? _sideWidth(size) + 8 : 8,
                 bottom: fanHeight + (!landscape || seance ? 70 : 0) - 6,
                 child: _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
               ),
@@ -543,7 +543,7 @@ class _TableArea extends StatelessWidget {
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();
       // Подпись ступеньки ~14 dp — карта подсказки умещается в высоту ряда.
       // Подсказки почти в рост ряда, подпись раунда — поверх карты: ступеньки идут вплотную.
-      final hint = (card * (below ? 0.75 : 0.8)).floorToDouble();
+      final hint = (card * (below ? 0.75 : 0.8)).clamp(0.0, 120.0).floorToDouble();
       final hintsWidth = staircase && !below ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
       final statement = _current;
@@ -551,9 +551,10 @@ class _TableArea extends StatelessWidget {
       final ask = !voting && !say.active && _canSpeakNow(v) ? _askedMe(screen, say) : null;
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       // Боком поле крупнее экрана: листается свайпом в обе стороны, подсказки — всегда видны слева.
-      final pan = landscape && staircase && screen.bigBoard;
+      // Листаемое поле крупнее экрана — только когда карты мелкие (телефон боком); иначе поле целиком и по центру.
+      final pan = landscape && staircase && screen.bigBoard && card < 110;
       // Крупнее экрана — только на телефоне, где карты мелкие; на большом экране поле целиком влезает по высоте.
-      final fieldCard = pan && card < 110 ? (card * 1.4).floorToDouble() : card;
+      final fieldCard = pan ? (card * 1.4).floorToDouble() : card;
       final Widget hintsColumn = SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -814,8 +815,9 @@ class _PlayersColumn extends StatelessWidget {
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
       final n = players.length;
-      const tile = 56.0;
       final w = box.maxWidth, h = box.maxHeight;
+      // Широкая колонка (большой экран) — портреты крупнее, чтобы круг не выглядел пустым.
+      final tile = (w / 5).clamp(56.0, 96.0);
       final rx = (w - tile) / 2;
       // Почти круг: высокая узкая колонка (большой экран) иначе вытягивает стол в овал.
       final ry = math.min((h - tile - 14) / 2, rx * 1.15);
@@ -834,7 +836,7 @@ class _PlayersColumn extends StatelessWidget {
             left: at(i).dx - tile / 2,
             top: at(i).dy - tile / 2,
             width: tile,
-            child: _SeatTile(screen: screen, player: players[i], first: first == players[i].id, compact: true),
+            child: _SeatTile(screen: screen, player: players[i], first: first == players[i].id, compact: true, avatar: tile * .68),
           ),
       ]);
     });
@@ -901,7 +903,7 @@ class _PlayersRow extends StatelessWidget {
 }
 
 class _SeatTile extends StatelessWidget {
-  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact, this.names = true});
+  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact, this.names = true, this.avatar});
 
   final GameScreenState screen;
   final PlayerInfo player;
@@ -910,6 +912,9 @@ class _SeatTile extends StatelessWidget {
 
   /// Кружок без подписи — когда игроки не помещаются (имя — во всплывающей подсказке).
   final bool names;
+
+  /// Размер портрета (на большом экране — крупнее).
+  final double? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -940,7 +945,7 @@ class _SeatTile extends StatelessWidget {
             color: screen.colorOf(p.id),
             photoId: screen.photoOf(p.id),
             // Портреты крупнее: ботов и людей должно быть хорошо видно.
-            size: compact ? 38 : 44,
+            size: this.avatar ?? (compact ? 38 : 44),
             ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
           ),
         ),
@@ -1409,6 +1414,9 @@ class _Say extends ChangeNotifier {
         for (final (green, link) in marks.values) (green ? 'думаю, эта' : 'исключаю') + (link >= 0 ? ':$link' : ''),
       ];
 }
+
+/// Колонка игроков боком: на телефоне узкая, на большом экране — шире (круг игроков не теряется в углу).
+double _sideWidth(Size size) => (size.width * 0.24).clamp(150.0, math.max(260.0, size.height * .5));
 
 /// Сообщения, собранные на столе, начинаются так — в чате они помечаются «со стола».
 const tablePostPrefix = 'Со стола: ';
