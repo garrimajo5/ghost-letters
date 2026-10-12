@@ -643,6 +643,13 @@ class ActionPanel extends StatelessWidget {
               'Угадано рядов: ${result.correctRows} из ${v.board.length}${result.killerCaught ? (v.players.any((p) => p.knownRole == 'Killer') ? ' · Убийца арестован' : ' · Верно: Убийцы нет') : ''}',
               style: const TextStyle(color: AppColors.muted),
             ),
+            // Стол ошибся с Убийцей — видно, кого арестовали вместо него.
+            if (!result.killerCaught && (finale?.arrested ?? const []).isNotEmpty)
+              Text(
+                key: const Key('arrested-result'),
+                'Арестован${finale!.arrested.length > 1 ? 'ы' : ''}: ${finale.arrested.map(screen.nick).join(', ')} — не Убийца',
+                style: const TextStyle(color: AppColors.muted),
+              ),
             if (result.imitatorWon) const Text('Подражатель добился ареста и тоже победил!'),
             // Охота: кого Убийца назвал Свидетелем (Экспертом) и угадал ли.
             if (finale?.huntTarget case final target?) ...[
