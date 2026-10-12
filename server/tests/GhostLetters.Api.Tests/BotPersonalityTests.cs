@@ -166,6 +166,9 @@ public sealed class BotPersonalityTests
         };
         var view = View(Phase.Discussion, [], Role.Witness, hints: [new HintGroupView(1, ["sword"])], players: players);
 
+        // Здесь стол не побеждает и Убийцу не подозревает — тихий режим Свидетеля проверяется отдельно.
+        using (BotTuning.Use(BotTuning.Default with { WitnessQuiet = false }))
+        {
         var bold = Enumerable.Range(0, 30).Count(seed =>
             BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Бот Боб"));
         var careful = Enumerable.Range(0, 30).Count(seed =>
@@ -173,6 +176,12 @@ public sealed class BotPersonalityTests
 
         bold.Should().BeGreaterThan(20, "рисковый Свидетель говорит прямо");
         careful.Should().Be(0, "осторожный Свидетель молчит, чтобы его не вычислили");
+        }
+
+        // Стол уже подозревает Убийцу: даже рисковый Свидетель молчит, чтобы не выдать себя на охоте.
+        var accused = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, 1)]);
+        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Бот Боб"))
+            .Should().Be(0);
     }
 
     [Fact]
@@ -346,6 +355,23 @@ public sealed class BotPersonalityTests
         var mind = Mind(new BotPersonality { Risk = 1, Strictness = 1, Memory = 0 },
             [new ChatOpinion(Ann, "knife", 1), new ChatOpinion(Bob, "rose", 1, IsCheck: true)]);
         BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value.Text.Should().NotContain("Боб");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void VanishedCheckRefutedByLaterHint_MakesAuthorSuspicious(bool lieDetect)
+    {
+        // Боб сказал: «кидал монету — исчезла, проверял нож». Потом Призрак открыл меч — явно про нож.
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["knife"] = ["weapon", "blade"], ["rose"] = ["flower"], ["sword"] = ["weapon", "blade"], ["boat"] = ["water"], ["sea"] = ["water"] });
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword", "sea"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = 1, Strictness = 0.5, Memory = 0 },
+            [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", 1, IsCheck: true, SourceCard: "coin")]);
+        using var _ = BotTuning.Use(BotTuning.Default with { LieDetect = lieDetect ? 2 : 0 });
+        var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
+        if (lieDetect) reply.Should().Contain("Бот Боб из чёрных", "отверг карту, на которую потом ясно указала подсказка");
+        else reply.Should().NotContain("Бот Боб из чёрных");
     }
 
     [Theory]

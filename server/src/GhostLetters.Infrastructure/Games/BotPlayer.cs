@@ -135,7 +135,49 @@ public static class BotPlayer
 
         /// <summary>Чёрные: как часто врут о своём письме, голосуют и пишут под ложную карту.</summary>
 
-        private double FakeChance => Classic ? 1 : Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1);
+        private double FakeChance => Classic ? 1 : Spoiler ? Math.Max(.85, Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1))
+            : Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1);
+
+        /// <summary>Сообщник-вредитель: ему не страшно попасться, главное — увести стол от истинных карт.</summary>
+        private bool Spoiler => !Classic && BotTuning.Current.AccompliceSpoiler && me.Role == Role.Accomplice;
+
+        /// <summary>Эксперт, который бережёт себя от охоты: помогает, но не слишком метко.</summary>
+        private bool SubtleExpert => !Classic && BotTuning.Current.ExpertSubtle && me.Role == Role.Expert && Truth is not null;
+
+        /// <summary>
+        /// Недоверие к игроку без разбора карт (без Evidence — его можно звать из оценки улик): память, обвинения стола
+        /// и «отверг карту, на которую потом указала подсказка». 0 — верю как всем.
+        /// </summary>
+        private double Distrust(Guid id) => Classic || KillerTeam ? 0
+            : BotTuning.Current.SuspectDistrust * (3 * PastSuspicion(id) + 1.5 * Accused(id) + BotTuning.Current.LieDetect * LiedChecks(id));
+
+        private double DistrustFactor(Guid id) => 1 / (1 + Distrust(id));
+
+        private readonly Dictionary<Guid, double> _lies = new();
+
+        /// <summary>
+        /// Сколько раз игрок отверг карту («проверял — исчезла» или «исключаю»), на которую затем ясно указала
+        /// подсказка Призрака: она — лучшее совпадение подсказки. Так выдают себя чёрные, отметающие истину.
+        /// </summary>
+        private double LiedChecks(Guid id)
+        {
+            if (Classic || mind is null) return 0;
+            if (_lies.TryGetValue(id, out var cached)) return cached;
+            var shown = view.Hints.SelectMany(h => h.Cards).ToList();
+            var sum = 0.0;
+            foreach (var o in mind.Opinions.Where(o => o.Author == id))
+            {
+                var rejected = o.Strength < 0 ||
+                    (o.IsCheck && o.SourceCard is { } src && !shown.Contains(src) && !view.Board.Any(r => r.Cards.Contains(src)));
+                if (!rejected) continue;
+                // Подсказка указывает именно на эту карту: она — единственное явное лучшее совпадение, а не одна из равных.
+                var support = shown.Where(h => h != o.SourceCard && Rank(h, o.CardId) == 0 && Sim(h, o.CardId) - view.Board.SelectMany(r => r.Cards)
+                        .Where(c => c != h && c != o.CardId).Select(c => Sim(h, c)).DefaultIfEmpty(0).Max() > .1)
+                    .Sum(h => HintWeight(h, o.CardId));
+                if (support > .3) sum += Math.Min(1, support);
+            }
+            return _lies[id] = sum;
+        }
 
         /// <summary>
         /// Чем больше за столом подозреваемых, тем безопаснее лгать: за маленьким столом ложь видна сразу,
@@ -241,7 +283,7 @@ public static class BotPlayer
             foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id && !o.IsCheck))
             {
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
-                trust *= HistoryTrust(o.Author);
+                trust *= HistoryTrust(o.Author) * DistrustFactor(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 var argument = o.SourceCard is null ? 1 : .5 + .5 * Sim(o.SourceCard, card);
                 sum += o.Strength * trust * mind.TrustMultiplier(o.Author) * argument;
@@ -332,7 +374,8 @@ public static class BotPlayer
 
         /// <summary>Итоговое подозрение к игроку: память, чужие обвинения и странные советы в чате.</summary>
         private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) +
-            (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id) - .25 * (mind?.AffinityBias(id) ?? 0);
+            (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id) - .25 * (mind?.AffinityBias(id) ?? 0) +
+            (KillerTeam ? 0 : BotTuning.Current.LieDetect * LiedChecks(id));
 
         private string CardName(string card)
         {
@@ -439,7 +482,7 @@ public static class BotPlayer
                 .GroupBy(o => o.SourceCard!).Sum(g =>
                 {
                     var o = g.First();
-                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : HistoryTrust(o.Author);
+                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : HistoryTrust(o.Author) * DistrustFactor(o.Author);
                     return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus);
                 });
         }
@@ -464,12 +507,19 @@ public static class BotPlayer
                 var real = truth[stage.Row];
                 if (!KillerTeam && candidates.Contains(real))
                 {
+                    // Эксперт со стопроцентной точностью — первая цель охоты. Там, где стол и без него видит истину,
+                    // он иногда голосует мимо, чтобы точность выглядела как у внимательного детектива.
+                    if (SubtleExpert && ClearTruth(stage.Row, candidates) && ExpertAccuracy(1) > .7 && rng.NextDouble() < .6)
+                    {
+                        var miss = candidates.Where(c => c != real).OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).FirstOrDefault(-1);
+                        if (miss >= 0) return miss;
+                    }
                     return real;
                 }
 
                 // Ряд, где стол и так ясно видит истину: голос против выдаст, а исход не изменит — голосуем «как все».
                 if (KillerTeam && !Classic && BotTuning.Current.KillerBlend && candidates.Contains(real) && ClearTruth(stage.Row, candidates)
-                    && rng.NextDouble() < BotTuning.Current.KillerBlendChance)
+                    && rng.NextDouble() < (Spoiler ? .3 : BotTuning.Current.KillerBlendChance))
                 {
                     return real;
                 }
@@ -493,7 +543,7 @@ public static class BotPlayer
 
             // Шантажисту выгодно нераскрытое дело: иногда голосует за вторую по уликам карту, а свою лучшую
             // версию бережёт для финала — его не ищут, и улики он называет сам.
-            if (me.Role == Role.Blackmailer && candidates.Count > 1 && rng.NextDouble() < 0.3 + 0.4 * P.Risk)
+            if (me.Role == Role.Blackmailer && candidates.Count > 1 && rng.NextDouble() < BotTuning.Current.BlackmailerSpoil * (0.3 + 0.4 * P.Risk))
             {
                 return candidates.OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).Skip(1).First();
             }
@@ -619,7 +669,7 @@ public static class BotPlayer
                 var fakes = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
                 target = Card(row, fakes[rng.Next(fakes.Count)]);
             }
-            else if (!Classic && BotTuning.Current.Probe && !(Truth is not null && me.Role == Role.Expert) && Probe() is { } probe)
+            else if (!Classic && BotTuning.Current.Probe && !ExpertAims() && Probe() is { } probe)
             {
                 return [probe, .. me.Hand.Where(h => h != probe).OrderByDescending(h => ProbeValue(h) + Noise()).Take(count - 1)];
             }
@@ -627,7 +677,7 @@ public static class BotPlayer
             {
                 // Проверяем самый неясный ряд: его лучшую (или случайную) карту.
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => Certainty(r) + Noise()).First();
-                target = Card(row, Truth is { } t && me.Role == Role.Expert ? t[row] : BestColumn(row, null));
+                target = Card(row, Truth is { } t && ExpertAims() ? t[row] : BestColumn(row, null));
             }
 
             // Строгий выбирает письмо, похожее на цель и ни на что больше на поле, — чтобы проверить ровно её.
@@ -636,6 +686,25 @@ public static class BotPlayer
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
             return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
+        }
+
+        /// <summary>Эксперт шлёт письмо под истинную карту; осторожный — не каждый раунд (иначе слишком метко).</summary>
+        private bool _expertAims, _expertAimsKnown;
+        private bool ExpertAims()
+        {
+            if (_expertAimsKnown) return _expertAims;
+            _expertAimsKnown = true;
+            return _expertAims = Truth is not null && me.Role == Role.Expert && (!SubtleExpert || rng.NextDouble() < .7);
+        }
+
+        /// <summary>Доля моих голосов по рядам за истину, если добавить ещё столько верных.</summary>
+        private double ExpertAccuracy(int extra)
+        {
+            if (Truth is not { } truth || view.Finale is not { } finale) return 1;
+            var stages = finale.Outcomes.Where(o => o.Kind == VoteStageKind.Row).ToDictionary(o => o.Stage, o => o.Row);
+            var mine = finale.Votes.Where(v => v.Voter == me.Id && v.Column is not null && stages.ContainsKey(v.Stage)).ToList();
+            var hits = mine.Count(v => truth[stages[v.Stage]] == v.Column);
+            return (hits + extra) / (double)(mine.Count + extra);
         }
 
         /// <summary>
@@ -840,6 +909,13 @@ public static class BotPlayer
             if (me.Role == Role.Witness && view.Players.FirstOrDefault(p => p.KnownRole == Role.Killer && p.Id != me.Id) is { } killer
                 && NameOf(killer.Id) is { } name)
             {
+                // Стол и так побеждает по картам или уже подозревает Убийцу — Свидетель молчит, чтобы его не вычислили.
+                if (BotTuning.Current.WitnessQuiet && (Accused(killer.Id) >= .5 || (view.Board.Count > 1 &&
+                        Enumerable.Range(0, view.Board.Count).Count(r => Certainty(r) > .15) >= view.Board.Count - 1)))
+                {
+                    return "";
+                }
+
                 if (P.Risk > 0.7 && rng.NextDouble() < P.Risk)
                 {
                     return $" Мне кажется, Убийца — {name}.";
@@ -905,7 +981,23 @@ public static class BotPlayer
             var (claimText, claimCard) = LetterClaim();
             int target;
             int column;
-            if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
+            // Карту не предлагают, а отметают («исключаю»): Эксперт — ложного лидера ряда, Сообщник — истину.
+            var exclude = false;
+            if (Spoiler && Truth is { } spoilTruth && rng.NextDouble() < BotTuning.Current.SpoilerExclude &&
+                Enumerable.Range(0, view.Board.Count).Where(r => !ClearTruth(r)).ToList() is { Count: > 0 } doubtful)
+            {
+                target = doubtful[rng.Next(doubtful.Count)];
+                column = spoilTruth[target];
+                exclude = true;
+            }
+            else if (SubtleExpert && rng.NextDouble() < .7 &&
+                Enumerable.Range(0, view.Board.Count).Where(r => BestColumn(r, null) != Truth![r] && Evidence(Card(r, BestColumn(r, null))) > .05 && Certainty(r) < .15).ToList() is { Count: > 0 } misled)
+            {
+                target = misled.OrderBy(r => TruthMargin(r) + Noise()).First();
+                column = BestColumn(target, null);
+                exclude = true;
+            }
+            else if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
             {
                 target = rng.Next(view.Board.Count);
                 if (!Classic && BotTuning.Current.KillerBlend)
@@ -930,7 +1022,7 @@ public static class BotPlayer
             var card = Card(target, column);
             string Where(int r, int c) => $"{Name(view.Board[r].Category).ToLowerInvariant()} {c + 1}";
             // Человек не называет версию наугад: без опоры на улики — только если в ряду остальное уже проверено.
-            var blind = !Classic && Evidence(card) <= 0.05 && !OnlyLeft(target, column);
+            var blind = !exclude && !Classic && Evidence(card) <= 0.05 && !OnlyLeft(target, column);
             var lines = Evidence(card) > 0
                 ? new[]
                 {
@@ -943,12 +1035,19 @@ public static class BotPlayer
                     $"Пока не ясно. Проверил бы {Name(view.Board[target].Category).ToLowerInvariant()} — карту {column + 1}.",
                     $"Есть идея про {Name(view.Board[target].Category).ToLowerInvariant()}: карта {column + 1}?",
                 };
+            if (exclude)
+                lines =
+                [
+                    $"{Name(view.Board[target].Category)} {column + 1} не подходит — улики к ней притянуты.",
+                    $"Исключаю {Where(target, column)}: связь с подсказками случайная.",
+                    $"Не верю в {Where(target, column)}, ищите в этом ряду другую.",
+                ];
             var opinion = Reply(target, card) + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
-            var links = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
+            var links = exclude ? new List<string>() : view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
                 .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
-                .Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.");
-            opinion += "\n" + string.Join("\n", links);
-            if (!links.Any()) opinion += "Связь с открытыми уликами слабая — это только предположение.";
+                .Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
+            if (links.Count > 0) opinion += "\n" + string.Join("\n", links);
+            else if (!exclude) opinion += " Связь с открытыми уликами слабая — это только предположение.";
             if (!Classic && view.Board.Count > 1)
             {
                 var version = new List<string>();
@@ -973,7 +1072,7 @@ public static class BotPlayer
             }
             if (claimCard is null)
             {
-                return blind ? (opinion, new List<string>(), new List<string>()) : (opinion, new List<string> { card }, new List<string> { "думаю, эта" });
+                return blind ? (opinion, new List<string>(), new List<string>()) : (opinion, new List<string> { card }, new List<string> { exclude ? "исключаю" : "думаю, эта" });
             }
 
             // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
@@ -981,7 +1080,7 @@ public static class BotPlayer
             // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
             // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
             if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)
-                && rng.NextDouble() < FakeVanishChance * FakeChance)
+                && rng.NextDouble() < (Spoiler ? Math.Max(BotTuning.Current.SpoilerVanish, FakeVanishChance) : FakeVanishChance) * FakeChance)
             {
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
                 var real = Card(row, lieTruth[row]);
@@ -1000,13 +1099,13 @@ public static class BotPlayer
                 // «:0» связывает проверку с письмом — так стол знает, какое письмо проверяло эту карту.
                 // Письмо исчезло — проверенные им карты бот показывает красным: по его рассуждению, это «не они».
                 var gone = !Classic && claimText.Contains("исчезла", StringComparison.Ordinal);
-                notes.Add((!Classic && !blind && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
+                notes.Add((!Classic && !blind && !exclude && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
             if (!blind && !cards.Contains(card) && cards.Count < ChatService.MaxCards)
             {
                 cards.Add(card);
-                notes.Add("думаю, эта");
+                notes.Add(exclude ? "исключаю" : "думаю, эта");
             }
 
             // Одной фразой, как сказал бы человек: что проверял и почему (по первой связи).
