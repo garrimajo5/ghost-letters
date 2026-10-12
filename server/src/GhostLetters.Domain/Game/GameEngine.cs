@@ -113,6 +113,12 @@ public static partial class GameEngine
                     throw GameRuleException.WrongPhase(Phase.Refill, state.Phase);
                 }
 
+                // В последнем раунде писем больше не будет — сбрасывать и добирать незачем.
+                if (state.Round >= state.TotalRounds)
+                {
+                    throw GameRuleException.NotAllowed("В последнем раунде добора нет.");
+                }
+
                 ApplyDiscard(state, actor, discard.CardId, events);
                 break;
             case EndTurn:
@@ -441,6 +447,13 @@ public static partial class GameEngine
         state.Hints.Add(group);
         state.Mailbox.Clear();
         events.Add(new GameEvent("HintsRevealed", state.Ghost.Id, Detail: group.Cards.Count.ToString()));
+
+        // Последний раунд: добора нет — сразу обсуждение.
+        if (state.Round >= state.TotalRounds)
+        {
+            StartDiscussion(state, events);
+            return;
+        }
 
         // Решения по сбросу, принятые во время выкладки, сохраняются.
         state.Phase = Phase.Refill;
