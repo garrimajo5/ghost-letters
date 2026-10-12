@@ -99,6 +99,12 @@ public sealed record BotTuning
     /// </summary>
     public bool FirstClueAlways { get; init; } = true;
 
+    /// <summary>
+    /// Запасное письмо раунда — только если на истину оно похоже сильнее, чем на любую ложную карту.
+    /// false — достаточно, чтобы отрыв был лучшим среди писем и стол от него почти не терял.
+    /// </summary>
+    public bool GhostFallbackStrict { get; init; } = true;
+
     /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
     public double AssociationScale { get; init; } = .5;
 
@@ -160,6 +166,7 @@ public sealed record BotTuning
                 nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
                 nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(FirstClueAlways) => t with { FirstClueAlways = B() },
+                nameof(GhostFallbackStrict) => t with { GhostFallbackStrict = B() },
                 nameof(LatestVersionWeight) => t with { LatestVersionWeight = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },

@@ -1,2 +1,2 @@
 300
-variants: зацепка как было: FirstClueAlways=false | зацепка всегда: FirstClueAlways=true
+variants: как было: FirstClueAlways=false | зацепка всегда: FirstClueAlways=true | зацепка и мягкий запас: FirstClueAlways=true, GhostFallbackStrict=false
