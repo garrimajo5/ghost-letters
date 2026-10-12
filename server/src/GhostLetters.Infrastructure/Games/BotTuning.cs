@@ -86,6 +86,11 @@ public sealed record BotTuning
 
     /// <summary>Чёрный в финальном голосовании идёт за столом, если стол сам склоняется к ложной карте.</summary>
     public bool KillerFollowWrong { get; init; } = true;
+    /// <summary>
+    /// Призрак не оставляет стол без улик: если полезных писем нет, открывает лучшее, которое вредит не больше этого
+    /// (по оценке стола). 0 — как раньше: может не открыть ничего и не дать зацепку.
+    /// </summary>
+    public double GhostFallback { get; init; } = .15;
 
     public static readonly BotTuning Default = new();
 
@@ -139,6 +144,7 @@ public sealed record BotTuning
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
                 nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
+                nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
