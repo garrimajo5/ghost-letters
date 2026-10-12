@@ -103,7 +103,7 @@ public sealed record BotTuning
     /// Запасное письмо раунда — только если на истину оно похоже сильнее, чем на любую ложную карту.
     /// false — достаточно, чтобы отрыв был лучшим среди писем и стол от него почти не терял.
     /// </summary>
-    public bool GhostFallbackStrict { get; init; } = false;
+    public bool GhostFallbackStrict { get; init; } = true;
 
     /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
     public double AssociationScale { get; init; } = .5;
