@@ -69,6 +69,35 @@ public sealed class CardTags
         return new CardTags(main) { _details = raw };
     }
 
+    /// <summary>
+    /// Ассоциации по смыслу (associations.json): то, что человек вспоминает при взгляде на карту — тема, обстановка,
+    /// жанр. Вес меньше 1: они «вторичные смыслы», насколько бот их видит, решает его характер (SecondaryMeanings).
+    /// </summary>
+    public CardTags WithAssociations(string json)
+    {
+        var raw = JsonSerializer.Deserialize<Dictionary<string, List<Detail>>>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        var tags = _tags.ToDictionary(e => e.Key, e => e.Value.ToHashSet());
+        var meanings = _meanings.ToDictionary(e => e.Key, e => e.Value);
+        var weights = _meaningWeights.ToDictionary(e => e.Key, e => new Dictionary<string, double>(e.Value));
+        foreach (var (card, list) in raw)
+        {
+            if (!tags.TryGetValue(card, out var own)) continue;
+            var added = list.Where(a => !string.IsNullOrWhiteSpace(a.Tag) && double.IsFinite(a.Weight) && a.Weight > 0)
+                .Select(a => a with { Tag = a.Tag.Trim().ToLowerInvariant(), Weight = Math.Min(a.Weight, .95) })
+                .Where(a => !own.Contains(a.Tag) && Group(a.Tag) == 0).GroupBy(a => a.Tag).Select(g => g.MaxBy(a => a.Weight)!).ToList();
+            if (added.Count == 0) continue;
+            var main = meanings.GetValueOrDefault(card) ?? own.Where(t => Group(t) == 0).Order().Select(t => new Detail(t, 1, t)).ToList();
+            meanings[card] = [.. main, .. added];
+            var w = weights.GetValueOrDefault(card) ?? new Dictionary<string, double>();
+            foreach (var a in added) w[a.Tag] = a.Weight;
+            weights[card] = w;
+            foreach (var a in added) own.Add(a.Tag);
+        }
+
+        return new CardTags(tags) { _details = _details, _meanings = meanings, _meaningWeights = weights };
+    }
+
     private Dictionary<string, double> DetailsOf(string card) =>
         (_details.GetValueOrDefault(card) ?? []).Where(d => Group(d.Tag) == 0).GroupBy(d => d.Tag)
         .ToDictionary(g => g.Key, g => g.Max(d => d.Weight));
@@ -269,6 +298,8 @@ public sealed class CardTags
         var tags = Parse(File.ReadAllText(path));
         var detailsPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "details.json");
         if (File.Exists(detailsPath)) tags = tags.WithDetails(File.ReadAllText(detailsPath));
+        var associationsPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "associations.json");
+        if (File.Exists(associationsPath)) tags = tags.WithAssociations(File.ReadAllText(associationsPath));
         logger.LogInformation("Теги карт: {Count} из {Path}", tags.Count, path);
         return tags;
     }

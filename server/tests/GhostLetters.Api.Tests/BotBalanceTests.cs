@@ -34,7 +34,12 @@ public sealed class BotBalanceTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "client", "assets", "cards", "tags.json"))) dir = dir.Parent;
         dir.Should().NotBeNull("tags.json лежит в client/assets/cards репозитория");
-        return CardTags.Parse(File.ReadAllText(Path.Combine(dir!.FullName, "client", "assets", "cards", "tags.json")));
+        var cards = Path.Combine(dir!.FullName, "client", "assets", "cards");
+        // Как на сервере: теги, детали и ассоциации по смыслу.
+        var tags = CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
+            .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")));
+        return Environment.GetEnvironmentVariable("BOT_NO_ASSOCIATIONS") == "1" ? tags
+            : tags.WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
     }
 
     [Theory]
