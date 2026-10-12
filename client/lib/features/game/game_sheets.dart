@@ -481,8 +481,8 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
       Text('О ПИСЬМАХ — ПО МОИМ ПОМЕТКАМ', style: label),
       const SizedBox(height: 8),
       if (claimed.isNotEmpty) row('Говорит, что отправил', claimed, color: AppColors.ice),
-      if (crossed.isNotEmpty) row('Проверял — не то ✕', crossed, color: AppColors.redSoft),
-      if (checked.isNotEmpty) row('Его подсказки указывают ✓', checked, color: AppColors.greenSoft),
+      if (crossed.isNotEmpty) row('Проверял — не то', crossed, color: AppColors.redSoft),
+      if (checked.isNotEmpty) row('Его подсказки указывают', checked, color: AppColors.greenSoft),
     ];
   }
 

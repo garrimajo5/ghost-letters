@@ -176,8 +176,11 @@ class _TableStatementsState extends State<TableStatements> {
                         },
                         child: Padding(
                             padding: const EdgeInsets.all(8),
-                            child: Text(
-                                'Версия: ${widget.screen.nick(message.authorId)} ▾'))),
+                            // «▾» нет в шрифте веба (квадратик) — стрелка иконкой.
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Text('Версия: ${widget.screen.nick(message.authorId)}'),
+                              const Icon(Icons.arrow_drop_down, size: 18),
+                            ]))),
                 ]),
             if (message != null) ...[
               if (message.text?.isNotEmpty == true)
