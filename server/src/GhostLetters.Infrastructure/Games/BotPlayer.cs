@@ -517,6 +517,13 @@ public static class BotPlayer
                     return real;
                 }
 
+                // Стол и так склоняется к ложной карте — чёрному выгоднее голосовать вместе со всеми, а не выделяться
+                // своей «особой» версией: в «Кто Убийца?» видно, кто за что голосовал по рядам.
+                if (KillerTeam && !Classic && BotTuning.Current.KillerFollowWrong && TableChoice(stage.Row, candidates) is { } table && table != real)
+                {
+                    return table;
+                }
+
                 // Ряд, где стол и так ясно видит истину: голос против выдаст, а исход не изменит — голосуем «как все».
                 if (KillerTeam && !Classic && BotTuning.Current.KillerBlend && candidates.Contains(real) && ClearTruth(stage.Row, candidates)
                     && rng.NextDouble() < (Spoiler ? .3 : BotTuning.Current.KillerBlendChance))
@@ -549,6 +556,19 @@ public static class BotPlayer
             }
 
             return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
+        }
+
+        /// <summary>Карта ряда, за которую, судя по чату, стол (кроме команды Убийцы) голосует охотнее всего; null — мнений нет.</summary>
+        private int? TableChoice(int row, IReadOnlyList<int> candidates)
+        {
+            if (mind is null) return null;
+            var team = view.Players.Where(p => p.Id == me.Id || (p.KnownRole is { } r && r.IsKillerTeam())).Select(p => p.Id).ToHashSet();
+            var votes = candidates.Select(c => (Column: c, Weight: mind.Opinions
+                    .Where(o => !o.IsCheck && !team.Contains(o.Author) && o.CardId == Card(row, c)).Sum(o => o.Strength)))
+                .Where(x => x.Weight > 0).OrderByDescending(x => x.Weight).ToList();
+            if (votes.Count == 0) return null;
+            // Явного лидера нет — не за кем «прятаться».
+            return votes.Count > 1 && votes[0].Weight - votes[1].Weight < .5 ? null : votes[0].Column;
         }
 
         private double FakeVanishChance => BotTuning.Current.KillerSizeAware

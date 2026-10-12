@@ -84,6 +84,9 @@ public sealed record BotTuning
     /// <summary>Множитель того, как часто Шантажист голосует за вторую по уликам карту (1 — как раньше; .4 — по замеру 8 игроков 28 → 35 %).</summary>
     public double BlackmailerSpoil { get; init; } = .4;
 
+    /// <summary>Чёрный в финальном голосовании идёт за столом, если стол сам склоняется к ложной карте.</summary>
+    public bool KillerFollowWrong { get; init; } = true;
+
     /// <summary>
     /// Призрак не оставляет стол без улик: если полезных писем нет, открывает лучшее, которое вредит не больше этого
     /// (по оценке стола). 0 — как раньше: может не открыть ничего и не дать зацепку.
@@ -141,6 +144,7 @@ public sealed record BotTuning
                 nameof(SpoilerExclude) => t with { SpoilerExclude = D() },
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
+                nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
                 nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
