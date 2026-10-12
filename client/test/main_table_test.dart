@@ -528,6 +528,23 @@ void main() {
     expect(find.textContaining('Мотив, карта 2'), findsOneWidget);
   });
 
+  testWidgets('окно карты: свайп вверх-вниз — карта того же столбца в соседнем ряду', (tester) async {
+    await _open(tester, const Size(390, 844));
+    await tester.tap(find.byKey(const Key('board-0-2')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Мотив, карта 3'), findsOneWidget);
+    await tester.drag(find.byKey(const Key('mark-carousel')), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Место, карта 3'), findsOneWidget);
+    // Сдвинулись по ряду — и следующий ряд встаёт на тот же столбец.
+    await tester.drag(find.byKey(const Key('mark-row-1')), const Offset(-220, 0));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Место, карта 4'), findsOneWidget);
+    await tester.drag(find.byKey(const Key('mark-carousel')), const Offset(0, -250));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Способ, карта 4'), findsOneWidget);
+  });
+
   testWidgets('боком поле крупнее экрана и листается, подсказки остаются слева', (tester) async {
     await _open(tester, const Size(1076, 457), big: true);
     expect(find.byKey(const Key('main-board-pan')), findsOneWidget);
