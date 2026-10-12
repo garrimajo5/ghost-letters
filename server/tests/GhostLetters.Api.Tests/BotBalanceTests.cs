@@ -24,6 +24,7 @@ public sealed class BotBalanceTests
         new("6 игроков, +1 Сообщник", new SandboxOptions(6, null, new RoleOptions(ExtraAccomplices: 1), false)),
         new("7 игроков (Сообщник, Свидетель)", new SandboxOptions(7, null, null, false)),
         new("8 игроков, +Шантажист", new SandboxOptions(8, null, new RoleOptions(UseBlackmailer: true), false)),
+        new("10 игроков (Свидетель, Эксперт)", new SandboxOptions(10, null, null, false)),
     ];
 
     private static readonly IReadOnlyList<string> Deck = Enumerable.Range(1, 758).Select(i => $"orig_{i:0000}").ToList();
@@ -40,6 +41,7 @@ public sealed class BotBalanceTests
     [InlineData(4)]
     [InlineData(7)]
     [InlineData(8)]
+    [InlineData(10)]
     public void Bots_FinishGames_OfEverySize(int players)
     {
         var tags = RealTags();
@@ -72,6 +74,7 @@ public sealed class BotBalanceTests
         md.AppendLine("| Состав | Партий | Детективы | Убийца | Шантажист | Никто | Ряды угаданы | Все ряды | Убийца пойман | Охота удалась | Сбои | мс / партия |");
         md.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
         var spreads = new List<string>();
+        var found = new List<string>();
         foreach (var config in Configs)
         {
             var sides = new Dictionary<WinningSide, int>();
@@ -80,6 +83,9 @@ public sealed class BotBalanceTests
             var failures = new List<string>();
             var spread = new int[6];
             var allRows = 0;
+            // Кого арестовали и кого нашла охота Убийцы (по настоящей роли цели).
+            int arrestKiller = 0, arrestAccomplice = 0, arrestInnocent = 0, arrestNone = 0, accompliceGames = 0;
+            int witnessGames = 0, witnessFound = 0, expertGames = 0, expertFound = 0;
             for (var seed = 1; seed <= games; seed++)
             {
                 var (report, state) = BotSandboxRunner.Simulate("full-game", seed, Deck, tags, CancellationToken.None, config.Options);
@@ -99,6 +105,23 @@ public sealed class BotBalanceTests
                 rows += report.TotalRows;
                 if (result.KillerCaught) caught++;
                 if (state.Hunt is { } hunt) { hunts++; if (hunt.Success) huntOk++; }
+                var roleOf = state.Players.ToDictionary(p => p.Id, p => p.Role);
+                var arrested = state.Arrested.Select(id => roleOf.GetValueOrDefault(id)).ToList();
+                if (state.Players.Any(p => p.Role == Role.Accomplice)) accompliceGames++;
+                if (arrested.Count == 0) arrestNone++;
+                if (arrested.Contains(Role.Killer)) arrestKiller++;
+                if (arrested.Contains(Role.Accomplice)) arrestAccomplice++;
+                if (arrested.Any(r => !r.IsKillerTeam())) arrestInnocent++;
+                if (state.Players.Any(p => p.Role == Role.Witness))
+                {
+                    witnessGames++;
+                    if (state.Hunt is { Success: true, Target: { } t } && roleOf.GetValueOrDefault(t) == Role.Witness) witnessFound++;
+                }
+                if (state.Players.Any(p => p.Role == Role.Expert))
+                {
+                    expertGames++;
+                    if (state.Hunt is { Success: true, Target: { } t } && roleOf.GetValueOrDefault(t) == Role.Expert) expertFound++;
+                }
                 var presets = report.Seats.ToDictionary(s => s.Id, s => s.Name.Split(' ')[1]);
                 foreach (var p in state.Players)
                 {
@@ -122,6 +145,9 @@ public sealed class BotBalanceTests
                 $"{(hunts == 0 ? "—" : $"{Pct(huntOk, hunts)} из {hunts}")} | {failed} | {ms / Math.Max(1, games)} |");
             foreach (var f in failures) md.AppendLine($"|  ↳ сбой: {f.Replace("|", "/")} ||||||||||||");
             spreads.Add($"| {config.Name} | " + string.Join(" | ", spread.Take(5).Select(n => Share(n))) + " |");
+            string Of(int n, int of) => of == 0 ? "—" : $"{Pct(n, of)} из {of}";
+            found.Add($"| {config.Name} | {Share(arrestKiller)} | {Of(arrestAccomplice, accompliceGames)} | {Share(arrestInnocent)} | {Share(arrestNone)} | " +
+                $"{Of(witnessFound, witnessGames)} | {Of(expertFound, expertGames)} |");
         }
 
         md.AppendLine().AppendLine($"Погрешность при {games} партиях — около ±{Math.Round(100 / Math.Sqrt(games))} п.п. на долю 50 %. " +
@@ -129,6 +155,12 @@ public sealed class BotBalanceTests
         md.AppendLine("## Сколько рядов угадано за партию").AppendLine();
         md.AppendLine("| Состав | 0 | 1 | 2 | 3 | 4 |").AppendLine("|---|---|---|---|---|---|");
         foreach (var line in spreads) md.AppendLine(line);
+        md.AppendLine();
+        md.AppendLine("## Кого находят").AppendLine();
+        md.AppendLine("Арест — по голосованию стола (доля от партий; Сообщник — от партий, где он есть). Свидетель и Эксперт — найдены охотой Убийцы (от партий, где роль есть).").AppendLine();
+        md.AppendLine("| Состав | Арестован Убийца | Арестован Сообщник | Арестован невиновный | Никого | Свидетель найден | Эксперт найден |");
+        md.AppendLine("|---|---|---|---|---|---|---|");
+        foreach (var line in found) md.AppendLine(line);
         md.AppendLine();
         md.AppendLine("## Победы по ролям (все составы вместе)").AppendLine();
         md.AppendLine("| Роль | В партиях | Побед |").AppendLine("|---|---|---|");
