@@ -583,19 +583,41 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
 
 /// Чат партии: общий канал и, для команды Убийцы, свой канал. Текст, голосовые и упоминания карт.
 class ChatSheet extends ConsumerStatefulWidget {
-  const ChatSheet({super.key, required this.screen, this.embedded = false});
+  const ChatSheet({super.key, required this.screen, this.embedded = false, this.full = false});
+
+  /// Чат развёрнут на весь экран (отдельным окном поверх стола).
+  final bool full;
 
   final GameScreenState screen;
 
   /// Чат встроен сбоку игрового стола (широкий экран), а не открыт шторкой.
   final bool embedded;
 
-  static Future<void> show(BuildContext context, GameScreenState screen) => showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        builder: (_) => ChatSheet(screen: screen),
-      );
+  /// Шторка чата; кнопка в шапке разворачивает его на весь экран и обратно.
+  static Future<void> show(BuildContext context, GameScreenState screen) async {
+    var full = false;
+    while (context.mounted) {
+      final next = full
+          ? await showDialog<String>(
+              context: context,
+              useSafeArea: false,
+              builder: (_) => Dialog.fullscreen(backgroundColor: AppColors.bg, child: SafeArea(child: ChatSheet(screen: screen, full: true))),
+            )
+          : await showModalBottomSheet<String>(
+              context: context,
+              isScrollControlled: true,
+              useSafeArea: true,
+              builder: (_) => ChatSheet(screen: screen),
+            );
+      if (next == 'full') {
+        full = true;
+      } else if (next == 'sheet') {
+        full = false;
+      } else {
+        return;
+      }
+    }
+  }
 
   @override
   ConsumerState<ChatSheet> createState() => _ChatSheetState();
@@ -615,9 +637,6 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
   static const autoScrollKey = 'chat.autoscroll';
   bool get _autoScroll => ref.read(prefsProvider).getBool(autoScrollKey) ?? false;
   bool _opened = false;
-
-  /// Шторка чата развёрнута на весь экран.
-  bool _full = false;
 
   void _toEnd({bool animate = true}) => WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_scroll.hasClients) return;
@@ -781,7 +800,7 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: widget.embedded ? 0 : MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
-        height: widget.embedded ? null : MediaQuery.of(context).size.height * (_full ? 1 : 0.75),
+        height: widget.embedded || widget.full ? null : MediaQuery.of(context).size.height * 0.75,
         child: Column(children: [
           // Шапка в одну строку: «ЧАТ», развернуть на весь экран, в углу — прокрутка к новым.
           Padding(
@@ -809,17 +828,21 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
               if (!widget.embedded)
                 IconButton(
                   key: const Key('chat-fullscreen'),
-                  tooltip: _full ? 'Свернуть чат' : 'Чат на весь экран',
+                  tooltip: widget.full ? 'Свернуть чат' : 'Чат на весь экран',
                   visualDensity: VisualDensity.compact,
-                  icon: Icon(_full ? Icons.fullscreen_exit : Icons.fullscreen, size: 20),
-                  onPressed: () => setState(() => _full = !_full),
+                  icon: Icon(widget.full ? Icons.fullscreen_exit : Icons.fullscreen, size: 20),
+                  onPressed: () => Navigator.pop(context, widget.full ? 'sheet' : 'full'),
                 ),
-              IconButton(
+              // Не стрелка вниз (похоже на «скачать»): подпись «к новым» и значок ленты, включено — янтарным.
+              TextButton.icon(
                 key: const Key('chat-autoscroll'),
-                tooltip: _autoScroll ? 'Прокрутка к новым: вкл' : 'Прокрутка к новым: выкл',
-                visualDensity: VisualDensity.compact,
-                isSelected: _autoScroll,
-                icon: Icon(Icons.vertical_align_bottom, size: 20, color: _autoScroll ? AppColors.amber : AppColors.dim),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: _autoScroll ? AppColors.amber : AppColors.dim,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                icon: Icon(_autoScroll ? Icons.mark_chat_read_outlined : Icons.chat_bubble_outline, size: 16),
+                label: Text(_autoScroll ? 'к новым: вкл' : 'к новым: выкл', style: const TextStyle(fontSize: 11)),
                 onPressed: () async {
                   final on = !_autoScroll;
                   await ref.read(prefsProvider).setBool(autoScrollKey, on);
