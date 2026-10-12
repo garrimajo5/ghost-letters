@@ -800,7 +800,9 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: widget.embedded ? 0 : MediaQuery.of(context).viewInsets.bottom),
       child: SizedBox(
-        height: widget.embedded || widget.full ? null : MediaQuery.of(context).size.height * 0.75,
+        // Во весь экран окно даёт свободные размеры — растягиваем явно, иначе колонка сжимается по содержимому.
+        width: widget.full ? double.infinity : null,
+        height: widget.full ? double.infinity : widget.embedded ? null : MediaQuery.of(context).size.height * 0.75,
         child: Column(children: [
           // Шапка в одну строку: «ЧАТ», развернуть на весь экран, в углу — прокрутка к новым.
           Padding(
