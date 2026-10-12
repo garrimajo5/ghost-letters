@@ -1,2 +1,0 @@
-200
-variants: прежние роли: ExpertSubtle=false, WitnessQuiet=false, AccompliceSpoiler=false, LieDetect=0, SuspectDistrust=0 | без вредителя: AccompliceSpoiler=false | без недоверия: LieDetect=0, SuspectDistrust=0 | слабое недоверие: LieDetect=1, SuspectDistrust=.5
