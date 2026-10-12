@@ -8,6 +8,7 @@ import '../../core/texts.dart';
 import '../../core/voice.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import 'chat_card_text.dart';
 import 'game_screen.dart';
 
 bool theorySource(String note) => note == 'улика' || note.startsWith('кидал');
@@ -180,7 +181,14 @@ class _TableStatementsState extends State<TableStatements> {
                 ]),
             if (message != null) ...[
               if (message.text?.isNotEmpty == true)
-                Text(message.text!, key: const Key('current-theory-text')),
+                // Карты по названию («тайна 4», «Подсказка р.2 №1») — картинками, как в чате.
+                ChatCardText(
+                    key: const Key('current-theory-text'),
+                    message: message,
+                    keyPrefix: 'theory-inline',
+                    mentions: widget.screen.mentions,
+                    parts: ChatCardText.parse(message, widget.screen.view?.board ?? const [], widget.screen.view?.hints ?? const [],
+                        text: message.text!.replaceFirst('Со стола: ', ''))),
               const Text('Мнение игрока, не подтверждённая истина',
                   style: TextStyle(fontSize: 11)),
               const SizedBox(height: 6),
