@@ -217,15 +217,26 @@ class LobbySettings {
     String? ghostUserId,
     bool clearGhost = false,
     bool? ranked,
-  }) =>
-      LobbySettings(
+  }) {
+    // Выбор того же значения в меню — не правка: шаблон остаётся «чистым».
+    final rulesChanged = (useSecretRow != null && useSecretRow != this.useSecretRow) ||
+        (columns != null && columns != this.columns) ||
+        (rounds != null && rounds != this.rounds) ||
+        (clearRounds && this.rounds != null) ||
+        (roles != null && roles.toJson().toString() != this.roles.toJson().toString());
+    final changed = rulesChanged ||
+        (discussion != null && discussion != this.discussion) ||
+        (tempo != null && tempo != this.tempo) ||
+        (turnHours != null && turnHours != this.turnHours) ||
+        (timers != null && timers.toString() != this.timers.toString()) ||
+        (cardSets != null && cardSets.join(',') != this.cardSets.join(',')) ||
+        (ranked != null && ranked != this.ranked);
+    return LobbySettings(
         presetName: presetName ?? this.presetName ?? (rulesPreset == 'ozon' ? 'Озон' : _isClassic ? 'Классика' : null),
-        presetModified: presetName != null ? false : presetModified || useSecretRow != null || columns != null ||
-            rounds != null || clearRounds || roles != null || discussion != null || tempo != null ||
-            turnHours != null || timers != null || cardSets != null || ranked != null,
+        presetModified: presetName != null ? false : presetModified || changed,
         // Ручная правка правил превращает шаблон в обычные настройки. Темп,
         // таймеры, наборы, рейтинг и назначение Призрака не меняют таблицу Озона.
-        rulesPreset: useSecretRow != null || columns != null || rounds != null || clearRounds || roles != null ? null : rulesPreset,
+        rulesPreset: rulesChanged ? null : rulesPreset,
         useSecretRow: useSecretRow ?? this.useSecretRow,
         columns: columns ?? this.columns,
         rounds: clearRounds ? null : rounds ?? this.rounds,
@@ -239,6 +250,7 @@ class LobbySettings {
         ghostUserId: clearGhost ? null : ghostUserId ?? this.ghostUserId,
         ranked: ranked ?? this.ranked,
       );
+  }
 
   Json toJson() => {
         'rulesPreset': rulesPreset,

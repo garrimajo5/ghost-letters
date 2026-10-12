@@ -18,6 +18,9 @@ void main() {
     expect(LobbySettings.fromJson(settings.resolveForPlayers(7).toJson()).presetLabel, 'Наш Озон');
     expect(settings.copyWith(columns: 7).presetLabel, 'Наш Озон · изменён');
     expect(settings.copyWith(ghostUserId: 'u1').presetLabel, 'Наш Озон');
+    // То же значение, выбранное в меню, — не правка.
+    expect(settings.copyWith(roles: settings.roles, ranked: settings.ranked).presetLabel, 'Наш Озон');
+    expect(settings.copyWith(roles: settings.roles).rulesPreset, 'ozon');
     expect(const LobbySettings().presetLabel, 'Классика');
     expect(const LobbySettings(columns: 7).presetLabel, 'Свои настройки');
     expect(const LobbySettings(timers: {'finale': 90, 'awards': 90}).presetLabel, 'Классика');
