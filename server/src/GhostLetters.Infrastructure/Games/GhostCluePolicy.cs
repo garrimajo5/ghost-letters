@@ -81,13 +81,26 @@ public static class GhostCluePolicy
             var fallback = candidates
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, c.Card], all.Where(x => x != c.Card).ToList(), Sim, focus) - current))
                 // Только письмо, которое на истину похоже сильнее, чем на любую ложную карту: двусмысленное не открываем.
-                .Where(c => c.Value.TrueMatch >= .08 && c.Value.TrueMatch > c.Value.FalseMatch && c.Gain > -tuning.GhostFallback)
+                .Where(c => c.Value.TrueMatch >= .08 && (!tuning.GhostFallbackStrict || c.Value.TrueMatch > c.Value.FalseMatch) && c.Gain > -tuning.GhostFallback)
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (fallback.Card is not null) chosen.Add(fallback.Card);
         }
 
         return chosen;
+    }
+
+    /// <summary>
+    /// Зацепка, когда <see cref="Choose"/> ничего не выбрал: карта руки, которая на истину похожа заметнее всего
+    /// относительно ложных (сходство с истиной не ниже .08). Нет такой — зацепки нет.
+    /// </summary>
+    public static string? FirstClueFallback(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> hand)
+    {
+        if (!BotTuning.Current.FirstClueAlways) return null;
+        return hand.Distinct().Select(c => (Card: c, Value: Assess(view, tags, mind, c)))
+            .Where(x => x.Value.TrueMatch >= .08)
+            .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch).ThenByDescending(x => x.Value.TrueMatch)
+            .Select(x => x.Card).FirstOrDefault();
     }
 
     /// <summary>

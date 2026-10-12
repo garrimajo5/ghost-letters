@@ -33,6 +33,15 @@ public sealed class GhostRiskAndLetterTacticsTests
     }
 
     [Fact]
+    public void FirstClueFallback_PicksBestTruthMargin_AndNeedsSomeLinkToTruth()
+    {
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["empty", "ambiguous"]).Should().Be("ambiguous");
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["empty"]).Should().BeNull();
+        using var _ = BotTuning.Use(BotTuning.Default with { FirstClueAlways = false });
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["ambiguous"]).Should().BeNull();
+    }
+
+    [Fact]
     public void LateRiskRequiresPublicWrongTheories_AndIgnoresKnownEvil()
     {
         var mind = Mind(0) with { Opinions = [new(Other, "false", 1)] };
