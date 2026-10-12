@@ -1591,7 +1591,7 @@ class _SayStrip extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: typing?.complete,
-              child: () {
+              child: ListenableBuilder(listenable: typing?.textTicks ?? ValueNotifier(0), builder: (context, _) {
                 final text = typing?.current?.id == m.id ? _Typing.tail(screen, m, typing!.text) : _Typing.fullText(screen, m);
                 // Карты в реплике («место 2», «Подсказка р.2 №1») — картинками, а не словами.
                 final parts = ChatCardText.parse(m, v.board, v.hints, text: text);
@@ -1624,7 +1624,7 @@ class _SayStrip extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 12),
                 );
-              }(),
+              }),
             ),
           ),
         ]);
@@ -1718,7 +1718,7 @@ class _Dialog extends StatelessWidget {
     final typing = this.typing;
     if (typing == null) return const SizedBox.shrink();
     return ListenableBuilder(
-      listenable: typing,
+      listenable: Listenable.merge([typing, typing.textTicks]),
       builder: (context, _) {
         final v = screen.view!;
         final queued = typing.queuedIds;
@@ -1790,6 +1790,9 @@ class _Typing extends ChangeNotifier {
   static const tick = Duration(milliseconds: 40);
 
   ChatMessage? current;
+
+  /// Каждая новая буква: слушают только строки с текстом, а не весь стол — иначе поле перестраивается 25 раз в секунду.
+  final textTicks = ValueNotifier<int>(0);
   List<String> _letters = [];
   int shown = 0;
   final revealed = <int>{};
@@ -1900,16 +1903,23 @@ class _Typing extends ChangeNotifier {
     if (m == null || _disposed) return;
     if (_pause > 0) {
       _pause--;
-      if (_pause % 6 == 0) _notify();
+      // Конец паузы меняет вид строки («печатает…» → текст) — это видит весь стол.
+      if (_pause == 0) {
+        _notify();
+      } else if (_pause % 6 == 0) {
+        _tick();
+      }
       return;
     }
     if (shown < _letters.length) {
       shown++;
       if (shown % 5 == 0 && _letters[shown - 1].trim().isNotEmpty) screen.ref.read(soundProvider).play(Sfx.typing);
+      final before = revealed.length;
       for (final e in _mentionAt.entries) {
         if (e.value <= shown) revealed.add(e.key);
       }
-      _notify();
+      // Стол перестраиваем, только когда реплика дошла до новой карты (её отметка появляется на поле).
+      revealed.length != before ? _notify() : _tick();
       return;
     }
     // Текст допечатан: оставшиеся карты — по одной, как будто игрок показывает их пальцем.
@@ -1954,9 +1964,14 @@ class _Typing extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  void _tick() {
+    if (!_disposed) textTicks.value++;
+  }
+
   @override
   void dispose() {
     _disposed = true;
+    textTicks.dispose();
     _timer?.cancel();
     super.dispose();
   }
