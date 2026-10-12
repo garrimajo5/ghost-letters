@@ -67,6 +67,10 @@ class Avatar extends StatelessWidget {
               height: size,
               fit: BoxFit.cover,
               cacheWidth: (size * (MediaQuery.maybeDevicePixelRatioOf(context) ?? 2)).ceil(),
+              // Пока фото грузится — буква, а не пустой цветной кружок.
+              frameBuilder: (_, child, frame, sync) => sync || frame != null
+                  ? child
+                  : Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0)),
               errorBuilder: (_, __, ___) => Text(letter, style: heading(size * 0.44, color: const Color(0xFFF4F7FA), spacing: 0)),
             ),
     );
