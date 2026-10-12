@@ -80,9 +80,15 @@ class _MainTableState extends State<_MainTable> {
     final stage = v.finale?.currentStage;
     final suspectVote = stage != null && !stage.isRow;
     final seance = widget.seance;
+    // Сеанс на телефоне боком: веер и кнопки — поверх нижнего края, как у основного стола (иначе на круг и поле
+    // остаётся полэкрана).
+    final compactSeance = seance && landscape && size.height < 560;
+    final overlay = landscape && (!seance || compactSeance);
+    final fanStrip = (size.height * 0.17).clamp(50.0, 130.0) * .75;
     final board = suspectVote
         ? _SuspectBoard(screen: screen)
-        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing, maxCard: seance ? 130 : 260);
+        : _TableArea(screen: screen, landscape: landscape, say: _say, staircase: !seance, typing: _typing,
+            maxCard: seance ? (compactSeance ? 90 : 130) : 260, fanOverlay: compactSeance ? true : null);
     final Widget center;
     if (open && v.can('RevealHints') && _panel == null) {
       // Призрак выбирает подсказки, глядя на стол: письма сверху, под ними — поле с истинными уликами.
@@ -107,7 +113,7 @@ class _MainTableState extends State<_MainTable> {
       center = landscape
           // Большой экран: круг и поле рядом, по центру, в спокойном масштабе — как в прототипе.
           ? LayoutBuilder(builder: (context, box) {
-              final side = [box.maxHeight, box.maxWidth * .45, 560.0].reduce((a, b) => a < b ? a : b).floorToDouble();
+              final side = [box.maxHeight - (compactSeance ? fanStrip : 0), box.maxWidth * .45, 560.0].reduce((a, b) => a < b ? a : b).floorToDouble();
               return Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1360),
@@ -142,14 +148,14 @@ class _MainTableState extends State<_MainTable> {
             Positioned.fill(child: Column(children: [
             const ConnectionBanner(),
             _TopBar(screen: screen, panelOpen: open, seance: seance, onEye: () => _toggle(v)),
-            if (seance)
+            if (seance && !compactSeance)
               Expanded(child: dropCenter)
-            else if (landscape)
+            else if (overlay)
               // Веер и кнопки лежат поверх стола: под картами виден стол, а не отдельная полоса (стол листается).
               Expanded(
                 child: Stack(children: [
                   Positioned.fill(
-                    child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    child: seance ? dropCenter : Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       Expanded(child: dropCenter),
                       // Справа — игроки; кнопка хода и чат — внизу у веера (эмодзи теперь — карта в руке).
                       SizedBox(
@@ -212,7 +218,7 @@ class _MainTableState extends State<_MainTable> {
               _PlayersRow(screen: screen),
               Expanded(child: dropCenter),
             ],
-            if (hand && (!landscape || seance))
+            if (hand && !overlay)
               _Fan(
                 screen: screen,
                 say: _say,
@@ -220,7 +226,7 @@ class _MainTableState extends State<_MainTable> {
                 onDrag: (on) => setState(() => _dragging = on),
                 height: fanHeight,
               ),
-            if (!landscape || seance)
+            if (!overlay)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
                 child: _Actions(screen: screen, row: true, onStatus: () => setState(() => _panel = true)),
@@ -231,9 +237,9 @@ class _MainTableState extends State<_MainTable> {
             // Выбор эмодзи — прямо над картой-смайликом (может перекрыть стол — это нестрашно).
             if (_emoji)
               Positioned(
-                left: landscape && !seance && isFinale(v) ? 8 : null,
-                right: landscape && !seance && isFinale(v) ? null : landscape && !seance ? _sideWidth(size) + 8 : 8,
-                bottom: fanHeight + (!landscape || seance ? 70 : 0) - 6,
+                left: overlay && isFinale(v) ? 8 : null,
+                right: overlay && isFinale(v) ? null : overlay ? _sideWidth(size) + 8 : 8,
+                bottom: fanHeight + (!overlay ? 70 : 0) - 6,
                 child: _EmojiBar(screen: screen, onClose: () => setState(() => _emoji = false)),
               ),
           ]),
@@ -420,7 +426,10 @@ class _TopBar extends StatelessWidget {
 /// Лесенка подсказок слева и поле: подсказка раунда стоит на высоте своего ряда
 /// (зацепка — Тайна, р. 1 — Мотив, р. 2 — Способ, р. 3 — Место), следующие ниже.
 class _TableArea extends StatelessWidget {
-  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing, this.maxCard = 260});
+  const _TableArea({required this.screen, required this.landscape, required this.say, this.staircase = true, this.typing, this.maxCard = 260, this.fanOverlay});
+
+  /// Веер лежит поверх нижнего края стола (боком): поле считаем без этой полосы. По умолчанию — у основного стола.
+  final bool? fanOverlay;
 
   /// Предел размера карты поля (на сеансе поле скромнее — главное место у круга).
   final double maxCard;
@@ -537,7 +546,7 @@ class _TableArea extends StatelessWidget {
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
       // С разговором поле берёт две трети высоты под строкой, разговор — треть (см. flex ниже).
       // Боком веер лежит поверх нижнего края стола: поле считаем без этой полосы (кроме сеанса — там веер отдельно).
-      final fanOver = landscape && staircase ? (MediaQuery.sizeOf(context).height * 0.17).clamp(50.0, 130.0) * .75 : 0.0;
+      final fanOver = landscape && (fanOverlay ?? staircase) ? (MediaQuery.sizeOf(context).height * 0.17).clamp(50.0, 130.0) * .75 : 0.0;
       final usable = dialog ? (box.maxHeight - stripHeight) * 2 / 3 : box.maxHeight - stripHeight - fanOver;
       final byHeight = box.maxHeight.isFinite ? (usable - 12 - (below ? 10 : 0)) / (rows + (below ? 0.75 : 0)) - gap : double.infinity;
       final card = (byWidth < byHeight ? byWidth : byHeight).clamp(28.0, maxCard).floorToDouble();

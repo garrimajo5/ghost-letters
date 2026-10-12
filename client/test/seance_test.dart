@@ -82,7 +82,7 @@ void main() {
   const portrait = Size(390, 844);
   const phone = Size(800, 360);
 
-  for (final size in const [portrait, phone, Size(1440, 900)]) {
+  for (final size in const [portrait, phone, Size(844, 390), Size(768, 1024), Size(1280, 800), Size(1440, 900), Size(1880, 950)]) {
     testWidgets('сеанс ${size.width.toInt()}×${size.height.toInt()}: круг, сектора со свечами, поле и веер', (tester) async {
       await _open(tester, size);
 
