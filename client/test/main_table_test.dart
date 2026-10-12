@@ -228,9 +228,9 @@ void main() {
     expect(call[2], 'public');
     expect(call[3], ['orig_0200', 'orig_0002', 'orig_0008']);
     expect(call[4], ['кидал', 'думаю, эта:0', 'исключаю:0']);
-    expect(call[1] as String, startsWith('Со стола: кидал эту карту'));
-    expect(call[1] as String, contains('Мотив 2'));
-    expect(call[1] as String, contains('не вытащили — не Место 3'));
+    expect(call[1] as String, startsWith('Со стола: Кидал вот эту'));
+    expect(call[1] as String, contains('указывает на Мотив 2'));
+    expect(call[1] as String, contains('не Место 3'));
     expect(find.byKey(const Key('say-send')), findsNothing);
   });
 
@@ -409,7 +409,7 @@ void main() {
     final call = app.api.named('sendChat').single.$2;
     expect(call[3], ['orig_0100', 'orig_0200', 'orig_0001', 'orig_0007']);
     expect(call[4], ['улика', 'кидал', 'думаю, эта:0', 'исключаю:1']);
-    expect(call[1] as String, contains('зацепка указывает на Мотив 1'));
+    expect(call[1] as String, contains('Зацепка: указывает на Мотив 1'));
     expect(call[1] as String, contains('не Место 2'));
   });
 
