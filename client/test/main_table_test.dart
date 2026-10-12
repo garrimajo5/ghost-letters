@@ -319,7 +319,7 @@ void main() {
     await tester.tap(find.byKey(const Key('chat-fullscreen')));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOneWidget);
-    expect(tester.getSize(find.byType(ChatSheet)).width, phone.width);
+    expect(tester.getSize(find.byType(ChatSheet)).width, tester.view.physicalSize.width);
     await tester.tap(find.byKey(const Key('chat-fullscreen')));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
