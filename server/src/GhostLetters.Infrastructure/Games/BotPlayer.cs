@@ -980,7 +980,7 @@ public static class BotPlayer
             int column;
             // Карту не предлагают, а отметают («исключаю»): Эксперт — ложного лидера ряда, Сообщник — истину.
             var exclude = false;
-            if (Spoiler && Truth is { } spoilTruth && rng.NextDouble() < .5 &&
+            if (Spoiler && Truth is { } spoilTruth && rng.NextDouble() < BotTuning.Current.SpoilerExclude &&
                 Enumerable.Range(0, view.Board.Count).Where(r => !ClearTruth(r)).ToList() is { Count: > 0 } doubtful)
             {
                 target = doubtful[rng.Next(doubtful.Count)];
@@ -1077,7 +1077,7 @@ public static class BotPlayer
             // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
             // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
             if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)
-                && rng.NextDouble() < (Spoiler ? Math.Max(.7, FakeVanishChance) : FakeVanishChance) * FakeChance)
+                && rng.NextDouble() < (Spoiler ? Math.Max(BotTuning.Current.SpoilerVanish, FakeVanishChance) : FakeVanishChance) * FakeChance)
             {
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
                 var real = Card(row, lieTruth[row]);

@@ -1,0 +1,2 @@
+200
+variants: мягкий вредитель: SpoilerExclude=.25, SpoilerVanish=.4 | строгое недоверие: LieDetect=4, SuspectDistrust=2 | Убийца осторожнее: KillerBlendChance=.95 | чужие исчезнувшие сильнее: OthersVanished=.8

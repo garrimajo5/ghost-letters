@@ -71,6 +71,10 @@ public sealed record BotTuning
     /// <summary>Сообщник мешает картам, а не прячется: чаще лжёт о письме, отметает истину, редко голосует «как все».</summary>
     public bool AccompliceSpoiler { get; init; } = true;
 
+    /// <summary>Как часто Сообщник-вредитель отметает истину в речи и выдаёт другую карту за исчезнувшее письмо.</summary>
+    public double SpoilerExclude { get; init; } = .5;
+    public double SpoilerVanish { get; init; } = .7;
+
     /// <summary>Вес подозрения к тому, кто отверг карту, на которую потом указала подсказка (0 — не замечать).</summary>
     public double LieDetect { get; init; } = 2;
 
@@ -125,6 +129,8 @@ public sealed record BotTuning
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },
                 nameof(WitnessQuiet) => t with { WitnessQuiet = B() },
                 nameof(AccompliceSpoiler) => t with { AccompliceSpoiler = B() },
+                nameof(SpoilerExclude) => t with { SpoilerExclude = D() },
+                nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
