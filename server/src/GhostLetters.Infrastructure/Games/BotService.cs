@@ -468,7 +468,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
-        var opinions = messages.SelectMany(m => TableReasoning.Read(m.AuthorId!.Value, m.CardIds, m.CardNotes, board)).ToList();
+        var perMessage = messages.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, m.CardIds, m.CardNotes, board).ToList()).ToList();
+        var opinions = perMessage.SelectMany(o => o).ToList();
 
         var everyone = state.Players.Select(p => p.Id).ToList();
         var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
@@ -480,7 +481,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var affinities = await db.BotRelationships.AsNoTracking().Where(r => r.BotId == botId && others.Contains(r.PlayerId))
             .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
         var claims = PublicRoleClaims.Read(messages.Select(m => (m.AuthorId!.Value, m.Text ?? "")));
-        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities, claims);
+        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities, claims,
+            BotMind.Latest(perMessage));
     }
 
     /// <summary>
