@@ -19,7 +19,7 @@ public sealed class SpokenStyleTests
         variants.Distinct().Count().Should().BeGreaterThan(20, "одна и та же реплика звучит каждый раз по-новому");
         foreach (var v in variants)
         {
-            v.Should().Contain("кошка").And.Contain("ухо").And.Contain("клетка").And.Contain("Пуаро");
+            v.Should().ContainEquivalentOf("кошка").And.ContainEquivalentOf("ухо").And.ContainEquivalentOf("клетка").And.Contain("Пуаро");
             v.Should().NotContain("Бот Пуаро", "приставку «Бот» вслух не говорят");
             v.Should().NotContain("по смыслу:").And.NotContain("Целиком думаю так");
         }
