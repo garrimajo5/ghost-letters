@@ -945,7 +945,7 @@ class _SeatTile extends StatelessWidget {
             color: screen.colorOf(p.id),
             photoId: screen.photoOf(p.id),
             // Портреты крупнее: ботов и людей должно быть хорошо видно.
-            size: avatar ?? (compact ? 38 : 44),
+            size: this.avatar ?? (compact ? 38 : 44),
             ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
           ),
         ),
