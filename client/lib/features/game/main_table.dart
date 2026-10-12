@@ -1481,7 +1481,7 @@ String _sayText(GameView v, _Say say) {
     final red = [for (final e in say.marks.entries) if (!e.value.$1 && e.value.$2 == link) _cardName(v, e.key)];
     final linked = link >= 0;
     final points = [
-      if (green.isNotEmpty) '${linked ? 'указывает на' : 'думаю, это'} ${green.join(', ')}',
+      if (green.isNotEmpty) '${linked ? 'указывает —' : 'думаю, это'} ${green.join(', ')}',
       if (red.isNotEmpty) 'не ${red.join(', ')}',
     ].join(', ');
     if (!linked) return points;

@@ -189,7 +189,13 @@ class _SeanceCenter extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = screen.view!;
     final stage = v.finale?.currentStage;
-    final whisper = screen.thoughts.where((t) => t.round == v.round && (t.text ?? '').isNotEmpty).lastOrNull;
+    // В обсуждении шепчет только тот, у кого слово: чужая старая мысль под именем говорящего путает.
+    final whisper = screen.thoughts
+        .where((t) =>
+            t.round == v.round &&
+            (t.text ?? '').isNotEmpty &&
+            (v.phase != 'Discussion' || (v.currentSpeaker != null && t.authorId == v.currentSpeaker)))
+        .lastOrNull;
     Widget body;
     switch (v.phase) {
       case 'Mailbox' || 'GhostPick':
