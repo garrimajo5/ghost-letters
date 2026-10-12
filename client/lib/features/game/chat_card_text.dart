@@ -66,7 +66,7 @@ class ChatCardText extends StatelessWidget {
           }
         }
       } else {
-        final index = message.cardNotes.indexOf('кидал эту');
+        final index = message.cardNotes.indexWhere((n) => n.startsWith('кидал'));
         if (index >= 0 && index < message.cardIds.length) cardId = message.cardIds[index];
       }
       if (cardId == null) continue;

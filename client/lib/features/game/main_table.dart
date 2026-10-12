@@ -492,14 +492,10 @@ class _TableArea extends StatelessWidget {
     return (colors: colors, numbers: numbers);
   }
 
-  /// Нажатие на карту поля в своё слово: показ начинается сам. Письмо раунда исчезло и улика не выбрана —
-  /// источник по умолчанию моё письмо: карта сразу красная («проверял — не эта»).
+  /// Нажатие на карту поля в своё слово: показ начинается сам. Без выбранной улики или своего письма —
+  /// это просто версия («Выдвинуть версию»); связать с письмом — выбрать его слева в строке показа.
   void _tapBoard(GameView v, String id) {
     if (!say.active) say.start();
-    if (say.sources.isEmpty) {
-      final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
-      if (letter != null && letter.revealed == false) say.pick(letter.cardId, hint: false);
-    }
     say.cycle(id);
   }
 
@@ -1451,29 +1447,32 @@ String _cardName(GameView v, String id) {
 
 /// Текст показа для чата: люди читают его, боты — заметки к картам.
 String _sayText(GameView v, _Say say) {
+  // Источник называется так, чтобы в чате он стал картинкой: «вот эту» — моё письмо, «Подсказка р.1 №2» — улика.
   String sourceName(int i) {
     final id = say.sources[i];
-    if (!say.isHint(id)) return 'кидал эту карту';
-    final round = v.hints.where((h) => h.cards.contains(id)).firstOrNull?.round;
-    return round == null ? 'улика' : round == 0 ? 'зацепка' : 'улика р.$round';
+    if (!say.isHint(id)) return say.vanished.contains(id) ? 'Кидал вот эту — исчезла' : 'Кидал вот эту';
+    final hint = v.hints.where((h) => h.cards.contains(id)).firstOrNull;
+    if (hint == null) return 'Улика';
+    return hint.round == 0 ? 'Зацепка' : 'Подсказка р.${hint.round} №${hint.cards.indexOf(id) + 1}';
   }
 
   String part(int link) {
     final green = [for (final e in say.marks.entries) if (e.value.$1 && e.value.$2 == link) _cardName(v, e.key)];
     final red = [for (final e in say.marks.entries) if (!e.value.$1 && e.value.$2 == link) _cardName(v, e.key)];
     final linked = link >= 0;
-    final thrown = linked && !say.isHint(say.sources[link]);
-    return [
-      if (linked) sourceName(link),
+    final points = [
       if (green.isNotEmpty) '${linked ? 'указывает на' : 'думаю, это'} ${green.join(', ')}',
-      if (red.isNotEmpty) '${thrown ? 'её не вытащили — ' : ''}не ${red.join(', ')}',
-    ].join(' ');
+      if (red.isNotEmpty) 'не ${red.join(', ')}',
+    ].join(', ');
+    if (!linked) return points;
+    return points.isEmpty ? sourceName(link) : '${sourceName(link)}: $points';
   }
 
   final parts = [for (var i = 0; i < say.sources.length; i++) part(i), if (say.marks.values.any((m) => m.$2 < 0)) part(-1)]
       .where((p) => p.isNotEmpty);
   if (say.replyTo case final to?) return '$to, моя версия: ${parts.join('; ')}.';
-  return '$tablePostPrefix${parts.join('; ')}.';
+  final text = parts.join('; ');
+  return '$tablePostPrefix${text.isEmpty ? text : text[0].toUpperCase() + text.substring(1)}.';
 }
 
 /// Строка над полем: что говорящий показал на столе, а во время своего показа — источники и «Отправить».
@@ -1750,7 +1749,7 @@ class _Dialog extends StatelessWidget {
             style: const TextStyle(fontSize: 13))
         : m.kind != 'text' && text.isEmpty
             ? const Text('🎤 голосовое', style: TextStyle(fontSize: 13))
-            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints), keyPrefix: 'dialog-inline', mentions: screen.mentions);
+            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints, text: text), keyPrefix: 'dialog-inline', mentions: screen.mentions);
     final bubble = Container(
       key: Key('dialog-${m.id}'),
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
