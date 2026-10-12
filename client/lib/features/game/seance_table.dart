@@ -57,8 +57,8 @@ class _SeanceCircle extends StatelessWidget {
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
       final side = box.maxWidth < box.maxHeight ? box.maxWidth : box.maxHeight;
-      // Места игроков — на краю стола, целиком внутри своего квадрата.
-      final r = side / 2 - 24;
+      // Стол чуть меньше квадрата: игроки сидят снаружи, на краю, и не закрывают подписи и подсказки секторов.
+      final r = side / 2 - 44;
       final center = Offset(box.maxWidth / 2, box.maxHeight / 2);
       // Подсказки крупнее на большом экране; в тесном секторе — мельче, чтобы не налезали.
       final hint = (r * 0.26).clamp(16.0, 80.0).floorToDouble();
@@ -112,7 +112,7 @@ class _SeanceCircle extends StatelessWidget {
       // Места игроков по кругу; первое место сверху.
       for (var i = 0; i < players.length; i++) {
         final p = players[i];
-        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r);
+        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r + 16);
         children.add(Positioned(
           left: pos.dx - 32,
           top: pos.dy - 22,
