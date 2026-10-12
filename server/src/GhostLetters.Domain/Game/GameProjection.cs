@@ -205,13 +205,13 @@ public static class GameProjection
                     list.Add(nameof(RevealHints));
                 }
 
-                if (!done)
+                if (!done && state.Round < state.TotalRounds)
                 {
                     list.Add(nameof(Discard));
                 }
 
                 break;
-            case Phase.Refill when !done:
+            case Phase.Refill when !done && state.Round < state.TotalRounds:
                 list.Add(nameof(Discard));
                 break;
             case Phase.Discussion when !ghost:
