@@ -71,11 +71,23 @@ class _MarkSheetState extends State<MarkSheet> {
   /// Доля ширины на одну карту: карта и узкий зазор — соседние видны по краям.
   double _fraction = .62;
 
+  // Все ряды стоят на одном столбце: свайп вверх-вниз ведёт к карте над/под текущей, а не к первой в ряду.
   PageController _columnsOf(int row) => _columns.putIfAbsent(row, () {
-        final (r, c) = _position(cardId);
+        final (_, c) = _position(cardId);
         // Страница 0 — жетон ряда, карты — с первой.
-        return PageController(initialPage: r == row ? c + 1 : 1, viewportFraction: _fraction);
+        return PageController(initialPage: c + 1, viewportFraction: _fraction);
       });
+
+  bool _syncing = false;
+
+  /// Выровнять остальные ряды по столбцу [page] (без анимации и без смены выбранной карты).
+  void _alignRows(int except, int page) {
+    _syncing = true;
+    for (final e in _columns.entries) {
+      if (e.key != except && e.value.hasClients && (e.value.page ?? -1).round() != page) e.value.jumpToPage(page);
+    }
+    _syncing = false;
+  }
 
   void _set(CardMark m) {
     setState(() {});
@@ -110,12 +122,26 @@ class _MarkSheetState extends State<MarkSheet> {
                 controller: _rows,
                 scrollDirection: Axis.vertical,
                 itemCount: view.board.length,
-                onPageChanged: (r) => _focus(r, _columnsOf(r).hasClients ? (_columnsOf(r).page ?? 1).round() : 1),
+                onPageChanged: (r) {
+                  // Тот же столбец, что был: карта над/под текущей.
+                  final page = _position(cardId).$2 + 1;
+                  final c = _columnsOf(r);
+                  if (c.hasClients && (c.page ?? -1).round() != page) {
+                    _syncing = true;
+                    c.jumpToPage(page);
+                    _syncing = false;
+                  }
+                  _focus(r, page);
+                },
                 itemBuilder: (context, r) => PageView.builder(
                   key: Key('mark-row-$r'),
                   controller: _columnsOf(r),
                   itemCount: view.board[r].cards.length + 1,
-                  onPageChanged: (page) => _focus(r, page),
+                  onPageChanged: (page) {
+                    if (_syncing) return;
+                    _focus(r, page);
+                    if (page > 0) _alignRows(r, page);
+                  },
                   itemBuilder: (context, page) {
                     if (page == 0) {
                       return Center(
