@@ -492,14 +492,10 @@ class _TableArea extends StatelessWidget {
     return (colors: colors, numbers: numbers);
   }
 
-  /// Нажатие на карту поля в своё слово: показ начинается сам. Письмо раунда исчезло и улика не выбрана —
-  /// источник по умолчанию моё письмо: карта сразу красная («проверял — не эта»).
+  /// Нажатие на карту поля в своё слово: показ начинается сам. Без выбранной улики или своего письма —
+  /// это просто версия («Выдвинуть версию»); связать с письмом — выбрать его слева в строке показа.
   void _tapBoard(GameView v, String id) {
     if (!say.active) say.start();
-    if (say.sources.isEmpty) {
-      final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
-      if (letter != null && letter.revealed == false) say.pick(letter.cardId, hint: false);
-    }
     say.cycle(id);
   }
 

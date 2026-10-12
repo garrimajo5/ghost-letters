@@ -644,7 +644,7 @@ void main() {
     expect(app.api.named('sendChat'), isNotEmpty);
   });
 
-  testWidgets('своё слово: письмо раунда исчезло — первое нажатие по полю сразу красное', (tester) async {
+  testWidgets('своё слово: нажатие по полю без выбранной улики — версия; с исчезнувшим письмом — сразу красная', (tester) async {
     final app = await _open(tester, phone, allowed: const ['EndTurn'], edit: (view) {
       view['currentSpeaker'] = 'u2';
       (view['me'] as Json)['letters'] = [
@@ -653,10 +653,21 @@ void main() {
     });
     await tester.tap(find.byKey(const Key('board-1-1')));
     await tester.pump();
+    expect(find.text('Выдвинуть версию'), findsOneWidget);
     await tester.tap(find.byKey(const Key('say-send')));
     await tester.pumpAndSettle();
-    final call = app.api.named('sendChat').single.$2;
-    expect(call[4], ['кидал', 'исключаю:0']);
+    expect(app.api.named('sendChat').single.$2[4], ['думаю, эта']);
+
+    // Письмо выбрано источником — его исчезновение говорит «не эта»: первое нажатие сразу красное.
+    await tester.tap(find.byKey(const Key('say-start')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('say-my-letter')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('board-1-3')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('say-send')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('sendChat').last.$2[4], ['кидал', 'исключаю:0']);
   });
 
   testWidgets('реплика бота печатается по буквам', (tester) async {
