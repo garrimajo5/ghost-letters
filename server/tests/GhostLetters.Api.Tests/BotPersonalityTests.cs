@@ -166,6 +166,9 @@ public sealed class BotPersonalityTests
         };
         var view = View(Phase.Discussion, [], Role.Witness, hints: [new HintGroupView(1, ["sword"])], players: players);
 
+        // Здесь стол не побеждает и Убийцу не подозревает — тихий режим Свидетеля проверяется отдельно.
+        using (BotTuning.Use(BotTuning.Default with { WitnessQuiet = false }))
+        {
         var bold = Enumerable.Range(0, 30).Count(seed =>
             BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Бот Боб"));
         var careful = Enumerable.Range(0, 30).Count(seed =>
@@ -173,6 +176,12 @@ public sealed class BotPersonalityTests
 
         bold.Should().BeGreaterThan(20, "рисковый Свидетель говорит прямо");
         careful.Should().Be(0, "осторожный Свидетель молчит, чтобы его не вычислили");
+        }
+
+        // Стол уже подозревает Убийцу: даже рисковый Свидетель молчит, чтобы не выдать себя на охоте.
+        var accused = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, 1)]);
+        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Бот Боб"))
+            .Should().Be(0);
     }
 
     [Fact]
