@@ -34,6 +34,8 @@ void main() {
 
     expect(find.text('Призрак: по жребию'), findsOneWidget);
     expect(find.text('все наборы карт'), findsOneWidget, reason: 'по умолчанию играем всеми наборами');
+    await tester.ensureVisible(find.byKey(Key('ghost-${watson.id}')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(Key('ghost-${watson.id}')));
     await tester.pumpAndSettle();
 
@@ -47,6 +49,8 @@ void main() {
     app.api.lobbyResult = lobbyWithGhost(null);
 
     expect(find.text('Призрак: Ватсон'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(Key('ghost-${watson.id}')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(Key('ghost-${watson.id}')));
     await tester.pumpAndSettle();
 
