@@ -1816,6 +1816,8 @@ class _Typing extends ChangeNotifier {
   int shown = 0;
   final revealed = <int>{};
   final _mentionAt = <int, int>{};
+  /// Начало названия карты → его конец (в буквах): картинку печать вставляет сразу, целиком.
+  final _jumps = <int, int>{};
   final _queue = <ChatMessage>[];
   final _seen = <String>{};
   Timer? _timer;
@@ -1886,6 +1888,10 @@ class _Typing extends ChangeNotifier {
     }
     final text = _letters.join();
     final v = screen.view!;
+    _jumps.clear();
+    for (final span in ChatCardText.cardSpans(m, v.board, v.hints, text)) {
+      _jumps[text.substring(0, span.start).characters.length] = text.substring(0, span.end).characters.length;
+    }
     for (var i = 0; i < m.cardIds.length; i++) {
       final note = m.noteFor(i) ?? '';
       // Карта, которую «кидал», и улика — с первой буквы: о них реплика.
@@ -1931,7 +1937,7 @@ class _Typing extends ChangeNotifier {
       return;
     }
     if (shown < _letters.length) {
-      shown++;
+      shown = _jumps[shown] ?? shown + 1;
       if (shown % 5 == 0 && _letters[shown - 1].trim().isNotEmpty) screen.ref.read(soundProvider).play(Sfx.typing);
       final before = revealed.length;
       for (final e in _mentionAt.entries) {

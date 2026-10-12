@@ -27,13 +27,30 @@ class ChatCardText extends StatelessWidget {
     String? text,
   }) {
     text ??= message.text ?? '';
+    final parts = <({String text, String? cardId})>[];
+    var end = 0;
+    for (final r in _refs(message, board, hints, text)) {
+      parts.add((text: text.substring(end, r.start), cardId: null));
+      parts.add((text: r.label, cardId: r.cardId));
+      end = r.end;
+    }
+    parts.add((text: text.substring(end), cardId: null));
+    return parts;
+  }
+
+  /// Где в тексте стоят названия карт, которые станут картинками (позиции в code units).
+  /// Печать реплики перескакивает их целиком: картинка появляется сразу, а не «мотив 1» буквами.
+  static List<({int start, int end})> cardSpans(ChatMessage message, List<BoardRow> board, List<HintGroup> hints, String text) =>
+      [for (final r in _refs(message, board, hints, text)) (start: r.start, end: r.end)];
+
+  static List<({int start, int end, String label, String cardId})> _refs(
+      ChatMessage message, List<BoardRow> board, List<HintGroup> hints, String text) {
     // Карты по названию («место 2», «Подсказка р.1 №2») подставляются картинками в любой реплике.
     final pattern = RegExp(
       r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',
       caseSensitive: false,
     );
-    final parts = <({String text, String? cardId})>[];
-    var end = 0;
+    final refs = <({int start, int end, String label, String cardId})>[];
     for (final match in pattern.allMatches(text)) {
       String? cardId;
       var label = match[0]!;
@@ -70,12 +87,9 @@ class ChatCardText extends StatelessWidget {
         if (index >= 0 && index < message.cardIds.length) cardId = message.cardIds[index];
       }
       if (cardId == null) continue;
-      parts.add((text: text.substring(end, match.start), cardId: null));
-      parts.add((text: label, cardId: cardId));
-      end = match.end;
+      refs.add((start: match.start, end: match.end, label: label, cardId: cardId));
     }
-    parts.add((text: text.substring(end), cardId: null));
-    return parts;
+    return refs;
   }
 
   @override
