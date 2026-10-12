@@ -111,6 +111,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(app.api.named('addBot').single.$2, ['l1', 'p1']);
+    // Шторка остаётся открытой: позванный пропал из списка, можно позвать ещё одного (случайного) и закрыть.
+    expect(find.byKey(const Key('bot-p1')), findsNothing);
+    await tester.tap(find.byKey(const Key('bot-random')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('addBot').length, 2);
+    await tester.tap(find.byKey(const Key('bot-done')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bot-random')), findsNothing);
   });
 
   testWidgets('админ ставит фото боту: обрезка, превью, загрузка при сохранении; можно убрать', (tester) async {

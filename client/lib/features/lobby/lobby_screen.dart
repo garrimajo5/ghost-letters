@@ -114,37 +114,72 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       await _apply((api) => api.addBot(lobby.id));
       return;
     }
-    final picked = await showModalBottomSheet<String>(
+    // Шторка не закрывается после каждого бота: можно позвать нескольких подряд и нажать «Готово».
+    final added = <String>{};
+    var count = 0;
+    var room = 12 - players.length;
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.75),
-          child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 8), children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Text('КОГО ПОЗВАТЬ', style: sectionLabel()),
-            ),
-            ListTile(
-              key: const Key('bot-random'),
-              leading: const CircleAvatar(child: Icon(Icons.casino_outlined)),
-              title: const Text('Случайный бот'),
-              onTap: () => Navigator.pop(context, ''),
-            ),
-            for (final b in free)
-              ListTile(
-                key: Key('bot-${b.id}'),
-                leading: Avatar(nickname: b.nickname.replaceFirst('Бот ', ''), color: b.avatarColor, photoId: b.avatarId),
-                title: Text(b.nickname),
-                subtitle: b.about.isEmpty ? null : Text(b.about, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-                onTap: () => Navigator.pop(context, b.id),
+      builder: (sheet) => StatefulBuilder(builder: (sheet, setSheet) {
+        Future<void> add(String? botId) async {
+          if (room <= 0) return;
+          final lobbyNow = await runAction(sheet, () => api.addBot(lobby.id, botId: botId));
+          if (lobbyNow == null) return;
+          if (mounted) setState(() => _lobby = lobbyNow);
+          room = 12 - lobbyNow.players.length;
+          setSheet(() {
+            count++;
+            if (botId != null) added.add(botId);
+          });
+        }
+
+        final left = [for (final b in free) if (!added.contains(b.id)) b];
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * 0.75),
+            child: ListView(shrinkWrap: true, padding: const EdgeInsets.symmetric(vertical: 8), children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 12, 0),
+                child: Row(children: [
+                  Expanded(child: Text(count == 0 ? 'КОГО ПОЗВАТЬ' : 'ПОЗВАЛИ: $count', style: sectionLabel())),
+                  if (left.length > 1 && room > 1)
+                    TextButton(
+                      key: const Key('bot-all'),
+                      onPressed: () async {
+                        for (final b in left.take(room)) {
+                          await add(b.id);
+                        }
+                      },
+                      child: const Text('Всех'),
+                    ),
+                  FilledButton.tonal(key: const Key('bot-done'), onPressed: () => Navigator.pop(sheet), child: const Text('Готово')),
+                ]),
               ),
-          ]),
-        ),
-      ),
+              if (room <= 0)
+                const Padding(padding: EdgeInsets.fromLTRB(20, 8, 20, 8), child: Text('Стол полон: 12 игроков', style: TextStyle(color: AppColors.muted))),
+              ListTile(
+                key: const Key('bot-random'),
+                enabled: room > 0,
+                leading: const CircleAvatar(child: Icon(Icons.casino_outlined)),
+                title: const Text('Случайный бот'),
+                onTap: () => add(null),
+              ),
+              for (final b in left)
+                ListTile(
+                  key: Key('bot-${b.id}'),
+                  enabled: room > 0,
+                  leading: Avatar(nickname: b.nickname.replaceFirst('Бот ', ''), color: b.avatarColor, photoId: b.avatarId),
+                  title: Text(b.nickname),
+                  subtitle: b.about.isEmpty ? null : Text(b.about, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+                  trailing: const Icon(Icons.add),
+                  onTap: () => add(b.id),
+                ),
+            ]),
+          ),
+        );
+      }),
     );
-    if (picked == null || !mounted) return;
-    await _apply((api) => api.addBot(lobby.id, botId: picked.isEmpty ? null : picked));
   }
 
   Future<void> _openSettings(Lobby lobby, int players) async {
