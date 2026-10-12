@@ -815,8 +815,9 @@ class _PlayersColumn extends StatelessWidget {
     final first = _firstSpeaker(screen);
     return LayoutBuilder(builder: (context, box) {
       final n = players.length;
-      const tile = 56.0;
       final w = box.maxWidth, h = box.maxHeight;
+      // Широкая колонка (большой экран) — портреты крупнее, чтобы круг не выглядел пустым.
+      final tile = (w / 5).clamp(56.0, 96.0);
       final rx = (w - tile) / 2;
       // Почти круг: высокая узкая колонка (большой экран) иначе вытягивает стол в овал.
       final ry = math.min((h - tile - 14) / 2, rx * 1.15);
@@ -835,7 +836,7 @@ class _PlayersColumn extends StatelessWidget {
             left: at(i).dx - tile / 2,
             top: at(i).dy - tile / 2,
             width: tile,
-            child: _SeatTile(screen: screen, player: players[i], first: first == players[i].id, compact: true),
+            child: _SeatTile(screen: screen, player: players[i], first: first == players[i].id, compact: true, avatar: tile * .68),
           ),
       ]);
     });
@@ -902,7 +903,7 @@ class _PlayersRow extends StatelessWidget {
 }
 
 class _SeatTile extends StatelessWidget {
-  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact, this.names = true});
+  const _SeatTile({required this.screen, required this.player, required this.first, required this.compact, this.names = true, this.avatar});
 
   final GameScreenState screen;
   final PlayerInfo player;
@@ -911,6 +912,9 @@ class _SeatTile extends StatelessWidget {
 
   /// Кружок без подписи — когда игроки не помещаются (имя — во всплывающей подсказке).
   final bool names;
+
+  /// Размер портрета (на большом экране — крупнее).
+  final double? avatar;
 
   @override
   Widget build(BuildContext context) {
@@ -941,7 +945,7 @@ class _SeatTile extends StatelessWidget {
             color: screen.colorOf(p.id),
             photoId: screen.photoOf(p.id),
             // Портреты крупнее: ботов и людей должно быть хорошо видно.
-            size: compact ? 38 : 44,
+            size: avatar ?? (compact ? 38 : 44),
             ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
           ),
         ),
