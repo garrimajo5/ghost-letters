@@ -1,2 +1,0 @@
-300
-variants: как было: FirstClueAlways=false | зацепка всегда: FirstClueAlways=true | зацепка и мягкий запас: FirstClueAlways=true, GhostFallbackStrict=false
