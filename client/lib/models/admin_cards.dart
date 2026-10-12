@@ -23,7 +23,8 @@ class AdminCard {
       this.title,
       this.tags = const [],
       this.meanings = const [],
-      this.details = const []});
+      this.details = const [],
+      this.names = const []});
   factory AdminCard.fromJson(Json j) {
     final a = Map<String, dynamic>.from(j['annotation'] as Map);
     List<CardFeature> features(String key) => (a[key] as List)
@@ -38,7 +39,8 @@ class AdminCard {
         version: j['version'] as int,
         tags: (a['tags'] as List).cast<String>(),
         meanings: features('meanings'),
-        details: features('details'));
+        details: features('details'),
+        names: ((a['names'] as List?) ?? const []).cast<String>());
   }
   final String id;
   final String imageKey;
@@ -49,6 +51,9 @@ class AdminCard {
   final List<String> tags;
   final List<CardFeature> meanings;
   final List<CardFeature> details;
+
+  /// Как карту называют вслух: основное название и синонимы (боты говорят ими голосом).
+  final List<String> names;
   Json toJson() => {
         'id': id,
         'imageKey': imageKey,
@@ -59,7 +64,8 @@ class AdminCard {
         'annotation': {
           'tags': tags,
           'meanings': meanings.map((m) => m.toJson()).toList(),
-          'details': details.map((d) => d.toJson()).toList()
+          'details': details.map((d) => d.toJson()).toList(),
+          'names': names
         }
       };
 }

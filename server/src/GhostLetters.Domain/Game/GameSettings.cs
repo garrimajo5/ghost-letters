@@ -25,6 +25,9 @@ public sealed record GameSettings
     /// <summary>Рейтинговая партия: итог меняет рейтинг всех участников, включая ботов. Обычная — только статистику.</summary>
     public bool Ranked { get; init; } = true;
 
+    /// <summary>Боты говорят голосом (озвучка реплик, если на сервере настроен синтез речи).</summary>
+    public bool BotVoice { get; init; } = true;
+
     /// <summary>Кто будет Призраком (роль открытая, на баланс не влияет); null — по жребию.</summary>
     public Guid? GhostPlayerId { get; init; }
 

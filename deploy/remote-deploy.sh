@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Выполняется на сервере (его запускает workflow «Deploy server» по SSH).
 # Ставит Docker при первом запуске, создаёт .env с паролями, обновляет и перезапускает сервис.
-# Ожидает переменные: DOMAIN, GHCR_USER, GHCR_TOKEN, APP_DIR; необязательно ADMIN_USER_IDS (кабинет ботов).
+# Ожидает переменные: DOMAIN, GHCR_USER, GHCR_TOKEN, APP_DIR; необязательно ADMIN_USER_IDS (кабинет ботов)
+# и YANDEX_SPEECHKIT_API_KEY (озвучка ботов).
 set -euo pipefail
 cd "$APP_DIR"
 
@@ -33,6 +34,15 @@ if [ -n "${ADMIN_USER_IDS:-}" ]; then
     sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$ADMIN_USER_IDS|" .env
   else
     echo "ADMIN_USER_IDS=$ADMIN_USER_IDS" >> .env
+  fi
+fi
+
+# Ключ Yandex SpeechKit для озвучки ботов (секрет репозитория YANDEX_SPEECHKIT_API_KEY); пусто — без озвучки.
+if [ -n "${YANDEX_SPEECHKIT_API_KEY:-}" ]; then
+  if grep -q '^YANDEX_SPEECHKIT_API_KEY=' .env; then
+    sed -i "s|^YANDEX_SPEECHKIT_API_KEY=.*|YANDEX_SPEECHKIT_API_KEY=$YANDEX_SPEECHKIT_API_KEY|" .env
+  else
+    echo "YANDEX_SPEECHKIT_API_KEY=$YANDEX_SPEECHKIT_API_KEY" >> .env
   fi
 fi
 

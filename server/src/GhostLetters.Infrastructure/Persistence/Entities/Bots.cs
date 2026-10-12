@@ -32,6 +32,12 @@ public sealed class BotProfile
 
     public double Variability { get; set; } = 0.2;
 
+    /// <summary>Голос SpeechKit (alexander, julia…); пусто — постоянный голос по id бота.</summary>
+    public string Voice { get; set; } = string.Empty;
+
+    /// <summary>Амплуа голоса (neutral, strict, friendly…); пусто — основное амплуа голоса.</summary>
+    public string VoiceRole { get; set; } = string.Empty;
+
     /// <summary>Выключенного бота не предлагают в лобби, но его история и рейтинг сохраняются.</summary>
     public bool Enabled { get; set; } = true;
 

@@ -108,6 +108,9 @@ public sealed record LobbySettings
     /// <summary>Рейтинговая или обычная партия.</summary>
     public bool Ranked { get; init; } = true;
 
+    /// <summary>Боты говорят голосом (если на сервере настроен синтез речи).</summary>
+    public bool BotVoice { get; init; } = true;
+
     /// <summary>Назначенный хостом Призрак (id игрока лобби); null — по жребию. Если игрок ушёл — тоже по жребию.</summary>
     public Guid? GhostUserId { get; init; }
 
@@ -121,6 +124,7 @@ public sealed record LobbySettings
         Discussion = Discussion,
         GhostPlayerId = GhostUserId,
         Ranked = Ranked,
+        BotVoice = BotVoice,
     };
 
     /// <summary>Проверка без числа игроков: оно известно только при старте.</summary>

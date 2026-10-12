@@ -57,7 +57,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
           scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile \
-            client/assets/cards/cards.json client/assets/cards/tags.json client/assets/cards/details.json client/assets/cards/associations.json "$SSH_USER@$HOST:$APP_DIR/"
+            client/assets/cards/cards.json client/assets/cards/tags.json client/assets/cards/details.json client/assets/cards/associations.json client/assets/cards/names.json "$SSH_USER@$HOST:$APP_DIR/"
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR/www/download"
           scp -i ~/.ssh/deploy deploy/www/download/index.html "$SSH_USER@$HOST:$APP_DIR/www/download/index.html"
 
@@ -65,10 +65,11 @@ jobs:
         if: steps.cfg.outputs.skip != 'true'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPEECHKIT_KEY: ${{ secrets.YANDEX_SPEECHKIT_API_KEY }}
         run: |
           {
-            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q ADMIN_USER_IDS=%q\n' \
-              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR" "${{ vars.ADMIN_USER_IDS }}"
+            printf 'export DOMAIN=%q GHCR_USER=%q GHCR_TOKEN=%q APP_DIR=%q ADMIN_USER_IDS=%q YANDEX_SPEECHKIT_API_KEY=%q\n' \
+              "${{ steps.cfg.outputs.domain }}" "${{ github.actor }}" "$GHCR_TOKEN" "$APP_DIR" "${{ vars.ADMIN_USER_IDS }}" "$SPEECHKIT_KEY"
             cat deploy/remote-deploy.sh
           } | ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" 'bash -s'
 

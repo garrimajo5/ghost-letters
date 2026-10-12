@@ -253,6 +253,24 @@ public sealed class ChatService(
         return new MediaDto(media.Id, media.DurationMs, media.ContentType);
     }
 
+    /// <summary>Озвучка реплики бота (MP3 от синтеза речи) — как голосовое, владелец — бот.</summary>
+    public async Task<Guid> SaveBotVoiceAsync(Guid botId, Speech.SpeechAudio audio, CancellationToken ct)
+    {
+        var media = new Media
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = botId,
+            ContentType = "audio/mpeg",
+            DurationMs = Math.Clamp(audio.DurationMs, 1, MaxVoiceMs),
+            SizeBytes = audio.Mp3.Length,
+            CreatedAt = time.GetUtcNow(),
+        };
+        media.StorageKey = media.Id.ToString("N");
+        using var buffer = new MemoryStream(audio.Mp3, writable: false);
+        await mediaLimits.SaveAsync(media, buffer, null, ct);
+        return media.Id;
+    }
+
     /// <summary>Голосовое доступно автору и тем, кто видит сообщение с ним.</summary>
     public async Task<(Stream Content, string ContentType)> OpenVoiceAsync(Guid userId, Guid mediaId, CancellationToken ct)
     {
