@@ -45,9 +45,14 @@ public sealed record BotDto(
     bool Enabled,
     int Games,
     int Wins,
-    int Rating);
+    int Rating,
+    string Voice = "",
+    string VoiceRole = "",
+    string DefaultVoice = "");
 
-public sealed record SaveBotRequest(string Nickname, string? AvatarColor, string? About, BotSpectra Spectra, bool Enabled = true);
+/// <param name="Voice">Голос SpeechKit (см. /admin/bots/voices); пусто — постоянный голос по id бота.</param>
+public sealed record SaveBotRequest(string Nickname, string? AvatarColor, string? About, BotSpectra Spectra, bool Enabled = true,
+    string? Voice = null, string? VoiceRole = null);
 
 /// <summary>Бот для выбора в лобби: имя, цвет и пара слов о характере.</summary>
 public sealed record BotCardDto(Guid Id, string Nickname, string AvatarColor, Guid? AvatarId, string About);
@@ -193,6 +198,18 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
         var about = (request.About ?? string.Empty).Trim();
         profile.About = about.Length > 300 ? about[..300] : about;
         profile.Enabled = request.Enabled;
+        // Старый клиент голос не присылает — оставляем прежний.
+        if (request.Voice is null) { profile.UpdatedAt = now; return; }
+        var voice = request.Voice.Trim();
+        var role = (request.VoiceRole ?? string.Empty).Trim();
+        if (voice.Length > 0)
+        {
+            var option = Speech.BotVoices.Find(voice) ?? throw AppException.Validation("Нет такого голоса.");
+            if (role.Length > 0 && !option.Roles.Contains(role)) throw AppException.Validation("У этого голоса нет такого амплуа.");
+        }
+        else role = string.Empty;
+        profile.Voice = voice;
+        profile.VoiceRole = role;
         profile.UpdatedAt = now;
     }
 
@@ -209,5 +226,6 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
     }
 
     private static BotDto ToDto(BotProfile b, User u, int games, int wins, int rating) =>
-        new(u.Id, u.Nickname, u.AvatarColor, u.AvatarMediaId, b.About, BotSpectra.From(Personality(b)), b.Enabled, games, wins, rating);
+        new(u.Id, u.Nickname, u.AvatarColor, u.AvatarMediaId, b.About, BotSpectra.From(Personality(b)), b.Enabled, games, wins, rating,
+            b.Voice, b.VoiceRole, Speech.BotVoices.For(u.Id, null, null).Voice);
 }

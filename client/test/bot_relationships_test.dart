@@ -8,6 +8,10 @@ import 'bots_test.dart' show lobbyWithBot;
 
 void main() {
   testWidgets('профиль с симпатиями открывается по аватарке бота в лобби', (tester) async {
+    // Высокий экран: строка бота не прячется под нижней кнопкой лобби.
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final app = await TestApp.create(user: host);
     addTearDown(app.container.dispose);
     app.api.profileIsBot = true;

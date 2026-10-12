@@ -54,6 +54,38 @@ public static class BotEndpoints
             })
             .WithName("AdminRemoveBotAvatar");
 
+        // Голоса для озвучки ботов и проба голоса (синтез SpeechKit, если на сервере есть ключ).
+        admin.MapGet("/bots/voices", (HttpContext http, BotAdminService bots, Infrastructure.Speech.SpeechKit speech) =>
+            {
+                bots.RequireAdmin(http.User.UserId());
+                return new
+                {
+                    enabled = speech.Enabled,
+                    spentToday = speech.SpentToday,
+                    voices = Infrastructure.Speech.BotVoices.All.Select(v => new
+                    {
+                        v.Id, v.Label, v.Male,
+                        roles = v.Roles.Select(r => new { id = r, label = Infrastructure.Speech.BotVoices.RoleLabels.GetValueOrDefault(r, r) }),
+                    }),
+                };
+            })
+            .WithName("AdminBotVoices");
+
+        admin.MapPost("/bots/voice-sample", async (VoiceSampleRequest request, HttpContext http, BotAdminService bots,
+                Infrastructure.Speech.SpeechKit speech, CancellationToken ct) =>
+            {
+                bots.RequireAdmin(http.User.UserId());
+                if (!speech.Enabled) return Results.Problem("Синтез речи не настроен на сервере.", statusCode: 503);
+                var option = Infrastructure.Speech.BotVoices.Find(request.Voice);
+                if (option is null) return Results.BadRequest(new { message = "Нет такого голоса." });
+                var role = request.Role is { Length: > 0 } r && option.Roles.Contains(r) ? r : option.Roles.FirstOrDefault();
+                var text = string.IsNullOrWhiteSpace(request.Text) ? "Ставлю на мотив — клетка. Подсказка второго раунда указывает на неё." : request.Text.Trim();
+                if (text.Length > 200) text = text[..200];
+                var audio = await speech.SynthesizeAsync(text, option.Id, role, ct);
+                return audio is null ? Results.Problem("Озвучка не удалась — см. журнал сервера.", statusCode: 502) : Results.File(audio.Mp3, "audio/mpeg");
+            })
+            .WithName("AdminBotVoiceSample");
+
         admin.MapPost("/bots/presets", (HttpContext http, BotAdminService bots, CancellationToken ct) =>
                 bots.CreatePresetsAsync(http.User.UserId(), ct))
             .WithName("AdminCreatePresetBots");
@@ -61,3 +93,6 @@ public static class BotEndpoints
         return api;
     }
 }
+
+/// <summary>Проба голоса: голос, амплуа и (необязательно) текст до 200 символов.</summary>
+public sealed record VoiceSampleRequest(string Voice, string? Role, string? Text);

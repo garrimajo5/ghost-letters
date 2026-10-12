@@ -191,6 +191,16 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("variability");
 
+                    b.Property<string>("Voice")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("voice");
+
+                    b.Property<string>("VoiceRole")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("voice_role");
+
                     b.HasKey("UserId")
                         .HasName("pk_bot_profiles");
 

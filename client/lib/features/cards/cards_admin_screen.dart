@@ -168,7 +168,7 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                                         ? Colors.greenAccent
                                                         : AppColors.muted)),
                                             Text(
-                                                '${card.meanings.length} смыслов · ${card.details.length} деталей',
+                                                '${card.names.isEmpty ? '' : '${card.names.first} · '}${card.meanings.length} смыслов · ${card.details.length} деталей',
                                                 style: const TextStyle(
                                                     fontSize: 11)),
                                           ])));
@@ -226,7 +226,7 @@ class CardEditorScreen extends ConsumerStatefulWidget {
 
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   final _form = GlobalKey<FormState>();
-  late final TextEditingController _title, _tags;
+  late final TextEditingController _title, _tags, _names;
   late final List<_FeatureDraft> _meanings, _details;
   late String _set;
   late bool _active;
@@ -238,6 +238,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     final c = widget.card;
     _title = TextEditingController(text: c.title ?? '');
     _tags = TextEditingController(text: c.tags.join(', '));
+    _names = TextEditingController(text: c.names.join(', '));
     _meanings = c.meanings.map(_FeatureDraft.new).toList();
     _details = c.details.map(_FeatureDraft.new).toList();
     _set = c.setCode;
@@ -248,6 +249,7 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   void dispose() {
     _title.dispose();
     _tags.dispose();
+    _names.dispose();
     for (final f in [..._meanings, ..._details, ..._removed]) {
       f.dispose();
     }
@@ -273,7 +275,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                 .where((t) => t.isNotEmpty)
                 .toList(),
             meanings: _meanings.map((m) => m.value).toList(),
-            details: _details.map((d) => d.value).toList())));
+            details: _details.map((d) => d.value).toList(),
+            names: _names.text
+                .split(',')
+                .map((t) => t.trim())
+                .where((t) => t.isNotEmpty)
+                .toList())));
     if (!mounted) return;
     if (saved != null) {
       Navigator.pop(context, true);
@@ -378,6 +385,22 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                               Text(s.title, overflow: TextOverflow.ellipsis)))
                       .toList(),
                   onChanged: _busy ? null : (v) => setState(() => _set = v!)),
+              const SizedBox(height: 16),
+              TextFormField(
+                  key: const Key('card-names'),
+                  controller: _names,
+                  minLines: 1,
+                  maxLines: 3,
+                  validator: (v) {
+                    final names = (v ?? '').split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+                    if (names.length > 8) return 'Не больше 8 названий';
+                    if (names.any((n) => n.length > 40)) return 'Каждое название — до 40 символов';
+                    return null;
+                  },
+                  decoration: const InputDecoration(
+                      labelText: 'Как называют вслух — через запятую',
+                      helperMaxLines: 3,
+                      helperText: 'Первое — основное название: его говорят боты голосом («мотив — клетка»). Дальше синонимы, по ним узнаётся карта в речи.')),
               const SizedBox(height: 16),
               TextFormField(
                   key: const Key('card-tags'),

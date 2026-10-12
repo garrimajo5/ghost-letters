@@ -86,6 +86,13 @@ class _SettingsSheetState extends State<SettingsSheet> {
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(ranked: v)),
           ),
           SwitchListTile(
+            key: const Key('bot-voice'),
+            title: const Text('Боты говорят голосом'),
+            subtitle: const Text('Реплики ботов озвучиваются их голосами; текст с картами остаётся в чате. Выключить звук у себя — в меню «Звук и музыка».'),
+            value: s.botVoice,
+            onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(botVoice: v)),
+          ),
+          SwitchListTile(
             title: const Text('Ряд «Тайна»'),
             subtitle: const Text('Четвёртый ряд улик из дополнения'),
             value: s.useSecretRow,

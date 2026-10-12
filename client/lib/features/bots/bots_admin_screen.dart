@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'bot_relationships.dart';
@@ -195,6 +196,8 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
   late BotSpectra _s = widget.bot?.spectra ?? BotSpectra(social: {for (final s in socialTraits) s.key: s.initial});
   late String _color = widget.bot?.avatarColor ?? avatarPalette.first;
   late bool _enabled = widget.bot?.enabled ?? true;
+  late String _voice = widget.bot?.voice ?? '';
+  late String _voiceRole = widget.bot?.voiceRole ?? '';
   bool _busy = false;
 
   /// Новое фото (уже обрезанное) или «убрать фото» — применяются при сохранении,
@@ -240,6 +243,8 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
         about: _about.text.trim(),
         spectra: _s,
         enabled: _enabled,
+        voice: _voice,
+        voiceRole: _voiceRole,
       );
       _createdId = bot.id;
       final photo = _newPhoto;
@@ -341,6 +346,17 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const Divider(),
+        Text('ГОЛОС', style: sectionLabel(size: 13)),
+        _VoicePicker(
+          voice: _voice,
+          role: _voiceRole,
+          defaultVoice: widget.bot?.defaultVoice ?? '',
+          onChanged: (voice, role) => setState(() {
+            _voice = voice;
+            _voiceRole = role;
+          }),
+        ),
+        const Divider(),
         Text('КАК СМОТРИТ НА КАРТЫ', style: sectionLabel(size: 13)),
         Text('Смысл $m% · форма $sh% · цвет $c%', key: const Key('attention-total'), style: const TextStyle(fontSize: 13, color: AppColors.muted)),
         _slider('meaning', 'Смысл', 'не замечает', 'главное — что изображено', _s.meaning, (v) => setState(() => _s = _s.copyWith(meaning: v))),
@@ -367,4 +383,97 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
       ]),
     );
   }
+}
+
+/// Голос бота для озвучки: голос SpeechKit, интонация и проба.
+class _VoicePicker extends ConsumerStatefulWidget {
+  const _VoicePicker({required this.voice, required this.role, required this.defaultVoice, required this.onChanged});
+
+  final String voice;
+  final String role;
+  final String defaultVoice;
+  final void Function(String voice, String role) onChanged;
+
+  @override
+  ConsumerState<_VoicePicker> createState() => _VoicePickerState();
+}
+
+class _VoicePickerState extends ConsumerState<_VoicePicker> {
+  late final Future<({bool enabled, List<VoiceOption> voices})> _voices = ref.read(apiProvider).botVoices();
+  AudioPlayer? _player;
+  bool _playing = false;
+
+  @override
+  void dispose() {
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _listen(String voice, String role) async {
+    setState(() => _playing = true);
+    try {
+      final bytes = await ref.read(apiProvider).voiceSample(voice, role);
+      final player = _player ??= AudioPlayer();
+      await player.play(BytesSource(bytes, mimeType: 'audio/mpeg'));
+    } finally {
+      if (mounted) setState(() => _playing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+        future: _voices,
+        builder: (context, snap) {
+          final data = snap.data;
+          if (data == null) {
+            return snap.hasError
+                ? const Text('Голоса не загрузились', style: TextStyle(color: AppColors.muted))
+                : const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator());
+          }
+          final byId = {for (final v in data.voices) v.id: v};
+          final auto = byId[widget.defaultVoice]?.label;
+          final current = byId[widget.voice];
+          final listenVoice = current?.id ?? widget.defaultVoice;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            if (!data.enabled)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 6),
+                child: Text('Озвучка выключена на сервере (нет ключа SpeechKit) — голос сохранится и заработает, когда её включат.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+              ),
+            DropdownButtonFormField<String>(
+              key: const Key('bot-voice'),
+              initialValue: current?.id ?? '',
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Голос'),
+              items: [
+                DropdownMenuItem(value: '', child: Text(auto == null ? 'Автоматически' : 'Автоматически ($auto)')),
+                for (final v in data.voices)
+                  DropdownMenuItem(value: v.id, child: Text('${v.label} · ${v.male ? 'мужской' : 'женский'}')),
+              ],
+              onChanged: (v) => widget.onChanged(v ?? '', ''),
+            ),
+            if (current != null && current.roles.length > 1)
+              DropdownButtonFormField<String>(
+                key: Key('bot-voice-role-${current.id}'),
+                initialValue: current.roles.any((r) => r.id == widget.role) ? widget.role : current.roles.first.id,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Интонация'),
+                items: [for (final r in current.roles) DropdownMenuItem(value: r.id, child: Text(r.label))],
+                onChanged: (r) => widget.onChanged(current.id, r ?? ''),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('bot-voice-listen'),
+                icon: const Icon(Icons.play_arrow),
+                label: Text(_playing ? 'Озвучиваю…' : 'Прослушать'),
+                onPressed: !data.enabled || _playing || listenVoice.isEmpty
+                    ? null
+                    : () => runAction(context, () => _listen(listenVoice, current == null ? '' : widget.role)),
+              ),
+            ),
+          ]);
+        },
+      );
 }

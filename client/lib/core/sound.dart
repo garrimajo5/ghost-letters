@@ -29,8 +29,12 @@ class SoundSettings {
       {this.music = true,
       this.effects = true,
       this.musicVolume = .18,
-      this.effectsVolume = .45});
+      this.effectsVolume = .45,
+      this.botVoices = true});
   final bool music;
+
+  /// Слушать озвучку реплик ботов (когда в партии боты говорят голосом).
+  final bool botVoices;
   final bool effects;
   final double musicVolume;
   final double effectsVolume;
@@ -50,6 +54,7 @@ class SoundSettingsController extends Notifier<SoundSettings> {
       musicVolume: (prefs.getDouble('audio.musicVolume') ?? .18).clamp(0, 1),
       effectsVolume:
           (prefs.getDouble('audio.effectsVolume') ?? .45).clamp(0, 1),
+      botVoices: prefs.getBool('audio.botVoices') ?? true,
     );
   }
 
@@ -57,12 +62,14 @@ class SoundSettingsController extends Notifier<SoundSettings> {
       {bool? music,
       bool? effects,
       double? musicVolume,
-      double? effectsVolume}) async {
+      double? effectsVolume,
+      bool? botVoices}) async {
     state = SoundSettings(
       music: music ?? state.music,
       effects: effects ?? state.effects,
       musicVolume: (musicVolume ?? state.musicVolume).clamp(0, 1),
       effectsVolume: (effectsVolume ?? state.effectsVolume).clamp(0, 1),
+      botVoices: botVoices ?? state.botVoices,
     );
     final prefs = ref.read(prefsProvider);
     await Future.wait([
@@ -70,6 +77,7 @@ class SoundSettingsController extends Notifier<SoundSettings> {
       prefs.setBool('audio.effects', state.effects),
       prefs.setDouble('audio.musicVolume', state.musicVolume),
       prefs.setDouble('audio.effectsVolume', state.effectsVolume),
+      prefs.setBool('audio.botVoices', state.botVoices),
     ]);
   }
 }

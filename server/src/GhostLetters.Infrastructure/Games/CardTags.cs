@@ -14,6 +14,7 @@ public sealed class CardTags
     private IReadOnlyDictionary<string, List<Detail>> _details = new Dictionary<string, List<Detail>>();
     private IReadOnlyDictionary<string, IReadOnlyList<Detail>> _meanings = new Dictionary<string, IReadOnlyList<Detail>>();
     private IReadOnlyDictionary<string, Dictionary<string, double>> _meaningWeights = new Dictionary<string, Dictionary<string, double>>();
+    private IReadOnlyDictionary<string, IReadOnlyList<string>> _names = new Dictionary<string, IReadOnlyList<string>>();
     public static readonly CardTags Empty = new(new Dictionary<string, HashSet<string>>());
 
     private readonly IReadOnlyDictionary<string, HashSet<string>> _tags;
@@ -24,9 +25,31 @@ public sealed class CardTags
 
     public IReadOnlyCollection<string> Of(string cardId) => _tags.TryGetValue(cardId, out var t) ? t : [];
 
+    /// <summary>Как карту называют вслух (names.json, правится в картотеке): первое — основное название, дальше синонимы.</summary>
+    public IReadOnlyList<string> NamesOf(string cardId) => _names.GetValueOrDefault(cardId) ?? [];
+
+    /// <summary>Основное название карты для речи; нет — null.</summary>
+    public string? NameOf(string cardId) => NamesOf(cardId).FirstOrDefault();
+
+    /// <summary>Названия карт (names.json): {"orig_0001": ["клетка", "птичья клетка"]}.</summary>
+    public CardTags WithNames(string json)
+    {
+        var raw = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json) ?? [];
+        var names = _names.ToDictionary(e => e.Key, e => e.Value);
+        foreach (var (card, list) in raw)
+        {
+            var clean = CleanNames(list);
+            if (clean.Count > 0) names[card] = clean;
+        }
+        return new CardTags(_tags) { _details = _details, _meanings = _meanings, _meaningWeights = _meaningWeights, _names = names };
+    }
+
+    public static IReadOnlyList<string> CleanNames(IEnumerable<string>? list) =>
+        (list ?? []).Select(n => n?.Trim() ?? "").Where(n => n.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
     public CardAnnotation AnnotationOf(string card) => new(Of(card).Where(t => Group(t) != 0).Order().ToList(),
         _meanings.GetValueOrDefault(card) ?? Of(card).Where(t => Group(t) == 0).Order().Select(t => new Detail(t, 1, t)).ToList(),
-        _details.GetValueOrDefault(card) ?? []);
+        _details.GetValueOrDefault(card) ?? [], NamesOf(card));
 
     public CardTags WithAnnotations(IReadOnlyDictionary<string, CardAnnotation> annotations)
     {
@@ -40,7 +63,10 @@ public sealed class CardTags
             details[key] = value.Details.ToList(); meanings[key] = value.Meanings;
             weights[key] = value.Meanings.ToDictionary(m => m.Tag, m => m.Weight);
         }
-        return new CardTags(tags) { _details = details, _meanings = meanings, _meaningWeights = weights };
+        var names = _names.ToDictionary(e => e.Key, e => e.Value);
+        foreach (var (key, value) in annotations)
+            if (value.Names is { Count: > 0 } own) names[key] = own;
+        return new CardTags(tags) { _details = details, _meanings = meanings, _meaningWeights = weights, _names = names };
     }
 
     private double Salience(string card, string tag, double secondary)
@@ -66,7 +92,7 @@ public sealed class CardTags
         // main subject: Details=0 must really ignore them.
         var main = _tags.ToDictionary(e => e.Key, e => e.Value
             .Except((raw.GetValueOrDefault(e.Key) ?? []).Select(d => d.Tag)).ToHashSet());
-        return new CardTags(main) { _details = raw };
+        return new CardTags(main) { _details = raw, _names = _names };
     }
 
     /// <summary>
@@ -95,7 +121,7 @@ public sealed class CardTags
             foreach (var a in added) own.Add(a.Tag);
         }
 
-        return new CardTags(tags) { _details = _details, _meanings = meanings, _meaningWeights = weights };
+        return new CardTags(tags) { _details = _details, _meanings = meanings, _meaningWeights = weights, _names = _names };
     }
 
     private Dictionary<string, double> DetailsOf(string card) =>
@@ -300,6 +326,8 @@ public sealed class CardTags
         if (File.Exists(detailsPath)) tags = tags.WithDetails(File.ReadAllText(detailsPath));
         var associationsPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "associations.json");
         if (File.Exists(associationsPath)) tags = tags.WithAssociations(File.ReadAllText(associationsPath));
+        var namesPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "names.json");
+        if (File.Exists(namesPath)) tags = tags.WithNames(File.ReadAllText(namesPath));
         logger.LogInformation("Теги карт: {Count} из {Path}", tags.Count, path);
         return tags;
     }

@@ -32,6 +32,7 @@ services:
       - ./client/assets/cards/tags.json:/app/cards/tags.json:ro
       - ./client/assets/cards/details.json:/app/cards/details.json:ro
       - ./client/assets/cards/associations.json:/app/cards/associations.json:ro
+      - ./client/assets/cards/names.json:/app/cards/names.json:ro
       - media:/app/data/media
     depends_on:
       postgres:

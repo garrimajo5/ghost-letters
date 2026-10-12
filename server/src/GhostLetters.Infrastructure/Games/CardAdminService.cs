@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GhostLetters.Infrastructure.Games;
 
-public sealed record CardAnnotation(IReadOnlyList<string> Tags, IReadOnlyList<CardTags.Detail> Meanings, IReadOnlyList<CardTags.Detail> Details);
+/// <param name="Names">Как карту называют вслух: основное название и синонимы (пусто — из names.json).</param>
+public sealed record CardAnnotation(IReadOnlyList<string> Tags, IReadOnlyList<CardTags.Detail> Meanings, IReadOnlyList<CardTags.Detail> Details,
+    IReadOnlyList<string>? Names = null);
 public sealed record AdminCardDto(Guid Id, string ImageKey, string? Title, string SetCode, bool IsActive, int Version, CardAnnotation Annotation);
 public sealed record CardSetDto(string Code, string Title, IReadOnlyList<string> Cards);
 public sealed record AdminCardPage(IReadOnlyList<AdminCardDto> Cards, int Total, IReadOnlyList<CardSetDto> Sets);
@@ -95,7 +97,10 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
     private static AppException Conflict() => AppException.Conflict("CARD_CHANGED", "Карту уже изменили. Обновите список и откройте её заново.");
 
     private AdminCardDto Dto(Card card, string setCode) => new(card.Id, card.ImageKey, card.Title, setCode, card.IsActive,
-        card.MetadataVersion, card.Annotations is null ? baseline.AnnotationOf(card.ImageKey) : GameJson.Deserialize<CardAnnotation>(card.Annotations));
+        card.MetadataVersion, WithNames(card.ImageKey, card.Annotations is null ? baseline.AnnotationOf(card.ImageKey) : GameJson.Deserialize<CardAnnotation>(card.Annotations)));
+
+    // Разметка из базы, сохранённая до появления названий, — с названиями из names.json.
+    private CardAnnotation WithNames(string key, CardAnnotation a) => a.Names is { Count: > 0 } ? a : a with { Names = baseline.NamesOf(key) };
 
     private static CardAnnotation Validate(CardAnnotation? value)
     {
@@ -121,6 +126,9 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
             throw AppException.Validation("Цвет и shape-* укажите в метках; предметы и темы — в смыслах.");
         var all = tags.Concat(meanings.Select(d => d.Tag)).Concat(details.Select(d => d.Tag)).ToList();
         if (all.Distinct().Count() != all.Count) throw AppException.Validation("Не повторяйте один ключ в разных признаках карты.");
-        return new(tags, meanings, details);
+        var names = CardTags.CleanNames(value.Names);
+        if (names.Count > 8 || names.Any(n => n.Length > 40))
+            throw AppException.Validation("Названий карты — до 8, каждое до 40 символов.");
+        return new(tags, meanings, details, names);
     }
 }

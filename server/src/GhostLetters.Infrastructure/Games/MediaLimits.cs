@@ -63,6 +63,14 @@ public sealed class MediaLimits(GhostLettersDbContext db, IMediaStorage storage,
         var cutoff = time.GetUtcNow().AddHours(-24);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(74293821)", ct);
+        // Озвучка ботов живёт неделю: потом реплика остаётся в истории текстом.
+        var botCutoff = time.GetUtcNow().AddDays(-7);
+        var botVoices = await db.MediaFiles.Where(m => m.CreatedAt < botCutoff && m.ContentType == "audio/mpeg" &&
+                db.Users.Any(u => u.Id == m.OwnerId && u.IsBot))
+            .Select(m => m.Id).Take(500).ToListAsync(ct);
+        if (botVoices.Count > 0)
+            await db.ChatMessages.Where(c => c.MediaId != null && botVoices.Contains(c.MediaId.Value))
+                .ExecuteUpdateAsync(u => u.SetProperty(c => c.MediaId, (Guid?)null).SetProperty(c => c.Kind, ChatKinds.Text), ct);
         var unused = await db.MediaFiles.Where(m => m.CreatedAt < cutoff &&
             !db.ChatMessages.Any(c => c.MediaId == m.Id) && !db.Users.Any(u => u.AvatarMediaId == m.Id))
             .OrderBy(m => m.CreatedAt).Take(500).ToListAsync(ct);

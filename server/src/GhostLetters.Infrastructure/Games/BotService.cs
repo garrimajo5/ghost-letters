@@ -14,7 +14,8 @@ using Microsoft.Extensions.Logging;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
-public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time, ReactionService reactions)
+public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time, ReactionService reactions,
+    Speech.SpeechKit speech)
 {
     private CardTags tags = baselineTags;
     /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
@@ -23,6 +24,31 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// <summary>Когда партия последний раз сдвинулась (версия) — для ожидания без таймера.</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (int Version, DateTimeOffset Since)> Changed = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (Phase Phase, int Round, DateTimeOffset Since)> PhaseStarted = new();
+
+    /// <summary>
+    /// Публичная реплика бота: если в партии боты говорят голосом и синтез настроен — с озвучкой его голосом.
+    /// Озвучка не удалась — реплика уходит текстом, как раньше.
+    /// </summary>
+    private async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct)
+    {
+        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
+        {
+            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags);
+            if (text.Length > 0)
+            {
+                var profile = await db.BotProfiles.AsNoTracking().Where(b => b.UserId == botId)
+                    .Select(b => new { b.Voice, b.VoiceRole }).FirstOrDefaultAsync(ct);
+                var (voice, role) = Speech.BotVoices.For(botId, profile?.Voice, profile?.VoiceRole);
+                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
+                {
+                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
+                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
+                }
+            }
+        }
+
+        await chat.SendAsync(state.Id, botId, request, ct);
+    }
 
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>
     public async Task<int> TickAsync(CancellationToken ct)
@@ -306,7 +332,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         // Wait without counting a move, so timers and other players can advance.
         if (sent.Count > 0 && time.GetUtcNow() - sent[^1].CreatedAt < await ReadingTimeAsync(sent[^1], ct)) return false;
         var report = reports[sent.Count];
-        await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, report.Text, null, report.Cards, report.Notes), ct);
+        await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, report.Text, null, report.Cards, report.Notes), ct);
         return true;
     }
 
@@ -343,7 +369,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         {
             try
             {
-                await chat.SendAsync(state.Id, botId, new SendChatRequest(ChatChannels.Public, tactic.Text, null, tactic.Cards, tactic.Notes), ct);
+                await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, tactic.Text, null, tactic.Cards, tactic.Notes), ct);
                 return true;
             }
             catch (AppException e) { logger.LogDebug("Заявление о письме пропущено: {Error}", e.Message); return false; }
@@ -367,7 +393,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             if (proposal is not { } finalLine) return false;
             try
             {
-                await chat.SendAsync(state.Id, botId, TableReasoning.Speech(view, tags, mind, finalLine), ct);
+                await SayAsync(state, botId, TableReasoning.Speech(view, tags, mind, finalLine), ct);
                 return true;
             }
             catch (AppException e)
@@ -393,7 +419,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         try
         {
-            await chat.SendAsync(state.Id, botId, TableReasoning.Speech(view, tags, mind, line), ct);
+            await SayAsync(state, botId, TableReasoning.Speech(view, tags, mind, line), ct);
             return true;
         }
         catch (AppException e)
