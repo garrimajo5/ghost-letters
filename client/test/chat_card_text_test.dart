@@ -26,6 +26,12 @@ void main() {
     expect(m.text, contains('карта 1'), reason: 'цитата сохраняет исходный читаемый текст');
   });
 
+  test('позиции названий карт — чтобы печать вставляла картинку целиком', () {
+    const text = 'Проверял: мотив 1, а не место 3.';
+    final spans = ChatCardText.cardSpans(message(text), board, hints, text);
+    expect(spans.map((s) => text.substring(s.start, s.end)), ['мотив 1']);
+  });
+
   test('«Зацепка» в реплике — карта первой улики Призрака', () {
     final parts = ChatCardText.parse(message('Зацепка → мотив 1: цветы.'), board, const [HintGroup(0, ['orig_9']), ...hints]);
     expect(parts.map((p) => p.cardId).whereType<String>(), ['orig_9', 'orig_2']);
