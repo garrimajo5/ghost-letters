@@ -29,7 +29,17 @@ public sealed class GhostRiskAndLetterTacticsTests
         GhostCluePolicy.Assess(View(), Tags, Mind(1), "ambiguous").Reveal.Should().BeTrue();
         GhostCluePolicy.Assess(View(), Tags, Mind(1), "empty").Reveal.Should().BeFalse();
         GhostCluePolicy.Assess(View(), Tags, Mind(0), "misleading").Reveal.Should().BeFalse();
-        GhostCluePolicy.Choose(View(), Tags, Mind(0), ["ambiguous", "empty"]).Should().BeEmpty();
+        using (BotTuning.Use(BotTuning.Default with { GhostFallbackStrict = true }))
+            GhostCluePolicy.Choose(View(), Tags, Mind(0), ["ambiguous", "empty"]).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void FirstClueFallback_PicksBestTruthMargin_AndNeedsSomeLinkToTruth()
+    {
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["empty", "ambiguous"]).Should().Be("ambiguous");
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["empty"]).Should().BeNull();
+        using var _ = BotTuning.Use(BotTuning.Default with { FirstClueAlways = false });
+        GhostCluePolicy.FirstClueFallback(View(), Tags, Mind(0), ["ambiguous"]).Should().BeNull();
     }
 
     [Fact]
