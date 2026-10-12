@@ -312,7 +312,7 @@ void main() {
     expect(find.byKey(const Key('chat-table-a')), findsNothing);
     expect(find.byKey(const Key('chat-outcome-0')), findsOneWidget);
     await _shot(tester, 'chat');
-    expect(find.textContaining('стол выбрал карту 3'), findsOneWidget);
+    expect(find.textContaining('стол выбрал эту'), findsOneWidget);
     expect(find.textContaining('верн'), findsNothing);
   });
 
