@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/core/theme.dart';
 import 'package:ghost_letters/features/game/chat_card_text.dart';
 import 'package:ghost_letters/features/game/game_screen.dart';
+import 'package:ghost_letters/features/game/game_sheets.dart';
 import 'package:ghost_letters/models/models.dart';
 import 'package:ghost_letters/widgets/common.dart';
 
@@ -314,6 +315,15 @@ void main() {
     await _shot(tester, 'chat');
     expect(find.textContaining('стол выбрал эту'), findsOneWidget);
     expect(find.textContaining('верн'), findsNothing);
+    // Чат разворачивается на весь экран и сворачивается обратно в шторку.
+    await tester.tap(find.byKey(const Key('chat-fullscreen')));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+    expect(tester.getSize(find.byType(ChatSheet)).width, tester.view.physicalSize.width);
+    await tester.tap(find.byKey(const Key('chat-fullscreen')));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byType(ChatSheet), findsOneWidget);
   });
 
   testWidgets('«Кто Убийца?»: под игроками столбцы их карт по рядам, выбор — нажатием', (tester) async {
