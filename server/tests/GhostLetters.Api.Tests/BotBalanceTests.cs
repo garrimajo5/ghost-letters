@@ -192,7 +192,7 @@ public sealed class BotBalanceTests
             variants.Add(colon < 0 ? (part, BotTuning.Parse(part)) : (part[..colon].Trim(), BotTuning.Parse(part[(colon + 1)..])));
         }
 
-        Config[] configs = [Configs[0], Configs[1], Configs[2], Configs[3], Configs[5]];
+        Config[] configs = [Configs[0], Configs[2], Configs[4], Configs[5], Configs[6], Configs[7]];
         var tags = RealTags();
         var md = new StringBuilder();
         var commit = Environment.GetEnvironmentVariable("GITHUB_SHA") is { Length: >= 7 } sha ? sha[..7] : "локально";
