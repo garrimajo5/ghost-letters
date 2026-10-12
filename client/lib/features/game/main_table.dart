@@ -552,7 +552,8 @@ class _TableArea extends StatelessWidget {
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       // Боком поле крупнее экрана: листается свайпом в обе стороны, подсказки — всегда видны слева.
       final pan = landscape && staircase && screen.bigBoard;
-      final fieldCard = pan ? (card * 1.4).floorToDouble() : card;
+      // Крупнее экрана — только на телефоне, где карты мелкие; на большом экране поле целиком влезает по высоте.
+      final fieldCard = pan && card < 110 ? (card * 1.4).floorToDouble() : card;
       final Widget hintsColumn = SizedBox(
             width: hintsWidth,
             child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -815,7 +816,9 @@ class _PlayersColumn extends StatelessWidget {
       final n = players.length;
       const tile = 56.0;
       final w = box.maxWidth, h = box.maxHeight;
-      final rx = (w - tile) / 2, ry = (h - tile - 14) / 2;
+      final rx = (w - tile) / 2;
+      // Почти круг: высокая узкая колонка (большой экран) иначе вытягивает стол в овал.
+      final ry = math.min((h - tile - 14) / 2, rx * 1.15);
       if (n == 0 || rx < 20 || ry < 20) return const SizedBox.shrink();
       final center = Offset(w / 2, h / 2);
       // Первый говорящий — сверху: круг поворачивается так, чтобы ход шёл от него по часовой.
