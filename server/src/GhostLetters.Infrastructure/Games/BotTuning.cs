@@ -94,7 +94,7 @@ public sealed record BotTuning
     public double GhostFallback { get; init; } = .15;
 
     /// <summary>Доля подозрения по последней версии игрока (0 — все его мнения за партию одинаково).</summary>
-    public double LatestVersionWeight { get; init; } = .6;
+    public double LatestVersionWeight { get; init; } = .8;
 
     public static readonly BotTuning Default = new();
 
