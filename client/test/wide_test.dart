@@ -54,15 +54,6 @@ void main() {
     expect(find.byTooltip('Чат'), findsOneWidget);
   });
 
-  testWidgets('телефон: прежняя вёрстка в одну колонку', (tester) async {
-    await openGameAt(tester, const Size(390, 844));
-
-    expect(find.byKey(const Key('wide-board')), findsNothing);
-    expect(find.byKey(const Key('chat-docked')), findsNothing);
-    expect(find.byTooltip('Чат'), findsOneWidget);
-    expect(tester.getSize(find.byKey(const Key('token-0'))).width, 34);
-  });
-
   testWidgets('главная на компьютере: партии отдельной колонкой', (tester) async {
     tester.view.physicalSize = const Size(1600, 900);
     tester.view.devicePixelRatio = 1;

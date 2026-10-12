@@ -539,10 +539,23 @@ class GameScreenState extends ConsumerState<GameScreen> {
   }
 
   /// Пометка карты вместе с проверками из реплик (кроме тех, с которыми я не согласен).
+  /// Проверки из чата по картам: пересчитываются, когда меняется чат или подсказки, а не на каждый кадр стола.
+  final _evidence = <String, List<CardEvidence>>{};
+  Object? _evidenceKey;
+
+  List<CardEvidence> _evidenceFor(String id) {
+    final hints = view?.hints ?? const <HintGroup>[];
+    final key = (chat.length, chat.lastOrNull?.id, hints.length, hints.fold<int>(0, (n, h) => n + h.cards.length));
+    if (key != _evidenceKey) {
+      _evidenceKey = key;
+      _evidence.clear();
+    }
+    return _evidence.putIfAbsent(id, () => cardEvidence(chat, id, revealed: {for (final h in hints) ...h.cards}));
+  }
+
   CardMark? effectiveMark(String id) {
     final base = marks[id];
-    final revealed = {for (final h in view?.hints ?? const <HintGroup>[]) ...h.cards};
-    final auto = cardEvidence(chat, id, revealed: revealed).where((e) => !e.contradicted && !(base?.ignored.contains(e.key) ?? false)).toList();
+    final auto = _evidenceFor(id).where((e) => !e.contradicted && !(base?.ignored.contains(e.key) ?? false)).toList();
     if (auto.isEmpty) return base;
     final m = base ?? const CardMark();
     // Считаем улики и письма, а не реплики: одно исчезнувшее письмо — один ✕, одна подсказка — одна ✓,
