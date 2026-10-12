@@ -59,6 +59,24 @@ public sealed record BotTuning
     /// <summary>Чёрные смелее лгут за большим столом (больше подозреваемых) и осторожнее — за маленьким.</summary>
     public bool KillerSizeAware { get; init; } = true;
 
+    /// <summary>
+    /// Эксперт не выдаёт себя точностью: в ясных рядах иногда голосует «как стол», в речи чаще отсекает ложные
+    /// карты, чем называет истину, письма шлёт полезные, но не всегда.
+    /// </summary>
+    public bool ExpertSubtle { get; init; } = true;
+
+    /// <summary>Свидетель молчит, когда стол и так побеждает по картам или уже подозревает Убийцу.</summary>
+    public bool WitnessQuiet { get; init; } = true;
+
+    /// <summary>Сообщник мешает картам, а не прячется: чаще лжёт о письме, отметает истину, редко голосует «как все».</summary>
+    public bool AccompliceSpoiler { get; init; } = true;
+
+    /// <summary>Вес подозрения к тому, кто отверг карту, на которую потом указала подсказка (0 — не замечать).</summary>
+    public double LieDetect { get; init; } = 2;
+
+    /// <summary>Насколько мирный не верит проверкам и мнениям подозреваемых (0 — верит всем одинаково).</summary>
+    public double SuspectDistrust { get; init; } = 1;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -104,6 +122,11 @@ public sealed record BotTuning
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
+                nameof(ExpertSubtle) => t with { ExpertSubtle = B() },
+                nameof(WitnessQuiet) => t with { WitnessQuiet = B() },
+                nameof(AccompliceSpoiler) => t with { AccompliceSpoiler = B() },
+                nameof(LieDetect) => t with { LieDetect = D() },
+                nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
             };
         }
