@@ -39,7 +39,8 @@ void main() {
       expect(parts.map((p) => p.text).join(), text);
       expect(parts.every((p) => p.cardId == null), isTrue);
     }
-    expect(ChatCardText.parse(message('мотив 1', annotated: false), board, hints).single.cardId, isNull);
+    // Карта по названию подставляется и без заметок к реплике.
+    expect(ChatCardText.parse(message('мотив 1', annotated: false), board, hints).map((p) => p.cardId).whereType<String>(), ['orig_2']);
   });
 
   testWidgets('миниатюры помещаются в узкий текст и открываются нажатием', (tester) async {

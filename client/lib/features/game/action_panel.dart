@@ -422,7 +422,7 @@ class ActionPanel extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(o.kind == 'Row'
-                    ? (o.column == null ? '${T.category(v.board[o.row].category)}: никто' : '${T.category(v.board[o.row].category)}: карта ${o.column! + 1}')
+                    ? (o.column == null ? '${T.category(v.board[o.row].category)}: никто' : T.category(v.board[o.row].category))
                     : v.player(o.suspect ?? '')?.isGhost == true
                         ? 'Выбрано: Убийцы нет'
                         : 'Арестован(а) ${screen.nick(o.suspect)}${o.revealedRole != null ? ' — ${T.role(o.revealedRole)}' : ''}'),

@@ -27,7 +27,7 @@ class ChatCardText extends StatelessWidget {
     String? text,
   }) {
     text ??= message.text ?? '';
-    if (message.cardNotes.isEmpty) return [(text: text, cardId: null)];
+    // Карты по названию («место 2», «Подсказка р.1 №2») подставляются картинками в любой реплике.
     final pattern = RegExp(
       r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',
       caseSensitive: false,

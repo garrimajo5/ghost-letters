@@ -446,29 +446,31 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
   }
 
   /// Что известно о игроке без заметок: роль (если видна), письма, голоса в финале.
-  List<String> _facts() {
+  List<({String text, String? card})> _facts() {
     final screen = widget.screen;
     final v = screen.view;
     if (v == null) return const [];
     final info = v.player(widget.userId);
-    final facts = <String>[
+    final facts = <({String text, String? card})>[
+      for (final t in <String>[
       if (info?.knownRole != null) 'Роль: ${T.role(info!.knownRole)}',
       if (info != null && info.hasActed && v.phase == 'Mailbox') 'Уже отправил письмо в этом раунде',
       if (v.currentSpeaker == widget.userId) 'Сейчас говорит по рации',
       if (v.raisedHands.contains(widget.userId)) 'Поднял руку',
+      ]) (text: t, card: null),
     ];
     final finale = v.finale;
     if (finale != null) {
       for (final r in finale.votes.where((r) => r.voter == widget.userId)) {
         if (r.column != null && finale.outcomes.any((o) => o.stage == r.stage && o.kind == 'Row')) {
           final o = finale.outcomes.firstWhere((o) => o.stage == r.stage);
-          facts.add('Голосовал: ${T.category(v.board[o.row].category)} — карта ${r.column! + 1}');
+          facts.add((text: 'Голосовал: ${T.category(v.board[o.row].category)} —', card: v.board[o.row].cards[r.column!]));
         } else if (r.suspect != null) {
-          facts.add('Голосовал за арест: ${screen.nick(r.suspect)}');
+          facts.add((text: 'Голосовал за арест: ${screen.nick(r.suspect)}', card: null));
         }
       }
     }
-    if (facts.isEmpty) facts.add('Пока ничего примечательного');
+    if (facts.isEmpty) facts.add((text: 'Пока ничего примечательного', card: null));
     return facts;
   }
 
@@ -517,7 +519,19 @@ class _NoteSheetState extends ConsumerState<NoteSheet> {
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('•  ', style: TextStyle(color: AppColors.ice)),
-                Expanded(child: Text(f, style: const TextStyle(fontSize: 13))),
+                Expanded(
+                  child: f.card == null
+                      ? Text(f.text, style: const TextStyle(fontSize: 13))
+                      : Row(children: [
+                          Text(f.text, style: const TextStyle(fontSize: 13)),
+                          const SizedBox(width: 6),
+                          GestureDetector(
+                            key: Key('fact-card-${f.card}'),
+                            onTap: () => showCardZoom(context, f.card!),
+                            child: CardImage(cardId: f.card!, size: 28, radius: 4),
+                          ),
+                        ]),
+                ),
               ]),
             ),
           ..._intel(label),
@@ -1475,7 +1489,7 @@ class _OutcomeLine extends StatelessWidget {
       child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         GestureDetector(onTap: () => showCardZoom(context, card), child: CardImage(cardId: card, size: 36, radius: 6)),
         const SizedBox(width: 8),
-        Text('${T.category(board[row].category)}: стол выбрал карту ${column + 1}${outcome.byLot ? ' (жребий)' : ''}',
+        Text('${T.category(board[row].category)}: стол выбрал эту${outcome.byLot ? ' (жребий)' : ''}',
             style: const TextStyle(fontSize: 12, color: AppColors.muted)),
       ]),
     );
