@@ -75,8 +75,23 @@ class _MarkSheetState extends State<MarkSheet> {
   PageController _columnsOf(int row) => _columns.putIfAbsent(row, () {
         final (_, c) = _position(cardId);
         // Страница 0 — жетон ряда, карты — с первой.
-        return PageController(initialPage: c + 1, viewportFraction: _fraction);
+        final controller = PageController(initialPage: c + 1, viewportFraction: _fraction);
+        // Ряды едут вместе, как одно поле: тянешь ряд — соседние сверху и снизу сдвигаются так же.
+        controller.addListener(() => _follow(row));
+        return controller;
       });
+
+  void _follow(int row) {
+    if (_syncing) return;
+    final lead = _columns[row];
+    if (lead == null || !lead.hasClients) return;
+    final pixels = lead.position.pixels;
+    _syncing = true;
+    for (final e in _columns.entries) {
+      if (e.key != row && e.value.hasClients && (e.value.position.pixels - pixels).abs() > .5) e.value.jumpTo(pixels);
+    }
+    _syncing = false;
+  }
 
   bool _syncing = false;
 
