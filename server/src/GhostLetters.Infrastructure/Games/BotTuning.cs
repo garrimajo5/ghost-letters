@@ -84,6 +84,12 @@ public sealed record BotTuning
     /// <summary>Множитель того, как часто Шантажист голосует за вторую по уликам карту (1 — как раньше; .4 — по замеру 8 игроков 28 → 35 %).</summary>
     public double BlackmailerSpoil { get; init; } = .4;
 
+    /// <summary>
+    /// Призрак не оставляет стол без улик: если полезных писем нет, открывает лучшее, которое вредит не больше этого
+    /// (по оценке стола). 0 — как раньше: может не открыть ничего и не дать зацепку.
+    /// </summary>
+    public double GhostFallback { get; init; } = .15;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -135,6 +141,7 @@ public sealed record BotTuning
                 nameof(SpoilerExclude) => t with { SpoilerExclude = D() },
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
+                nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
