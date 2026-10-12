@@ -76,7 +76,7 @@ class _SeanceCircle extends StatelessWidget {
       // Подписи и подсказки секторов.
       for (var i = 0; i < sectors; i++) {
         final mid = sectorStart(i) + math.pi / sectors;
-        final label = at(mid, r * 0.8);
+        final label = at(mid, r * 0.7);
         final group = v.hints.where((h) => h.round == i).firstOrNull;
         children.add(Positioned(
           left: label.dx - 45,
@@ -94,7 +94,7 @@ class _SeanceCircle extends StatelessWidget {
           // Несколько подсказок раунда — веером вдоль дуги своего сектора.
           final spread = (2 * math.pi / sectors) * 0.5;
           final a = cards.length == 1 ? mid : mid - spread / 2 + spread * k / (cards.length - 1);
-          final p = at(a, r * 0.52);
+          final p = at(a, r * 0.48);
           final c = cards[k];
           final size = cards.length < 2 ? hint : math.max(16.0, math.min(hint, r * 0.55 * spread / (cards.length - 1) * 0.9)).floorToDouble();
           children.add(Positioned(
@@ -112,11 +112,11 @@ class _SeanceCircle extends StatelessWidget {
       // Места игроков по кругу; первое место сверху.
       for (var i = 0; i < players.length; i++) {
         final p = players[i];
-        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r + 16);
+        final pos = at(-math.pi / 2 + 2 * math.pi * (i + 0.5) / players.length, r + 20);
         children.add(Positioned(
-          left: pos.dx - 32,
+          left: pos.dx - 40,
           top: pos.dy - 22,
-          width: 64,
+          width: 80,
           child: _SeatTile(screen: screen, player: p, first: first == p.id, compact: true, names: side >= 300),
         ));
       }
@@ -189,7 +189,13 @@ class _SeanceCenter extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = screen.view!;
     final stage = v.finale?.currentStage;
-    final whisper = screen.thoughts.where((t) => t.round == v.round && (t.text ?? '').isNotEmpty).lastOrNull;
+    // В обсуждении шепчет только тот, у кого слово: чужая старая мысль под именем говорящего путает.
+    final whisper = screen.thoughts
+        .where((t) =>
+            t.round == v.round &&
+            (t.text ?? '').isNotEmpty &&
+            (v.phase != 'Discussion' || (v.currentSpeaker != null && t.authorId == v.currentSpeaker)))
+        .lastOrNull;
     Widget body;
     switch (v.phase) {
       case 'Mailbox' || 'GhostPick':

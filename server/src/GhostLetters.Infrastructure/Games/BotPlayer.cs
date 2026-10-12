@@ -1084,10 +1084,15 @@ public static class BotPlayer
             if (!Classic && view.Board.Count > 1)
             {
                 var version = new List<string>();
+                // Карты, проверенные исчезнувшим письмом, бот покажет красными — в «целиком думаю так» их не зовут.
+                HashSet<(int Row, int Column)> gone = claimCard is not null && claimText.Contains("исчезла", StringComparison.Ordinal)
+                    ? Checked(claimCard).ToHashSet()
+                    : [];
                 for (var r = 0; r < view.Board.Count; r++)
                 {
                     var options = Enumerable.Range(0, view.Board[r].Cards.Count)
-                        .Where(c => !KillerTeam || Truth is null || Truth[r] != c).ToList();
+                        .Where(c => !KillerTeam || Truth is null || Truth[r] != c)
+                        .Where(c => !gone.Contains((r, c))).ToList();
                     if (options.Count == 0) continue;
                     var best = BestColumn(r, options);
                     if (Evidence(Card(r, best)) > 0.05)
