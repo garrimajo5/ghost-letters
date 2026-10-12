@@ -93,6 +93,9 @@ public sealed record BotTuning
     /// </summary>
     public double GhostFallback { get; init; } = .15;
 
+    /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
+    public double AssociationScale { get; init; } = .5;
+
     /// <summary>Доля подозрения по последней версии игрока (0 — все его мнения за партию одинаково).</summary>
     public double LatestVersionWeight { get; init; } = .8;
 
@@ -147,6 +150,7 @@ public sealed record BotTuning
                 nameof(SpoilerExclude) => t with { SpoilerExclude = D() },
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
+                nameof(AssociationScale) => t with { AssociationScale = D() },
                 nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
                 nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(LatestVersionWeight) => t with { LatestVersionWeight = D() },
