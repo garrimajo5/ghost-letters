@@ -1029,10 +1029,13 @@ class _Illustration extends StatelessWidget {
 
 /// Знакомство с ролью: карта рубашкой вверх, по нажатию переворачивается.
 class RoleReveal extends StatefulWidget {
-  const RoleReveal({super.key, required this.role, this.width = 170, this.footer});
+  const RoleReveal({super.key, required this.role, this.width = 170, this.footer, this.horizontal = false});
 
   final String role;
   final double width;
+
+  /// Боком: текст справа от карты — под картой его не видно без прокрутки.
+  final bool horizontal;
 
   /// Что показать под открытой картой: кто Призрак, кто в команде.
   final Widget? footer;
@@ -1048,8 +1051,7 @@ class _RoleRevealState extends State<RoleReveal> {
   Widget build(BuildContext context) {
     final killer = isKillerTeam(widget.role);
     final w = widget.width;
-    return Column(mainAxisSize: MainAxisSize.min, children: [
-      GestureDetector(
+    final card = GestureDetector(
         key: const Key('role-card'),
         onTap: () => setState(() => _open = !_open),
         child: AnimatedSwitcher(
@@ -1067,23 +1069,32 @@ class _RoleRevealState extends State<RoleReveal> {
             child: AppImage(_open ? roleImage(widget.role) : 'role_back', width: w, height: w * 1.42, radius: 18),
           ),
         ),
-      ),
-      const SizedBox(height: 16),
+      );
+    final align = widget.horizontal ? TextAlign.start : TextAlign.center;
+    final texts = <Widget>[
       if (!_open) ...[
         Text('ВАША РОЛЬ', style: heading(24, color: AppColors.ice, spacing: 2)),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           'Убедитесь, что никто не смотрит в ваш экран, и нажмите на карту',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: AppColors.muted, height: 1.5),
+          textAlign: align,
+          style: const TextStyle(fontSize: 15, color: AppColors.muted, height: 1.5),
         ),
       ] else ...[
         Text(T.role(widget.role).toUpperCase(), style: heading(32, color: killer ? AppColors.redSoft : AppColors.ice, spacing: 3)),
         const SizedBox(height: 6),
-        Text(T.roleHints[widget.role] ?? '', textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, height: 1.5)),
+        Text(T.roleHints[widget.role] ?? '', textAlign: align, style: const TextStyle(fontSize: 15, height: 1.5)),
         if (widget.footer != null) ...[const SizedBox(height: 14), widget.footer!],
       ],
-    ]);
+    ];
+    if (widget.horizontal) {
+      return Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.center, children: [
+        card,
+        const SizedBox(width: 24),
+        Flexible(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: texts)),
+      ]);
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: [card, const SizedBox(height: 16), ...texts]);
   }
 }
 
