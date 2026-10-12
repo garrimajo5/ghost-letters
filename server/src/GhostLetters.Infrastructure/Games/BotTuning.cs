@@ -94,7 +94,7 @@ public sealed record BotTuning
     public double GhostFallback { get; init; } = .15;
 
     /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
-    public double AssociationScale { get; init; } = 1;
+    public double AssociationScale { get; init; } = .5;
 
     public static readonly BotTuning Default = new();
 
