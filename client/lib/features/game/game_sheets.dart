@@ -947,7 +947,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                     final quotable = canWrite && m.authorId != null && m.authorId != screen.view?.me?.id && (m.text ?? '').isNotEmpty;
                     final mine = m.authorId != null && m.authorId == screen.view?.me?.id;
                     final inlineParts = ChatCardText.parse(m, screen.view?.board ?? [], screen.view?.hints ?? []);
-                    final inlineCards = m.isVoice ? <String>{} : inlineParts.map((p) => p.cardId).whereType<String>().toSet();
+                    final voiceOnly = m.isVoice && (m.text ?? '').isEmpty;
+                    final inlineCards = voiceOnly ? <String>{} : inlineParts.map((p) => p.cardId).whereType<String>().toSet();
                     if (m.authorId == null) {
                       return Center(
                         child: Container(
@@ -984,9 +985,10 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                                 if (fromTable) _ChatTag(key: Key('chat-table-${m.id}'), icon: Icons.touch_app_outlined, text: 'со стола'),
                               ]),
                             ),
+                          // Озвученная реплика бота: и голос, и текст с картами.
                           if (m.isVoice)
-                            _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0)
-                          else if ((m.text ?? '').isNotEmpty)
+                            _VoiceTile(voice: voice, mediaId: m.mediaId!, durationMs: m.durationMs ?? 0),
+                          if (!voiceOnly && (m.text ?? '').isNotEmpty)
                             ChatCardText(message: m, parts: inlineParts, mentions: screen.mentions),
                           if (m.cardIds.any((id) => !inlineCards.contains(id)))
                             Padding(

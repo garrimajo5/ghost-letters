@@ -72,6 +72,14 @@ class SoundSettingsSheet extends ConsumerWidget {
                       : null,
                 ),
               ),
+              SwitchListTile(
+                key: const Key('bot-voices-switch'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Голоса ботов'),
+                subtitle: const Text('Реплики ботов вслух, когда в партии включено «Боты говорят голосом»'),
+                value: value.botVoices,
+                onChanged: (enabled) => controller.update(botVoices: enabled),
+              ),
             ]),
       ),
     );

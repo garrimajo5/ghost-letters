@@ -543,6 +543,10 @@ class _SettingsSummary extends StatelessWidget {
         ('Рейтинговая — меняет рейтинг', (s) => s.copyWith(ranked: true)),
         ('Обычная — без рейтинга', (s) => s.copyWith(ranked: false)),
       ]),
+      _chip(context, 'bot-voice', settings.botVoice ? 'боты голосом' : 'боты текстом', rules: true, choices: [
+        ('Боты говорят голосом', (s) => s.copyWith(botVoice: true)),
+        ('Боты только пишут', (s) => s.copyWith(botVoice: false)),
+      ]),
       _chip(context, 'rows', settings.useSecretRow ? '4 ряда (с «Тайной»)' : '3 ряда', rules: true, choices: [
         ('3 ряда: Мотив, Место, Способ', (s) => s.copyWith(useSecretRow: false)),
         ('4 ряда: + «Тайна»', (s) => s.copyWith(useSecretRow: true)),

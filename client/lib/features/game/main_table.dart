@@ -1919,7 +1919,15 @@ class _Typing extends ChangeNotifier {
     _hold = 0;
     // Пауза «печатает…» — от длины реплики: 0,6–2 с.
     _pause = (15 + _letters.length ~/ 12).clamp(15, 50);
-    _timer = Timer.periodic(tick, (_) => _step());
+    var step = tick;
+    // Бот говорит голосом: слышно сразу, а текст идёт вровень с речью.
+    if (m.isVoice && screen.isBot(m.authorId) && screen.ref.read(soundSettingsProvider).botVoices) {
+      _pause = 0;
+      final letters = (_letters.length - shown).clamp(1, 100000);
+      step = Duration(milliseconds: ((m.durationMs ?? 0) / letters).round().clamp(20, 120));
+      unawaited(screen.ref.read(voiceProvider).play(m.mediaId!).catchError((Object _) {}));
+    }
+    _timer = Timer.periodic(step, (_) => _step());
     _notify();
   }
 

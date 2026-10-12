@@ -129,6 +129,7 @@ class LobbySettings {
     this.cardSets = const ['original', 'mailbox', 'ritual', 'mirror'],
     this.ghostUserId,
     this.ranked = true,
+    this.botVoice = true,
   });
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
@@ -149,6 +150,7 @@ class LobbySettings {
         cardSets: _strings(j['cardSets']).isEmpty ? const ['original', 'mailbox', 'ritual', 'mirror'] : _strings(j['cardSets']),
         ghostUserId: j['ghostUserId'] as String?,
         ranked: j['ranked'] as bool? ?? true,
+        botVoice: j['botVoice'] as bool? ?? true,
       );
 
   final bool useSecretRow;
@@ -200,6 +202,9 @@ class LobbySettings {
   /// Рейтинговая партия (итог меняет рейтинг) или обычная.
   final bool ranked;
 
+  /// Боты говорят голосом (если на сервере настроен синтез речи).
+  final bool botVoice;
+
   int timer(String key, int fallback) => timers[key] ?? fallback;
 
   LobbySettings copyWith({
@@ -217,6 +222,7 @@ class LobbySettings {
     String? ghostUserId,
     bool clearGhost = false,
     bool? ranked,
+    bool? botVoice,
   }) {
     // Выбор того же значения в меню — не правка: шаблон остаётся «чистым».
     final rulesChanged = (useSecretRow != null && useSecretRow != this.useSecretRow) ||
@@ -230,7 +236,8 @@ class LobbySettings {
         (turnHours != null && turnHours != this.turnHours) ||
         (timers != null && timers.toString() != this.timers.toString()) ||
         (cardSets != null && cardSets.join(',') != this.cardSets.join(',')) ||
-        (ranked != null && ranked != this.ranked);
+        (ranked != null && ranked != this.ranked) ||
+        (botVoice != null && botVoice != this.botVoice);
     return LobbySettings(
         presetName: presetName ?? this.presetName ?? (rulesPreset == 'ozon' ? 'Озон' : _isClassic ? 'Классика' : null),
         presetModified: presetName != null ? false : presetModified || changed,
@@ -249,6 +256,7 @@ class LobbySettings {
         cardSets: cardSets ?? this.cardSets,
         ghostUserId: clearGhost ? null : ghostUserId ?? this.ghostUserId,
         ranked: ranked ?? this.ranked,
+        botVoice: botVoice ?? this.botVoice,
       );
   }
 
@@ -268,6 +276,7 @@ class LobbySettings {
         'cardSets': cardSets,
         'ghostUserId': ghostUserId,
         'ranked': ranked,
+        'botVoice': botVoice,
       };
 }
 
@@ -1116,6 +1125,9 @@ class BotInfo {
     this.games = 0,
     this.wins = 0,
     this.rating = 1000,
+    this.voice = '',
+    this.voiceRole = '',
+    this.defaultVoice = '',
   });
 
   factory BotInfo.fromJson(Json j) => BotInfo(
@@ -1129,6 +1141,9 @@ class BotInfo {
         games: (j['games'] as num?)?.toInt() ?? 0,
         wins: (j['wins'] as num?)?.toInt() ?? 0,
         rating: (j['rating'] as num?)?.toInt() ?? 1000,
+        voice: j['voice'] as String? ?? '',
+        voiceRole: j['voiceRole'] as String? ?? '',
+        defaultVoice: j['defaultVoice'] as String? ?? '',
       );
 
   final String id;
@@ -1141,6 +1156,29 @@ class BotInfo {
   final int games;
   final int wins;
   final int rating;
+
+  /// Голос озвучки (SpeechKit); пусто — постоянный голос по id ([defaultVoice]).
+  final String voice;
+  final String voiceRole;
+  final String defaultVoice;
+}
+
+/// Голос для озвучки ботов: id SpeechKit, имя, пол и амплуа (интонации).
+class VoiceOption {
+  const VoiceOption({required this.id, required this.label, required this.male, this.roles = const []});
+  factory VoiceOption.fromJson(Json j) => VoiceOption(
+        id: j['id'] as String,
+        label: j['label'] as String,
+        male: j['male'] as bool? ?? false,
+        roles: [
+          for (final r in (j['roles'] as List? ?? const []))
+            (id: (r as Map)['id'] as String, label: r['label'] as String),
+        ],
+      );
+  final String id;
+  final String label;
+  final bool male;
+  final List<({String id, String label})> roles;
 }
 
 /// Бот для выбора в лобби.

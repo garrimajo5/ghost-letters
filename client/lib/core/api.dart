@@ -266,10 +266,27 @@ class Api {
   Future<List<BotInfo>> adminBots() async =>
       ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
-  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled}) async {
-    final body = {'nickname': nickname, 'avatarColor': color, 'about': about, 'spectra': spectra.toJson(), 'enabled': enabled};
+  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled,
+      String voice = '', String voiceRole = ''}) async {
+    final body = {'nickname': nickname, 'avatarColor': color, 'about': about, 'spectra': spectra.toJson(), 'enabled': enabled,
+      'voice': voice, 'voiceRole': voiceRole};
     return BotInfo.fromJson((id == null ? await post('/admin/bots', body) : await put('/admin/bots/$id', body)) as Json);
   }
+
+  /// Голоса озвучки ботов и включён ли синтез на сервере.
+  Future<({bool enabled, List<VoiceOption> voices})> botVoices() async {
+    final j = await get('/admin/bots/voices') as Json;
+    return (
+      enabled: j['enabled'] as bool? ?? false,
+      voices: [for (final v in (j['voices'] as List)) VoiceOption.fromJson(Map<String, dynamic>.from(v as Map))],
+    );
+  }
+
+  /// Проба голоса (MP3).
+  Future<Uint8List> voiceSample(String voice, String role, {String? text}) async => Uint8List.fromList((await _call(() => _dio.post<List<int>>(
+      '/admin/bots/voice-sample',
+      data: {'voice': voice, 'role': role, 'text': text},
+      options: Options(responseType: ResponseType.bytes)))) as List<int>);
 
   /// Фото бота (только админ): уже обрезанное под круг.
   Future<BotInfo> uploadBotAvatar(String botId, Uint8List bytes, String fileName) async {

@@ -165,11 +165,21 @@ class FakeApi extends Api {
   Future<bool> isAdmin() async => _record('isAdmin', const [], () => admin);
 
   @override
+  Future<({bool enabled, List<VoiceOption> voices})> botVoices() async => _record('botVoices', const [], () => (
+        enabled: true,
+        voices: const [
+          VoiceOption(id: 'kirill', label: 'Кирилл', male: true, roles: [(id: 'neutral', label: 'спокойно'), (id: 'strict', label: 'строго')]),
+          VoiceOption(id: 'julia', label: 'Юлия', male: false, roles: [(id: 'neutral', label: 'спокойно')]),
+        ],
+      ));
+
+  @override
   Future<List<BotInfo>> adminBots() async => _record('adminBots', const [], () => botList);
 
   @override
-  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled}) async =>
-      _record('saveBot', [id, nickname, spectra, enabled], () {
+  Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled,
+          String voice = '', String voiceRole = ''}) async =>
+      _record('saveBot', [id, nickname, spectra, enabled, voice, voiceRole], () {
         final bot = BotInfo(
             id: id ?? 'b${botList.length + 1}',
             nickname: 'Бот $nickname'.replaceFirst('Бот Бот ', 'Бот '),
@@ -177,7 +187,9 @@ class FakeApi extends Api {
             avatarId: botList.where((b) => b.id == id).firstOrNull?.avatarId,
             about: about,
             spectra: spectra,
-            enabled: enabled);
+            enabled: enabled,
+            voice: voice,
+            voiceRole: voiceRole);
         botList = [for (final b in botList) if (b.id != bot.id) b, bot];
         return bot;
       });

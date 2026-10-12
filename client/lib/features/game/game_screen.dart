@@ -15,6 +15,7 @@ import '../../core/realtime.dart';
 import '../../core/lobby_preferences.dart';
 import '../../core/session.dart' show prefsProvider, sessionProvider;
 import '../../core/texts.dart';
+import '../../core/voice.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
