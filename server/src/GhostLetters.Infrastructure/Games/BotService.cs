@@ -15,7 +15,7 @@ namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
 public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time, ReactionService reactions,
-    Speech.SpeechKit speech)
+    Speech.SpeechKit speech, Speech.SpeechWriter writer)
 {
     private CardTags tags = baselineTags;
     /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
@@ -33,12 +33,20 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     {
         if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
         {
-            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags);
+            var names = new List<string>();
+            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
             if (text.Length > 0)
             {
-                var profile = await db.BotProfiles.AsNoTracking().Where(b => b.UserId == botId)
-                    .Select(b => new { b.Voice, b.VoiceRole }).FirstOrDefaultAsync(ct);
+                var profile = await (from b in db.BotProfiles.AsNoTracking()
+                                     join u in db.Users.AsNoTracking() on b.UserId equals u.Id
+                                     where b.UserId == botId
+                                     select new { b.Voice, b.VoiceRole, b.About, u.Nickname }).FirstOrDefaultAsync(ct);
                 var (voice, role) = Speech.BotVoices.For(botId, profile?.Voice, profile?.VoiceRole);
+                var male = Speech.BotVoices.Find(voice)?.Male ?? true;
+                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
+                // Вслух — своими словами: YandexGPT (если подключён), иначе варианты фраз по правилам; шаблон остаётся в чате.
+                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
+                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, Speech.SpokenStyle.MannerOf(botId), male);
                 if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
                 {
                     try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
