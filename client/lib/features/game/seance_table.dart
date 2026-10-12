@@ -76,7 +76,7 @@ class _SeanceCircle extends StatelessWidget {
       // Подписи и подсказки секторов.
       for (var i = 0; i < sectors; i++) {
         final mid = sectorStart(i) + math.pi / sectors;
-        final label = at(mid, r * 0.76);
+        final label = at(mid, r * 0.8);
         final group = v.hints.where((h) => h.round == i).firstOrNull;
         children.add(Positioned(
           left: label.dx - 45,
@@ -94,7 +94,7 @@ class _SeanceCircle extends StatelessWidget {
           // Несколько подсказок раунда — веером вдоль дуги своего сектора.
           final spread = (2 * math.pi / sectors) * 0.5;
           final a = cards.length == 1 ? mid : mid - spread / 2 + spread * k / (cards.length - 1);
-          final p = at(a, r * 0.55);
+          final p = at(a, r * 0.52);
           final c = cards[k];
           final size = cards.length < 2 ? hint : math.max(16.0, math.min(hint, r * 0.55 * spread / (cards.length - 1) * 0.9)).floorToDouble();
           children.add(Positioned(
