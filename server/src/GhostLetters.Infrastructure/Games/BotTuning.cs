@@ -81,8 +81,8 @@ public sealed record BotTuning
     /// <summary>Насколько мирный не верит проверкам и мнениям подозреваемых (0 — верит всем одинаково).</summary>
     public double SuspectDistrust { get; init; } = 1;
 
-    /// <summary>Множитель того, как часто Шантажист голосует за вторую по уликам карту (1 — как раньше).</summary>
-    public double BlackmailerSpoil { get; init; } = 1;
+    /// <summary>Множитель того, как часто Шантажист голосует за вторую по уликам карту (1 — как раньше; .4 — по замеру 8 игроков 28 → 35 %).</summary>
+    public double BlackmailerSpoil { get; init; } = .4;
 
     public static readonly BotTuning Default = new();
 
