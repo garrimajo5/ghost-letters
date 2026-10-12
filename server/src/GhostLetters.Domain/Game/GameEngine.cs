@@ -448,9 +448,16 @@ public static partial class GameEngine
         state.Mailbox.Clear();
         events.Add(new GameEvent("HintsRevealed", state.Ghost.Id, Detail: group.Cards.Count.ToString()));
 
-        // Последний раунд: добора нет — сразу обсуждение.
+        // Последний раунд: писем больше не будет — выбор «оставить / сбросить» не спрашиваем,
+        // руку добираем сами и сразу начинаем обсуждение.
         if (state.Round >= state.TotalRounds)
         {
+            foreach (var p in state.Players.Where(p => !state.Done.Contains(p.Id)))
+            {
+                Refill(state, p);
+                state.Done.Add(p.Id);
+            }
+
             StartDiscussion(state, events);
             return;
         }

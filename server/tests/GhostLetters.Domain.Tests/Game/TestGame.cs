@@ -59,6 +59,8 @@ internal static class TestGame
 
     public static void KeepAll(this GameState state)
     {
+        // В последнем раунде добора не спрашивают: обсуждение начинается сразу после выкладки.
+        if (state.Phase is not (Phase.GhostPick or Phase.Refill) || state.Round >= state.TotalRounds) return;
         foreach (var p in state.Players.Where(x => !state.Done.Contains(x.Id)).ToList())
         {
             state.Run(p, new Discard(null));
