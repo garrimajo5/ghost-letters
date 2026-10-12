@@ -81,6 +81,9 @@ public sealed record BotTuning
     /// <summary>Насколько мирный не верит проверкам и мнениям подозреваемых (0 — верит всем одинаково).</summary>
     public double SuspectDistrust { get; init; } = 1;
 
+    /// <summary>Множитель того, как часто Шантажист голосует за вторую по уликам карту (1 — как раньше).</summary>
+    public double BlackmailerSpoil { get; init; } = 1;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -131,6 +134,7 @@ public sealed record BotTuning
                 nameof(AccompliceSpoiler) => t with { AccompliceSpoiler = B() },
                 nameof(SpoilerExclude) => t with { SpoilerExclude = D() },
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
+                nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),

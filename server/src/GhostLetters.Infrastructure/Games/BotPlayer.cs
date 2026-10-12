@@ -540,7 +540,7 @@ public static class BotPlayer
 
             // Шантажисту выгодно нераскрытое дело: иногда голосует за вторую по уликам карту, а свою лучшую
             // версию бережёт для финала — его не ищут, и улики он называет сам.
-            if (me.Role == Role.Blackmailer && candidates.Count > 1 && rng.NextDouble() < 0.3 + 0.4 * P.Risk)
+            if (me.Role == Role.Blackmailer && candidates.Count > 1 && rng.NextDouble() < BotTuning.Current.BlackmailerSpoil * (0.3 + 0.4 * P.Risk))
             {
                 return candidates.OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).Skip(1).First();
             }
