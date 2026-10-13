@@ -47,14 +47,20 @@ public static partial class ChatStyle
     {
         if (string.IsNullOrWhiteSpace(text)) return text ?? "";
         var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions);
-        var parts = new List<string>();
+        var result = "";
+        var afterList = false;
         foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            var said = Line(line, ctx);
-            if (said.Length > 0) parts.Add(said);
+            var said = Regex.Replace(Line(line, ctx), @"[ \t]+", " ").Replace(" .", ".").Replace("..", ".").Trim();
+            if (said.Length == 0) continue;
+            // Список по рядам («• мотив 2 — …») остаётся списком, остальное — одним абзацем, как пишут люди.
+            var item = said.StartsWith('•');
+            result += result.Length == 0 ? said : item || afterList ? "\n" + said : " " + said;
+            afterList = item;
         }
 
-        var result = Regex.Replace(string.Join(" ", parts), @"\s+", " ").Replace(" .", ".").Replace("..", ".").Trim();
+        // Предложение после точки — с большой буквы («… тайна 2. Связь …»).
+        result = Regex.Replace(result, @"(?<=[.!?] )[а-яё]", m => m.Value.ToUpperInvariant());
         if (result.Length == 0) return text;
         // В чате люди пишут «Ватсон», а не «Бот Ватсон».
         result = Regex.Replace(result, @"(?<![а-яёА-ЯЁ])Бот (?=[А-ЯЁ])", "");
@@ -64,6 +70,8 @@ public static partial class ChatStyle
 
     private static string Line(string line, Ctx c)
     {
+        line = Common(line, c);
+        if (line.StartsWith("• ", StringComparison.Ordinal)) return line;
         // Версия с откликом на чужое мнение, подозрением и оговоркой в одной строке — разбираем по частям.
         if (line.StartsWith("Версия: ", StringComparison.Ordinal) || Regex.IsMatch(line, @"^[^,.]{2,24}, (?:согласен|тут не соглашусь)\. Версия: "))
             return Version(line, c);
@@ -151,6 +159,18 @@ public static partial class ChatStyle
         if ((m = Regex.Match(bare, @"^Подозреваю (?<who>.+?): уже бывал Убийцей$")).Success)
             return c.Pick($"{m.Groups["who"].Value} уже бывал Убийцей — подозреваю.", $"Подозреваю {m.Groups["who"].Value}: уже бывал Убийцей.");
         return s;
+    }
+
+    /// <summary>Обороты, которые бот повторяет в каждой строке, — разными словами.</summary>
+    private static string Common(string line, Ctx c)
+    {
+        line = line.Replace("связь с открытыми уликами слабая, пока предположение", c.Pick("улик под неё мало, пока чутьё", "пока скорее наугад", "прямых улик нет, догадка"));
+        line = Regex.Replace(line, @"(?<hint>Подсказка р\.\d+ №\d+|Зацепка): (?<why>по (?:смыслу|форме|цвету|деталям): [^.;]+(?:; [^.]+)?)",
+            m => $"{m.Groups["hint"].Value} — {Reason(m.Groups["why"].Value, c)}");
+        line = line.Replace(" По игрокам пока недостаточно оснований для уверенного обвинения.", " " + c.Pick("Кого подозревать — пока не знаю.", "По игрокам пока молчу.", "Подозреваемых пока не назову."));
+        if (line.StartsWith("По игрокам пока недостаточно оснований для уверенного обвинения", StringComparison.Ordinal))
+            line = c.Pick("Кого подозревать — пока не знаю.", "По игрокам пока молчу.");
+        return line;
     }
 
     /// <summary>«Аня, согласен. Версия: По-моему, Место: 4. Кто против? Подозреваю, что …» — по-человечески.</summary>
