@@ -155,7 +155,7 @@ public static partial class ChatStyle
             var hint = m.Groups["hint"].Value;
             var to = m.Groups["to"].Value;
             return c.Pick($"{hint} намекает на {Acc(to)}: {why}.",
-                $"{hint} и {to}: {why}.",
+                $"{hint} и {to} — {why}.",
                 $"Смотрите: {(hint == "Зацепка" ? "зацепка" : hint)} — {why}, как и {to}.");
         }
         if ((m = Regex.Match(bare, @"^Целиком думаю так: (?<list>.+)$")).Success)
@@ -281,7 +281,7 @@ public static partial class ChatStyle
         };
     }
 
-    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «общее — море».</summary>
+    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «там тоже море» (без тире и двоеточий — их ставит фраза вокруг).</summary>
     private static string Reason(string why, Ctx c)
     {
         var first = why.Split(';')[0].Trim();
@@ -290,10 +290,10 @@ public static partial class ChatStyle
         var what = m.Groups["what"].Value.Trim();
         return m.Groups["kind"].Value switch
         {
-            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"общее: {what}", $"там тоже {what}", $"их роднит {what}"),
-            "форме" => what == "похожий силуэт" ? "похожи формой" : c.Pick($"похожи формой ({what})", $"форма похожа: {what}"),
-            "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : c.Pick($"похожи цветом ({what})", $"цвет тот же: {what}"),
-            _ => c.Pick($"общая деталь: {what}", $"совпадает деталь: {what}"),
+            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"там тоже {what}", $"в обеих есть {what}", $"{what} и там, и там"),
+            "форме" => what == "похожий силуэт" ? "похожи формой" : c.Pick($"похожи формой ({what})", $"форма похожа ({what})"),
+            "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : c.Pick($"похожи цветом ({what})", $"цвет тот же ({what})"),
+            _ => c.Pick($"общая деталь ({what})", $"совпадает деталь ({what})"),
         };
     }
 
