@@ -542,7 +542,22 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
-        var perMessage = messages.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, m.CardIds, m.CardNotes, board).ToList()).ToList();
+        var playerIds = state.Players.Select(p => p.Id).ToList();
+        var botPlayers = (await db.Users.AsNoTracking().Where(u => playerIds.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
+        var perMessage = messages.Select(m =>
+        {
+            IReadOnlyList<string> cards = m.CardIds;
+            IReadOnlyList<string> notes = m.CardNotes;
+            // Человек написал словами, без карт («мотив пять — оно», «точно не клетка») — боты понимают так же, как речь.
+            if (cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
+            {
+                var ownLetters = state.Letters.Where(l => l.From == m.AuthorId).Select(l => l.CardId).ToList();
+                var read = Speech.SpokenCards.Read(m.Text, state.Board, state.Hints, ownLetters, tags);
+                (cards, notes) = (read.Cards, read.Notes);
+            }
+
+            return (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, cards, notes, board).ToList();
+        }).ToList();
         var opinions = perMessage.SelectMany(o => o).ToList();
 
         var everyone = state.Players.Select(p => p.Id).ToList();
