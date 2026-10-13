@@ -57,14 +57,14 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
             .Select(p => (p.Intent, p.Emotion, p.Template)).ToList();
     }
 
-    private sealed record BotRow(Guid Id, string Nickname, string Voice, string VoiceRole);
+    private sealed record BotRow(Guid Id, string Nickname, string Voice, string VoiceRole, string? Gender);
 
     private async Task<List<BotRow>> BotsAsync(CancellationToken ct) =>
         await (from b in db.BotProfiles.AsNoTracking()
                join u in db.Users.AsNoTracking() on b.UserId equals u.Id
                where b.Enabled
                orderby u.Nickname
-               select new BotRow(b.UserId, u.Nickname, b.Voice, b.VoiceRole)).ToListAsync(ct);
+               select new BotRow(b.UserId, u.Nickname, b.Voice, b.VoiceRole, u.Gender)).ToListAsync(ct);
 
     /// <summary>Выученные фразы для кабинета: новые сверху, с автором и ботами, которые говорят этой манерой.</summary>
     public async Task<PhraseListDto> ListAsync(int take, CancellationToken ct)
@@ -97,7 +97,7 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
         var other = bots.Where(b => b.Id != speaker?.Id).Select(b => b.Nickname).OrderBy(_ => Random.Shared.Next()).FirstOrDefault() ?? "Аня";
         var text = PhraseBook.Fill(row.Template, card ?? "клетка", other);
         var (voice, role) = speaker is null ? (BotVoices.All[0].Id, BotVoices.All[0].Roles.FirstOrDefault()) : BotVoices.For(speaker.Id, speaker.Voice, speaker.VoiceRole);
-        if (BotVoices.Find(voice)?.Male == false) text = SpokenStyle.Feminine(text);
+        if (Genders.IsFemale(speaker?.Gender) ?? BotVoices.Find(voice)?.Male == false) text = SpokenStyle.Feminine(text);
         var audio = speech.Enabled && text.Length > 0 ? await speech.SynthesizeAsync(text, voice, role, ct) : null;
         return new PhrasePlayDto(text, speaker?.Nickname ?? "", audio is null ? null : Convert.ToBase64String(audio.Mp3));
     }

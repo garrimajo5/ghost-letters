@@ -15,13 +15,14 @@ List<int> _ints(dynamic v) => v is List ? v.map((e) => (e as num).toInt()).toLis
 DateTime? _date(dynamic v) => v is String ? DateTime.tryParse(v) : null;
 
 class User {
-  const User({required this.id, required this.nickname, required this.avatarColor, this.avatarId});
+  const User({required this.id, required this.nickname, required this.avatarColor, this.avatarId, this.gender});
 
   factory User.fromJson(Json j) => User(
         id: j['id'] as String,
         nickname: j['nickname'] as String,
         avatarColor: j['avatarColor'] as String,
         avatarId: j['avatarId'] as String?,
+        gender: j['gender'] as String?,
       );
 
   final String id;
@@ -31,7 +32,10 @@ class User {
   /// Загруженная аватарка; null — круг с буквой.
   final String? avatarId;
 
-  Json toJson() => {'id': id, 'nickname': nickname, 'avatarColor': avatarColor, 'avatarId': avatarId};
+  /// 'male', 'female' или null — не указан. Нужен ботам, чтобы обращаться в нужном роде («ты права»).
+  final String? gender;
+
+  Json toJson() => {'id': id, 'nickname': nickname, 'avatarColor': avatarColor, 'avatarId': avatarId, 'gender': gender};
 }
 
 class AuthTokens {
@@ -1135,6 +1139,7 @@ class BotInfo {
     this.voice = '',
     this.voiceRole = '',
     this.defaultVoice = '',
+    this.gender = '',
   });
 
   factory BotInfo.fromJson(Json j) => BotInfo(
@@ -1151,7 +1156,11 @@ class BotInfo {
         voice: j['voice'] as String? ?? '',
         voiceRole: j['voiceRole'] as String? ?? '',
         defaultVoice: j['defaultVoice'] as String? ?? '',
+        gender: j['gender'] as String? ?? '',
       );
+
+  /// 'male', 'female' или '' — по голосу.
+  final String gender;
 
   final String id;
   final String nickname;

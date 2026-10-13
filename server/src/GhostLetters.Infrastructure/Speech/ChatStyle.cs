@@ -27,7 +27,7 @@ public static partial class ChatStyle
 
     private sealed record Ctx(Random Rng, SpokenStyle.Manner Manner, double Risk,
         IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions,
-        IReadOnlyCollection<string> Earlier, string? Persona = null)
+        IReadOnlyCollection<string> Earlier, string? Persona = null, IReadOnlyDictionary<string, bool>? Genders = null)
     {
         /// <summary>Фраза своего персонажа (Пуаро, Марпл…) для ситуации — в большинстве реплик, но не во всех.</summary>
         public string? Own(string situation, string? card = null, string? who = null, string? list = null, string? why = null,
@@ -51,7 +51,10 @@ public static partial class ChatStyle
         public string? LearnedFor(string intent, string? card, string? player)
         {
             if (Learned.Count == 0 || Rng.NextDouble() >= LearnedShare) return null;
-            var options = Learned.Where(l => l.Intent == intent && (Emotions is null || Emotions.Contains(l.Emotion))).ToList();
+            // Фраза с «ты прав»/«дорогой мой» годится, только если знаем род того, к кому обращаемся.
+            var addresseeKnown = player is null || Genders?.ContainsKey(Bare(player)) == true;
+            var options = Learned.Where(l => l.Intent == intent && (Emotions is null || Emotions.Contains(l.Emotion)) &&
+                (addresseeKnown || !RussianGender.DependsOnAddressee(l.Template))).ToList();
             if (options.Count == 0) return null;
             var said = SpokenStyle.Masculine(PhraseBook.Fill(options[Rng.Next(options.Count)].Template, card, player));
             return said.Length == 0 ? null : said;
@@ -62,12 +65,14 @@ public static partial class ChatStyle
     /// <param name="emotions">Эмоции, которые подходят боту.</param>
     /// <param name="earlier">Прежние реплики бота в этой партии: уже сказанные обвинения он не повторяет.</param>
     /// <param name="persona">Персонаж бота (<see cref="PersonaLines.KeyOf"/>): говорит его фразами.</param>
+    /// <param name="genders">Ник игрока → женский ли род: к нему обращаются и о нём говорят в его роде.</param>
     public static string Humanize(string? text, Random rng, SpokenStyle.Manner manner, bool male, double risk = .5,
         IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null,
-        IReadOnlyCollection<string>? earlier = null, string? persona = null)
+        IReadOnlyCollection<string>? earlier = null, string? persona = null, IReadOnlyDictionary<string, bool>? genders = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return text ?? "";
-        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? [], persona);
+        genders = genders?.GroupBy(g => Bare(g.Key)).ToDictionary(g => g.Key, g => g.First().Value);
+        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? [], persona, genders);
         var result = "";
         var afterList = false;
         var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
@@ -104,7 +109,8 @@ public static partial class ChatStyle
         // В чате люди пишут «Ватсон», а не «Бот Ватсон».
         result = Regex.Replace(result, @"(?<![а-яёА-ЯЁ])Бот (?=[А-ЯЁ])", "");
         result = char.ToUpperInvariant(result[0]) + result[1..];
-        return male ? result : SpokenStyle.Feminine(result);
+        // Сначала свой род (о себе), потом — род тех, к кому бот обращается и о ком говорит.
+        return RussianGender.People(RussianGender.Speaker(result, !male), genders);
     }
 
     private static string Line(string line, Ctx c)
@@ -370,6 +376,8 @@ public static partial class ChatStyle
         ? s : char.ToLowerInvariant(s[0]) + s[1..];
 
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    private static string Bare(string name) => name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
 
     /// <summary>Ссылки на карты в тексте — для проверки, что пересказ ничего не потерял.</summary>
     public static IReadOnlyList<string> Refs(string text) =>

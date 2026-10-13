@@ -437,3 +437,24 @@ Future<bool> confirmCloseGame(BuildContext context) async =>
       ),
     ) ??
     false;
+
+/// Пол: «Мужской», «Женский» или не указан ('' — тогда [unsetLabel]).
+class GenderPicker extends StatelessWidget {
+  const GenderPicker({super.key, required this.value, required this.onChanged, this.unsetLabel = 'Не указан'});
+
+  final String value;
+  final String unsetLabel;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SegmentedButton<String>(
+        showSelectedIcon: false,
+        segments: [
+          const ButtonSegment(value: 'male', label: Text('Мужской')),
+          const ButtonSegment(value: 'female', label: Text('Женский')),
+          ButtonSegment(value: '', label: Text(unsetLabel)),
+        ],
+        selected: {value == 'male' || value == 'female' ? value : ''},
+        onSelectionChanged: (s) => onChanged(s.first),
+      );
+}

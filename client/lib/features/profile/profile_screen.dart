@@ -148,6 +148,22 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 4),
+            // Пол — чтобы боты обращались в нужном роде: «Аня, ты права».
+            Text('ПОЛ', style: heading(14, color: AppColors.ice, spacing: 2)),
+            const SizedBox(height: 4),
+            const Text('Боты обращаются к вам в этом роде: «ты прав» или «ты права».', style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            const SizedBox(height: 6),
+            GenderPicker(
+              key: const Key('profile-gender'),
+              value: p.user.gender ?? '',
+              onChanged: (g) async {
+                final updated = await runAction(context, () => ref.read(apiProvider).updateMe(gender: g));
+                if (updated == null) return;
+                ref.read(sessionProvider.notifier).updateUser(updated);
+                ref.invalidate(profileProvider(userId));
+              },
+            ),
+            const SizedBox(height: 10),
             OutlinedButton.icon(
               key: const Key('recovery-settings'),
               icon: const Icon(Icons.key),

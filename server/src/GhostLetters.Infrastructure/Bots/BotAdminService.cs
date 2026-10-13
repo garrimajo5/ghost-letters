@@ -48,11 +48,12 @@ public sealed record BotDto(
     int Rating,
     string Voice = "",
     string VoiceRole = "",
-    string DefaultVoice = "");
+    string DefaultVoice = "",
+    string? Gender = null);
 
 /// <param name="Voice">Голос SpeechKit (см. /admin/bots/voices); пусто — постоянный голос по id бота.</param>
 public sealed record SaveBotRequest(string Nickname, string? AvatarColor, string? About, BotSpectra Spectra, bool Enabled = true,
-    string? Voice = null, string? VoiceRole = null);
+    string? Voice = null, string? VoiceRole = null, string? Gender = null);
 
 /// <summary>Бот для выбора в лобби: имя, цвет и пара слов о характере.</summary>
 public sealed record BotCardDto(Guid Id, string Nickname, string AvatarColor, Guid? AvatarId, string About);
@@ -100,6 +101,7 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
             CreatedAt = now,
             LastSeenAt = now,
             IsBot = true,
+            Gender = Genders.Normalize(request.Gender),
         };
         var profile = new BotProfile { UserId = user.Id };
         Apply(profile, request, now);
@@ -116,6 +118,8 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
         var profile = await db.BotProfiles.FirstOrDefaultAsync(b => b.UserId == botId, ct) ?? throw AppException.NotFound("Бот не найден.");
         var user = await db.Users.SingleAsync(u => u.Id == botId, ct);
         user.Nickname = BotNickname(request.Nickname);
+        // Старый клиент пол не присылает — оставляем прежний; пустая строка — «по голосу».
+        if (request.Gender is not null) user.Gender = Genders.Normalize(request.Gender);
         if (request.AvatarColor is not null)
         {
             user.AvatarColor = ProfileRules.AvatarColor(request.AvatarColor);
@@ -157,7 +161,8 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
             var nickname = BotNickname(name);
             if (!existing.Contains(nickname))
             {
-                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p) with { Social = null }), ct);
+                await CreateAsync(adminId, new SaveBotRequest(nickname, color, about, BotSpectra.From(p) with { Social = null },
+                    Gender: Speech.PersonaLines.IsFemale(nickname) == true ? Genders.Female : Genders.Male), ct);
             }
         }
 
@@ -227,5 +232,5 @@ public sealed class BotAdminService(GhostLettersDbContext db, IConfiguration con
 
     private static BotDto ToDto(BotProfile b, User u, int games, int wins, int rating) =>
         new(u.Id, u.Nickname, u.AvatarColor, u.AvatarMediaId, b.About, BotSpectra.From(Personality(b)), b.Enabled, games, wins, rating,
-            b.Voice, b.VoiceRole, Speech.BotVoices.For(u.Id, null, null).Voice);
+            b.Voice, b.VoiceRole, Speech.BotVoices.For(u.Id, null, null).Voice, u.Gender);
 }

@@ -69,6 +69,9 @@ public static partial class PersonaLines
         return Keys.TryGetValue(bare.Trim(), out var key) && All.Value.ContainsKey(key) ? key : null;
     }
 
+    /// <summary>Род персонажа: Марпл — женский, остальные сыщики — мужской; неизвестный ник — null.</summary>
+    public static bool? IsFemale(string? nickname) => KeyOf(nickname) switch { null => null, "marple" => true, _ => false };
+
     public static IReadOnlyList<string> Lines(string? persona, string situation) =>
         persona is not null && All.Value.TryGetValue(persona, out var book) && book.TryGetValue(situation, out var lines) ? lines : [];
 
