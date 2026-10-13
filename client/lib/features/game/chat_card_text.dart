@@ -47,7 +47,7 @@ class ChatCardText extends StatelessWidget {
       ChatMessage message, List<BoardRow> board, List<HintGroup> hints, String text) {
     // Карты по названию («место 2», «Подсказка р.1 №2») подставляются картинками в любой реплике.
     final pattern = RegExp(
-      r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+(?!\d)|один|два|три|четыре|пять|шесть|семь|перв[а-яё]*|втор[а-яё]*|трет[а-яё]*|четв[её]рт[а-яё]*|пят[а-яё]+|шест[а-яё]+|седьм[а-яё]*)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',
+      r'(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайн[ау])(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+(?!\d)|один|два|три|четыре|пять|шесть|семь|перв[а-яё]*|втор[а-яё]*|трет[а-яё]*|четв[её]рт[а-яё]*|пят[а-яё]+|шест[а-яё]+|седьм[а-яё]*)|вот эт[оу]|(Зацепка))(?![а-яёa-z])',
       caseSensitive: false,
     );
     final refs = <({int start, int end, String label, String cardId})>[];
@@ -67,7 +67,8 @@ class ChatCardText extends StatelessWidget {
       } else if (match[4] != null) {
         final index = (int.tryParse(match[5]!) ?? _number(match[5]!)) - 1;
         for (final row in board) {
-          if (T.categories[row.category]?.toLowerCase() == match[4]!.toLowerCase() && index >= 0 && index < row.cards.length) {
+          final word = match[4]!.toLowerCase().startsWith('тайн') ? 'тайна' : match[4]!.toLowerCase();
+          if (T.categories[row.category]?.toLowerCase() == word && index >= 0 && index < row.cards.length) {
             cardId = row.cards[index];
             label = match[4]!;
             break;

@@ -73,4 +73,15 @@ public sealed class ChatStyleTests
             new Random(2), SpokenStyle.Manner.Formal, true);
         answer.Should().StartWith("Аня, отвечаю").And.Contain("тайна 2");
     }
+
+    [Fact]
+    public void Secret_IsDeclined_AfterPrepositions()
+    {
+        foreach (var seed in Enumerable.Range(0, 30))
+        {
+            var s = ChatStyle.Humanize("Проверял: тайна 5 и способ 2 — по смыслу: путешествия.\nВерсия: Ставлю на тайна, карта 3.", new Random(seed), SpokenStyle.Manner.Lively, true);
+            s.Should().NotMatchRegex("(?i)\\b(в|на|про|за) тайна");
+            ChatStyle.Refs(s).Should().Contain(["тайна 5", "способ 2", "тайна 3"]);
+        }
+    }
 }
