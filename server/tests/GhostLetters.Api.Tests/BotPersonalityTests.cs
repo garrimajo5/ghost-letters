@@ -290,6 +290,18 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void Defense_IsNotReadAsAccusation()
+    {
+        foreach (var manner in Enum.GetValues<GhostLetters.Infrastructure.Speech.SpokenStyle.Manner>())
+            foreach (var seed in Enumerable.Range(0, 10))
+            {
+                var text = BotService.Defense("Аня", manner, new Random(seed));
+                text.Should().StartWithEquivalentOf("").And.Contain("Аня");
+                AccusationReader.Read(Bob, text, Names).Should().BeEmpty($"«{text}» — защита, а не обвинение");
+            }
+    }
+
+    [Fact]
     public void DirectQuestion_GetsShortAnswer_AboutAskedRowOrSuspects()
     {
         var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
