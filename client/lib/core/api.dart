@@ -362,6 +362,9 @@ class Api {
   Future<String> voiceAlias(String gameId, String questionId, String cardId) async =>
       ((await post('/games/$gameId/voice/alias', {'questionId': questionId, 'cardId': cardId})) as Json)['verdict'] as String;
 
+  /// Закрыть партию без доигрывания (своя с ботами; админ — любая).
+  Future<void> closeGame(String gameId) => post('/games/$gameId/close');
+
   Future<String> uploadVoice(MultipartFile file, int durationMs) async {
     final form = FormData.fromMap({
       'file': file,

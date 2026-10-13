@@ -21,7 +21,10 @@ public static class GameStore
         game.Phase = state.Phase.ToString();
         if (solo)
         {
-            game.PhaseDeadline = null;
+            // Один человек с ботами — без таймеров, кроме ачивок: не выбрал — партия завершается сама.
+            game.PhaseDeadline = state.Phase is Phase.AwardNomination or Phase.AwardVoting
+                ? phaseChanged || game.PhaseDeadline is null ? now + (settings.TimerFor(state) ?? TimeSpan.FromSeconds(90)) : game.PhaseDeadline
+                : null;
         }
         else if (phaseChanged)
         {

@@ -30,7 +30,8 @@ public sealed record MyGameDto(
     int Players = 0,
     string? Title = null,
     string? Role = null,
-    bool? Won = null);
+    bool? Won = null,
+    bool CanClose = false);
 
 public sealed record SummaryPlayerDto(Guid Id, string Nickname, string AvatarColor, int Seat, string Role, bool Won);
 
@@ -109,6 +110,12 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         var lobbyIds = list.Where(g => g.LobbyId != null).Select(g => g.LobbyId!.Value).Distinct().ToList();
         var titles = await db.Lobbies.AsNoTracking().Where(l => lobbyIds.Contains(l.Id))
             .ToDictionaryAsync(l => l.Id, l => l.Title, ct);
+        // Закрыть без доигрывания можно идущую партию, где кроме меня только боты.
+        var gameIds = list.Select(g => g.Id).ToList();
+        var withPeople = (await (from p in db.GamePlayers.AsNoTracking()
+                                 join u in db.Users.AsNoTracking() on p.UserId equals u.Id
+                                 where gameIds.Contains(p.GameId) && !u.IsBot && p.UserId != userId
+                                 select p.GameId).Distinct().ToListAsync(ct)).ToHashSet();
         return list.Select(g =>
         {
             var state = GameStore.Read(g);
@@ -119,7 +126,8 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
                 state.TotalRounds, state.Players.Count,
                 g.LobbyId is { } lobbyId ? titles.GetValueOrDefault(lobbyId) : null,
                 me.Role.ToString(),
-                state.Result is { } result ? (bool?)result.Winners.Contains(userId) : null);
+                state.Result is { } result ? (bool?)result.Winners.Contains(userId) : null,
+                g.Status is GameStatuses.Active or GameStatuses.Paused && !withPeople.Contains(g.Id));
         }).ToList();
     }
 

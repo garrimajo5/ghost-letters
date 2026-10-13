@@ -52,6 +52,28 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SoloGame_CanBeClosed_ByItsPlayer_NotByStranger()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var stranger = await TestPlayer.LoginAsync(_factory, "Чужой");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings { Rounds = 1 } });
+        var id = lobby.Id("id");
+        for (var i = 0; i < 3; i++) await host.PostAsync($"/api/v1/lobbies/{id}/bots", null);
+        var gameId = (await host.PostAsync($"/api/v1/lobbies/{id}/start", null)).Id("gameId");
+
+        var mine = await host.GetAsync("/api/v1/me/games?status=active");
+        mine.EnumerateArray().Single(g => g.Id("gameId") == gameId).GetProperty("canClose").GetBoolean().Should().BeTrue();
+        await stranger.PostAsync($"/api/v1/games/{gameId}/close", null, HttpStatusCode.Forbidden);
+        await host.PostAsync($"/api/v1/games/{gameId}/close", null, HttpStatusCode.NoContent);
+
+        var status = await _factory.WithDbAsync(db => db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => g.Status).SingleAsync());
+        status.Should().Be(GameStatuses.Abandoned);
+        (await host.GetAsync("/api/v1/me/games?status=active")).EnumerateArray().Should().NotContain(g => g.Id("gameId") == gameId);
+        (await host.PostAsync($"/api/v1/games/{gameId}/commands", new { type = "AckRole", payload = new { } }, HttpStatusCode.Conflict))
+            .Code().Should().Be("GAME_IN_PROGRESS");
+    }
+
+    [Fact]
     public async Task OneHumanAndBots_PlayWholeGame()
     {
         var host = await TestPlayer.LoginAsync(_factory, "Хост");
@@ -67,10 +89,12 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
         var driver = new GameDriver(game);
         var botMoves = 0;
         var deadlines = new HashSet<DateTimeOffset?>();
+        var awardDeadlines = new HashSet<DateTimeOffset?>();
 
         for (var i = 0; i < 2000 && (await game.StateAsync()).Status == "active"; i++)
         {
-            deadlines.Add(await _factory.WithDbAsync(db => db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => g.PhaseDeadline).SingleAsync()));
+            var row = await _factory.WithDbAsync(db => db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => new { g.Phase, g.PhaseDeadline }).SingleAsync());
+            (row.Phase is "AwardNomination" or "AwardVoting" ? awardDeadlines : deadlines).Add(row.PhaseDeadline);
             var moved = await _factory.WithServiceAsync<BotService, int>(s => s.TickAsync(CancellationToken.None));
             botMoves += moved;
             if (moved == 0 && !await driver.StepAsync())
@@ -82,6 +106,7 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
 
         (await game.StateAsync()).Status.Should().Be("finished");
         deadlines.Should().Equal(new DateTimeOffset?[] { null }, "один человек с ботами — без таймеров, боты ждут");
+        awardDeadlines.Where(d => d is not null).Should().NotBeEmpty("ачивки не ждут человека бесконечно");
         var reopened = await host.GetAsync($"/api/v1/lobbies/{lobby.Str("code")}");
         reopened.GetProperty("members").EnumerateArray().Where(m => m.GetProperty("isBot").GetBoolean())
             .Should().OnlyContain(m => m.GetProperty("isReady").GetBoolean(), "боты готовы к реваншу");

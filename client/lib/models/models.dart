@@ -867,6 +867,7 @@ class MyGame {
     this.won,
     this.startedAt,
     this.finishedAt,
+    this.canClose = false,
   });
 
   factory MyGame.fromJson(Json j) => MyGame(
@@ -883,8 +884,11 @@ class MyGame {
         won: j['won'] as bool?,
         startedAt: _date(j['startedAt']),
         finishedAt: _date(j['finishedAt']),
+        canClose: j['canClose'] as bool? ?? false,
       );
 
+  /// Партию с одними ботами можно закрыть без доигрывания.
+  final bool canClose;
   final String gameId;
   final String status;
   final String phase;
