@@ -54,7 +54,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
         {
-            var earlier = answering ? [] : await db.ChatMessages.AsNoTracking()
+            var earlier = answering ? new List<string>() : await db.ChatMessages.AsNoTracking()
                 .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Public)
                 .OrderByDescending(m => m.CreatedAt).Take(6).Select(m => m.Text ?? "").ToListAsync(ct);
             request = request with
