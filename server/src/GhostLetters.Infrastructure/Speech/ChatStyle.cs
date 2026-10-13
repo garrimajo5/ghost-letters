@@ -197,11 +197,13 @@ public static partial class ChatStyle
     /// <summary>Обороты, которые бот повторяет в каждой строке, — разными словами.</summary>
     private static string Common(string line, Ctx c)
     {
+        // «Сейчас выберу тайна 2» → «тайну 2»: после глагола и предлога ряд склоняется.
+        line = Regex.Replace(line, @"(?<=(?:выберу|выбираю|предлагаю|исключаю|проверял|на|за|в|про) )тайна(?= \d)", "тайну", RegexOptions.IgnoreCase);
         line = line.Replace("связь с открытыми уликами слабая, пока предположение", c.Pick("улик под неё мало, пока чутьё", "пока скорее наугад", "прямых улик нет, догадка"));
         line = Regex.Replace(line, @"(?<hint>Подсказка р\.\d+ №\d+|Зацепка): (?<why>по (?:смыслу|форме|цвету|деталям): [^.;]+(?:; [^.]+)?)",
             m => $"{m.Groups["hint"].Value} — {Reason(m.Groups["why"].Value, c)}");
         line = Regex.Replace(line, @"Пересмотрел выбор: (?<from>" + Ref + @") → (?<to>" + Ref + @")\. ",
-            m => c.Pick($"Передумал: не {m.Groups["from"].Value}, а {m.Groups["to"].Value}. ", $"Пересмотрел: {m.Groups["to"].Value} вместо {m.Groups["from"].Value}. "), RegexOptions.IgnoreCase);
+            m => c.Pick($"Передумал: не {m.Groups["from"].Value}, а {m.Groups["to"].Value}. ", $"Пересмотрел: теперь {m.Groups["to"].Value}, а не {m.Groups["from"].Value}. "), RegexOptions.IgnoreCase);
         line = line.Replace("Учёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке.",
             c.Pick("Свои исчезнувшие письма тоже учёл.", "Пропавшие письма учёл — в меру."));
         line = line.Replace("Исчезновение своих писем не считаю доводом против карт: смотрю на другие улики.",
