@@ -25,6 +25,7 @@ public static class GhostDebrief
             .Concat(state.Letters.Select(l => (Card: l.CardId, l.Round, Revealed: l.Revealed == true, From: (Guid?)l.From))).ToList();
         string Name(Guid? id)
         {
+            if (id == state.Ghost.Id) return "моё";
             if (id is not { } who || !mind.Names.TryGetValue(who, out var name)) return "письмо";
             return name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
         }
@@ -64,7 +65,8 @@ public static class GhostDebrief
                 {
                     var good = opened.Where(x => x.Value.TrueMatch > .18 && x.Value.TrueMatch > x.Value.FalseMatch).Select(x => Name(x.Letter.From)).Distinct().ToList();
                     var first = opened[0];
-                    parts.Add($"Открыл: {string.Join(", ", opened.Select(x => Name(x.Letter.From)).Distinct())}" +
+                    var who = opened.Select(x => Name(x.Letter.From)).Distinct().ToList();
+                    parts.Add($"Открыл {(who.Count == 1 ? "письмо" : "письма")}: {string.Join(", ", who)}" +
                         (first.Reason.Length > 0 ? $" — {first.Reason}." : "."));
                     if (good.Count > 0) parts.Add($"{string.Join(", ", good)}, спасибо за понятную связь.");
                     foreach (var x in opened.Take(3)) { cards.Add(x.Letter.Card); notes.Add("открыл"); }
@@ -77,7 +79,9 @@ public static class GhostDebrief
                     var why = x.Value.TrueMatch < .08 ? "связь с истиной слабая"
                         : x.Value.FalseMatch >= x.Value.TrueMatch ? "похоже и на ложную карту, открывать — риск"
                         : p.Compromise < .4 ? "можно было открыть, но я перестраховался" : "почти подошло";
-                    parts.Add($"{Name(x.Letter.From)} — оставил закрытым: {why}" + (x.Reason.Length > 0 && x.Value.TrueMatch >= .08 ? $" ({x.Reason})." : "."));
+                    var whose = Name(x.Letter.From);
+                    parts.Add((whose == "моё" ? "Своё письмо оставил закрытым" : $"{whose} — оставил закрытым") +
+                        $": {why}" + (x.Reason.Length > 0 && x.Value.TrueMatch >= .08 ? $" ({x.Reason})." : "."));
                 }
 
                 // Карты всех закрытых писем — на виду (до пяти карт в реплике), даже если о них не сказано отдельно.
