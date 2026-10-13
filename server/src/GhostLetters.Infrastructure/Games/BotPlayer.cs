@@ -443,7 +443,8 @@ public static class BotPlayer
                 // Подозревает самого спросившего — так и говорит, а не о нём в третьем лице.
                 if (accusation.Contains(call, StringComparison.Ordinal))
                 {
-                    var why = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0 ? accusation[(at + 2)..].TrimEnd('.') : null;
+                    var why = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0
+                        ? accusation[(at + 2)..].TrimEnd('.').Replace("его версия", "твоя версия").Replace("его голоса", "твои голоса") : null;
                     return ($"{call}, если честно — тебя{(why is null ? "" : $": {why}")}. Подозреваю, что ты из чёрных.", [], []);
                 }
                 return (accusation.Length == 0
