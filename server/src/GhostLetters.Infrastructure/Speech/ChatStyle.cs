@@ -63,10 +63,23 @@ public static partial class ChatStyle
         var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? []);
         var result = "";
         var afterList = false;
-        foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        // Люди не всегда начинают с письма: иногда сначала версия, потом — что кидал.
+        var claim = lines.FindIndex(l => l.StartsWith("Отправлял вот", StringComparison.Ordinal) || l.StartsWith("Моё письмо — вот это", StringComparison.Ordinal));
+        var version = lines.FindIndex(l => l.Contains("Версия: ", StringComparison.Ordinal));
+        var reordered = claim == 0 && version > 0 && rng.NextDouble() < .25;
+        if (reordered)
         {
-            var said = Regex.Replace(Line(line, ctx), @"[ \t]+", " ").Replace(" .", ".").Replace("..", ".").Trim();
+            var moved = lines[version];
+            lines.RemoveAt(version);
+            lines.Insert(0, moved);
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var said = Regex.Replace(Line(lines[i], ctx), @"[ \t]+", " ").Replace(" .", ".").Replace("..", ".").Trim();
             if (said.Length == 0) continue;
+            if (reordered && i == 1 && !said.StartsWith("Моё", StringComparison.Ordinal)) said = "А " + char.ToLowerInvariant(said[0]) + said[1..];
             // Список по рядам («• мотив 2 — …») остаётся списком, остальное — одним абзацем, как пишут люди.
             var item = said.StartsWith('•');
             result += result.Length == 0 ? said : item || afterList ? "\n" + said : " " + said;
@@ -184,11 +197,13 @@ public static partial class ChatStyle
     /// <summary>Обороты, которые бот повторяет в каждой строке, — разными словами.</summary>
     private static string Common(string line, Ctx c)
     {
+        // «Сейчас выберу тайна 2» → «тайну 2»: после глагола и предлога ряд склоняется.
+        line = Regex.Replace(line, @"(?<=(?:выберу|выбираю|предлагаю|исключаю|проверял|на|за|в|про) )тайна(?= \d)", "тайну", RegexOptions.IgnoreCase);
         line = line.Replace("связь с открытыми уликами слабая, пока предположение", c.Pick("улик под неё мало, пока чутьё", "пока скорее наугад", "прямых улик нет, догадка"));
         line = Regex.Replace(line, @"(?<hint>Подсказка р\.\d+ №\d+|Зацепка): (?<why>по (?:смыслу|форме|цвету|деталям): [^.;]+(?:; [^.]+)?)",
             m => $"{m.Groups["hint"].Value} — {Reason(m.Groups["why"].Value, c)}");
         line = Regex.Replace(line, @"Пересмотрел выбор: (?<from>" + Ref + @") → (?<to>" + Ref + @")\. ",
-            m => c.Pick($"Передумал: не {m.Groups["from"].Value}, а {m.Groups["to"].Value}. ", $"Пересмотрел: {m.Groups["to"].Value} вместо {m.Groups["from"].Value}. "), RegexOptions.IgnoreCase);
+            m => c.Pick($"Передумал: не {m.Groups["from"].Value}, а {m.Groups["to"].Value}. ", $"Пересмотрел: теперь {m.Groups["to"].Value}, а не {m.Groups["from"].Value}. "), RegexOptions.IgnoreCase);
         line = line.Replace("Учёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке.",
             c.Pick("Свои исчезнувшие письма тоже учёл.", "Пропавшие письма учёл — в меру."));
         line = line.Replace("Исчезновение своих писем не считаю доводом против карт: смотрю на другие улики.",

@@ -462,7 +462,20 @@ public static class BotPlayer
             var reason = hint.Id is not null && HintWeight(hint.Id, card) > 0.01
                 ? $"{BotDiscussion.HintRef(hint.Round, hint.Number)}: {Connection(hint.Id, card)}"
                 : "прямых улик нет, скорее чутьё";
-            var verdict = askedCard is null ? "" : askedCard == card ? "да, я тоже за неё. " : $"нет, я бы взял другую — ";
+            var why = System.Text.RegularExpressions.Regex.IsMatch(lower, @"почему|зачем|с чего|отчего");
+            // «Подсказка р.1 №2» остаётся с большой буквы — так её узнают чат и озвучка.
+            var because = reason.StartsWith("Подсказка", StringComparison.Ordinal) || reason.StartsWith("Зацепка", StringComparison.Ordinal)
+                ? reason : $"{char.ToLowerInvariant(reason[0])}{reason[1..]}";
+            var where = CardName(card);
+            var text = why
+                ? askedCard is null || askedCard == card
+                    ? $"{call}, {where} — потому что {because}."
+                    : $"{call}, я как раз не за неё: {where} лучше. {char.ToUpperInvariant(reason[0])}{reason[1..]}."
+                : askedCard is null
+                    ? $"{call}, я за {where}. {char.ToUpperInvariant(reason[0])}{reason[1..]}."
+                    : askedCard == card
+                        ? $"{call}, да, {where} — {because}."
+                        : $"{call}, нет, я бы взял другую — {where}. {char.ToUpperInvariant(reason[0])}{reason[1..]}.";
             var cards = new List<string> { card };
             var notes = new List<string> { "думаю, эта" };
             if (askedCard is not null && askedCard != card)
@@ -471,7 +484,7 @@ public static class BotPlayer
                 notes.Add("не эта");
             }
 
-            return ($"{call}, {verdict}{CardName(card)}. {char.ToUpperInvariant(reason[0])}{reason[1..]}.", cards, notes);
+            return (text, cards, notes);
         }
 
         /// <summary>Своя оценка карт ряда, смешанная с мнением стола в доле компромисса.</summary>

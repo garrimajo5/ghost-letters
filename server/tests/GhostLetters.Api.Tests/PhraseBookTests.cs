@@ -30,6 +30,8 @@ public sealed class PhraseBookTests
         formal.Manner.Should().Be(SpokenStyle.Manner.Formal);
         formal.Template.Should().Contain("коллеги, {card} вероятнее");
         Learn("Ставлю на мотив два, уверен!").Should().BeEmpty("после предлога падеж карты не угадать");
+        Learn("Не согласен про Пуаро, он темнит.").Should().BeEmpty("«про Пуаро» — бот скажет «про Ватсон»");
+        PhraseBook.Fill("Не согласен про {player}.", null, "Ватсон").Should().BeEmpty();
         PhraseBook.Fill("Ну короче, мотив — {card} — это оно!", "тайна 2", null).Should().Be("Ну короче, тайна 2 — это оно!");
 
         var doubt = Learn("Кажется, Пуаро темнит").Should().ContainSingle().Subject;

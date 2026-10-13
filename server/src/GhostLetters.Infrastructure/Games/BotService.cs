@@ -161,6 +161,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 if (state.Player(botId).Role == Role.Killer && WaitForNight(botId, phaseSince, now, row.PhaseDeadline,
                     recent?.CreatedAt, recent?.Text, recent is null ? null : await ReadingTimeAsync(recent, ct), alone)) continue;
             }
+            // На охоте Сообщник-бот не молча подсказывает, а пишет команде, кого и почему подозревает.
+            if (state.Phase is Phase.Hunt or Phase.BlackmailerHunt && state.Player(botId).Role == Role.Accomplice &&
+                await HuntTalkAsync(state, botId, ct)) return 1;
             if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
             {
                 continue;
@@ -219,6 +222,32 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (now - started >= TimeSpan.FromMinutes(2)) return false;
         return now - started < TimeSpan.FromSeconds(60 + bot.ToByteArray()[0] % 21) ||
             (lastSpeech is { } at && now - at < (speechTime ?? BotDiscussion.SpeechTime(text ?? "")));
+    }
+
+    private async Task<bool> HuntTalkAsync(GameState state, Guid bot, CancellationToken ct)
+    {
+        if (!state.TeamSuggestions.TryGetValue(bot, out var suggestion) || suggestion.Target is not { } target) return false;
+        var phaseStart = PhaseStarted.TryGetValue(state.Id, out var started) && started.Phase == state.Phase ? started.Since : DateTimeOffset.MinValue;
+        // Одна реплика за охоту (фаза началась не раньше, чем бот её заметил).
+        if (phaseStart == DateTimeOffset.MinValue || await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.AuthorId == bot &&
+                m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseStart, ct)) return false;
+        var name = await db.Users.AsNoTracking().Where(u => u.Id == target).Select(u => u.Nickname).FirstOrDefaultAsync(ct) ?? "";
+        if (name.StartsWith("Бот ", StringComparison.Ordinal)) name = name[4..];
+        var role = suggestion.Guess switch
+        {
+            Role.Witness => "Свидетель", Role.Expert => "Эксперт", Role.Blackmailer => "Шантажист", _ => null,
+        };
+        string[] lines = role is null
+            ? [$"По-моему, это {name}. Что скажешь?", $"Я бы указал на {name} — слишком уж уверенно играл. Согласен?"]
+            : [$"Думаю, {role} — {name}: слишком точно шёл к истине. Берём?", $"Мой вариант: {name}, {role}. Что скажешь?",
+               $"{name} очень похож на {suggestion.Guess switch { Role.Witness => "свидетеля", Role.Expert => "эксперта", _ => "шантажиста" }} — указываем?"];
+        var pick = new Random(HashCode.Combine(state.Id, bot, state.Phase));
+        try
+        {
+            await chat.SendAsync(state.Id, bot, new SendChatRequest(ChatChannels.KillerTeam, lines[pick.Next(lines.Length)], null, [], []), ct);
+            return true;
+        }
+        catch (AppException e) { logger.LogDebug("Реплика на охоте пропущена: {Error}", e.Message); return false; }
     }
 
     private async Task<bool> NightTalkAsync(GameState state, Guid bot, CancellationToken ct)

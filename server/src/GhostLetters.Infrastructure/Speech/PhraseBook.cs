@@ -42,8 +42,8 @@ public static partial class PhraseBook
     [GeneratedRegex(@"[а-яё]+", RegexOptions.IgnoreCase)]
     private static partial Regex Words();
 
-    /// <summary>Карта сразу после предлога — её падеж зависит от названия, шаблон не годится.</summary>
-    [GeneratedRegex(@"(?<![а-яё])(?:на|в|во|за|про|под|к|ко|о|об|у|от|из|с|со|до|по|без|для|над|при)\s+(?:(?:мотив|место|способ|тайн[ау])\s*—\s*)?\{card\}", RegexOptions.IgnoreCase)]
+    /// <summary>Карта или имя сразу после предлога («про Ватсона») — падеж зависит от слова, шаблон не годится.</summary>
+    [GeneratedRegex(@"(?<![а-яё])(?:на|в|во|за|про|под|к|ко|о|об|у|от|из|с|со|до|по|без|для|над|при)\s+(?:(?:мотив|место|способ|тайн[ау])\s*—\s*)?\{(?:card|player)\}", RegexOptions.IgnoreCase)]
     private static partial Regex Prepositioned();
 
     [GeneratedRegex(@"(?<=[.!?…])\s+")]
@@ -115,7 +115,7 @@ public static partial class PhraseBook
             }, RegexOptions.IgnoreCase);
         }
 
-        if (oblique || Prepositioned().IsMatch(text)) return null;
+        if (oblique) return null;
 
         foreach (var name in playerNames.Where(n => n.Length >= 2).OrderByDescending(n => n.Length))
         {
@@ -125,6 +125,7 @@ public static partial class PhraseBook
 
         // «{card} и {card}» — слишком сложная фраза для шаблона одной карты: оставляем одно место.
         text = Regex.Replace(text, @"\{card\}(?:\s*(?:,|и)\s*\{card\})+", "{card}");
+        if (Prepositioned().IsMatch(text)) return null;
         return text.Length > 0 ? text : null;
     }
 

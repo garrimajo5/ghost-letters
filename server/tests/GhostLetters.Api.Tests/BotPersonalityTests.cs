@@ -294,13 +294,15 @@ public sealed class BotPersonalityTests
     {
         var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
         var mind = Mind(new BotPersonality { Meaning = 1 });
-        var about = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, почему не роза в мотиве?", ["rose"])!.Value;
+        var about = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, ты за розу в мотиве?", ["rose"])!.Value;
         about.Text.Should().StartWith("Аня, нет").And.Contain("мотив 1").And.Contain("Подсказка р.1 №1");
         about.Cards.Should().Equal("knife", "rose");
         about.Notes.Should().Equal("думаю, эта", "не эта");
 
         var agree = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, ты за нож?", ["knife"])!.Value;
-        agree.Text.Should().StartWith("Аня, да");
+        agree.Text.Should().StartWith("Аня, да, мотив 1 — ");
+        BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, почему мотив 1?", ["knife"])!.Value.Text.Should().StartWith("Аня, мотив 1 — потому что Подсказка р.1 №1");
+        BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, почему роза?", ["rose"])!.Value.Text.Should().StartWith("Аня, я как раз не за неё: мотив 1 лучше.");
 
         var row = BotPlayer.Answer(view, new Random(1), Tags, mind, "Бот Боб", "Я, а что в месте?", [])!.Value;
         row.Text.Should().StartWith("Боб, ").And.MatchRegex("место [12]");

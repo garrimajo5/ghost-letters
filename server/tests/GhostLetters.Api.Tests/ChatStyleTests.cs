@@ -71,7 +71,7 @@ public sealed class ChatStyleTests
 
         var answer = ChatStyle.Humanize("Аня, отвечаю про голосование: здесь я пока не согласен. Сейчас выберу тайна 2. Остальные ряды моей версии — на прикреплённых картах.",
             new Random(2), SpokenStyle.Manner.Formal, true);
-        answer.Should().StartWith("Аня, отвечаю").And.Contain("тайна 2");
+        answer.Should().StartWith("Аня, отвечаю").And.Contain("выберу тайну 2");
     }
 
     [Fact]
