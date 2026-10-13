@@ -38,7 +38,9 @@ public static class BotTable
         if (plan.Count < view.Board.Count) return null;
         var p = mind?.Personality ?? BotPersonality.Default;
         double Sim(string a, string b) => tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
-        string Name(Guid id) => mind?.Names.GetValueOrDefault(id) ?? "игроком";
+        string Name(Guid id) => mind?.Names.GetValueOrDefault(id) ?? "Игрок";
+        // Имя без «Бот »: «Пуаро: р.1 — это мотив 2. Согласен.»
+        string Call(Guid id) => Name(id).StartsWith("Бот ", StringComparison.Ordinal) ? Name(id)[4..] : Name(id);
         int Count(string note) => recent.Count(t => t.Notes.Contains(note));
         var last = recent.Count > 0 ? recent[^1] : null;
 
@@ -140,17 +142,20 @@ public static class BotTable
                 if (t.Author == me.Id || t.EndorsedBy.Contains(me.Id) || t.DisputedBy.Contains(me.Id) ||
                     t.Stance != TableStance.For || Cell(t.Target) is not { } cell) continue;
                 var source = Source(t.SourceKind, t.Source);
+                // Чья нить и, если она давняя, из какого раунда — чтобы было понятно, с чем соглашаются или спорят.
+                var when = t.Round >= view.Round ? "" : view.Round - t.Round == 1 ? " (прошлый раунд)" : $" (раунд {t.Round})";
+                var whose = $"{Call(t.Author)}: {source} — это {Where(t.Target)}{when}.";
                 if (plan[cell.Row] == cell.Column)
                 {
                     if (Count("согласен") >= MaxEndorsementsPerRound) continue;
-                    return new($"Согласен с {Name(t.Author)}: {source} — это {Where(t.Target)}.",
+                    return new($"{whose} Согласен.",
                         [t.Source, t.Target], ["улика", "согласен"], [new TableOp(TableOpKind.Endorse, Thread: t.Id)]);
                 }
 
                 var mine = Target(cell.Row);
                 if (Count("оспорил") >= 1 ||
                     BotPlayer.Evidence(view, tags, mind, t.Target) > BotPlayer.Evidence(view, tags, mind, mine) - .1) continue;
-                return new($"Не согласен с {Name(t.Author)}: по-моему, это скорее {Where(mine)}, а не {Where(t.Target)}.",
+                return new($"{whose} Не согласен: по-моему, скорее {Where(mine)}.",
                     [t.Source, t.Target, mine], ["улика", "оспорил", "думаю, эта"],
                     [new TableOp(TableOpKind.Dispute, Thread: t.Id)]);
             }
