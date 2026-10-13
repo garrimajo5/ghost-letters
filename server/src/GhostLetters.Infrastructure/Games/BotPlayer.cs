@@ -443,9 +443,9 @@ public static class BotPlayer
                 // Подозревает самого спросившего — так и говорит, а не о нём в третьем лице.
                 if (accusation.Contains(call, StringComparison.Ordinal))
                 {
-                    var why = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0
+                    var motive = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0
                         ? accusation[(at + 2)..].TrimEnd('.').Replace("его версия", "твоя версия").Replace("его голоса", "твои голоса") : null;
-                    return ($"{call}, если честно — тебя{(why is null ? "" : $": {why}")}. Ты у меня главный подозреваемый, {call}.", [], []);
+                    return ($"{call}, если честно — тебя{(motive is null ? "" : $": {motive}")}. Ты у меня главный подозреваемый, {call}.", [], []);
                 }
                 return (accusation.Length == 0
                     ? $"{call}, пока никого всерьёз не подозреваю — мало данных."
