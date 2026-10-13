@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme.dart';
 
 /// Размер готовой аватарки (квадрат, PNG).
-const avatarOutputSize = 512;
+const avatarOutputSize = 256;
 
 /// Обрезка фото под аватарку: экран с кругом; в тестах подменяется.
 final avatarCropperProvider = Provider<Future<Uint8List?> Function(BuildContext context, Uint8List bytes)>(

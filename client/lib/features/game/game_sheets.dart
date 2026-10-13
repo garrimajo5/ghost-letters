@@ -1077,6 +1077,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
                           maxLength: 1000,
                           minLines: 1,
                           maxLines: 4,
+                          // Enter отправляет (как в мессенджерах), а не переносит строку.
+                          textInputAction: TextInputAction.send,
                           decoration: InputDecoration(
                             hintText: _ch == 'public' ? 'Сообщение всем' : 'Сообщение команде',
                             counterText: '',
