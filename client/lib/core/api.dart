@@ -346,6 +346,18 @@ class Api {
   Future<User> removeAvatar() async => User.fromJson(await _call(() => _dio.delete<dynamic>('/me/avatar')) as Json);
 
   /// Загрузить голосовое и получить его id для сообщения.
+  /// Доступ к голосовому чату партии (LiveKit): адрес, токен и можно ли говорить сейчас.
+  Future<({String url, String token, bool canSpeak})> voiceAccess(String gameId) async {
+    final j = await post('/games/$gameId/voice') as Json;
+    return (url: j['url'] as String, token: j['token'] as String, canSpeak: j['canSpeak'] as bool? ?? false);
+  }
+
+  /// Кусок сказанного голосом (WAV 16 кГц): сервер распознаёт и кладёт текст в чат — для ботов.
+  Future<void> voiceTranscript(String gameId, MultipartFile file) async {
+    final form = FormData.fromMap({'file': file});
+    await _call(() => _dio.post<dynamic>('/games/$gameId/voice/transcript', data: form, options: Options(contentType: 'multipart/form-data')));
+  }
+
   Future<String> uploadVoice(MultipartFile file, int durationMs) async {
     final form = FormData.fromMap({
       'file': file,
