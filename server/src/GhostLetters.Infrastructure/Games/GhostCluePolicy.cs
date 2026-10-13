@@ -78,10 +78,14 @@ public static class GhostCluePolicy
         // но лучшее почти не вредит и всё же похоже на истину, Призрак открывает его (зацепку — всегда).
         if (chosen.Count == 0 && tuning.GhostFallback > 0)
         {
+            // Стол голодает: в прошлом раунде Призрак не открыл ни одного письма. Живой Призрак тогда открывает
+            // лучшее из похожих на истину, даже если оно чуть двусмысленно, — иначе обсуждать нечего.
+            var starving = view.Round > 1 && view.Hints.Where(h => h.Round == view.Round - 1).All(h => h.Cards.Count == 0);
             var fallback = candidates
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, c.Card], all.Where(x => x != c.Card).ToList(), Sim, focus) - current))
                 // Только письмо, которое на истину похоже сильнее, чем на любую ложную карту: двусмысленное не открываем.
-                .Where(c => c.Value.TrueMatch >= .08 && (!tuning.GhostFallbackStrict || c.Value.TrueMatch > c.Value.FalseMatch) && c.Gain > -tuning.GhostFallback)
+                .Where(c => c.Value.TrueMatch >= .08 && (!tuning.GhostFallbackStrict || c.Value.TrueMatch > c.Value.FalseMatch * (starving ? .8 : 1)) &&
+                    c.Gain > -tuning.GhostFallback * (starving ? 1.5 : 1))
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (fallback.Card is not null) chosen.Add(fallback.Card);
