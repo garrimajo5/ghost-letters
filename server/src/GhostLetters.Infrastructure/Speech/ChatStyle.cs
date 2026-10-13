@@ -215,6 +215,18 @@ public static partial class ChatStyle
         line = Regex.Replace(line, @"^(?<who>[^,]{2,24}), твоя версия «(?<card>[^»]+)» сходится с подсказками; пока считаю тебя мирным\. ",
             m => c.Pick($"{m.Groups["who"].Value}, с «{m.Groups["card"].Value}» согласен — сходится. ", $"{m.Groups["who"].Value}, «{m.Groups["card"].Value}» — да, похоже. Тебе пока верю. ",
                 $"{m.Groups["who"].Value}, поддержу «{m.Groups["card"].Value}». "));
+        // Вопрос соседу в финале: имя в начале и «?» остаются — по ним боты узнают вопрос.
+        line = Regex.Replace(line, @"^(?<who>[^,]{2,24}), за какую карту в ряду «(?<row>[^»]+)» будешь голосовать\? Я выбираю (?<ref>" + Ref + @")\. (?<arg>.+?)\. Какие улики поддерживают твою версию\? А кого подозреваешь\?$",
+            m => c.Pick($"{m.Groups["who"].Value}, а ты что выберешь в ряду «{m.Groups["row"].Value}»? Я — {m.Groups["ref"].Value}: {Lower(m.Groups["arg"].Value)}. И кого подозреваешь?",
+                $"{m.Groups["who"].Value}, ты за что в ряду «{m.Groups["row"].Value}»? У меня {m.Groups["ref"].Value}. {m.Groups["arg"].Value}.",
+                $"{m.Groups["who"].Value}, как голосуешь в ряду «{m.Groups["row"].Value}»? Я за {Acc(m.Groups["ref"].Value)}. А кого подозреваешь?"), RegexOptions.IgnoreCase);
+        line = Regex.Replace(line, @"^(?<who>[^,]{2,24}), отвечаю про голосование: (?<how>здесь наши версии совпадают|здесь я пока не согласен|вот мой текущий выбор)\. ",
+            m => $"{m.Groups["who"].Value}, отвечаю: " + (m.Groups["how"].Value switch
+            {
+                "здесь наши версии совпадают" => c.Pick("тут мы заодно. ", "здесь наши версии совпадают. ", "тут я с тобой. "),
+                "здесь я пока не согласен" => c.Pick("тут я пока не согласен. ", "здесь мы расходимся. "),
+                _ => c.Pick("вот мой выбор. ", "сейчас так. "),
+            }));
         line = line.Replace(" Какие ещё улики подтверждают нашу версию?", " " + c.Pick("Что ещё за неё?", "Какие ещё улики за неё?"));
         line = line.Replace(" По игрокам пока недостаточно оснований для уверенного обвинения.", " " + c.Pick("Кого подозревать — пока не знаю.", "По игрокам пока молчу.", "Подозреваемых пока не назову."));
         if (line.StartsWith("По игрокам пока недостаточно оснований для уверенного обвинения", StringComparison.Ordinal))
@@ -326,6 +338,9 @@ public static partial class ChatStyle
     private static string Acc(string refs) => Regex.Replace(refs, @"(?<![а-яё])тайна(?=\s*\d)", "тайну", RegexOptions.IgnoreCase);
 
     private static string Nom(string category) => category.ToLowerInvariant().StartsWith("тайн", StringComparison.Ordinal) ? "тайна" : category.ToLowerInvariant();
+
+    private static string Lower(string s) => s.Length == 0 || s.StartsWith("Подсказка", StringComparison.Ordinal) || s.StartsWith("Зацепка", StringComparison.Ordinal)
+        ? s : char.ToLowerInvariant(s[0]) + s[1..];
 
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
