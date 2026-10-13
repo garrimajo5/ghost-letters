@@ -77,7 +77,14 @@ class BotsAdminScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bots = ref.watch(adminBotsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('БОТЫ')),
+      appBar: AppBar(title: const Text('БОТЫ'), actions: [
+        IconButton(
+          key: const Key('bot-phrases'),
+          tooltip: 'Фразы, выученные у людей',
+          icon: const Icon(Icons.record_voice_over_outlined),
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LearnedPhrasesScreen())),
+        ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('bot-new'),
         onPressed: () => _edit(context, ref, null),
@@ -102,13 +109,6 @@ class BotsAdminScreen extends ConsumerWidget {
               final created = await runAction(context, () => ref.read(apiProvider).createPresetBots());
               if (created != null) ref.invalidate(adminBotsProvider);
             },
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            key: const Key('bot-phrases'),
-            icon: const Icon(Icons.record_voice_over_outlined),
-            label: const Text('Фразы, выученные у людей'),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LearnedPhrasesScreen())),
           ),
           const SizedBox(height: 12),
           if (list.isEmpty)
