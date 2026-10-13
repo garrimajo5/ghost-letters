@@ -459,6 +459,17 @@ void main() {
     await _shot(tester, 'dialog');
   });
 
+  testWidgets('вертикально: пока бот печатает, карты в пузыре — картинками', (tester) async {
+    final app = await _open(tester, const Size(390, 844));
+    app.realtime.chatCtl.add(ChatMessage(id: 't1', channel: 'public', authorId: 'u3', kind: 'text',
+        text: 'Целился в мотив 1 и место 2 — общее — море. Ещё немного текста, чтобы печать заняла время и мы успели посмотреть.',
+        cardIds: const [], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 2500));
+    expect(find.descendant(of: find.byKey(const Key('dialog-t1')), matching: find.byType(CardImage)), findsWidgets,
+        reason: 'карта появляется картинкой сразу, ещё до конца печати');
+  });
+
   testWidgets('планшет вертикально: поле целиком видно над разговором', (tester) async {
     final app = await _open(tester, const Size(800, 915));
     app.realtime.chatCtl.add(ChatMessage(id: 'h1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Мотив 1.',
