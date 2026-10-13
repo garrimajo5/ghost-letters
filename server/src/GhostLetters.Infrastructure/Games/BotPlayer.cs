@@ -1272,7 +1272,9 @@ public static class BotPlayer
                 && view.Board[row].Cards.Contains(o.CardId));
             if (last is null || NameOf(last.Author) is not { } who) return "";
             if (who.StartsWith("Бот ", StringComparison.Ordinal)) who = who[4..];
-            return last.CardId == card ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
+            // Сверяемся с тем, что игрок сказал в последней реплике об этом ряду, а не с давним упоминанием.
+            var theirs = mind.LatestOf(last.Author).FirstOrDefault(o => o.Strength > 0 && view.Board[row].Cards.Contains(o.CardId))?.CardId ?? last.CardId;
+            return theirs == card ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
         }
 
         /// <summary>
