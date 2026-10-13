@@ -290,6 +290,25 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void DirectQuestion_GetsShortAnswer_AboutAskedRowOrSuspects()
+    {
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
+        var mind = Mind(new BotPersonality { Meaning = 1 });
+        var about = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, почему не роза в мотиве?", ["rose"])!.Value;
+        about.Text.Should().StartWith("Аня, нет").And.Contain("мотив 1").And.Contain("Подсказка р.1 №1");
+        about.Cards.Should().Equal("knife", "rose");
+        about.Notes.Should().Equal("думаю, эта", "не эта");
+
+        var agree = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, ты за нож?", ["knife"])!.Value;
+        agree.Text.Should().StartWith("Аня, да");
+
+        var row = BotPlayer.Answer(view, new Random(1), Tags, mind, "Бот Боб", "Я, а что в месте?", [])!.Value;
+        row.Text.Should().StartWith("Боб, ").And.MatchRegex("место [12]");
+
+        BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, кого подозреваешь?", [])!.Value.Text.Should().StartWith("Аня, ");
+    }
+
+    [Fact]
     public void StructuredSpeech_ExplainsChecksAndUncertainty_WithinChatLimits()
     {
         var view = View(Phase.Discussion, [], Role.Detective,

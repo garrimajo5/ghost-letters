@@ -88,6 +88,14 @@ public static class BotPlayer
         view.Me is { Role: not Role.Ghost } me ? new Brain(view, me, rng, tags, mind).Reply() : null;
 
     /// <summary>
+    /// Ответ на прямой вопрос игрока («Ватсон, почему тайна 2?», «Марпл, кого подозреваешь?»): коротко, по одному ряду
+    /// или о подозрениях, а не вся версия заново.
+    /// </summary>
+    public static (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Answer(
+        PlayerView view, Random rng, CardTags tags, BotMind? mind, string who, string question, IReadOnlyList<string> asked) =>
+        view.Me is { Role: not Role.Ghost } me && view.Board.Count > 0 ? new Brain(view, me, rng, tags, mind).Answer(who, question, asked) : null;
+
+    /// <summary>
     /// Реплика бота в обсуждении: что он думает об одном ряду, с упоминанием карты; если отправлял письмо —
     /// показывает его («кидал эту») и карты поля, которые им проверял (их может быть несколько).
     /// Команда Убийцы так же уверенно указывает на ложную карту. Призрак молчит.
@@ -422,6 +430,48 @@ public static class BotPlayer
             else
                 text += $"Предлагаю поддержать «{CardName(card)}». Какие ещё улики подтверждают нашу версию?";
             return (text, new[] { card }, new[] { "думаю, эта" });
+        }
+
+        public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Answer(string who, string question, IReadOnlyList<string> asked)
+        {
+            if (Classic) return null;
+            var call = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+            var lower = question.ToLowerInvariant();
+            if ((lower.Contains("кого") && (lower.Contains("подозр") || lower.Contains("убийц"))) || lower.Contains("кто убийца") || lower.Contains("кто из чёрных") || lower.Contains("кто из черных"))
+            {
+                var accusation = Accusation().Trim();
+                return (accusation.Length == 0
+                    ? $"{call}, пока никого всерьёз не подозреваю — мало данных."
+                    : $"{call}, {char.ToLowerInvariant(accusation[0])}{accusation[1..]}", [], []);
+            }
+
+            var askedCard = asked.FirstOrDefault(c => Position(c).Row >= 0);
+            var row = askedCard is not null ? Position(askedCard).Row : -1;
+            if (row < 0)
+                foreach (var (word, category) in new[] { ("мотив", Category.Motive), ("мест", Category.Place), ("способ", Category.Method), ("тайн", Category.Secret) })
+                {
+                    var found = view.Board.Select((b, i) => (b, i)).FirstOrDefault(x => x.b.Category == category);
+                    if (lower.Contains(word) && found.b is not null) { row = found.i; break; }
+                }
+            if (row < 0) row = Enumerable.Range(0, view.Board.Count).OrderByDescending(r => Certainty(r) + Noise()).First();
+            // Чёрные и тут не выдают истину.
+            var options = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => !KillerTeam || Truth is null || Truth[row] != c).ToList();
+            var card = Card(row, BestColumn(row, options));
+            var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
+                .OrderByDescending(h => HintWeight(h.Id, card)).FirstOrDefault();
+            var reason = hint.Id is not null && HintWeight(hint.Id, card) > 0.01
+                ? $"{BotDiscussion.HintRef(hint.Round, hint.Number)}: {Connection(hint.Id, card)}"
+                : "прямых улик нет, скорее чутьё";
+            var verdict = askedCard is null ? "" : askedCard == card ? "да, я тоже за неё. " : $"нет, я бы взял другую — ";
+            var cards = new List<string> { card };
+            var notes = new List<string> { "думаю, эта" };
+            if (askedCard is not null && askedCard != card)
+            {
+                cards.Add(askedCard);
+                notes.Add("не эта");
+            }
+
+            return ($"{call}, {verdict}{CardName(card)}. {char.ToUpperInvariant(reason[0])}{reason[1..]}.", cards, notes);
         }
 
         /// <summary>Своя оценка карт ряда, смешанная с мнением стола в доле компромисса.</summary>
