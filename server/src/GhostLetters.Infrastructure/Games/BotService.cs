@@ -32,7 +32,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// Публичная реплика бота: если в партии боты говорят голосом и синтез настроен — с озвучкой его голосом.
     /// Озвучка не удалась — реплика уходит текстом, как раньше.
     /// </summary>
-    public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct)
+    /// <param name="answering">Ответ на прямой вопрос: прежние обвинения повторять можно — о них и спросили.</param>
+    public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct, bool answering = false)
     {
         var manner = Speech.SpokenStyle.MannerOf(botId);
         var profile = await (from b in db.BotProfiles.AsNoTracking()
@@ -53,7 +54,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
         {
-            var earlier = await db.ChatMessages.AsNoTracking()
+            var earlier = answering ? [] : await db.ChatMessages.AsNoTracking()
                 .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Public)
                 .OrderByDescending(m => m.CreatedAt).Take(6).Select(m => m.Text ?? "").ToListAsync(ct);
             request = request with
@@ -591,7 +592,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
                 try
                 {
-                    await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, answer.Text, null, answer.Cards, answer.Notes), ct);
+                    await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, answer.Text, null, answer.Cards, answer.Notes), ct, answering: true);
                     return true;
                 }
                 catch (AppException e) { logger.LogDebug("Ответ бота пропущен: {Error}", e.Message); }
