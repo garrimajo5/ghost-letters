@@ -102,7 +102,8 @@ public static partial class SpokenCards
 
         string NoteAt(int at, bool own)
         {
-            var before = words.Skip(Math.Max(0, at - 3)).Take(Math.Min(3, at)).ToList();
+            // Только два слова перед картой: «точно не ухо», «я кидала кошку» — и не дальше, в прошлую фразу.
+            var before = words.Skip(Math.Max(0, at - 2)).Take(Math.Min(2, at)).ToList();
             return own && before.Any(w => Claims.Contains(w)) ? "кидал эту"
                 : before.Any(w => Negations.Contains(w)) ? "исключаю"
                 : "думаю, эта";
