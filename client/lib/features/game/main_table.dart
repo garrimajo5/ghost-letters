@@ -557,7 +557,9 @@ class _TableArea extends StatelessWidget {
       final order = _Board.tableOrder(v);
       final statement = _current;
       // Меня спросили — строка с ответами; вопрос про ряд — ряд подсвечен, нажатие на карту в нём — ответ.
-      final ask = !voting && !say.active && _canSpeakNow(v) ? _askedMe(screen, say) : null;
+      // Переспрос бота про название карты ждёт ответа и тогда, когда слово уже перешло.
+      final asked = !voting && !say.active ? _askedMe(screen, say) : null;
+      final ask = asked != null && (asked.alias != null || _canSpeakNow(v)) ? asked : null;
       final strip = voting || say.active || (!dialog && statement != null) || _canSay(v);
       // Боком поле крупнее экрана: листается свайпом в обе стороны, подсказки — всегда видны слева.
       // Листаемое поле крупнее экрана — только когда карты мелкие (телефон боком); иначе поле целиком и по центру.
@@ -631,7 +633,14 @@ class _TableArea extends StatelessWidget {
                 }
                 // Показ на столе: нажатие — зелёная («улика указывает»), ещё раз — красная («не эта»), ещё — снять.
                 // Своё слово: нажатия по полю сразу собирают показ (без кнопки «Показать»); удержание — приблизить.
-                if (ask?.row case final row? when v.board[row].cards.contains(id)) {
+                if (ask?.alias != null && (ask!.row == null || v.board[ask.row!].cards.contains(id))) {
+                  out = GestureDetector(
+                    key: Key('alias-pick-$id'),
+                    onTap: () => _answerAlias(context, screen, ask.q, id),
+                    onLongPress: () => showCardZoom(context, id),
+                    child: out,
+                  );
+                } else if (ask?.row case final row? when v.board[row].cards.contains(id)) {
                   out = GestureDetector(
                     key: Key('ask-pick-$id'),
                     onTap: () => _answerRow(context, screen, ask!.q, row, id),
@@ -2281,7 +2290,7 @@ String? _claimable(GameView v, String? hint) {
 
 
 /// Вопрос мне: чья реплика, про какой ряд (если про ряд) и зовут ли голосовать вместе («Согласен?»).
-typedef _Ask = ({ChatMessage q, int? row, bool agree, bool version});
+typedef _Ask = ({ChatMessage q, int? row, bool agree, bool version, String? alias});
 
 /// Последний вопрос мне в этом раунде, на который я ещё не ответил: «Ватсон, за какую карту в ряду «Место» …?»
 _Ask? _askedMe(GameScreenState screen, _Say say) {
@@ -2294,7 +2303,8 @@ _Ask? _askedMe(GameScreenState screen, _Say say) {
   for (final m in screen.chat) {
     if (m.channel != 'public' || m.round != v.round || m.authorId == null) continue;
     if (m.authorId == me) {
-      q = null;
+      // Моя расшифровка голоса — не ответ на вопрос: переспрос остаётся.
+      if (!(m.text ?? '').startsWith('Голосом: ')) q = null;
       continue;
     }
     final text = (m.text ?? '').trim();
@@ -2310,7 +2320,21 @@ _Ask? _askedMe(GameScreenState screen, _Say say) {
       if (T.category(v.board[i].category).toLowerCase() == named) row = i;
     }
   }
-  return (q: q, row: row, agree: text.contains('Согласен?'), version: row == null && text.toLowerCase().contains('верси'));
+  // Бот переспросил непонятное название: «Аня, «грабли» — это какая карта? Нажмите на неё».
+  final alias = RegExp(r'«([^»]+)» — это какая карта').firstMatch(text)?[1];
+  return (
+    q: q,
+    row: row,
+    agree: text.contains('Согласен?'),
+    version: row == null && alias == null && text.toLowerCase().contains('верси'),
+    alias: alias,
+  );
+}
+
+/// Ответ на переспрос: эта карта — то, что я назвал словом [ask.alias]. Сервер проверит и ответит от бота.
+Future<void> _answerAlias(BuildContext context, GameScreenState screen, ChatMessage q, String id) async {
+  final v = screen.view!;
+  await runAction(context, () => screen.ref.read(apiProvider).voiceAlias(v.gameId, q.id, id));
 }
 
 /// Ответ на вопрос про ряд одним нажатием: «Марпл, в ряду «Место» голосую за Место 2.» и карта с заметкой.
@@ -2347,7 +2371,9 @@ class _AskStrip extends StatelessWidget {
     final q = ask.q;
     final to = _callName(screen.nick(q.authorId));
     final row = ask.row;
-    final label = row != null
+    final label = ask.alias != null
+        ? '$to: «${ask.alias}» — это какая карта? Нажмите на неё${row != null ? ' в подсвеченном ряду' : ''}'
+        : row != null
         ? '$to спрашивает про ряд «${T.category(v.board[row].category)}» — нажмите карту в подсвеченном ряду'
         : ask.agree
             ? '$to зовёт голосовать вместе'
@@ -2356,7 +2382,7 @@ class _AskStrip extends StatelessWidget {
       if (ask.agree) ...[
         TextButton(key: const Key('ask-agree'), onPressed: () => _reply(context, '$to, согласен.'), child: const Text('Согласен')),
         TextButton(key: const Key('ask-disagree'), onPressed: () => _reply(context, '$to, не согласен.'), child: const Text('Не согласен')),
-      ] else if (row == null)
+      ] else if (row == null && ask.alias == null)
         FilledButton(
           key: const Key('ask-version'),
           onPressed: () {
@@ -2365,7 +2391,9 @@ class _AskStrip extends StatelessWidget {
           },
           child: const Text('Показать версию'),
         ),
-      if (row != null)
+      if (ask.alias != null)
+        TextButton(key: const Key('alias-skip'), onPressed: () => _reply(context, '$to, не помню, какую имел в виду.'), child: const Text('Не помню'))
+      else if (row != null)
         TextButton(key: const Key('ask-unsure'), onPressed: () => _reply(context, '$to, в этом ряду пока не уверен.'), child: const Text('Не уверен')),
     ];
     return Container(

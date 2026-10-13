@@ -103,6 +103,48 @@ public sealed partial class SpeechWriter
         }
     }
 
+    /// <summary>
+    /// Можно ли так назвать карту за столом (по её названиям и признакам). true/false — ответ модели; null — модель недоступна.
+    /// </summary>
+    public async Task<bool?> JudgeAsync(string phrase, IReadOnlyCollection<string> names, IReadOnlyCollection<string> features, CancellationToken ct)
+    {
+        if (!Enabled) return null;
+        lock (gate)
+        {
+            var today = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+            if (day != today) (day, calls) = (today, 0);
+            if (calls >= dailyCalls) return null;
+            calls++;
+        }
+
+        var system = "Ты судья в настольной игре с картинками. Игрок назвал картинку своим словом. Реши, честное ли это название: " +
+                     "похоже ли оно на то, что изображено, или на очевидную ассоциацию. Ответь одним словом: да или нет.";
+        var user = $"Картинка: {string.Join(", ", names)}. Признаки: {string.Join(", ", features.Take(12))}. Игрок назвал её: «{phrase}».";
+        try
+        {
+            var body = JsonSerializer.Serialize(new
+            {
+                model = $"gpt://{folderId}/{model}",
+                messages = new[] { new { role = "system", content = system }, new { role = "user", content = user } },
+                temperature = 0.0,
+                max_tokens = 5,
+            });
+            using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Api-Key", apiKey);
+            request.Headers.Add("OpenAI-Project", folderId);
+            using var response = await http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode) return null;
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
+            var answer = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString()?.Trim().ToLowerInvariant() ?? "";
+            return answer.StartsWith("да", StringComparison.Ordinal) ? true : answer.StartsWith("нет", StringComparison.Ordinal) ? false : null;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)
+        {
+            if (ct.IsCancellationRequested) throw;
+            return null;
+        }
+    }
+
     [GeneratedRegex(@"[A-Za-z*#_`\[\]<>]")]
     private static partial Regex Foreign();
 

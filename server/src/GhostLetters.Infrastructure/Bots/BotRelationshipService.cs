@@ -56,6 +56,10 @@ public sealed class BotRelationshipService(GhostLettersDbContext db, BotAdminSer
         double? Activity(Guid id) => state.Players.First(p => p.Id == id).Role == Role.Ghost ? null :
             Math.Min(1, messages.Where(m => m.AuthorId == id).Select(m => m.Round).Distinct().Count() / (double)Math.Max(1, state.TotalRounds));
 
+        // Как игроки называли карты на переспросы ботов: явно неверные названия — недобросовестность.
+        var naming = await db.CardAliases.AsNoTracking().Where(a => a.GameId == state.Id)
+            .GroupBy(a => a.UserId).Select(g => new { g.Key, Bad = g.Count(a => a.Valid == false), Good = g.Count(a => a.Valid == true) })
+            .ToDictionaryAsync(x => x.Key, ct);
         foreach (var bot in bots.Order())
         {
             // The same bot may finish two different games concurrently. Serialize updates across games.
@@ -84,6 +88,9 @@ public sealed class BotRelationshipService(GhostLettersDbContext db, BotAdminSer
                 relation.SharedGames++;
                 var observation = BotAffinity.Observe(social, Activity(player), Activity(bot), votes.Count == 0 ? null : votes.Average(),
                     Skill(player) - Skill(bot), thanked, honesty, relation.SharedGames);
+                observation["naming"] = naming.TryGetValue(player, out var named)
+                    ? named.Bad > 0 ? -8.0 * named.Bad : named.Good > 0 ? 3 : 0
+                    : 0;
                 var components = BotAffinity.Update(Read(relation.Components), observation, social.Forgiveness);
                 relation.Components = JsonSerializer.Serialize(components);
                 relation.Score = Math.Clamp((int)Math.Round(components.Values.Sum()), -100, 100);
