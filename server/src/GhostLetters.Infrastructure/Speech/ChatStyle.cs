@@ -146,6 +146,8 @@ public static partial class ChatStyle
             or "Исчезло — значит, скорее не они" or "Но одной проверки мало")
         {
             if (bare == "Но одной проверки мало") return "";
+            // Вывод из исчезнувшего письма человек проговаривает не каждый раз.
+            if (c.Rng.NextDouble() < .35) return "";
             return c.Manner switch
             {
                 SpokenStyle.Manner.Lively => c.Pick("Значит, скорее мимо. Но это не точно!", "Минус этим картам, хотя одной проверки мало."),
@@ -172,7 +174,7 @@ public static partial class ChatStyle
                 $"Смотрите: {(hint == "Зацепка" ? "зацепка" : hint)} — {why}, как и {to}.");
         }
         if ((m = Regex.Match(bare, @"^Целиком думаю так: (?<list>.+)$")).Success)
-            return c.Rng.NextDouble() < .4 ? "" : c.Pick($"В целом у меня так: {m.Groups["list"].Value}.", $"Итого: {m.Groups["list"].Value}.", $"Целиком: {m.Groups["list"].Value}.");
+            return c.Rng.NextDouble() < .55 ? "" : c.Pick($"В целом у меня так: {m.Groups["list"].Value}.", $"Итого: {m.Groups["list"].Value}.", $"Целиком: {m.Groups["list"].Value}.");
         if ((m = Regex.Match(bare, @"^(?:Подозреваю, что (?<who>.+?) из чёрных|Думаю, Убийца — (?<who>.+?)|Мне кажется, Убийца — (?<who>.+?)|Я бы присмотрелся к (?<who>.+?)|Подозреваю (?<who>.+?): уже бывал Убийцей)(?:: .+)?$")).Success
             && c.Repeats(m.Groups["who"].Value))
             return "";
