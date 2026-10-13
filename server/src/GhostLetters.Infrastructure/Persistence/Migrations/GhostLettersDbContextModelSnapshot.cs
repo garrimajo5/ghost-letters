@@ -1311,6 +1311,11 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Gender")
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("gender");
+
                     b.Property<bool>("IsBot")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

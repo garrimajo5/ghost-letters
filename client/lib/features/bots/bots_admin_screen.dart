@@ -205,6 +205,7 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
   late bool _enabled = widget.bot?.enabled ?? true;
   late String _voice = widget.bot?.voice ?? '';
   late String _voiceRole = widget.bot?.voiceRole ?? '';
+  late String _gender = widget.bot?.gender ?? '';
   bool _busy = false;
 
   /// Новое фото (уже обрезанное) или «убрать фото» — применяются при сохранении,
@@ -252,6 +253,7 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
         enabled: _enabled,
         voice: _voice,
         voiceRole: _voiceRole,
+        gender: _gender,
       );
       _createdId = bot.id;
       final photo = _newPhoto;
@@ -352,6 +354,12 @@ class _BotEditorScreenState extends ConsumerState<BotEditorScreen> {
           value: _enabled,
           onChanged: (v) => setState(() => _enabled = v),
         ),
+        const Divider(),
+        Text('ПОЛ', style: sectionLabel(size: 13)),
+        const Text('Род, в котором бот говорит о себе («кидала», «уверена»). «По голосу» — как звучит его голос.',
+            style: TextStyle(fontSize: 12, color: AppColors.muted)),
+        const SizedBox(height: 6),
+        GenderPicker(key: const Key('bot-gender'), value: _gender, unsetLabel: 'По голосу', onChanged: (g) => setState(() => _gender = g)),
         const Divider(),
         Text('ГОЛОС', style: sectionLabel(size: 13)),
         _VoicePicker(

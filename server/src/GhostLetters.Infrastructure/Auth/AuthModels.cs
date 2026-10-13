@@ -16,11 +16,12 @@ public sealed record LinkLoginRequest(string DeviceId, string Code);
 
 public sealed record LinkCodeResponse(string Code, DateTimeOffset ExpiresAt);
 
-public sealed record UpdateProfileRequest(string? Nickname, string? AvatarColor);
+/// <param name="Gender">«male», «female» или пусто — не указан; null — не менять.</param>
+public sealed record UpdateProfileRequest(string? Nickname, string? AvatarColor, string? Gender = null);
 
-public sealed record UserDto(Guid Id, string Nickname, string AvatarColor, DateTimeOffset CreatedAt, Guid? AvatarId = null)
+public sealed record UserDto(Guid Id, string Nickname, string AvatarColor, DateTimeOffset CreatedAt, Guid? AvatarId = null, string? Gender = null)
 {
-    public static UserDto From(User user) => new(user.Id, user.Nickname, user.AvatarColor, user.CreatedAt, user.AvatarMediaId);
+    public static UserDto From(User user) => new(user.Id, user.Nickname, user.AvatarColor, user.CreatedAt, user.AvatarMediaId, user.Gender);
 }
 
 public sealed record AuthResponse(string AccessToken, DateTimeOffset AccessTokenExpiresAt, string RefreshToken, UserDto User);

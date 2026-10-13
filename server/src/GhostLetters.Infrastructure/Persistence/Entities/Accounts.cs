@@ -22,6 +22,25 @@ public sealed class User
 
     /// <summary>Загруженная игроком аватарка (файл в media); null — круг с буквой.</summary>
     public Guid? AvatarMediaId { get; set; }
+
+    /// <summary>Пол (<see cref="Genders"/>): боты обращаются к игроку и говорят о себе в нужном роде. null — не указан.</summary>
+    public string? Gender { get; set; }
+}
+
+public static class Genders
+{
+    public const string Male = "male";
+    public const string Female = "female";
+
+    /// <summary>«male»/«female»; пусто или иное — не указан (null).</summary>
+    public static string? Normalize(string? value) => value?.Trim().ToLowerInvariant() switch
+    {
+        Male or "m" or "м" => Male,
+        Female or "f" or "ж" => Female,
+        _ => null,
+    };
+
+    public static bool? IsFemale(string? value) => Normalize(value) switch { Female => true, Male => false, _ => null };
 }
 
 public static class AuthProviders

@@ -31,6 +31,11 @@ public sealed class UserService(GhostLettersDbContext db, IMediaStorage storage,
             user.AvatarColor = ProfileRules.AvatarColor(request.AvatarColor);
         }
 
+        if (request.Gender is not null)
+        {
+            user.Gender = Genders.Normalize(request.Gender);
+        }
+
         await db.SaveChangesAsync(ct);
         return UserDto.From(user);
     }

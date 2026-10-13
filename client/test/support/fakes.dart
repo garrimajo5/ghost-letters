@@ -206,7 +206,7 @@ class FakeApi extends Api {
 
   @override
   Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled,
-          String voice = '', String voiceRole = ''}) async =>
+          String voice = '', String voiceRole = '', String gender = ''}) async =>
       _record('saveBot', [id, nickname, spectra, enabled, voice, voiceRole], () {
         final bot = BotInfo(
             id: id ?? 'b${botList.length + 1}',
@@ -217,7 +217,8 @@ class FakeApi extends Api {
             spectra: spectra,
             enabled: enabled,
             voice: voice,
-            voiceRole: voiceRole);
+            voiceRole: voiceRole,
+            gender: gender);
         botList = [for (final b in botList) if (b.id != bot.id) b, bot];
         return bot;
       });

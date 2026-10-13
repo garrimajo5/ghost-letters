@@ -39,9 +39,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var profile = await (from b in db.BotProfiles.AsNoTracking()
                              join u in db.Users.AsNoTracking() on b.UserId equals u.Id
                              where b.UserId == botId
-                             select new { b.Voice, b.VoiceRole, b.About, u.Nickname }).FirstOrDefaultAsync(ct);
+                             select new { b.Voice, b.VoiceRole, b.About, u.Nickname, u.Gender }).FirstOrDefaultAsync(ct);
         var (voice, role) = Speech.BotVoices.For(botId, profile?.Voice, profile?.VoiceRole);
-        var male = Speech.BotVoices.Find(voice)?.Male ?? true;
+        // Род бота — из кабинета; не указан — по голосу.
+        var male = (Genders.IsFemale(profile?.Gender) ?? Speech.PersonaLines.IsFemale(profile?.Nickname)) is { } female ? !female : Speech.BotVoices.Find(voice)?.Male ?? true;
         IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null;
         double? risk = null;
         if (request.Channel == ChatChannels.Public && request.MediaId is null)
@@ -60,7 +61,8 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             request = request with
             {
                 Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
-                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier, Speech.PersonaLines.KeyOf(profile?.Nickname)),
+                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier, Speech.PersonaLines.KeyOf(profile?.Nickname),
+                    await GendersAsync(state, ct)),
             };
         }
 
@@ -84,6 +86,32 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
 
         await chat.SendAsync(state.Id, botId, request, ct);
+    }
+
+    /// <summary>
+    /// Род игроков партии по нику (без «Бот »): указанный в профиле, у ботов без указанного — по голосу.
+    /// Люди, не указавшие пол, в словаре отсутствуют — к ним бот обращается без родовых форм.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, bool>> GendersAsync(GameState state, CancellationToken ct)
+    {
+        var ids = state.Players.Select(p => p.Id).ToList();
+        var rows = await (from u in db.Users.AsNoTracking()
+                          where ids.Contains(u.Id)
+                          join b in db.BotProfiles.AsNoTracking() on u.Id equals b.UserId into bb
+                          from b in bb.DefaultIfEmpty()
+                          select new { u.Id, u.Nickname, u.Gender, u.IsBot, Voice = b == null ? null : b.Voice, Role = b == null ? null : b.VoiceRole })
+            .ToListAsync(ct);
+        var result = new Dictionary<string, bool>();
+        foreach (var r in rows)
+        {
+            bool? female = Genders.IsFemale(r.Gender);
+            if (female is null && r.IsBot) female = Speech.PersonaLines.IsFemale(r.Nickname);
+            if (female is null && r.IsBot) female = Speech.BotVoices.Find(Speech.BotVoices.For(r.Id, r.Voice, r.Role).Voice)?.Male == false;
+            if (female is null) continue;
+            var name = r.Nickname.StartsWith("Бот ", StringComparison.Ordinal) ? r.Nickname[4..] : r.Nickname;
+            result[name] = female.Value;
+        }
+        return result;
     }
 
     /// <summary>Сделать ходы ботов. Возвращает число сделанных ходов.</summary>

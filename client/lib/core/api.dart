@@ -188,8 +188,9 @@ class Api {
   /// Одноразовый код (10 минут), чтобы войти в этот аккаунт на другом устройстве.
   Future<LinkCode> createLinkCode() async => LinkCode.fromJson(await post('/auth/link-code') as Json);
 
-  Future<User> updateMe({String? nickname, String? color}) async =>
-      User.fromJson(await patch('/me', {if (nickname != null) 'nickname': nickname, if (color != null) 'avatarColor': color}) as Json);
+  /// [gender]: 'male', 'female' или '' — не указан; null — не менять.
+  Future<User> updateMe({String? nickname, String? color, String? gender}) async =>
+      User.fromJson(await patch('/me', {if (nickname != null) 'nickname': nickname, if (color != null) 'avatarColor': color, if (gender != null) 'gender': gender}) as Json);
 
   /// Таблица лидеров; [bots] — показать и ботов.
   Future<List<LeaderRow>> leaderboard({bool bots = false}) async =>
@@ -277,9 +278,9 @@ class Api {
       ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
   Future<BotInfo> saveBot({String? id, required String nickname, required String color, required String about, required BotSpectra spectra, required bool enabled,
-      String voice = '', String voiceRole = ''}) async {
+      String voice = '', String voiceRole = '', String gender = ''}) async {
     final body = {'nickname': nickname, 'avatarColor': color, 'about': about, 'spectra': spectra.toJson(), 'enabled': enabled,
-      'voice': voice, 'voiceRole': voiceRole};
+      'voice': voice, 'voiceRole': voiceRole, 'gender': gender};
     return BotInfo.fromJson((id == null ? await post('/admin/bots', body) : await put('/admin/bots/$id', body)) as Json);
   }
 

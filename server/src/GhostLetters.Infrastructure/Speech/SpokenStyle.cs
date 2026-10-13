@@ -212,39 +212,10 @@ public static partial class SpokenStyle
 
     private static string EndSentence(string s) => s.Length == 0 || ".!?…".Contains(s[^1]) ? s : s + ".";
 
-    private static readonly (string Male, string Female)[] Endings =
-    [
-        ("отправлял", "отправляла"), ("отправил", "отправила"), ("кидал", "кидала"), ("проверял", "проверяла"),
-        ("думал", "думала"), ("целился", "целилась"), ("видел", "видела"), ("сказал", "сказала"), ("согласен", "согласна"),
-        ("уверен", "уверена"), ("проверил", "проверила"), ("пересмотрел", "пересмотрела"), ("собрал", "собрала"),
-        ("выбрал", "выбрала"), ("голосовал", "голосовала"), ("бы сказал", "бы сказала"), ("бы проверил", "бы проверила"), ("бы присмотрелся", "бы присмотрелась"),
-        ("бы последил", "бы последила"), ("готов", "готова"), ("кинул", "кинула"), ("скинул", "скинула"), ("ставил", "ставила"),
-        ("ошибся", "ошиблась"), ("понял", "поняла"), ("заметил", "заметила"), ("решил", "решила"),
-    ];
+    /// <summary>Обратно к мужскому роду: фразы, выученные у людей, бывают «я кидала» — бот приводит их к своему роду.
+    /// Обращение («ты права») и чужой род («Аня ошиблась») не трогаются.</summary>
+    public static string Masculine(string text) => RussianGender.Speaker(text, female: false);
 
-    /// <summary>Обратно к мужскому роду: фразы, выученные у людей, бывают «я кидала» — бот приводит их к своему роду.</summary>
-    public static string Masculine(string text)
-    {
-        foreach (var (male, female) in Endings.OrderByDescending(e => e.Female.Length))
-        {
-            if (male == female) continue;
-            text = Regex.Replace(text, $@"(?<![а-яё]){Regex.Escape(female)}(?![а-яё])", m =>
-                char.IsUpper(m.Value[0]) ? char.ToUpperInvariant(male[0]) + male[1..] : male, RegexOptions.IgnoreCase);
-        }
-
-        return text;
-    }
-
-    /// <summary>Род по голосу: женский голос говорит «проверяла», «согласна». «Призрак открыл/оставил» не трогаем.</summary>
-    public static string Feminine(string text)
-    {
-        foreach (var (male, female) in Endings)
-        {
-            if (male == female) continue;
-            text = Regex.Replace(text, $@"(?<![а-яё]){Regex.Escape(male)}(?![а-яё])", m =>
-                char.IsUpper(m.Value[0]) ? char.ToUpperInvariant(female[0]) + female[1..] : female, RegexOptions.IgnoreCase);
-        }
-
-        return text;
-    }
+    /// <summary>Род бота: женский говорит «проверяла», «согласна». «Призрак открыл», «ты прав» не трогаем.</summary>
+    public static string Feminine(string text) => RussianGender.Speaker(text, female: true);
 }

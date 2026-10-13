@@ -102,6 +102,7 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             e.Property(x => x.Nickname).HasMaxLength(User.MaxNicknameLength);
             e.Property(x => x.AvatarColor).HasMaxLength(7);
             e.Property(x => x.IsBot).HasDefaultValue(false);
+            e.Property(x => x.Gender).HasMaxLength(8);
         });
 
         b.Entity<AuthIdentity>(e =>
