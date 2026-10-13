@@ -1,5 +1,8 @@
 // Модели ответов сервера. JSON — camelCase, перечисления строками (как на сервере).
 
+import 'dart:convert';
+import 'dart:typed_data';
+
 typedef Json = Map<String, dynamic>;
 
 List<T> _list<T>(dynamic v, T Function(Json) f) =>
@@ -1363,4 +1366,35 @@ class LearnedPhrase {
   };
   static const emotions = {'joking': 'в шутку', 'doubtful': 'с сомнением', 'excited': 'увлечённо', 'confident': 'уверенно', 'calm': 'спокойно'};
   static const manners = {'Calm': 'спокойная', 'Lively': 'живая', 'Formal': 'официальная'};
+}
+
+/// Выученные фразы и какие боты говорят каждой манерой.
+class LearnedPhrases {
+  const LearnedPhrases({required this.voiceEnabled, required this.phrases, required this.speakers});
+  factory LearnedPhrases.fromJson(Json j) => LearnedPhrases(
+        voiceEnabled: j['voiceEnabled'] as bool? ?? false,
+        phrases: [for (final e in (j['phrases'] as List? ?? const [])) LearnedPhrase.fromJson(Map<String, dynamic>.from(e as Map))],
+        speakers: {
+          for (final e in (j['speakers'] as Map? ?? const {}).entries)
+            e.key as String: [
+              for (final b in (e.value as List)) (id: (b as Map)['id'] as String, nickname: b['nickname'] as String),
+            ],
+        },
+      );
+  final bool voiceEnabled;
+  final List<LearnedPhrase> phrases;
+  final Map<String, List<({String id, String nickname})>> speakers;
+}
+
+/// Проигранная фраза: текст, кто сказал, MP3 (null — озвучка выключена).
+class PlayedPhrase {
+  const PlayedPhrase({required this.text, required this.speaker, this.audio});
+  factory PlayedPhrase.fromJson(Json j) => PlayedPhrase(
+        text: j['text'] as String? ?? '',
+        speaker: j['speaker'] as String? ?? '',
+        audio: j['audio'] is String ? base64Decode(j['audio'] as String) : null,
+      );
+  final String text;
+  final String speaker;
+  final Uint8List? audio;
 }

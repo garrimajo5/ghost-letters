@@ -274,10 +274,13 @@ class Api {
   }
 
   /// Фразы, которым боты научились у людей (только админ).
-  Future<List<LearnedPhrase>> learnedPhrases() async =>
-      [for (final e in (await get('/admin/phrases') as List)) LearnedPhrase.fromJson(Map<String, dynamic>.from(e as Map))];
+  Future<LearnedPhrases> learnedPhrases() async => LearnedPhrases.fromJson(await get('/admin/phrases') as Json);
 
   Future<void> blockPhrase(String id, bool blocked) async => post('/admin/phrases/$id/block', {'blocked': blocked});
+
+  /// Проиграть фразу голосом бота (botId пусто — случайный бот той же манеры).
+  Future<PlayedPhrase> playPhrase(String id, {String? botId}) async =>
+      PlayedPhrase.fromJson(await post('/admin/phrases/$id/play', {'botId': botId}) as Json);
 
   /// Голоса озвучки ботов и включён ли синтез на сервере.
   Future<({bool enabled, List<VoiceOption> voices})> botVoices() async {

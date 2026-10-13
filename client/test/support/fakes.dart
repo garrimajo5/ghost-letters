@@ -173,6 +173,34 @@ class FakeApi extends Api {
         ],
       ));
 
+  List<LearnedPhrase> phrases = [
+    const LearnedPhrase(id: 'ph1', intent: 'version', emotion: 'excited', manner: 'Lively', template: 'Ну короче, {card} — это оно!',
+        author: 'Шерлок', seen: 3, blocked: false),
+    const LearnedPhrase(id: 'ph2', intent: 'accuse', emotion: 'doubtful', manner: 'Calm', template: 'Кажется, {player} темнит',
+        author: 'Ватсон', seen: 1, blocked: false),
+  ];
+
+  @override
+  Future<LearnedPhrases> learnedPhrases() async => _record('learnedPhrases', const [], () => LearnedPhrases(voiceEnabled: true, phrases: phrases, speakers: {
+        'Lively': [(id: 'b1', nickname: 'Бот Пуаро'), (id: 'b2', nickname: 'Бот Марпл')],
+        'Calm': [(id: 'b3', nickname: 'Бот Холмс')],
+      }));
+
+  @override
+  Future<PlayedPhrase> playPhrase(String id, {String? botId}) async => _record('playPhrase', [id, botId], () => PlayedPhrase(
+        text: phrases.firstWhere((p) => p.id == id).template.replaceAll('{card}', 'клетка').replaceAll('{player}', 'Холмс'),
+        speaker: botId == 'b2' ? 'Бот Марпл' : 'Бот Пуаро'));
+
+  @override
+  Future<void> blockPhrase(String id, bool blocked) async => _record('blockPhrase', [id, blocked], () {
+        phrases = [
+          for (final p in phrases)
+            p.id == id
+                ? LearnedPhrase(id: p.id, intent: p.intent, emotion: p.emotion, manner: p.manner, template: p.template, author: p.author, seen: p.seen, blocked: blocked)
+                : p,
+        ];
+      });
+
   @override
   Future<List<BotInfo>> adminBots() async => _record('adminBots', const [], () => botList);
 

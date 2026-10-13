@@ -28,6 +28,9 @@ public sealed class CardTags
     /// <summary>Как карту называют вслух (names.json, правится в картотеке): первое — основное название, дальше синонимы.</summary>
     public IReadOnlyList<string> NamesOf(string cardId) => _names.GetValueOrDefault(cardId) ?? [];
 
+    /// <summary>Карты, у которых есть названия для речи.</summary>
+    public IReadOnlyList<string> NamedCards => _names.Keys.ToList();
+
     /// <summary>Основное название карты для речи; нет — null.</summary>
     public string? NameOf(string cardId) => NamesOf(cardId).FirstOrDefault();
 
