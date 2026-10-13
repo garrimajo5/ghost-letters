@@ -31,6 +31,7 @@ public static class GhostDebrief
 
         string Short(string reason)
         {
+            if (reason.Contains("явной связи", StringComparison.Ordinal)) return "";
             var first = reason.Split(';')[0].Trim();
             var at = first.IndexOf(": ", StringComparison.Ordinal);
             return at > 0 ? first[(at + 2)..] : first;
@@ -51,7 +52,7 @@ public static class GhostDebrief
             if (round.Key == 0)
             {
                 var clue = rated[0];
-                parts.Add($"Зацепку дал такую{(clue.Reason.Length > 0 ? $": {clue.Reason} — к истине" : "")}.");
+                parts.Add(clue.Reason.Length > 0 ? $"Зацепку дал такую: {clue.Reason} — это про истину." : "Зацепку дал вот эту.");
                 cards.Add(clue.Letter.Card);
                 notes.Add("открыл");
             }
@@ -70,12 +71,19 @@ public static class GhostDebrief
                 }
                 else parts.Add("Ничего не открыл.");
 
-                foreach (var x in closed.Take(cards.Count >= 3 ? 1 : 2))
+                var told = closed.Take(cards.Count >= 3 ? 1 : 2).ToList();
+                foreach (var x in told)
                 {
                     var why = x.Value.TrueMatch < .08 ? "связь с истиной слабая"
                         : x.Value.FalseMatch >= x.Value.TrueMatch ? "похоже и на ложную карту, открывать — риск"
                         : p.Compromise < .4 ? "можно было открыть, но я перестраховался" : "почти подошло";
                     parts.Add($"{Name(x.Letter.From)} — оставил закрытым: {why}" + (x.Reason.Length > 0 && x.Value.TrueMatch >= .08 ? $" ({x.Reason})." : "."));
+                }
+
+                // Карты всех закрытых писем — на виду (до пяти карт в реплике), даже если о них не сказано отдельно.
+                foreach (var x in told.Concat(closed.Except(told)))
+                {
+                    if (cards.Count >= 5) break;
                     cards.Add(x.Letter.Card);
                     notes.Add("не открыл");
                 }
