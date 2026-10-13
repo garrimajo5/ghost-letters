@@ -142,6 +142,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 continue;
             }
 
+            // Письмо бот кидает не сразу, а через случайное время в пределах таймера — человек тоже может успеть первым.
+            if (state.Phase == Phase.Mailbox && !state.Done.Contains(botId) && now - phaseSince < LetterDelay(state, botId, phaseSince, row.PhaseDeadline))
+            {
+                continue;
+            }
+
             if (await TryMoveAsync(state, botId, rng, ct, humansReady))
             {
                 return 1;
@@ -168,6 +174,17 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         return deadline is { } d
             ? pending && d - now > TimeSpan.FromSeconds(30)
             : pending && soloSince is { } since && now - since < SoloTeamWait;
+    }
+
+    /// <summary>
+    /// Через сколько после начала «Писем» бот отправляет своё: 3 с плюс случайная (но постоянная для бота и раунда) доля
+    /// окна. Окно — до 45 с и не позже чем за 15 с до конца таймера; без таймера — до 20 с.
+    /// </summary>
+    public static TimeSpan LetterDelay(GameState state, Guid botId, DateTimeOffset phaseSince, DateTimeOffset? deadline)
+    {
+        var window = deadline is { } end ? Math.Clamp((end - phaseSince).TotalSeconds - 15 - 3, 0, 45) : 20;
+        var share = (uint)HashCode.Combine(botId, state.Id, state.Round) % 1000 / 1000.0;
+        return TimeSpan.FromSeconds(3 + window * share);
     }
 
     public static bool WaitForNight(Guid bot, DateTimeOffset started, DateTimeOffset now, DateTimeOffset? deadline,

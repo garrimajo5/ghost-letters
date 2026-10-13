@@ -328,13 +328,20 @@ class _UpdateBanner extends ConsumerWidget {
 }
 
 /// Карточка идущей партии; если ждут вашего хода — янтарная рамка и плашка «Ваш ход».
-class _GameCard extends StatelessWidget {
+class _GameCard extends ConsumerWidget {
   const _GameCard({required this.game});
 
   final MyGame game;
 
+  Future<void> _close(BuildContext context, WidgetRef ref) async {
+    final ok = await confirmCloseGame(context);
+    if (!ok || !context.mounted) return;
+    await runAction(context, () => ref.read(apiProvider).closeGame(game.gameId));
+    ref.invalidate(myGamesProvider);
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final g = game;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -369,6 +376,13 @@ class _GameCard extends StatelessWidget {
                     ),
                 ]),
               ),
+              if (g.canClose)
+                IconButton(
+                  key: Key('close-game-${g.gameId}'),
+                  tooltip: 'Закрыть партию без доигрывания',
+                  onPressed: () => _close(context, ref),
+                  icon: const Icon(Icons.close, color: AppColors.muted),
+                ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(

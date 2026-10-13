@@ -16,11 +16,22 @@ class WatchGamesSheet extends ConsumerStatefulWidget {
 
 class _WatchGamesSheetState extends ConsumerState<WatchGamesSheet> {
   late Future<List<WatchableGame>> _games;
+  bool _admin = false;
 
   @override
   void initState() {
     super.initState();
     _games = ref.read(apiProvider).watchableGames();
+    // Админ может закрыть любую зависшую партию.
+    ref.read(apiProvider).isAdmin().then((v) {
+      if (mounted) setState(() => _admin = v);
+    }).catchError((Object _) {});
+  }
+
+  Future<void> _close(WatchableGame game) async {
+    if (!await confirmCloseGame(context) || !mounted) return;
+    await runAction(context, () => ref.read(apiProvider).closeGame(game.gameId));
+    if (mounted) _refresh();
   }
 
   void _refresh() => setState(() { _games = ref.read(apiProvider).watchableGames(); });
@@ -52,7 +63,14 @@ class _WatchGamesSheetState extends ConsumerState<WatchGamesSheet> {
                         leading: const Icon(Icons.visibility_outlined),
                         title: Text(game.title, maxLines: 2, overflow: TextOverflow.ellipsis),
                         subtitle: Text('${T.phase(game.phase)} · ${T.players(game.players)} · ${game.code}'),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: _admin
+                            ? IconButton(
+                                key: Key('admin-close-${game.gameId}'),
+                                tooltip: 'Закрыть партию (админ)',
+                                onPressed: () => _close(game),
+                                icon: const Icon(Icons.close),
+                              )
+                            : const Icon(Icons.chevron_right),
                         onTap: () => Navigator.pop(context, game.code),
                       );
                     },

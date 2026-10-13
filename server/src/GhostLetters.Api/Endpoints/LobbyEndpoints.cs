@@ -66,6 +66,13 @@ public static class LobbyEndpoints
         games.MapGet("/view", (Guid id, HttpContext http, GameService service, CancellationToken ct) =>
             service.SnapshotAsync(id, http.User.UserId(), ct)).WithName("GetGameView");
 
+        // Закрыть без доигрывания: свою партию с ботами или (админ) любую.
+        games.MapPost("/close", async (Guid id, HttpContext http, GameService service, CancellationToken ct) =>
+            {
+                await service.CloseAsync(id, http.User.UserId(), ct);
+                return Results.NoContent();
+            }).WithName("CloseGame");
+
         games.MapPost("/commands", (Guid id, CommandRequest request, HttpContext http, GameService service, CancellationToken ct) =>
             service.ExecuteAsync(id, http.User.UserId(), request, ct)).WithName("SendCommand");
 

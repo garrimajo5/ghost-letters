@@ -354,7 +354,7 @@ class _TopBar extends StatelessWidget {
           key: const Key('main-menu'),
           tooltip: 'Меню партии',
           icon: const Icon(Icons.menu, color: AppColors.muted),
-          onSelected: (value) {
+          onSelected: (value) async {
             switch (value) {
               case 'home':
                 context.go('/');
@@ -370,6 +370,14 @@ class _TopBar extends StatelessWidget {
                 screen.setSeance(!seance);
               case 'big':
                 screen.setBigBoard(!screen.bigBoard);
+              case 'close':
+                if (await confirmCloseGame(context) && context.mounted) {
+                  final closed = await runAction(context, () async {
+                    await screen.ref.read(apiProvider).closeGame(v.gameId);
+                    return true;
+                  });
+                  if (closed == true && context.mounted) context.go('/');
+                }
             }
           },
           itemBuilder: (_) => [
@@ -380,6 +388,9 @@ class _TopBar extends StatelessWidget {
             if (v.board.isNotEmpty && !seance)
               PopupMenuItem(value: 'big', key: const Key('menu-big'), child: Text(screen.bigBoard ? 'Поле целиком на экране' : 'Поле крупно, листать свайпом')),
             const PopupMenuItem(value: 'rules', child: Text('Правила')),
+            // Партия с одними ботами — можно закрыть, не доигрывая.
+            if (v.me != null && v.phase != 'Finished' && v.players.every((p) => p.id == v.me!.id || screen.isBot(p.id)))
+              const PopupMenuItem(value: 'close', key: Key('menu-close-game'), child: Text('Закрыть партию')),
             const PopupMenuItem(value: 'home', child: Text('На главную')),
           ],
         ),
