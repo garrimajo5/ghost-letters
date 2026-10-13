@@ -231,8 +231,13 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             _ => null,
         };
         var cards = columns is null ? new List<string>() : columns.Select((c, r) => view.Board[r].Cards[c]).Take(4).ToList();
-        var text = own.Count == 0 ? "Давайте обсудим выбор. Предлагаю эти карты — что изменим? Я ещё не подтверждаю." :
-            "Послушал предложения. Показываю текущий вариант; можно возразить до подтверждения.";
+        // Ночью Убийца говорит с командой коротко и по-разному, как человек.
+        string[] first = ["Думаю взять вот эти. Что скажете? Пока не подтверждаю.", "Мой вариант — эти карты. Поменяем что-нибудь?",
+            "Предлагаю такие. Если есть идея лучше — пишите, я ещё не нажал.", "Давайте обсудим: я бы загадал эти. Что изменим?"];
+        string[] next = ["Учёл ваши подсказки — вот что выходит. Можно ещё возразить.", "Ок, послушал. Сейчас так — есть возражения?",
+            "Подправил. Если всё устраивает — подтверждаю."];
+        var pick = new Random(HashCode.Combine(state.Id, bot, state.Round, own.Count));
+        var text = own.Count == 0 ? first[pick.Next(first.Length)] : next[pick.Next(next.Length)];
         try
         {
             await chat.SendAsync(state.Id, bot, new SendChatRequest(ChatChannels.KillerTeam, text, null, cards,
