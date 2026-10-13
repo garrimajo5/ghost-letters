@@ -27,6 +27,7 @@ import 'game_sheets.dart';
 import 'game_state.dart';
 import 'game_audio.dart';
 import 'table_theory.dart';
+import 'voice_chat.dart';
 
 part 'main_table.dart';
 part 'seance_table.dart';
@@ -43,6 +44,19 @@ class GameScreen extends ConsumerStatefulWidget {
 
 class GameScreenState extends ConsumerState<GameScreen> {
   GameSnapshot? _snap;
+
+  /// Живой голосовой чат партии — создаётся при первом включении.
+  VoiceChat? _voiceChat;
+  VoiceChat get voiceChat => _voiceChat ??= VoiceChat(ref.read(apiProvider), widget.gameId)..addListener(_onVoice);
+  bool get voiceStarted => _voiceChat != null;
+  String _speakingKey = '';
+
+  /// Кто говорит вслух — подсвечиваем места; стол перестраиваем, только когда это поменялось.
+  void _onVoice() {
+    final key = (_voiceChat!.speaking.toList()..sort()).join(',');
+    if (key == _speakingKey || !mounted) return;
+    setState(() => _speakingKey = key);
+  }
   late final GameAudio _audio;
   Timer? _audioTimer;
   bool _audioBaseline = false;
@@ -349,6 +363,8 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   @override
   void dispose() {
+    _voiceChat?.removeListener(_onVoice);
+    _voiceChat?.dispose();
     for (final s in _subs) {
       s.cancel();
     }
@@ -1767,6 +1783,8 @@ class _Dock extends StatelessWidget {
           ),
           if (showChat) ...[
             const SizedBox(width: 10),
+            _VoiceButton(screen: screen),
+            const SizedBox(width: 4),
             _ChatButton(screen: screen),
           ],
         ]),
@@ -1854,6 +1872,52 @@ class _Pulse extends StatelessWidget {
         );
       },
       child: child,
+    );
+  }
+}
+
+/// Голосовой чат: включить; включён — микрофон (говорить можно, только когда слово у вас); удержание — выйти.
+class _VoiceButton extends StatelessWidget {
+  const _VoiceButton({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final voice = screen.voiceChat;
+    return ListenableBuilder(
+      listenable: voice,
+      builder: (context, _) {
+        final (icon, color, hint) = !voice.joined
+            ? (voice.connecting ? Icons.hourglass_top : Icons.headset_mic_outlined, AppColors.ice,
+                voice.error ?? 'Голосовой чат: слушать всех, говорить — когда слово у вас')
+            : !voice.canSpeak
+                ? (Icons.mic_off_outlined, AppColors.muted, 'Вас не слышно: слово не у вас. Удержание — выйти из голосового чата')
+                : voice.micWanted
+                    ? (Icons.mic, AppColors.believed, 'Вас слышат. Нажмите, чтобы выключить микрофон')
+                    : (Icons.mic_off, AppColors.amber, 'Слово у вас, микрофон выключен — нажмите, чтобы говорить');
+        return Tooltip(
+          message: hint,
+          child: InkWell(
+            key: const Key('voice-chat'),
+            onTap: voice.connecting
+                ? null
+                : () => voice.joined ? (voice.canSpeak ? voice.toggleMic() : null) : voice.join(),
+            onLongPress: voice.joined ? voice.leave : null,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              width: 44,
+              height: 52,
+              decoration: BoxDecoration(
+                color: voice.live ? AppColors.believed.withValues(alpha: .18) : AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: voice.live ? AppColors.believed : AppColors.border),
+              ),
+              child: Icon(icon, color: color),
+            ),
+          ),
+        );
+      },
     );
   }
 }

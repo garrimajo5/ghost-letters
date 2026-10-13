@@ -1,0 +1,11 @@
+# LiveKit для голосового чата партий. Ключи приходят из переменной LIVEKIT_KEYS (docker-compose.prod.yml).
+port: 7880
+log_level: info
+rtc:
+  # Один UDP-порт на все звонки и TCP — запасной путь, если UDP закрыт.
+  udp_port: 7882
+  tcp_port: 7881
+  use_external_ip: true
+room:
+  empty_timeout: 300
+  max_participants: 20

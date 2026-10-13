@@ -935,7 +935,9 @@ class _SeatTile extends StatelessWidget {
     final speaking = v.currentSpeaker == p.id;
     final selected = screen.target == p.id;
     final arrested = v.finale?.arrested.contains(p.id) == true;
-    final ring = selected ? AppColors.amber : (speaking ? AppColors.believed : Colors.transparent);
+    // Говорит вслух (голосовой чат) — зелёное кольцо, как у того, кто держит рацию.
+    final talking = screen.voiceStarted && screen.voiceChat.speaking.contains(p.id);
+    final ring = selected ? AppColors.amber : (speaking || talking ? AppColors.believed : Colors.transparent);
     final name = isMe ? 'Вы' : screen.nick(p.id);
     final meta = [
       if (ghost) 'Призрак',
@@ -1105,6 +1107,8 @@ class _Actions extends StatelessWidget {
       ],
       Expanded(child: main),
       SizedBox(width: row ? 10 : 6),
+      _VoiceButton(screen: screen),
+      const SizedBox(width: 4),
       _ChatButton(screen: screen),
     ]);
   }

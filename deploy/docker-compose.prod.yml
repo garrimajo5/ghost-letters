@@ -31,6 +31,10 @@ services:
       Admin__UserIds: ${ADMIN_USER_IDS:-}
       Speech__ApiKey: ${YANDEX_SPEECHKIT_API_KEY:-}
       Speech__FolderId: ${YANDEX_FOLDER_ID:-}
+      LiveKit__ApiKey: ${LIVEKIT_API_KEY:-}
+      LiveKit__ApiSecret: ${LIVEKIT_API_SECRET:-}
+      LiveKit__PublicUrl: wss://livekit.${DOMAIN}
+      LiveKit__InternalUrl: http://livekit:7880
     volumes:
       - ./cards.json:/app/cards/cards.json:ro
       - ./tags.json:/app/cards/tags.json:ro
@@ -65,6 +69,23 @@ services:
     networks:
       edge:
         ipv4_address: 172.29.214.2
+
+  # Живой голосовой чат (WebRTC SFU). Сигнализация — через Caddy (wss://livekit.ДОМЕН), звук — напрямую:
+  # 7881/tcp и 7882/udp. Ключи — LIVEKIT_API_KEY/SECRET в .env (создаются при первом деплое).
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: unless-stopped
+    command: ["--config", "/etc/livekit.yaml"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret-devsecret-devsecret-devsecret}"
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    networks:
+      edge:
+        ipv4_address: 172.29.214.4
 
 networks:
   edge:
