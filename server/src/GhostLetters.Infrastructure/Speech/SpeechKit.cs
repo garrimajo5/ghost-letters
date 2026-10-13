@@ -70,12 +70,18 @@ public sealed class SpeechKit
         try
         {
             using var audio = new MemoryStream();
-            foreach (var chunk in SpeechText.Chunks(text))
-            {
-                var bytes = await RequestAsync(chunk, voice, role, ct);
-                if (bytes is null) return null;
-                audio.Write(bytes);
-            }
+            // Целиком, одним запросом: склеенные куски звучат рублено — у каждого своя интонация и паузы на стыке.
+            // Длиннее 250 символов SpeechKit v3 синтезирует только в unsafeMode; не вышло — по кускам, как раньше.
+            var whole = await RequestAsync(text, voice, role, ct, unsafeMode: text.Length > SpeechText.ChunkLimit);
+            if (whole is { Length: > 0 }) audio.Write(whole);
+            else if (text.Length <= SpeechText.ChunkLimit) return null;
+            else
+                foreach (var chunk in SpeechText.Chunks(text))
+                {
+                    var bytes = await RequestAsync(chunk, voice, role, ct);
+                    if (bytes is null) return null;
+                    audio.Write(bytes);
+                }
 
             var mp3 = audio.ToArray();
             var duration = Mp3.DurationMs(mp3);
@@ -140,17 +146,19 @@ public sealed class SpeechKit
         }
     }
 
-    private async Task<byte[]?> RequestAsync(string text, string voice, string? role, CancellationToken ct)
+    private async Task<byte[]?> RequestAsync(string text, string voice, string? role, CancellationToken ct, bool unsafeMode = false)
     {
         var hints = new List<object> { new { voice } };
         if (role is not null) hints.Add(new { role });
-        var body = JsonSerializer.Serialize(new
+        var request0 = new Dictionary<string, object>
         {
-            text,
-            hints,
-            outputAudioSpec = new { containerAudio = new { containerAudioType = "MP3" } },
-            loudnessNormalizationType = "LUFS",
-        });
+            ["text"] = text,
+            ["hints"] = hints,
+            ["outputAudioSpec"] = new { containerAudio = new { containerAudioType = "MP3" } },
+            ["loudnessNormalizationType"] = "LUFS",
+        };
+        if (unsafeMode) request0["unsafeMode"] = true;
+        var body = JsonSerializer.Serialize(request0);
         using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint)
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
