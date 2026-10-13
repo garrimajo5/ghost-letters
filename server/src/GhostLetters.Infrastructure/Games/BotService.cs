@@ -331,9 +331,35 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         catch (AppException e) { logger.LogDebug("Реакция бота пропущена: {Error}", e.Message); }
     }
 
+    /// <summary>
+    /// После итогов люди перекидываются парой слов: «Хорошая партия!», «Эх, почти!». Бот — не всегда, один раз,
+    /// через несколько секунд после итогов и только если за столом есть люди.
+    /// </summary>
+    private async Task TryFarewellAsync(GameState state, PlayerView view, Guid botId, CancellationToken ct)
+    {
+        if (state.Phase != Phase.AwardNomination || state.Result is not { } result || view.Me?.Role == Role.Ghost) return;
+        var pick = new Random(HashCode.Combine(state.Id, botId, "farewell"));
+        if (pick.NextDouble() > .45) return;
+        if (!PhaseStarted.TryGetValue(state.Id, out var started) || started.Phase != state.Phase ||
+            time.GetUtcNow() - started.Since < TimeSpan.FromSeconds(4 + pick.Next(10))) return;
+        if (Reacted.ContainsKey((state.Id, botId, -2, state.Phase))) return;
+        Reacted[(state.Id, botId, -2, state.Phase)] = true;
+        var ids = state.Players.Select(p => p.Id).ToList();
+        if (!await db.Users.AsNoTracking().AnyAsync(u => ids.Contains(u.Id) && !u.IsBot, ct)) return;
+        var won = result.Winners.Contains(botId);
+        string[] lines = won
+            ? view.Me?.Role.IsKillerTeam() == true
+                ? ["Простите, это были мы!", "Хорошо, что не раскусили.", "Было непросто держаться. Хорошая партия!"]
+                : ["Хорошая партия!", "Ура, получилось!", "Спасибо за игру — было интересно."]
+            : ["Эх, почти! Хорошо сыграли.", "Поздравляю победителей!", "Обидно, но было интересно.", "Ну вы даёте. Спасибо за игру!"];
+        try { await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, lines[pick.Next(lines.Length)], null, [], []), ct); }
+        catch (AppException e) { logger.LogDebug("Прощание бота пропущено: {Error}", e.Message); }
+    }
+
     private async Task TryReactAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
     {
         await TryReactToHumanAsync(state, view, botId, rng, ct);
+        await TryFarewellAsync(state, view, botId, ct);
         var round = state.Phase == Phase.Discussion ? state.Round : -1;
         if (state.Phase is not (Phase.Discussion or Phase.AwardNomination) || Reacted.ContainsKey((state.Id, botId, round, state.Phase))) return;
         // Человек реагирует не мгновенно: у каждого бота своя задержка 3–10 с.

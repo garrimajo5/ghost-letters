@@ -686,7 +686,9 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
       });
 
   void _onChat() {
-    if (_autoScroll) _toEnd();
+    // Как в мессенджерах: кто и так внизу ленты, видит новое; кто листает старое — не сбивается.
+    final atEnd = _scroll.hasClients && _scroll.position.maxScrollExtent - _scroll.position.pixels < 60;
+    if (_autoScroll || atEnd) _toEnd();
   }
 
   @override
