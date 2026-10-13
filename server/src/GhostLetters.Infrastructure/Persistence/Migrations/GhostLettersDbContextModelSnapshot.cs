@@ -311,6 +311,56 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                     b.ToTable("cards", "public");
                 });
 
+            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.CardAlias", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CardId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("card_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("game_id");
+
+                    b.Property<string>("Phrase")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("phrase");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<bool?>("Valid")
+                        .HasColumnType("boolean")
+                        .HasColumnName("valid");
+
+                    b.HasKey("Id")
+                        .HasName("pk_card_aliases");
+
+                    b.HasIndex("GameId")
+                        .HasDatabaseName("ix_card_aliases_game_id");
+
+                    b.HasIndex("Phrase", "CardId")
+                        .HasDatabaseName("ix_card_aliases_phrase_card_id");
+
+                    b.HasIndex("UserId", "Phrase")
+                        .HasDatabaseName("ix_card_aliases_user_id_phrase");
+
+                    b.ToTable("card_aliases", "public");
+                });
+
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.CardMark", b =>
                 {
                     b.Property<Guid>("GameId")
@@ -1424,6 +1474,23 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_cards_card_sets_set_id");
+                });
+
+            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.CardAlias", b =>
+                {
+                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.Game", null)
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_aliases_games_game_id");
+
+                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_card_aliases_users_user_id");
                 });
 
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.CardMark", b =>
