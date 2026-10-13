@@ -60,7 +60,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             request = request with
             {
                 Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
-                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier),
+                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier, Speech.PersonaLines.KeyOf(profile?.Nickname)),
             };
         }
 
@@ -362,7 +362,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var ids = state.Players.Select(p => p.Id).ToList();
         if (!await db.Users.AsNoTracking().AnyAsync(u => ids.Contains(u.Id) && !u.IsBot, ct)) return;
         var won = result.Winners.Contains(botId);
-        string[] lines = won
+        var persona = Speech.PersonaLines.KeyOf(await db.Users.AsNoTracking().Where(u => u.Id == botId).Select(u => u.Nickname).FirstOrDefaultAsync(ct));
+        var own = Speech.PersonaLines.Lines(persona, !won ? Speech.PersonaLines.Situations.FarewellLose
+            : view.Me?.Role.IsKillerTeam() == true ? Speech.PersonaLines.Situations.FarewellBlackWin : Speech.PersonaLines.Situations.FarewellWin);
+        string[] lines = own.Count > 0 ? [.. own] : won
             ? view.Me?.Role.IsKillerTeam() == true
                 ? ["Простите, это были мы!", "Хорошо, что не раскусили.", "Было непросто держаться. Хорошая партия!"]
                 : ["Хорошая партия!", "Ура, получилось!", "Спасибо за игру — было интересно."]
@@ -587,7 +590,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                     var call = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
                     // «Тестер, это не я. Тестер, тайна 2: …» — имя второй раз не повторяем.
                     var rest = answer.Text.StartsWith(call + ", ", StringComparison.Ordinal) ? Capital(answer.Text[(call.Length + 2)..]) : answer.Text;
-                    answer = (Defense(call, Speech.SpokenStyle.MannerOf(botId), rng) + rest, answer.Cards, answer.Notes);
+                    answer = (Defense(call, Speech.SpokenStyle.MannerOf(botId), rng, Speech.PersonaLines.KeyOf(mind.Names.GetValueOrDefault(botId))) + rest, answer.Cards, answer.Notes);
                 }
 
                 try
@@ -612,7 +615,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         // Обвинили — человек сначала отвечает на это, потом говорит о картах.
         if (mind is not null && await AccusedByAsync(state, botId, mind, said.Count > 0 ? said[0].CreatedAt : null, ct) is { } accuser)
-            line = (Defense(accuser, Speech.SpokenStyle.MannerOf(botId), rng) + line.Text, line.Cards, line.Notes);
+            line = (Defense(accuser, Speech.SpokenStyle.MannerOf(botId), rng, Speech.PersonaLines.KeyOf(mind.Names.GetValueOrDefault(botId))) + line.Text, line.Cards, line.Notes);
 
         try
         {
@@ -646,8 +649,11 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     /// <summary>Ответ на обвинение — без слов-подозрений, чтобы самого бота не сочли обвинителем.</summary>
-    public static string Defense(string who, Speech.SpokenStyle.Manner manner, Random rng)
+    public static string Defense(string who, Speech.SpokenStyle.Manner manner, Random rng, string? persona = null)
     {
+        // Сыщик отвечает в своём характере: Пуаро — с достоинством, Жеглов — напористо.
+        if (persona is not null && rng.NextDouble() < Speech.PersonaLines.Share && Speech.PersonaLines.Pick(persona, Speech.PersonaLines.Situations.Defense, rng, who: who) is { } own)
+            return own + " ";
         string[] lines = manner switch
         {
             Speech.SpokenStyle.Manner.Lively => [$"Я?! {who}, ты что, я мирный! ", $"{who}, да ладно, я за стол играю! ", $"Ну нет, {who}, это не я. "],

@@ -27,8 +27,14 @@ public static partial class ChatStyle
 
     private sealed record Ctx(Random Rng, SpokenStyle.Manner Manner, double Risk,
         IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions,
-        IReadOnlyCollection<string> Earlier)
+        IReadOnlyCollection<string> Earlier, string? Persona = null)
     {
+        /// <summary>Фраза своего персонажа (Пуаро, Марпл…) для ситуации — в большинстве реплик, но не во всех.</summary>
+        public string? Own(string situation, string? card = null, string? who = null, string? list = null, string? why = null,
+            string? hint = null, string? to = null) =>
+            Persona is null || Rng.NextDouble() >= PersonaLines.Share ? null
+                : PersonaLines.Pick(Persona, situation, Rng, card, who, list, why, hint, to);
+
         /// <summary>Это обвинение бот уже говорил раньше — человек не повторяет его в каждой реплике.</summary>
         public bool Repeats(string who)
         {
@@ -55,12 +61,13 @@ public static partial class ChatStyle
     /// <param name="learned">Фразы людей той же манеры (мысль, эмоция, шаблон с {card}/{player}).</param>
     /// <param name="emotions">Эмоции, которые подходят боту.</param>
     /// <param name="earlier">Прежние реплики бота в этой партии: уже сказанные обвинения он не повторяет.</param>
+    /// <param name="persona">Персонаж бота (<see cref="PersonaLines.KeyOf"/>): говорит его фразами.</param>
     public static string Humanize(string? text, Random rng, SpokenStyle.Manner manner, bool male, double risk = .5,
         IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null,
-        IReadOnlyCollection<string>? earlier = null)
+        IReadOnlyCollection<string>? earlier = null, string? persona = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return text ?? "";
-        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? []);
+        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? [], persona);
         var result = "";
         var afterList = false;
         var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
@@ -128,26 +135,26 @@ public static partial class ChatStyle
         Match m;
         // Своё письмо: «вот эту» — клиент покажет карту письма.
         if (bare == "Отправлял вот эту — исчезла")
-            return c.LearnedFor(PhraseBook.Intents.ClaimLost, "вот это", null) ?? c.Manner switch
+            return c.LearnedFor(PhraseBook.Intents.ClaimLost, "вот это", null) ?? c.Own(PersonaLines.Situations.ClaimLost) ?? c.Manner switch
             {
                 SpokenStyle.Manner.Lively => c.Pick("Моё вот это — пропало!", "Эх, кидал вот эту — не открыли.", "Я кидал вот эту, и она исчезла."),
                 SpokenStyle.Manner.Formal => c.Pick("Моё письмо — вот это; Призрак его не открыл.", "Я отправлял вот эту, письмо исчезло."),
                 _ => c.Pick("Кидал вот эту — исчезла.", "Моё письмо — вот это, не открылось.", "Я отправлял вот эту, она пропала."),
             };
         if (bare == "Моё письмо — вот это, оно открылось")
-            return c.LearnedFor(PhraseBook.Intents.ClaimOpen, "вот это", null) ?? c.Manner switch
+            return c.LearnedFor(PhraseBook.Intents.ClaimOpen, "вот это", null) ?? c.Own(PersonaLines.Situations.ClaimOpen) ?? c.Manner switch
             {
                 SpokenStyle.Manner.Lively => c.Pick("Моё вот это — открылось!", "Кидал вот это — и его открыли!"),
                 SpokenStyle.Manner.Formal => c.Pick("Моё письмо — вот это; Призрак его открыл.", "Я отправлял вот это, письмо открыто."),
                 _ => c.Pick("Моё письмо — вот это, открылось.", "Кидал вот это — открыли.", "Вот это моё, Призрак его открыл."),
             };
         if (bare == "Отправил вот эту, ждём Призрака")
-            return c.Pick("Кинул вот эту, посмотрим.", "Моё — вот это. Ждём Призрака.", "Отправил вот эту, ждём.");
+            return c.Own(PersonaLines.Situations.ClaimWait) ?? c.Pick("Кинул вот эту, посмотрим.", "Моё — вот это. Ждём Призрака.", "Отправил вот эту, ждём.");
         if ((m = Regex.Match(bare, $@"^Проверял: (?<list>.+?) — (?<why>(?:по смыслу|по форме|по цвету|по деталям).+)$")).Success)
         {
             var list = Acc(m.Groups["list"].Value);
             var why = Reason(m.Groups["why"].Value, c);
-            return c.Manner switch
+            return c.Own(PersonaLines.Situations.Check, list: list, why: why) ?? c.Manner switch
             {
                 SpokenStyle.Manner.Formal => c.Pick($"Письмом проверял {list}: {why}.", $"Целился в {list} — {why}."),
                 SpokenStyle.Manner.Lively => c.Pick($"Целился в {list} — {why}!", $"Думал про {list}: {why}.", $"Хотел проверить {list} — {why}."),
@@ -163,7 +170,7 @@ public static partial class ChatStyle
             if (bare == "Но одной проверки мало") return "";
             // Вывод из исчезнувшего письма человек проговаривает не каждый раз.
             if (c.Rng.NextDouble() < .35) return "";
-            return c.Manner switch
+            return c.Own(PersonaLines.Situations.LostConclusion) ?? c.Manner switch
             {
                 SpokenStyle.Manner.Lively => c.Pick("Значит, скорее мимо. Но это не точно!", "Минус этим картам, хотя одной проверки мало."),
                 SpokenStyle.Manner.Formal => c.Pick("Это ослабляет проверенное, но не исключает.", "Под сомнением, но не вычеркнуто."),
@@ -175,8 +182,10 @@ public static partial class ChatStyle
         if (bare is "Письмо исчезло, но явных связей с картами поля я не вижу" or "Письмо открыто, но явных связей с картами поля я не вижу")
             return "";
         if (bare == "Открытие письма усиливает эти связи")
-            return c.Manner == SpokenStyle.Manner.Lively ? c.Pick("Тепло!", "Значит, я на верном пути!") : c.Pick("Значит, я на верном пути.", "Это в плюс этим картам.");
+            return c.Own(PersonaLines.Situations.OpenConclusion) ?? (c.Manner == SpokenStyle.Manner.Lively ? c.Pick("Тепло!", "Значит, я на верном пути!") : c.Pick("Значит, я на верном пути.", "Это в плюс этим картам."));
         if (bare == "Пока жду результат проверки") return "";
+        if (bare is "Улик пока мало — версию не строю, жду подсказок" or "Пока гадать рано: подсказок почти нет" or "Подожду улик, наугад называть не буду")
+            return c.Own(PersonaLines.Situations.NoClues) ?? s;
         if ((m = Regex.Match(bare, @"^(?<hint>Подсказка р\.\d+ №\d+|Зацепка) → (?<to>" + Ref + @"): (?<why>.+)$", RegexOptions.IgnoreCase)).Success)
         {
             var why = Reason(m.Groups["why"].Value, c);
@@ -184,7 +193,7 @@ public static partial class ChatStyle
             if (c.Links++ > 0 && c.Rng.NextDouble() < .7) return "";
             var hint = m.Groups["hint"].Value;
             var to = m.Groups["to"].Value;
-            return c.Pick($"{hint} намекает на {Acc(to)}: {why}.",
+            return c.Own(PersonaLines.Situations.Link, hint: hint, to: to, why: why) ?? c.Pick($"{hint} намекает на {Acc(to)}: {why}.",
                 $"{hint} и {to} — {why}.",
                 $"Смотрите: {(hint == "Зацепка" ? "зацепка" : hint)} — {why}, как и {to}.");
         }
@@ -197,9 +206,11 @@ public static partial class ChatStyle
         {
             var who = m.Groups["who"].Value;
             var why = m.Groups["why"].Success ? Behaviour(m.Groups["why"].Value) : null;
-            return c.LearnedFor(PhraseBook.Intents.Accuse, null, who) is { } learned && Regex.IsMatch(learned, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase)
-                ? learned
-                : c.Pick($"Подозреваю, что {who} из чёрных{(why is null ? "" : ": " + why)}.",
+            if (c.LearnedFor(PhraseBook.Intents.Accuse, null, who) is { } learned && Regex.IsMatch(learned, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase))
+                return learned;
+            if (c.Own(PersonaLines.Situations.Accuse, who: who) is { } own)
+                return why is null ? own : $"{own} {Capital(why)}.";
+            return c.Pick($"Подозреваю, что {who} из чёрных{(why is null ? "" : ": " + why)}.",
                     $"{who}, по-моему, из чёрных{(why is null ? "" : " — " + why)}.",
                     $"Присмотритесь к игроку {who}: похоже, из чёрных{(why is null ? "" : " — " + why)}.");
         }
@@ -284,8 +295,8 @@ public static partial class ChatStyle
         var said = new List<string>();
         if (who is not null)
             said.Add(agree
-                ? c.LearnedFor(PhraseBook.Intents.Agree, null, who) ?? c.Pick($"{who}, согласен.", $"{who}, поддержу.", $"{who}, да, я тоже так думаю.")
-                : c.LearnedFor(PhraseBook.Intents.Disagree, null, who) ?? c.Pick($"{who}, тут не соглашусь.", $"{who}, а я не согласен.", $"{who}, спорно."));
+                ? c.LearnedFor(PhraseBook.Intents.Agree, null, who) ?? c.Own(PersonaLines.Situations.Agree, who: who) ?? c.Pick($"{who}, согласен.", $"{who}, поддержу.", $"{who}, да, я тоже так думаю.")
+                : c.LearnedFor(PhraseBook.Intents.Disagree, null, who) ?? c.Own(PersonaLines.Situations.Disagree, who: who) ?? c.Pick($"{who}, тут не соглашусь.", $"{who}, а я не согласен.", $"{who}, спорно."));
         if (!refMatch.Success)
         {
             said.Add(rest.Trim());
@@ -297,22 +308,23 @@ public static partial class ChatStyle
             var exclude = Regex.IsMatch(rest, @"не подходит|Исключаю|Не верю в", RegexOptions.IgnoreCase);
             var tentative = !exclude && Regex.IsMatch(rest, @"Пока не ясно|Есть идея", RegexOptions.IgnoreCase);
             said.Add(exclude
-                ? c.Pick($"{Capital(r)} — мимо, по-моему.", $"Не верю в {ra}.", $"{Capital(r)} отпадает: улики притянуты.", $"Исключаю {ra}.")
+                ? c.Own(PersonaLines.Situations.Exclude, card: r) ?? c.Pick($"{Capital(r)} — мимо, по-моему.", $"Не верю в {ra}.", $"{Capital(r)} отпадает: улики притянуты.", $"Исключаю {ra}.")
                 : tentative
-                    ? c.Pick($"Я бы проверил {ra}.", $"А что если {r}?", $"Есть мысль про {ra}, но пока сыро.")
+                    ? c.Own(PersonaLines.Situations.Tentative, card: r) ?? c.Pick($"Я бы проверил {ra}.", $"А что если {r}?", $"Есть мысль про {ra}, но пока сыро.")
                     : doubt
-                        ? c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? c.Pick($"Может, {r}?", $"Не уверен, но, кажется, {r}.", $"Склоняюсь: {r}, но не точно.")
+                        ? c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? c.Own(PersonaLines.Situations.VersionDoubt, card: r) ?? c.Pick($"Может, {r}?", $"Не уверен, но, кажется, {r}.", $"Склоняюсь: {r}, но не точно.")
                         : c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? Confident(r, sure, c));
         }
 
         if (weakLink && !doubt)
-            said.Add(c.Pick("Но это так, догадка.", "Пока больше чутьё.", "Улик под это мало, конечно."));
+            said.Add(c.Own(PersonaLines.Situations.Weak) ?? c.Pick("Но это так, догадка.", "Пока больше чутьё.", "Улик под это мало, конечно."));
         said.AddRange(tail.Where(t => t.Length > 0));
         return string.Join(" ", said);
     }
 
     private static string Confident(string r, bool sure, Ctx c)
     {
+        if (c.Own(sure ? PersonaLines.Situations.VersionSure : PersonaLines.Situations.Version, card: r) is { } own) return own;
         if (sure)
             return c.Manner == SpokenStyle.Manner.Lively
                 ? c.Pick($"{Capital(r)} — точно оно!", $"Уверен: {r}!")
