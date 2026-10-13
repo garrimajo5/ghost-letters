@@ -155,7 +155,7 @@ public static partial class ChatStyle
             var hint = m.Groups["hint"].Value;
             var to = m.Groups["to"].Value;
             return c.Pick($"{hint} намекает на {Acc(to)}: {why}.",
-                $"{hint} и {to} — {why}.",
+                $"{hint} и {to}: {why}.",
                 $"Смотрите: {(hint == "Зацепка" ? "зацепка" : hint)} — {why}, как и {to}.");
         }
         if ((m = Regex.Match(bare, @"^Целиком думаю так: (?<list>.+)$")).Success)

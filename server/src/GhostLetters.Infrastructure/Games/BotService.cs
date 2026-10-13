@@ -241,6 +241,13 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             "Предлагаю такие. Если есть идея лучше — пишите, я ещё не нажал.", "Давайте обсудим: я бы загадал эти. Что изменим?"];
         string[] next = ["Учёл ваши подсказки — вот что выходит. Можно ещё возразить.", "Ок, послушал. Сейчас так — есть возражения?",
             "Подправил. Если всё устраивает — подтверждаю."];
+        // Сообщник не загадывает сам — он подсказывает Убийце.
+        if (state.Player(bot).Role != Role.Killer)
+        {
+            first = ["Я бы взял эти. Решать тебе.", "Предлагаю вот такие — их будет трудно угадать.", "Мой совет — эти карты. Что думаешь?"];
+            next = ["Посмотрел твой вариант — так тоже можно.", "Ок, если тебе так удобнее — поддержу.", "Учёл — оставил бы так."];
+        }
+
         var pick = new Random(HashCode.Combine(state.Id, bot, state.Round, own.Count));
         var text = own.Count == 0 ? first[pick.Next(first.Length)] : next[pick.Next(next.Length)];
         try
