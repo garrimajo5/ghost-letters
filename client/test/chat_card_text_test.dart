@@ -63,4 +63,11 @@ void main() {
     expect(find.byType(CardImage), findsNWidgets(3));
     expect(tester.takeException(), isNull);
   });
+
+  test('номер словом и «тайну» после предлога — тоже картинкой', () {
+    const wide = [BoardRow('Motive', ['m1', 'm2', 'm3', 'm4', 'm5']), BoardRow('Secret', ['s1', 's2', 's3'])];
+    final parts = ChatCardText.parse(message('Хм, мотив пять похоже правда. Ставлю на тайну 2, а мотив второй — нет.', annotated: false), wide, hints);
+    expect(parts.map((p) => p.cardId).whereType<String>(), ['m5', 's2', 'm2']);
+    expect(parts.map((p) => p.text).join(), contains('тайну'));
+  });
 }
