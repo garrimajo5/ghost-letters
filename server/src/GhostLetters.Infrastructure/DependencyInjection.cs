@@ -48,6 +48,8 @@ public static class DependencyInjection
         services.AddScoped<ChatService>();
         services.AddSingleton<Speech.SpeechKit>();
         services.AddSingleton<Speech.SpeechWriter>();
+        services.AddSingleton<Voice.VoiceRooms>();
+        services.AddScoped<Voice.VoiceService>();
         services.AddScoped<ReactionService>();
         services.AddSingleton<ReactionLimiter>();
         services.AddScoped<MediaLimits>();

@@ -93,6 +93,53 @@ public sealed class SpeechKit
         }
     }
 
+    public const string SttEndpoint = "https://stt.api.cloud.yandex.net/speech/v1/stt:recognize";
+
+    /// <summary>
+    /// Распознать короткую речь (до 30 с, 16 кГц моно, PCM 16 бит; WAV-заголовок снимается). Нужна роль
+    /// ai.speechkit-stt.user. null — не распознано или распознавание недоступно. Ошибки не бросает.
+    /// </summary>
+    public async Task<string?> RecognizeAsync(byte[] audio, int sampleRate, CancellationToken ct)
+    {
+        if (!Enabled) return null;
+        var pcm = Wav.Pcm(audio, out var rate) ?? audio;
+        if (rate > 0) sampleRate = rate;
+        if (pcm.Length < sampleRate / 5 || pcm.Length > 1_000_000) return null;
+        lock (gate)
+        {
+            if (day != Today) (day, spent) = (Today, 0);
+            // Минута речи считается как 600 символов синтеза: общий дневной предел расходов.
+            var cost = (int)Math.Ceiling(pcm.Length / 2.0 / sampleRate * 10);
+            if (spent + cost > dailyLimit) return null;
+            spent += cost;
+        }
+
+        try
+        {
+            var url = $"{SttEndpoint}?lang=ru-RU&format=lpcm&sampleRateHertz={sampleRate}" +
+                      (string.IsNullOrEmpty(folderId) ? "" : $"&folderId={Uri.EscapeDataString(folderId)}");
+            using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = new ByteArrayContent(pcm) };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Api-Key", apiKey);
+            using var response = await http.SendAsync(request, ct);
+            var payload = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                logger.LogWarning("Распознавание SpeechKit {Status}: {Body}", (int)response.StatusCode, payload.Length > 300 ? payload[..300] : payload);
+                return null;
+            }
+
+            using var doc = JsonDocument.Parse(payload);
+            var text = doc.RootElement.TryGetProperty("result", out var r) ? r.GetString() : null;
+            return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            if (ct.IsCancellationRequested) throw;
+            logger.LogWarning(e, "Распознавание не удалось");
+            return null;
+        }
+    }
+
     private async Task<byte[]?> RequestAsync(string text, string voice, string? role, CancellationToken ct)
     {
         var hints = new List<object> { new { voice } };
@@ -215,5 +262,34 @@ public static class Mp3
         }
 
         return (int)Math.Round(seconds * 1000);
+    }
+}
+
+/// <summary>Снять WAV-заголовок: PCM 16 бит моно и частота из fmt. Не WAV — null.</summary>
+public static class Wav
+{
+    public static byte[]? Pcm(byte[] data, out int sampleRate)
+    {
+        sampleRate = 0;
+        if (data.Length < 44 || data[0] != 'R' || data[1] != 'I' || data[2] != 'F' || data[3] != 'F' ||
+            data[8] != 'W' || data[9] != 'A' || data[10] != 'V' || data[11] != 'E') return null;
+        var i = 12;
+        while (i + 8 <= data.Length)
+        {
+            var id = System.Text.Encoding.ASCII.GetString(data, i, 4);
+            var size = BitConverter.ToInt32(data, i + 4);
+            // Запись «на лету» может оставить размер незаполненным — тогда до конца файла.
+            if (size < 0 || i + 8 + size > data.Length) size = data.Length - i - 8;
+            if (id == "fmt " && i + 16 <= data.Length) sampleRate = BitConverter.ToInt32(data, i + 12);
+            if (id == "data")
+            {
+                var length = Math.Min(size, data.Length - i - 8);
+                return data.AsSpan(i + 8, length).ToArray();
+            }
+
+            i += 8 + size + (size & 1);
+        }
+
+        return null;
     }
 }

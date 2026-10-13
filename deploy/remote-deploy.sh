@@ -14,6 +14,8 @@ fi
 # Открыть HTTP/HTTPS, если включён брандмауэр.
 if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
   ufw allow 22/tcp >/dev/null; ufw allow 80/tcp >/dev/null; ufw allow 443/tcp >/dev/null
+  # Голосовой чат (LiveKit): звук по UDP и запасной TCP.
+  ufw allow 7881/tcp >/dev/null; ufw allow 7882/udp >/dev/null
 fi
 
 if [ ! -f .env ]; then
@@ -53,6 +55,12 @@ if [ -n "${YANDEX_FOLDER_ID:-}" ]; then
   else
     echo "YANDEX_FOLDER_ID=$YANDEX_FOLDER_ID" >> .env
   fi
+fi
+
+# Ключи голосового чата (LiveKit) — создаются один раз и хранятся только на сервере.
+if ! grep -q '^LIVEKIT_API_KEY=' .env; then
+  echo "LIVEKIT_API_KEY=gl$(openssl rand -hex 6)" >> .env
+  echo "LIVEKIT_API_SECRET=$(openssl rand -hex 32)" >> .env
 fi
 
 # Веб-версия и APK (их выкладывают workflow «Deploy web» и «Release Android»).

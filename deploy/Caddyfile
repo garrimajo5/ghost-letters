@@ -29,3 +29,8 @@
 		file_server
 	}
 }
+
+# Голосовой чат: сигнализация LiveKit (WebSocket) на поддомене, сертификат Caddy получает сам.
+livekit.{$DOMAIN} {
+	reverse_proxy livekit:7880
+}

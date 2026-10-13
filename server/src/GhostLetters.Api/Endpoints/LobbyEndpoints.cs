@@ -72,6 +72,20 @@ public static class LobbyEndpoints
         games.MapGet("/events", (Guid id, long? after, HttpContext http, GameService service, CancellationToken ct) =>
             service.GetEventsAsync(id, http.User.UserId(), after ?? 0, ct)).WithName("GetGameEvents");
 
+        // Живой голосовой чат (LiveKit): доступ к комнате партии; говорить — только со словом.
+        games.MapPost("/voice", (Guid id, HttpContext http, Infrastructure.Voice.VoiceService voice, CancellationToken ct) =>
+            voice.AccessAsync(id, http.User.UserId(), ct)).WithName("JoinVoice");
+
+        // Кусок сказанного (WAV 16 кГц) — распознать и положить в чат: так боты понимают людей.
+        games.MapPost("/voice/transcript", async (Guid id, IFormFile file, HttpContext http, Infrastructure.Voice.VoiceService voice,
+                CancellationToken ct) =>
+            {
+                await using var stream = file.OpenReadStream();
+                return await voice.TranscribeAsync(id, http.User.UserId(), stream, file.Length, ct);
+            })
+            .DisableAntiforgery()
+            .WithName("VoiceTranscript");
+
         return api;
     }
 }

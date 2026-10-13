@@ -56,7 +56,7 @@ jobs:
         if: steps.cfg.outputs.skip != 'true'
         run: |
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
-          scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile \
+          scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile deploy/livekit.yaml \
             client/assets/cards/cards.json client/assets/cards/tags.json client/assets/cards/details.json client/assets/cards/associations.json client/assets/cards/names.json "$SSH_USER@$HOST:$APP_DIR/"
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR/www/download"
           scp -i ~/.ssh/deploy deploy/www/download/index.html "$SSH_USER@$HOST:$APP_DIR/www/download/index.html"

@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 namespace GhostLetters.Api.Realtime;
 
 /// <summary>Рассылка через SignalR: каждому игроку — его проекция и видимые ему события.</summary>
-public sealed class HubNotifier(IHubContext<PlayHub> hub) : IRealtimeNotifier
+public sealed class HubNotifier(IHubContext<PlayHub> hub, Infrastructure.Voice.VoiceRooms voice) : IRealtimeNotifier
 {
     public Task LobbyChangedAsync(LobbyDto lobby, CancellationToken ct) =>
         hub.Clients.Group(PlayHub.LobbyGroup(lobby.Id)).SendAsync("LobbyUpdated", lobby, ct);
@@ -17,6 +17,8 @@ public sealed class HubNotifier(IHubContext<PlayHub> hub) : IRealtimeNotifier
     /// <summary>GameView — {view, deadline}: личная проекция и дедлайн текущей фазы.</summary>
     public async Task GameChangedAsync(GameState state, IReadOnlyList<GameEvent> events, DateTimeOffset? deadline, CancellationToken ct)
     {
+        // Слово перешло — микрофоны в голосовом чате открываются и закрываются сервером.
+        await voice.SyncAsync(state, ct);
         foreach (var player in state.Players)
         {
             var client = hub.Clients.User(player.Id.ToString());
