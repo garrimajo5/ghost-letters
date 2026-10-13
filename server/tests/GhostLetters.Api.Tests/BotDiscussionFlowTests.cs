@@ -40,8 +40,9 @@ public sealed class BotDiscussionFlowTests(PostgresFixture postgres) : IAsyncLif
                 .OrderBy(m => m.CreatedAt).ToListAsync());
             // Итоговая версия — построчно по рядам (вступления у ботов разные).
             lines.Should().Contain(m => m.Text!.Contains("\n• "));
-            lines.Should().Contain(m => m.Text!.Contains("будешь голосовать?"));
-            lines.Should().Contain(m => m.Text!.Contains("отвечаю про голосование"));
+            // Вопрос соседу о ряду и ответ на него (формулировки живые, разные).
+            lines.Should().Contain(m => m.Text!.Contains("? ") && m.Text.Contains("в ряду «"));
+            lines.Should().Contain(m => m.Text!.Contains(", отвечаю"));
             lines.GroupBy(m => m.AuthorId).Should().OnlyContain(g => g.Count() <= BotDiscussion.MaxMessages);
             lines.Should().OnlyContain(m => m.Channel == ChatChannels.Public && m.Text!.Length <= ChatService.MaxTextLength);
             var count = lines.Count;

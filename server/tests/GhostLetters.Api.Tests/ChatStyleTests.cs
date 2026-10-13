@@ -95,4 +95,18 @@ public sealed class ChatStyleTests
         said.Should().OnlyContain(s => s.Contains("мотив 5"));
         ChatStyle.Humanize("Подозреваю, что Бот Жеглов из чёрных.", new Random(1), SpokenStyle.Manner.Calm, true, earlier: earlier).Should().Contain("Жеглов");
     }
+
+    [Fact]
+    public void FinalQuestion_StaysAQuestionToTheSamePlayer()
+    {
+        foreach (var seed in Enumerable.Range(0, 20))
+        {
+            var s = ChatStyle.Humanize("Ватсон, за какую карту в ряду «мотив» будешь голосовать? Я выбираю мотив 4. Зацепка: по смыслу: восточная культура. Какие улики поддерживают твою версию? А кого подозреваешь?",
+                new Random(seed), SpokenStyle.Manner.Calm, true);
+            s.Should().StartWith("Ватсон, ").And.Contain("?").And.Contain("«мотив»").And.NotContain("Какие улики поддерживают");
+            ChatStyle.Refs(s).Should().Contain("мотив 4");
+            var a = ChatStyle.Humanize("Пуаро, отвечаю про голосование: здесь наши версии совпадают. Сейчас выберу мотив 4.", new Random(seed), SpokenStyle.Manner.Calm, true);
+            a.Should().StartWith("Пуаро, отвечаю").And.Contain("мотив 4");
+        }
+    }
 }

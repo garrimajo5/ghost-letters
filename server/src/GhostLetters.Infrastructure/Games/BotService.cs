@@ -296,8 +296,44 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// Боты реагируют, как люди: через несколько секунд после открытия писем — 🤔/😮/😱 (Призрак — 👻),
     /// в итогах — радость или досада. Не всегда и не все; это не ход и не сообщение в чат.
     /// </summary>
+    /// <summary>На какие реплики людей бот уже отреагировал (партия, бот, сообщение).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Guid, Guid, Guid), bool> ReactedTo = new();
+
+    /// <summary>
+    /// Реакция на реплику человека, как за живым столом: обвинили бота — 😮/🙈/🤡, согласились с ним — 👍,
+    /// пошутили — 😂. Через пару секунд после реплики, не на каждую и не все боты сразу.
+    /// </summary>
+    private async Task TryReactToHumanAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
+    {
+        if (state.Phase != Phase.Discussion || view.Me?.Role == Role.Ghost) return;
+        var now = time.GetUtcNow();
+        var last = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&
+                m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId && m.CreatedAt > now.AddSeconds(-25))
+            .OrderByDescending(m => m.CreatedAt).FirstOrDefaultAsync(ct);
+        if (last?.Text is not { Length: > 0 } text || now - last.CreatedAt < TimeSpan.FromSeconds(2 + (botId.GetHashCode() & 3))) return;
+        if (ReactedTo.Count > 20_000) ReactedTo.Clear();
+        if (!ReactedTo.TryAdd((state.Id, botId, last.Id), true)) return;
+        if (await db.Users.AsNoTracking().AnyAsync(u => u.Id == last.AuthorId && u.IsBot, ct)) return;
+        var ids = state.Players.Select(p => p.Id).ToList();
+        var names = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
+        var mine = names.GetValueOrDefault(botId, "");
+        var bare = mine.StartsWith("Бот ", StringComparison.Ordinal) ? mine[4..] : mine;
+        string? emoji = null;
+        if (AccusationReader.Read(last.AuthorId!.Value, text, names).Any(a => a.Target == botId))
+            emoji = rng.NextDouble() < .7 ? new[] { "😮", "🙈", "🤡" }[rng.Next(3)] : null;
+        else if (bare.Length > 1 && System.Text.RegularExpressions.Regex.IsMatch(text,
+                     $@"(?<![\p{{L}}]){System.Text.RegularExpressions.Regex.Escape(bare)}[\p{{L}}]{{0,2}},?\s+(?:согласен|согласна|поддерживаю|поддержу|прав|права|верно)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            emoji = rng.NextDouble() < .5 ? "👍" : null;
+        else if (System.Text.RegularExpressions.Regex.IsMatch(text, @"(?<![\p{L}])(?:ха-?ха|хах|лол|ахах)|😂|🤣", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            emoji = rng.NextDouble() < .35 ? "😂" : null;
+        if (emoji is null) return;
+        try { await reactions.SendAsync(state.Id, botId, emoji, ct); }
+        catch (AppException e) { logger.LogDebug("Реакция бота пропущена: {Error}", e.Message); }
+    }
+
     private async Task TryReactAsync(GameState state, PlayerView view, Guid botId, Random rng, CancellationToken ct)
     {
+        await TryReactToHumanAsync(state, view, botId, rng, ct);
         var round = state.Phase == Phase.Discussion ? state.Round : -1;
         if (state.Phase is not (Phase.Discussion or Phase.AwardNomination) || Reacted.ContainsKey((state.Id, botId, round, state.Phase))) return;
         // Человек реагирует не мгновенно: у каждого бота своя задержка 3–10 с.
