@@ -86,6 +86,22 @@ public static class BotEndpoints
             })
             .WithName("AdminBotVoiceSample");
 
+        // Фразы, которым боты научились у людей: посмотреть и запретить неудачные.
+        admin.MapGet("/phrases", (int? take, HttpContext http, BotAdminService bots, Infrastructure.Speech.PhraseLearner phrases, CancellationToken ct) =>
+            {
+                bots.RequireAdmin(http.User.UserId());
+                return phrases.ListAsync(take ?? 200, ct);
+            })
+            .WithName("AdminPhrases");
+
+        admin.MapPost("/phrases/{id:guid}/block", async (Guid id, BlockPhraseRequest request, HttpContext http, BotAdminService bots,
+                Infrastructure.Speech.PhraseLearner phrases, CancellationToken ct) =>
+            {
+                bots.RequireAdmin(http.User.UserId());
+                return await phrases.BlockAsync(id, request.Blocked, ct) ? Results.NoContent() : Results.NotFound();
+            })
+            .WithName("AdminBlockPhrase");
+
         admin.MapPost("/bots/presets", (HttpContext http, BotAdminService bots, CancellationToken ct) =>
                 bots.CreatePresetsAsync(http.User.UserId(), ct))
             .WithName("AdminCreatePresetBots");
@@ -96,3 +112,6 @@ public static class BotEndpoints
 
 /// <summary>Проба голоса: голос, амплуа и (необязательно) текст до 200 символов.</summary>
 public sealed record VoiceSampleRequest(string Voice, string? Role, string? Text);
+
+/// <summary>Запретить (true) или вернуть (false) выученную фразу.</summary>
+public sealed record BlockPhraseRequest(bool Blocked);

@@ -273,6 +273,12 @@ class Api {
     return BotInfo.fromJson((id == null ? await post('/admin/bots', body) : await put('/admin/bots/$id', body)) as Json);
   }
 
+  /// Фразы, которым боты научились у людей (только админ).
+  Future<List<LearnedPhrase>> learnedPhrases() async =>
+      [for (final e in (await get('/admin/phrases') as List)) LearnedPhrase.fromJson(Map<String, dynamic>.from(e as Map))];
+
+  Future<void> blockPhrase(String id, bool blocked) async => post('/admin/phrases/$id/block', {'blocked': blocked});
+
   /// Голоса озвучки ботов и включён ли синтез на сервере.
   Future<({bool enabled, List<VoiceOption> voices})> botVoices() async {
     final j = await get('/admin/bots/voices') as Json;

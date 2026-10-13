@@ -32,3 +32,22 @@ public sealed class CardAlias
     public bool? Valid { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+/// <summary>
+/// Фраза, выученная у человека: мысль (intent), эмоция, манера и шаблон с местами {card}/{player}.
+/// Боты с той же манерой говорят ею. Админ может удалить неудачную.
+/// </summary>
+public sealed class PhraseTemplate
+{
+    public Guid Id { get; set; }
+    public string Intent { get; set; } = string.Empty;
+    public string Emotion { get; set; } = string.Empty;
+    public string Manner { get; set; } = string.Empty;
+    public string Template { get; set; } = string.Empty;
+    public string Hash { get; set; } = string.Empty;
+    public Guid AuthorId { get; set; }
+    public int Seen { get; set; }
+    public int Uses { get; set; }
+    public bool Blocked { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+}

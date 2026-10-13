@@ -112,7 +112,29 @@ public static partial class SpokenStyle
     private static partial Regex ReasonLabel();
 
     /// <summary>Пересказать реплику вслух. <paramref name="rng"/> — свой для каждой реплики, чтобы повторы звучали по-разному.</summary>
-    public static string Rephrase(string spoken, Random rng, Manner manner, bool male)
+    /// <summary>Мысль типового предложения бота — для выученных у людей фраз (их места {card}, {player}).</summary>
+    private static string? IntentOf(Rule rule)
+    {
+        var p = rule.Pattern.ToString();
+        if (p.StartsWith("^(?:Отправлял", StringComparison.Ordinal)) return PhraseBook.Intents.ClaimLost;
+        if (p.StartsWith("^(?:Моё письмо", StringComparison.Ordinal)) return PhraseBook.Intents.ClaimOpen;
+        if (p.StartsWith("^Версия:", StringComparison.Ordinal)) return PhraseBook.Intents.Version;
+        if (p.StartsWith("^Подозреваю", StringComparison.Ordinal)) return PhraseBook.Intents.Accuse;
+        if (p.EndsWith(", согласен$", StringComparison.Ordinal)) return PhraseBook.Intents.Agree;
+        if (p.EndsWith(", тут не соглашусь$", StringComparison.Ordinal)) return PhraseBook.Intents.Disagree;
+        return null;
+    }
+
+    [GeneratedRegex(@"(?:мотив|место|способ|тайна) — (?<card>[^.,!?:;—]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex NamedCard();
+
+    /// <summary>Доля реплик, которую бот говорит выученной у людей фразой (если есть подходящая).</summary>
+    public const double LearnedShare = .45;
+
+    /// <param name="learned">Фразы людей той же манеры: мысль, эмоция, шаблон.</param>
+    /// <param name="emotions">Эмоции, которые подходят боту.</param>
+    public static string Rephrase(string spoken, Random rng, Manner manner, bool male,
+        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null)
     {
         if (string.IsNullOrWhiteSpace(spoken)) return spoken;
         var sentences = SentenceBreak().Split(spoken.Trim()).Where(s => s.Length > 0).ToList();
@@ -128,6 +150,26 @@ public static partial class SpokenStyle
             }
 
             var match = rule.Pattern.Match(sentence);
+            if (learned is { Count: > 0 } && IntentOf(rule) is { } intent && rng.NextDouble() < LearnedShare)
+            {
+                var card = match.Groups["card"].Success ? match.Groups["card"].Value.Trim()
+                    : match.Groups["rest"].Success && NamedCard().Match(match.Groups["rest"].Value) is { Success: true } named ? named.Groups["card"].Value.Trim()
+                    : null;
+                var who = match.Groups["who"].Success ? match.Groups["who"].Value.Trim() : null;
+                // Письмо: подходит и фраза про исход («исчезло»), и нейтральная («я кидал …»).
+                var options = learned.Where(l => (l.Intent == intent || (l.Intent == PhraseBook.Intents.Claim && intent is PhraseBook.Intents.ClaimLost or PhraseBook.Intents.ClaimOpen))
+                    && (emotions is null || emotions.Contains(l.Emotion))).ToList();
+                if (options.Count > 0)
+                {
+                    var said = PhraseBook.Fill(options[rng.Next(options.Count)].Template, card, who);
+                    if (said.Length > 0)
+                    {
+                        result.Add(EndSentence(said));
+                        continue;
+                    }
+                }
+            }
+
             var variant = rule.Variants[rng.Next(rule.Variants.Length)];
             var text = Fill(variant, match);
             result.Add(EndSentence(Capitalize(text)));

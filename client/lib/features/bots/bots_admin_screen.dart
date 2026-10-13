@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'bot_relationships.dart';
+import 'learned_phrases.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
@@ -101,6 +102,13 @@ class BotsAdminScreen extends ConsumerWidget {
               final created = await runAction(context, () => ref.read(apiProvider).createPresetBots());
               if (created != null) ref.invalidate(adminBotsProvider);
             },
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            key: const Key('bot-phrases'),
+            icon: const Icon(Icons.record_voice_over_outlined),
+            label: const Text('Фразы, выученные у людей'),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LearnedPhrasesScreen())),
           ),
           const SizedBox(height: 12),
           if (list.isEmpty)
