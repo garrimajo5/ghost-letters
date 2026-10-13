@@ -47,24 +47,6 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             learned = await phrases.ForAsync(manner, ct);
         }
 
-        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
-        {
-            var names = new List<string>();
-            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
-            if (text.Length > 0)
-            {
-                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
-                // Вслух — своими словами: YandexGPT (если подключён), иначе варианты фраз по правилам; шаблон остаётся в чате.
-                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
-                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
-                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
-                {
-                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
-                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
-                }
-            }
-        }
-
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
         {
@@ -76,6 +58,25 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
                     Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier),
             };
+        }
+
+        // Голос читает то же, что написано в чате (раньше — свой пересказ шаблона, и текст с голосом расходились).
+        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
+        {
+            var names = new List<string>();
+            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
+            if (text.Length > 0)
+            {
+                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
+                // Вслух — то же, что в чате (уже живым текстом), с названиями карт; YandexGPT (если подключён) пересказывает.
+                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
+                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
+                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
+                {
+                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
+                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
+                }
+            }
         }
 
         await chat.SendAsync(state.Id, botId, request, ct);
