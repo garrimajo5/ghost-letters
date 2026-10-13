@@ -1136,7 +1136,8 @@ public static class BotPlayer
                     $"Исключаю {Where(target, column)}: связь с подсказками случайная.",
                     $"Не верю в {Where(target, column)}, ищите в этом ряду другую.",
                 ];
-            var opinion = Reply(target, card) + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
+            var reply = Reply(target, card);
+            var opinion = reply + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
             var links = exclude ? new List<string>() : view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
                 .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
                 .Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
@@ -1168,6 +1169,9 @@ public static class BotPlayer
                 else versionCards.Clear();
             }
             var accusation = Accusation();
+            // «Фандорин, согласен… Подозреваю, что Фандорин из чёрных» — так не говорят: соглашаться с подозреваемым не будем.
+            if (reply.Length > 0 && accusation.Length > 0 && reply.Split(',')[0] is { Length: > 1 } replied && accusation.Contains(replied, StringComparison.Ordinal))
+                opinion = opinion[reply.Length..];
             opinion += accusation;
             if (blind)
             {
