@@ -60,6 +60,7 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
     public DbSet<BotRelationship> BotRelationships => Set<BotRelationship>();
     public DbSet<BotRelationshipGame> BotRelationshipGames => Set<BotRelationshipGame>();
     public DbSet<CardAlias> CardAliases => Set<CardAlias>();
+    public DbSet<PhraseTemplate> PhraseTemplates => Set<PhraseTemplate>();
 
     public DbSet<BotProfile> BotProfiles => Set<BotProfile>();
 
@@ -343,6 +344,18 @@ public sealed class GhostLettersDbContext(DbContextOptions<GhostLettersDbContext
             e.HasKey(x => new { x.GameId, x.BotId });
             GameFk(e, x => x.GameId);
             UserFk(e, x => x.BotId);
+        });
+        b.Entity<PhraseTemplate>(e =>
+        {
+            e.ToTable("phrase_templates");
+            e.HasIndex(x => x.Hash).IsUnique();
+            e.HasIndex(x => new { x.Intent, x.Manner });
+            e.Property(x => x.Template).HasMaxLength(200);
+            e.Property(x => x.Hash).HasMaxLength(32);
+            e.Property(x => x.Intent).HasMaxLength(16);
+            e.Property(x => x.Emotion).HasMaxLength(16);
+            e.Property(x => x.Manner).HasMaxLength(16);
+            UserFk(e, x => x.AuthorId);
         });
         b.Entity<CardAlias>(e =>
         {

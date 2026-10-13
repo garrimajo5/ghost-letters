@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddSingleton(sp => CardTags.FromConfiguration(
             sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILoggerFactory>().CreateLogger<CardTags>()));
         services.AddScoped<ChatService>();
+        services.AddScoped<Speech.PhraseLearner>();
         services.AddSingleton<Speech.SpeechKit>();
         services.AddSingleton<Speech.SpeechWriter>();
         services.AddSingleton<Voice.VoiceRooms>();

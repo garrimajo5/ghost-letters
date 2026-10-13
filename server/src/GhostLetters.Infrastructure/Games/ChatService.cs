@@ -38,7 +38,8 @@ public sealed class ChatService(
     IMediaStorage storage,
     MediaLimits mediaLimits,
     IRealtimeNotifier notifier,
-    TimeProvider time)
+    TimeProvider time,
+    Speech.PhraseLearner phrases)
 {
     public const int MaxTextLength = 1000;
     /// <summary>Карт в одном сообщении: показ на столе может связать все подсказки Призрака с полем.</summary>
@@ -145,6 +146,10 @@ public sealed class ChatService(
         var dto = Dto(message, media?.DurationMs);
         var recipients = Recipients(state, channel);
         await notifier.ChatAsync(dto, recipients, toTable: channel == ChatChannels.Public, ct);
+        // Боты учатся у людей: как они формулируют версии, споры и обвинения.
+        if (channel == ChatChannels.Public && !string.IsNullOrEmpty(text) &&
+            !await db.Users.AsNoTracking().AnyAsync(u => u.Id == userId && u.IsBot, ct))
+            await phrases.LearnAsync(state, userId, text, ct);
         return dto;
     }
 

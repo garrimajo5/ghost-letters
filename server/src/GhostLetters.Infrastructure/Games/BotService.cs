@@ -15,7 +15,7 @@ namespace GhostLetters.Infrastructure.Games;
 
 /// <summary>Ходы ботов: за такт — по одному ходу в каждой партии, где боту есть что делать.</summary>
 public sealed class BotService(GhostLettersDbContext db, GameService games, ChatService chat, CardTags baselineTags, CardTagStore tagStore, ILogger<BotService> logger, TimeProvider time, ReactionService reactions,
-    Speech.SpeechKit speech, Speech.SpeechWriter writer)
+    Speech.SpeechKit speech, Speech.SpeechWriter writer, Speech.PhraseLearner phrases)
 {
     private CardTags tags = baselineTags;
     /// <summary>Сколько бот-Убийца в партии без таймеров ждёт подсказку живого Сообщника после последнего хода.</summary>
@@ -45,8 +45,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 var male = Speech.BotVoices.Find(voice)?.Male ?? true;
                 var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
                 // Вслух — своими словами: YandexGPT (если подключён), иначе варианты фраз по правилам; шаблон остаётся в чате.
+                var manner = Speech.SpokenStyle.MannerOf(botId);
+                var risk = (await MindAsync(state, botId, ct))?.Personality.Risk ?? .5;
+                // Фразы, выученные у людей с той же манерой, — тем же ботам, по характеру подходящих эмоций.
+                var learned = await phrases.ForAsync(manner, ct);
                 text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
-                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, Speech.SpokenStyle.MannerOf(botId), male);
+                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk));
                 if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
                 {
                     try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }

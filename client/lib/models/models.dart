@@ -1333,3 +1333,34 @@ class Reaction {
   final String emoji;
   final DateTime at;
 }
+
+/// Фраза человека, по которой боты учатся говорить: мысль, эмоция, манера и шаблон с местами {card} и {player}.
+class LearnedPhrase {
+  const LearnedPhrase({required this.id, required this.intent, required this.emotion, required this.manner, required this.template,
+      required this.author, required this.seen, required this.blocked});
+  factory LearnedPhrase.fromJson(Json j) => LearnedPhrase(
+        id: j['id'] as String,
+        intent: j['intent'] as String? ?? '',
+        emotion: j['emotion'] as String? ?? '',
+        manner: j['manner'] as String? ?? '',
+        template: j['template'] as String? ?? '',
+        author: j['author'] as String? ?? '',
+        seen: (j['seen'] as num?)?.toInt() ?? 0,
+        blocked: j['blocked'] as bool? ?? false,
+      );
+  final String id;
+  final String intent;
+  final String emotion;
+  final String manner;
+  final String template;
+  final String author;
+  final int seen;
+  final bool blocked;
+
+  static const intents = {
+    'claim': 'своё письмо', 'claim_lost': 'письмо исчезло', 'claim_open': 'письмо открылось', 'version': 'версия',
+    'exclude': 'исключает', 'accuse': 'обвиняет', 'agree': 'соглашается', 'disagree': 'спорит',
+  };
+  static const emotions = {'joking': 'в шутку', 'doubtful': 'с сомнением', 'excited': 'увлечённо', 'confident': 'уверенно', 'calm': 'спокойно'};
+  static const manners = {'Calm': 'спокойная', 'Lively': 'живая', 'Formal': 'официальная'};
+}
