@@ -1136,7 +1136,7 @@ public static class BotPlayer
                     $"Исключаю {Where(target, column)}: связь с подсказками случайная.",
                     $"Не верю в {Where(target, column)}, ищите в этом ряду другую.",
                 ];
-            var reply = Reply(target, card);
+            var reply = Reply(target, card, exclude);
             var opinion = reply + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
             var links = exclude ? new List<string>() : view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
                 .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
@@ -1269,7 +1269,7 @@ public static class BotPlayer
         /// <summary>
         /// Отклик на последнее чужое мнение о том же ряду — как в живом разговоре: «Аня, согласен» или «Боб, не соглашусь».
         /// </summary>
-        private string Reply(int row, string card)
+        private string Reply(int row, string card, bool exclude = false)
         {
             if (mind is null) return "";
             var last = mind.Opinions.LastOrDefault(o => !o.IsCheck && o.Strength > 0 && o.Author != me.Id
@@ -1278,7 +1278,8 @@ public static class BotPlayer
             if (who.StartsWith("Бот ", StringComparison.Ordinal)) who = who[4..];
             // Сверяемся с тем, что игрок сказал в последней реплике об этом ряду, а не с давним упоминанием.
             var theirs = mind.LatestOf(last.Author).FirstOrDefault(o => o.Strength > 0 && view.Board[row].Cards.Contains(o.CardId))?.CardId ?? last.CardId;
-            return theirs == card ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
+            // Исключаю карту, за которую он, — это спор, а не согласие.
+            return (theirs == card) != exclude ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
         }
 
         /// <summary>
