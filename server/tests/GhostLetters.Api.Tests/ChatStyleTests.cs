@@ -84,4 +84,15 @@ public sealed class ChatStyleTests
             ChatStyle.Refs(s).Should().Contain(["тайна 5", "способ 2", "тайна 3"]);
         }
     }
+
+    [Fact]
+    public void SameAccusation_IsNotRepeatedEveryMessage()
+    {
+        var earlier = new[] { "Ставлю на то, что Убийца — Коломбо." };
+        var said = Enumerable.Range(0, 30).Select(seed => ChatStyle.Humanize("Версия: Ставлю на мотив, карта 5. Думаю, Убийца — Бот Коломбо: его голоса расходятся с моим чтением подсказок.",
+            new Random(seed), SpokenStyle.Manner.Calm, true, earlier: earlier)).ToList();
+        said.Count(s => s.Contains("Коломбо")).Should().BeLessThan(15);
+        said.Should().OnlyContain(s => s.Contains("мотив 5"));
+        ChatStyle.Humanize("Подозреваю, что Бот Жеглов из чёрных.", new Random(1), SpokenStyle.Manner.Calm, true, earlier: earlier).Should().Contain("Жеглов");
+    }
 }

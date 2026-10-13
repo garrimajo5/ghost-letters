@@ -26,8 +26,17 @@ public static partial class ChatStyle
     public const double LearnedShare = .35;
 
     private sealed record Ctx(Random Rng, SpokenStyle.Manner Manner, double Risk,
-        IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions)
+        IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions,
+        IReadOnlyCollection<string> Earlier)
     {
+        /// <summary>Это обвинение бот уже говорил раньше — человек не повторяет его в каждой реплике.</summary>
+        public bool Repeats(string who)
+        {
+            var bare = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+            return Earlier.Any(e => e.Contains(bare, StringComparison.OrdinalIgnoreCase) &&
+                Regex.IsMatch(e, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase)) && Rng.NextDouble() < .8;
+        }
+
         /// <summary>Сколько доводов «подсказка → карта» уже сказано в реплике.</summary>
         public int Links { get; set; }
 
@@ -45,11 +54,13 @@ public static partial class ChatStyle
 
     /// <param name="learned">Фразы людей той же манеры (мысль, эмоция, шаблон с {card}/{player}).</param>
     /// <param name="emotions">Эмоции, которые подходят боту.</param>
+    /// <param name="earlier">Прежние реплики бота в этой партии: уже сказанные обвинения он не повторяет.</param>
     public static string Humanize(string? text, Random rng, SpokenStyle.Manner manner, bool male, double risk = .5,
-        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null)
+        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null,
+        IReadOnlyCollection<string>? earlier = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return text ?? "";
-        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions);
+        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? []);
         var result = "";
         var afterList = false;
         foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -149,6 +160,9 @@ public static partial class ChatStyle
         }
         if ((m = Regex.Match(bare, @"^Целиком думаю так: (?<list>.+)$")).Success)
             return c.Rng.NextDouble() < .4 ? "" : c.Pick($"В целом у меня так: {m.Groups["list"].Value}.", $"Итого: {m.Groups["list"].Value}.", $"Целиком: {m.Groups["list"].Value}.");
+        if ((m = Regex.Match(bare, @"^(?:Подозреваю, что (?<who>.+?) из чёрных|Думаю, Убийца — (?<who>.+?)|Мне кажется, Убийца — (?<who>.+?)|Я бы присмотрелся к (?<who>.+?)|Подозреваю (?<who>.+?): уже бывал Убийцей)(?:: .+)?$")).Success
+            && c.Repeats(m.Groups["who"].Value))
+            return "";
         if ((m = Regex.Match(bare, @"^Подозреваю, что (?<who>.+?) из чёрных(?:: (?<why>.+))?$")).Success)
         {
             var who = m.Groups["who"].Value;
@@ -267,7 +281,7 @@ public static partial class ChatStyle
         };
     }
 
-    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «оба про море».</summary>
+    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «общее — море».</summary>
     private static string Reason(string why, Ctx c)
     {
         var first = why.Split(';')[0].Trim();
@@ -276,7 +290,7 @@ public static partial class ChatStyle
         var what = m.Groups["what"].Value.Trim();
         return m.Groups["kind"].Value switch
         {
-            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"оба про {what}", $"общее — {what}", $"там тоже {what}"),
+            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"общее — {what}", $"там тоже {what}", $"связь — {what}"),
             "форме" => what == "похожий силуэт" ? "похожи формой" : c.Pick($"похожи формой ({what})", $"форма та же: {what}"),
             "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : c.Pick($"похожи цветом ({what})", $"тот же цвет — {what}"),
             _ => c.Pick($"деталь общая — {what}", $"совпадает деталь: {what}"),
