@@ -47,24 +47,6 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             learned = await phrases.ForAsync(manner, ct);
         }
 
-        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
-        {
-            var names = new List<string>();
-            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
-            if (text.Length > 0)
-            {
-                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
-                // Вслух — своими словами: YandexGPT (если подключён), иначе варианты фраз по правилам; шаблон остаётся в чате.
-                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
-                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
-                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
-                {
-                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
-                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
-                }
-            }
-        }
-
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
         {
@@ -76,6 +58,25 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
                     Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier),
             };
+        }
+
+        // Голос читает то же, что написано в чате (раньше — свой пересказ шаблона, и текст с голосом расходились).
+        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
+        {
+            var names = new List<string>();
+            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
+            if (text.Length > 0)
+            {
+                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
+                // Вслух — то же, что в чате (уже живым текстом), с названиями карт; YandexGPT (если подключён) пересказывает.
+                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
+                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
+                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
+                {
+                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
+                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
+                }
+            }
         }
 
         await chat.SendAsync(state.Id, botId, request, ct);
@@ -466,6 +467,23 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var said = await db.ChatMessages.Where(m => m.GameId == state.Id && m.AuthorId == botId &&
                 m.Round == state.Round && m.Channel == ChatChannels.Public)
             .OrderByDescending(m => m.CreatedAt).ToListAsync(ct);
+        // Прямой вопрос этому боту от человека («Ватсон, почему тайна 2?») — короткий ответ, а не вся версия заново.
+        if (said.Count < 4 && mind is not null && await QuestionToAsync(state, botId, mind, said.Count > 0 ? said[0].CreatedAt : null, ct) is { } question)
+        {
+            var asked = question.CardIds.Count > 0 ? (IReadOnlyList<string>)question.CardIds
+                : Speech.SpokenCards.Read(question.Text ?? "", state.Board, state.Hints,
+                    state.Letters.Where(l => l.From == question.AuthorId).Select(l => l.CardId).ToList(), tags).Cards;
+            if (BotPlayer.Answer(view, rng, tags, mind, mind.Names.GetValueOrDefault(question.AuthorId!.Value, "Игрок"), question.Text ?? "", asked) is { } answer)
+            {
+                try
+                {
+                    await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, answer.Text, null, answer.Cards, answer.Notes), ct);
+                    return true;
+                }
+                catch (AppException e) { logger.LogDebug("Ответ бота пропущен: {Error}", e.Message); }
+            }
+        }
+
         if (said.Count >= 2) return false;
         // Одно объяснение и один содержательный ответ после чужой реплики, без бесконечного эха.
         if (said.Count > 0 && !await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.Round == state.Round &&
@@ -487,6 +505,24 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             logger.LogDebug("Бот {Bot} не смог написать: {Error}", botId, e.Message);
             return false;
         }
+    }
+
+    /// <summary>Последний вопрос человека этому боту в раунде после его последней реплики: имя бота и «?».</summary>
+    private async Task<ChatMessage?> QuestionToAsync(GameState state, Guid botId, BotMind mind, DateTimeOffset? since, CancellationToken ct)
+    {
+        var name = mind.Names.GetValueOrDefault(botId, "");
+        var bare = name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+        if (bare.Length < 2) return null;
+        var after = since ?? DateTimeOffset.MinValue;
+        var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&
+                m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId && m.CreatedAt > after)
+            .OrderByDescending(m => m.CreatedAt).Take(10).ToListAsync(ct);
+        if (recent.Count == 0) return null;
+        var authors = recent.Select(m => m.AuthorId!.Value).Distinct().ToList();
+        var bots = await db.Users.AsNoTracking().Where(u => authors.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct);
+        var pattern = $@"(?<![\p{{L}}]){System.Text.RegularExpressions.Regex.Escape(bare)}(?![\p{{L}}])";
+        return recent.FirstOrDefault(m => !bots.Contains(m.AuthorId!.Value) && (m.Text ?? "").Contains('?') &&
+            System.Text.RegularExpressions.Regex.IsMatch(m.Text ?? "", pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase));
     }
 
     private async Task<List<DiscussionLine>> DiscussionAsync(GameState state, CancellationToken ct) =>

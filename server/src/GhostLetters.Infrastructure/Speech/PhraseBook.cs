@@ -42,6 +42,10 @@ public static partial class PhraseBook
     [GeneratedRegex(@"[а-яё]+", RegexOptions.IgnoreCase)]
     private static partial Regex Words();
 
+    /// <summary>Карта сразу после предлога — её падеж зависит от названия, шаблон не годится.</summary>
+    [GeneratedRegex(@"(?<![а-яё])(?:на|в|во|за|про|под|к|ко|о|об|у|от|из|с|со|до|по|без|для|над|при)\s+(?:(?:мотив|место|способ|тайн[ау])\s*—\s*)?\{card\}", RegexOptions.IgnoreCase)]
+    private static partial Regex Prepositioned();
+
     [GeneratedRegex(@"(?<=[.!?…])\s+")]
     private static partial Regex Sentences();
 
@@ -90,12 +94,13 @@ public static partial class PhraseBook
     /// <summary>
     /// Карты → {card}, имена игроков → {player}. Боты подставляют название карты в именительном падеже, поэтому
     /// фраза, где карта названа в другом падеже («ставлю на клетку»), не годится (null): иначе выйдет «ставлю на клетка».
-    /// Номер в ряду («мотив два») становится «мотив — {card}», как говорят боты.
+    /// Номер в ряду («мотив два») становится {card}; после предлога («ставлю на мотив два») фраза не годится — падеж.
     /// </summary>
     private static string? Slot(string sentence, IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints,
         IReadOnlyCollection<string> playerNames, CardTags tags)
     {
-        var text = CardByNumber().Replace(sentence, m => m.Groups[1].Value + " — {card}");
+        // «мотив два» → {card}: бот подставит свою карту (в чате — «тайна 2», вслух — название).
+        var text = CardByNumber().Replace(sentence, "{card}");
         var oblique = false;
         var cards = board.SelectMany(r => r.Cards).Concat(hints.SelectMany(h => h.Cards)).Distinct();
         foreach (var name in cards.SelectMany(tags.NamesOf).Distinct().OrderByDescending(n => n.Length))
@@ -110,7 +115,7 @@ public static partial class PhraseBook
             }, RegexOptions.IgnoreCase);
         }
 
-        if (oblique) return null;
+        if (oblique || Prepositioned().IsMatch(text)) return null;
 
         foreach (var name in playerNames.Where(n => n.Length >= 2).OrderByDescending(n => n.Length))
         {
@@ -178,7 +183,9 @@ public static partial class PhraseBook
     /// <summary>Заполнить шаблон: {card} — название карты, {player} — имя (без «Бот»).</summary>
     public static string Fill(string template, string? card, string? player)
     {
-        var text = template;
+        // Старые шаблоны: «мотив — {card}» — ряд мог быть другим, оставляем только карту.
+        var text = Regex.Replace(template, @"(?<![а-яё])(?:мотив|место|способ|тайн[ау])\s*—\s*\{card\}", "{card}", RegexOptions.IgnoreCase);
+        if (Prepositioned().IsMatch(text)) return "";
         if (card is not null) text = text.Replace("{card}", card);
         if (player is not null) text = text.Replace("{player}", player.StartsWith("Бот ", StringComparison.Ordinal) ? player[4..] : player);
         return text.Contains('{') ? "" : char.ToUpperInvariant(text[0]) + text[1..];
