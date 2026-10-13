@@ -132,7 +132,9 @@ public sealed class BotWinrateTests
         string[] board = ["ring", "wallet", "boat", "sword", "cat", "rose"];
         var opinions = board.Select(c => new ChatOpinion(Ann, c, .5)).ToList();
         var text = BotPlayer.Say(view, new Random(3), Tags, Mind(opinions: opinions))!.Value.Text;
-        text.Should().Match(t => t.Contains("Аня, согласен.") || t.Contains("Аня, тут не соглашусь."));
+        // Или обвиняет Аню — тогда не соглашается с ней «по-дружески» в той же реплике.
+        text.Should().Match(t => t.Contains("Аня, согласен.") || t.Contains("Аня, тут не соглашусь.") ||
+            (t.Contains("Аня из чёрных") && !t.Contains("Аня, согласен")));
         BotPlayer.Say(view, new Random(3), Tags, Mind())!.Value.Text.Should().NotContain("Аня,");
     }
 
