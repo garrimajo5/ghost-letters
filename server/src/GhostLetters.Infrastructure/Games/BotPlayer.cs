@@ -1327,7 +1327,8 @@ public static class BotPlayer
                 .OrderByDescending(x => x.s).ToList();
             if (scored.Count == 0) return [];
             // Слабая побочная связь — не проверка: Призрак открыл бы письмо ради сильной, её и вычёркиваем.
-            var cut = Classic ? 0 : scored[0].s * BotTuning.Current.CheckRelative;
+            // Строгий отсекает всё, что заметно слабее лучшей связи; широкий — только совсем слабое.
+            var cut = Classic ? 0 : scored[0].s * BotTuning.Current.CheckRelative * (.5 + .5 * P.Strictness);
             return scored.Where(x => x.s >= cut)
                 .Take(Math.Min(MyBreadth, ChatService.MaxCards - 1))
                 .Select(x => x.x)
