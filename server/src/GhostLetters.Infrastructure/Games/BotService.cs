@@ -749,7 +749,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             if (cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
             {
                 var ownLetters = state.Letters.Where(l => l.From == m.AuthorId).Select(l => l.CardId).ToList();
-                var read = Speech.SpokenCards.Read(m.Text, state.Board, state.Hints, ownLetters, tags);
+                // Вопрос («Пуаро, почему ты за способ пять?») — не своё мнение о карте.
+                var statements = string.Join(" ", System.Text.RegularExpressions.Regex.Split(m.Text, @"(?<=[.!?…])\s+").Where(x => !x.TrimEnd().EndsWith('?')));
+                var read = Speech.SpokenCards.Read(statements, state.Board, state.Hints, ownLetters, tags);
                 (cards, notes) = (read.Cards, read.Notes);
             }
 
