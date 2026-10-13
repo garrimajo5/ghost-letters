@@ -80,7 +80,8 @@ public static class GhostCluePolicy
         {
             // Стол голодает: в прошлом раунде Призрак не открыл ни одного письма. Живой Призрак тогда открывает
             // лучшее из похожих на истину, даже если оно чуть двусмысленно, — иначе обсуждать нечего.
-            var starving = view.Round > 1 && view.Hints.Where(h => h.Round == view.Round - 1).All(h => h.Cards.Count == 0);
+            var previous = view.Hints.Where(h => h.Round == view.Round - 1).ToList();
+            var starving = view.Round > 1 && previous.Count > 0 && previous.All(h => h.Cards.Count == 0);
             var fallback = candidates
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, c.Card], all.Where(x => x != c.Card).ToList(), Sim, focus) - current))
                 // Только письмо, которое на истину похоже сильнее, чем на любую ложную карту: двусмысленное не открываем.
