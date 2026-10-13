@@ -79,7 +79,12 @@ public static partial class ChatStyle
         {
             var said = Regex.Replace(Line(lines[i], ctx), @"[ \t]+", " ").Replace(" .", ".").Replace("..", ".").Trim();
             if (said.Length == 0) continue;
-            if (reordered && i == 1 && !said.StartsWith("Моё", StringComparison.Ordinal)) said = "А " + char.ToLowerInvariant(said[0]) + said[1..];
+            if (reordered && i == 1)
+            {
+                // «А кидал вот эту…»: междометие («Эх, …») с «А» не сочетается — убираем его.
+                if (said.StartsWith("Эх, ", StringComparison.Ordinal)) said = Capital(said[4..]);
+                if (!said.StartsWith("Моё", StringComparison.Ordinal)) said = "А " + char.ToLowerInvariant(said[0]) + said[1..];
+            }
             // Список по рядам («• мотив 2 — …») остаётся списком, остальное — одним абзацем, как пишут люди.
             var item = said.StartsWith('•');
             result += result.Length == 0 ? said : item || afterList ? "\n" + said : " " + said;

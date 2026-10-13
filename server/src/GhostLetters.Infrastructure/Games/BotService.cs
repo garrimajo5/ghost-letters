@@ -540,6 +540,15 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                     state.Letters.Where(l => l.From == question.AuthorId).Select(l => l.CardId).ToList(), tags).Cards;
             if (BotPlayer.Answer(view, rng, tags, mind, mind.Names.GetValueOrDefault(question.AuthorId!.Value, "Игрок"), question.Text ?? "", asked) is { } answer)
             {
+                if (AccusationReader.Read(question.AuthorId!.Value, question.Text, mind.Names).Any(a => a.Target == botId))
+                {
+                    var who = mind.Names.GetValueOrDefault(question.AuthorId!.Value, "");
+                    var call = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+                    // «Тестер, это не я. Тестер, тайна 2: …» — имя второй раз не повторяем.
+                    var rest = answer.Text.StartsWith(call + ", ", StringComparison.Ordinal) ? Capital(answer.Text[(call.Length + 2)..]) : answer.Text;
+                    answer = (Defense(call, Speech.SpokenStyle.MannerOf(botId), rng) + rest, answer.Cards, answer.Notes);
+                }
+
                 try
                 {
                     await SayAsync(state, botId, new SendChatRequest(ChatChannels.Public, answer.Text, null, answer.Cards, answer.Notes), ct);
@@ -560,6 +569,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             return false;
         }
 
+        // Обвинили — человек сначала отвечает на это, потом говорит о картах.
+        if (mind is not null && await AccusedByAsync(state, botId, mind, said.Count > 0 ? said[0].CreatedAt : null, ct) is { } accuser)
+            line = (Defense(accuser, Speech.SpokenStyle.MannerOf(botId), rng) + line.Text, line.Cards, line.Notes);
+
         try
         {
             await SayAsync(state, botId, TableReasoning.Speech(view, tags, mind, line), ct);
@@ -570,6 +583,37 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             logger.LogDebug("Бот {Bot} не смог написать: {Error}", botId, e.Message);
             return false;
         }
+    }
+
+    /// <summary>Кто из людей обвинил бота после его последней реплики (имя для ответа) — или null.</summary>
+    private async Task<string?> AccusedByAsync(GameState state, Guid botId, BotMind mind, DateTimeOffset? since, CancellationToken ct)
+    {
+        var after = since ?? DateTimeOffset.MinValue;
+        var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&
+                m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId && m.CreatedAt > after)
+            .OrderByDescending(m => m.CreatedAt).Take(8).Select(m => new { m.AuthorId, m.Text }).ToListAsync(ct);
+        if (recent.Count == 0) return null;
+        var authors = recent.Select(m => m.AuthorId!.Value).Distinct().ToList();
+        var bots = await db.Users.AsNoTracking().Where(u => authors.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct);
+        var accuser = recent.FirstOrDefault(m => !bots.Contains(m.AuthorId!.Value) &&
+            AccusationReader.Read(m.AuthorId!.Value, m.Text, mind.Names).Any(a => a.Target == botId));
+        if (accuser is null) return null;
+        var name = mind.Names.GetValueOrDefault(accuser.AuthorId!.Value, "");
+        return name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+    }
+
+    private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+    /// <summary>Ответ на обвинение — без слов-подозрений, чтобы самого бота не сочли обвинителем.</summary>
+    public static string Defense(string who, Speech.SpokenStyle.Manner manner, Random rng)
+    {
+        string[] lines = manner switch
+        {
+            Speech.SpokenStyle.Manner.Lively => [$"Я?! {who}, ты что, я мирный! ", $"{who}, да ладно, я за стол играю! ", $"Ну нет, {who}, это не я. "],
+            Speech.SpokenStyle.Manner.Formal => [$"{who}, позволь возразить: я играю за стол. ", $"{who}, это ошибка — я не из чёрных. "],
+            _ => [$"{who}, зря ты так — я мирный. ", $"{who}, это не я. ", $"{who}, я не из чёрных, посмотри на мои письма. "],
+        };
+        return lines[rng.Next(lines.Length)];
     }
 
     /// <summary>Последний вопрос человека этому боту в раунде после его последней реплики: имя бота и «?».</summary>
