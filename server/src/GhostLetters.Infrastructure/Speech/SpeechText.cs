@@ -27,8 +27,8 @@ public static partial class SpeechText
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
 
-    [GeneratedRegex(@"(—\s[^—.!?,:;\n]{1,40}?)\s—\s")]
-    private static partial Regex DoubleDash();
+    /// <summary>Метка «здесь кончается подставленное название карты» (служебный символ, вслух не читается).</summary>
+    private const string Named = "\u0001";
 
     /// <param name="namesUsed">Сюда складываются подставленные названия карт (для проверки пересказа).</param>
     public static string For(string? text, IReadOnlyList<string> cardIds, IReadOnlyList<string>? notes,
@@ -53,7 +53,7 @@ public static partial class SpeechText
                 var name = hint is not null && index >= 0 && index < hint.Cards.Count ? tags.NameOf(hint.Cards[index]) : null;
                 var which = round == 0 ? "зацепка" : $"подсказка {(round < Ordinals.Length ? Ordinals[round] : round.ToString())} раунда";
                 if (name is not null) namesUsed?.Add(name);
-                return name is null ? which : $"{which} — {name}";
+                return name is null ? which : $"{which} — {name}{Named}";
             }
 
             if (m.Groups[4].Success)
@@ -63,7 +63,7 @@ public static partial class SpeechText
                 var row = board.FirstOrDefault(r => string.Equals(CategoryWord(r.Category), word.StartsWith("тайн", StringComparison.OrdinalIgnoreCase) ? "тайна" : word, StringComparison.OrdinalIgnoreCase));
                 var name = row is not null && column >= 0 && column < row.Cards.Count ? tags.NameOf(row.Cards[column]) : null;
                 if (name is not null) namesUsed?.Add(name);
-                return name is null ? m.Value : $"{word} — {name}";
+                return name is null ? m.Value : $"{word} — {name}{Named}";
             }
 
             if (m.Groups[6].Success)
@@ -71,17 +71,17 @@ public static partial class SpeechText
                 var first = hints.FirstOrDefault(h => h.Round == 0)?.Cards.FirstOrDefault();
                 var name = first is null ? null : tags.NameOf(first);
                 if (name is not null) namesUsed?.Add(name);
-                return name is null ? m.Value : $"{m.Value} — {name}";
+                return name is null ? m.Value : $"{m.Value} — {name}{Named}";
             }
 
             var own = claimed is null ? null : tags.NameOf(claimed);
             if (own is not null) namesUsed?.Add(own);
-            return own is null ? m.Value : $"{m.Value} — {own}";
+            return own is null ? m.Value : $"{m.Value} — {own}{Named}";
         });
 
         spoken = spoken.Replace("→", " указывает на ").Replace("\n", ". ");
         // «тайна — клетка — это оно»: два тире подряд — две паузы, фраза рвётся. Второе тире — запятая.
-        spoken = DoubleDash().Replace(spoken, "$1, ");
+        spoken = spoken.Replace(Named + " — ", ", ").Replace(Named, "");
         spoken = Symbols().Replace(spoken, " ");
         spoken = Spaces().Replace(spoken, " ").Replace(" .", ".").Replace(" ,", ",").Replace("..", ".").Trim();
         return Cut(spoken);
