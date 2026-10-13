@@ -416,7 +416,7 @@ public static class BotPlayer
             if (Classic) return null;
             var candidates = view.Players.Where(p => p.Id != me.Id && !p.IsGhost).ToList();
             var ally = candidates.Where(p => Known(p.Id) is not { } role || !role.IsKillerTeam())
-                .Select(p => (Player: p, Opinion: mind!.Opinions.FirstOrDefault(o => o.Author == p.Id && !o.IsCheck &&
+                .Select(p => (Player: p, Opinion: mind!.Opinions.FirstOrDefault(o => o.Author == p.Id && o.Public && !o.IsCheck &&
                     o.Strength > 0 && Evidence(o.CardId) > 0.1)))
                 .Where(x => x.Opinion is not null && ChatContrarian(x.Player.Id) == 0 && Suspicion(x.Player.Id) < 0.6)
                 .OrderByDescending(x => Evidence(x.Opinion!.CardId)).FirstOrDefault();
@@ -1100,20 +1100,30 @@ public static class BotPlayer
             }
             else if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
             {
-                target = rng.Next(view.Board.Count);
+                // Ложь, повторённая слово в слово второй раунд подряд, выдаёт: улики меняются, а он твердит одно.
+                var repeated = Repeated();
+                bool Fresh(int r) => Enumerable.Range(0, view.Board[r].Cards.Count).Any(c => c != truth[r] && !repeated.Contains(Card(r, c)));
+                var rows = Enumerable.Range(0, view.Board.Count).ToList();
                 if (!Classic && BotTuning.Current.KillerBlend)
                 {
                     // Спорим там, где ложная карта правдоподобна: в ясном ряду ложь видна и выдаёт.
-                    var open = Enumerable.Range(0, view.Board.Count).Where(r => !ClearTruth(r)).ToList();
-                    if (open.Count > 0) target = open[rng.Next(open.Count)];
+                    var open = rows.Where(r => !ClearTruth(r)).ToList();
+                    if (open.Count > 0) rows = open;
                 }
+                if (rows.Where(Fresh).ToList() is { Count: > 0 } fresh) rows = fresh;
+                target = rows[rng.Next(rows.Count)];
 
                 var fakes = Enumerable.Range(0, view.Board[target].Cards.Count).Where(c => c != truth[target]).ToList();
-                column = fakes.OrderByDescending(c => Evidence(Card(target, c)) + Noise()).First();
+                column = fakes.OrderBy(c => repeated.Contains(Card(target, c)) ? 1 : 0)
+                    .ThenByDescending(c => Evidence(Card(target, c)) + Noise()).First();
             }
             else
             {
-                target = Enumerable.Range(0, view.Board.Count).OrderByDescending(r => Certainty(r) + Noise()).First();
+                // Чёрный не твердит одну карту раунд за раундом — переходит к другому ряду.
+                var said = KillerTeam ? Repeated() : [];
+                target = Enumerable.Range(0, view.Board.Count)
+                    .OrderBy(r => said.Contains(Card(r, BestColumn(r, null))) ? 1 : 0)
+                    .ThenByDescending(r => Certainty(r) + Noise()).First();
                 // Эксперт знает истину: осторожный редко её выдаёт (его ищут на охоте), рисковый — почти всегда.
                 column = Truth is { } t && me.Role == Role.Expert && (Classic ? rng.Next(3) > 0 : rng.NextDouble() < 0.2 + 0.7 * P.Risk)
                     ? t[target]
@@ -1269,6 +1279,10 @@ public static class BotPlayer
             return (text, cards, notes);
         }
 
+        /// <summary>Карты, которые бот сам называл вслух в прошлом раунде (главная карта реплики — первая «думаю, эта»).</summary>
+        private HashSet<string> Repeated() => (mind?.OwnSaid ?? [])
+            .Where(o => !o.IsCheck && o.Strength > 0 && o.Round == view.Round - 1).Select(o => o.CardId).ToHashSet();
+
         /// <summary>Карта — последняя непроверенная в ряду: остальные уже ослаблены исчезнувшими письмами.</summary>
         private bool OnlyLeft(int row, int column) =>
             Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != column).All(c => Evidence(Card(row, c)) < -0.05);
@@ -1279,10 +1293,21 @@ public static class BotPlayer
         private string Reply(int row, string card, bool exclude = false)
         {
             if (mind is null) return "";
-            var last = mind.Opinions.LastOrDefault(o => !o.IsCheck && o.Strength > 0 && o.Author != me.Id
-                && view.Board[row].Cards.Contains(o.CardId));
+            // Отвечают только на сказанное вслух: ночной шёпот команды и мысли у доски никто, кроме своих, не слышал.
+            var said = mind.Opinions.Where(o => o.Public && !o.IsCheck && o.Strength > 0 && o.Author != me.Id
+                && view.Board[row].Cards.Contains(o.CardId)).ToList();
+            var last = said.LastOrDefault(o => o.Round is null || o.Round == view.Round) ?? said.LastOrDefault();
             if (last is null || NameOf(last.Author) is not { } who) return "";
             if (who.StartsWith("Бот ", StringComparison.Ordinal)) who = who[4..];
+            var agree = (last.CardId == card) != exclude;
+            if (last.Round is { } spokenIn && spokenIn < view.Round)
+            {
+                // Спор с давней репликой — с пометкой, о каком раунде речь, иначе непонятно, с чем спорят.
+                var when = view.Round - spokenIn == 1 ? "в прошлом раунде" : "раньше";
+                return agree
+                    ? $"{who}, {when} у тебя тоже был {CardName(last.CardId)}, теперь и я так думаю. "
+                    : $"{who}, {when} у тебя был {CardName(last.CardId)}, тут не соглашусь. ";
+            }
             // Сверяемся с тем, что игрок сказал в последней реплике об этом ряду, а не с давним упоминанием.
             var theirs = mind.LatestOf(last.Author).FirstOrDefault(o => o.Strength > 0 && view.Board[row].Cards.Contains(o.CardId))?.CardId ?? last.CardId;
             // Исключаю карту, за которую он, — это спор, а не согласие.
@@ -1293,15 +1318,21 @@ public static class BotPlayer
         /// Карты поля, на которые похоже письмо: столько самых похожих, какова ширина бота
         /// (строгий — одна, широкий — до четырёх; без характера — три; без тегов — ни одной).
         /// </summary>
-        private List<(int Row, int Column)> Checked(string letter) =>
-            Enumerable.Range(0, view.Board.Count)
+        private List<(int Row, int Column)> Checked(string letter)
+        {
+            var scored = Enumerable.Range(0, view.Board.Count)
                 .SelectMany(r => Enumerable.Range(0, view.Board[r].Cards.Count).Select(c => (Row: r, Column: c)))
                 .Select(x => (x, s: Sim(letter, Card(x.Row, x.Column))))
                 .Where(x => x.s > 0 && Card(x.x.Row, x.x.Column) != letter)
-                .OrderByDescending(x => x.s)
+                .OrderByDescending(x => x.s).ToList();
+            if (scored.Count == 0) return [];
+            // Слабая побочная связь — не проверка: Призрак открыл бы письмо ради сильной, её и вычёркиваем.
+            var cut = Classic ? 0 : scored[0].s * BotTuning.Current.CheckRelative;
+            return scored.Where(x => x.s >= cut)
                 .Take(Math.Min(MyBreadth, ChatService.MaxCards - 1))
                 .Select(x => x.x)
                 .ToList();
+        }
 
         /// <summary>
         /// Что бот говорит о своём письме этого раунда. По правилам можно рассказывать, что отправил;

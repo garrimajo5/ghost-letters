@@ -735,11 +735,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         var canReadTeam = state.Player(botId).Role.IsKillerTeam();
         var messages = await db.ChatMessages.AsNoTracking()
-            .Where(m => m.GameId == state.Id && (m.Channel == ChatChannels.Public || (canReadTeam && m.Channel == ChatChannels.KillerTeam)) && m.AuthorId != null && m.AuthorId != botId)
+            .Where(m => m.GameId == state.Id && (m.Channel == ChatChannels.Public || (canReadTeam && m.Channel == ChatChannels.KillerTeam)) && m.AuthorId != null)
             .OrderBy(m => m.CreatedAt).ThenBy(m => m.Id)
-            .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
+            .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text, m.Round, m.Channel })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
+        var own = messages.Where(m => m.AuthorId == botId && m.Channel == ChatChannels.Public)
+            .SelectMany(m => TableReasoning.Read(botId, m.CardIds, m.CardNotes, board).Select(o => o with { Round = m.Round })).ToList();
+        messages = messages.Where(m => m.AuthorId != botId).ToList();
         var playerIds = state.Players.Select(p => p.Id).ToList();
         var botPlayers = (await db.Users.AsNoTracking().Where(u => playerIds.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
         var perMessage = messages.Select(m =>
@@ -756,7 +759,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 (cards, notes) = (read.Cards, read.Notes);
             }
 
-            return (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, cards, notes, board).ToList();
+            var spoken = m.Channel == ChatChannels.Public;
+            return (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, cards, notes, board)
+                .Select(o => o with { Round = m.Round, Public = spoken }).ToList();
         }).ToList();
         var opinions = perMessage.SelectMany(o => o).ToList();
 
@@ -771,7 +776,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
         var claims = PublicRoleClaims.Read(messages.Select(m => (m.AuthorId!.Value, m.Text ?? "")));
         return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities, claims,
-            BotMind.Latest(perMessage));
+            BotMind.Latest(perMessage.Where(o => o.Count > 0 && o[0].Public)), own);
     }
 
     /// <summary>

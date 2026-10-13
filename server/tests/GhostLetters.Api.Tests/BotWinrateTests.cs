@@ -139,6 +139,22 @@ public sealed class BotWinrateTests
     }
 
     [Fact]
+    public void Bot_RepliesOnlyToWhatWasSaidAloud_AndNamesTheRound()
+    {
+        var view = View(Role.Detective, [], ["stone"], phase: Phase.Discussion, hints: [new HintGroupView(1, ["purse", "dagger"])]);
+        string[] board = ["ring", "wallet", "boat", "sword", "cat", "rose"];
+        // Аня ещё ничего не говорила вслух — её ночной шёпот команде бот не слышал и не спорит с ним.
+        var whispered = board.Select(c => new ChatOpinion(Ann, c, .5) { Public = false, Round = view.Round }).ToList();
+        foreach (var seed in Enumerable.Range(0, 20))
+            BotPlayer.Say(view, new Random(seed), Tags, Mind(opinions: whispered))!.Value.Text.Should().NotContain("Аня,");
+        // Сказанное в прошлом раунде — с пометкой, о каком раунде речь.
+        var earlier = board.Select(c => new ChatOpinion(Ann, c, .5) { Round = view.Round - 1 }).ToList();
+        var texts = Enumerable.Range(0, 20).Select(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(opinions: earlier))!.Value.Text).ToList();
+        texts.Where(t => t.StartsWith("Аня,") || t.Contains("\nАня,") || t.Contains(" Аня,")).Should().NotBeEmpty()
+            .And.OnlyContain(t => t.Contains("в прошлом раунде") || t.Contains("раньше"));
+    }
+
+    [Fact]
     public void Bot_DoesNotGuess_WithoutAnyClues()
     {
         var view = View(Role.Detective, [], ["stone"], phase: Phase.Discussion);
