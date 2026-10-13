@@ -94,12 +94,13 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
             {
                 db.Games.Add(new Game { Id = gameId, StartedAt = DateTimeOffset.UtcNow, Status = GameStatuses.Finished, FinishedAt = DateTimeOffset.UtcNow });
                 db.ChatMessages.Add(new ChatMessage { Id = Guid.NewGuid(), GameId = gameId, AuthorId = admin.Id, Channel = ChatChannels.Public, Round = 1,
-                    CreatedAt = DateTimeOffset.UtcNow, Text = "Ну короче, мотив два — это оно! Точно не место первое.", CardIds = [], CardNotes = [] });
+                    CreatedAt = DateTimeOffset.UtcNow, Text = "Ну короче, мотив два — это оно! Точно не место первое. Пуаро, а почему ты за мотив третий?", CardIds = [], CardNotes = [] });
                 return await db.SaveChangesAsync();
             });
             var mind = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
             mind.Opinions.Should().Contain(o => o.Author == admin.Id && o.CardId == state.Board[0].Cards[1] && o.Strength > 0, "«мотив два» — версия");
             mind.Opinions.Should().Contain(o => o.Author == admin.Id && o.CardId == state.Board[1].Cards[0] && o.Strength < 0, "«точно не» — исключение");
+            mind.Opinions.Should().NotContain(o => o.Author == admin.Id && o.CardId == state.Board[0].Cards[2], "вопрос — не мнение");
         }
         finally
         {
