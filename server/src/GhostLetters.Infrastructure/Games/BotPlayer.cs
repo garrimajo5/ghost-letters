@@ -445,7 +445,7 @@ public static class BotPlayer
                 {
                     var why = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0
                         ? accusation[(at + 2)..].TrimEnd('.').Replace("его версия", "твоя версия").Replace("его голоса", "твои голоса") : null;
-                    return ($"{call}, если честно — тебя{(why is null ? "" : $": {why}")}. Подозреваю, что ты из чёрных.", [], []);
+                    return ($"{call}, если честно — тебя{(why is null ? "" : $": {why}")}. Ты у меня главный подозреваемый, {call}.", [], []);
                 }
                 return (accusation.Length == 0
                     ? $"{call}, пока никого всерьёз не подозреваю — мало данных."
