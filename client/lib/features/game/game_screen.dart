@@ -996,7 +996,8 @@ class _PlayerChip extends StatelessWidget {
     final arrested = v.finale?.arrested.contains(p.id) == true;
     final name = isMe ? 'Вы' : (ghost ? 'Призрак' : screen.nick(p.id));
     final nameColor = isMe ? AppColors.amber : (ghost ? AppColors.ice : AppColors.muted);
-    final suspicionRole = !isMe && isKillerTeam(p.knownRole);
+    final role = shownRole(v, p);
+    final suspicionRole = !isMe && isKillerTeam(role);
 
     return GestureDetector(
       key: Key('player-${p.id}'),
@@ -1041,7 +1042,7 @@ class _PlayerChip extends StatelessWidget {
               ),
             ),
           if (suspicionRole)
-            Positioned(top: -4, left: -6, child: CountBadge(text: p.knownRole == 'Killer' ? 'У' : 'С', color: AppColors.red))
+            Positioned(top: -4, left: -6, child: CountBadge(text: role == 'Killer' ? 'У' : 'С', color: AppColors.red))
           else if (!isMe && (screen.suspicion[p.id] ?? 0) > 0)
             Positioned(
               top: -4,
@@ -1062,8 +1063,8 @@ class _PlayerChip extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 11, color: selected ? AppColors.amber : nameColor, fontWeight: selected ? FontWeight.w600 : null),
         ),
-        if (p.knownRole != null && !ghost && !isMe)
-          Text(T.role(p.knownRole), maxLines: 1, style: TextStyle(fontSize: 9, color: suspicionRole ? AppColors.redSoft : AppColors.dim)),
+        if (role != null && !ghost && !isMe)
+          Text(T.role(role), maxLines: 1, style: TextStyle(fontSize: 9, color: suspicionRole ? AppColors.redSoft : AppColors.dim)),
       ]),
     );
   }

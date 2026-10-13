@@ -693,6 +693,8 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
   void initState() {
     super.initState();
     _voice = ref.read(voiceProvider);
+    // Ночью команда Убийцы говорит между собой — сразу в своём канале.
+    if (_killerTeam && widget.screen.view?.phase == 'Night') _channel = 'killer_team';
     widget.screen.chatChanges.addListener(_onChat);
   }
 
@@ -708,9 +710,10 @@ class _ChatSheetState extends ConsumerState<ChatSheet> {
 
   String get _gameId => widget.screen.widget.gameId;
 
-  /// Свой канал команды Убийцы — только пока ищут Свидетеля, Эксперта или Шантажиста.
+  /// Свой канал команды Убийцы — ночью (Убийца и Сообщник выбирают улики) и пока ищут Свидетеля, Эксперта или Шантажиста.
   bool get _teamTalk =>
-      (_killerTeam || widget.screen.view?.isGhost == true) && const {'Hunt', 'BlackmailerHunt'}.contains(widget.screen.view?.phase);
+      ((_killerTeam || widget.screen.view?.isGhost == true) && const {'Hunt', 'BlackmailerHunt'}.contains(widget.screen.view?.phase)) ||
+      (_killerTeam && widget.screen.view?.phase == 'Night');
 
   /// Канал, куда пишу и который читаю сейчас.
   String get _ch => _teamTalk ? _channel : 'public';
@@ -1143,7 +1146,9 @@ class _VoiceTile extends StatelessWidget {
               icon: Icon(playing ? Icons.stop_circle_outlined : Icons.play_circle_outline),
               onPressed: () => runAction(context, () => playing ? voice.stopPlaying() : voice.play(mediaId)),
             ),
-            Text('🎤 ${(durationMs / 1000).toStringAsFixed(0)} с'),
+            const Icon(Icons.mic_none, size: 16, color: AppColors.muted),
+            const SizedBox(width: 2),
+            Text('${(durationMs / 1000).toStringAsFixed(0)} с'),
           ]);
         },
       );

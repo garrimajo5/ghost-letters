@@ -161,7 +161,7 @@ public static partial class SpokenStyle
                     && (emotions is null || emotions.Contains(l.Emotion))).ToList();
                 if (options.Count > 0)
                 {
-                    var said = PhraseBook.Fill(options[rng.Next(options.Count)].Template, card, who);
+                    var said = Masculine(PhraseBook.Fill(options[rng.Next(options.Count)].Template, card, who));
                     if (said.Length > 0)
                     {
                         result.Add(EndSentence(said));
@@ -218,8 +218,22 @@ public static partial class SpokenStyle
         ("думал", "думала"), ("целился", "целилась"), ("видел", "видела"), ("сказал", "сказала"), ("согласен", "согласна"),
         ("уверен", "уверена"), ("проверил", "проверила"), ("пересмотрел", "пересмотрела"), ("собрал", "собрала"),
         ("выбрал", "выбрала"), ("голосовал", "голосовала"), ("бы сказал", "бы сказала"), ("бы проверил", "бы проверила"), ("бы присмотрелся", "бы присмотрелась"),
-        ("бы последил", "бы последила"), ("готов", "готова"),
+        ("бы последил", "бы последила"), ("готов", "готова"), ("кинул", "кинула"), ("скинул", "скинула"), ("ставил", "ставила"),
+        ("ошибся", "ошиблась"), ("понял", "поняла"), ("заметил", "заметила"), ("решил", "решила"),
     ];
+
+    /// <summary>Обратно к мужскому роду: фразы, выученные у людей, бывают «я кидала» — бот приводит их к своему роду.</summary>
+    public static string Masculine(string text)
+    {
+        foreach (var (male, female) in Endings.OrderByDescending(e => e.Female.Length))
+        {
+            if (male == female) continue;
+            text = Regex.Replace(text, $@"(?<![а-яё]){Regex.Escape(female)}(?![а-яё])", m =>
+                char.IsUpper(m.Value[0]) ? char.ToUpperInvariant(male[0]) + male[1..] : male, RegexOptions.IgnoreCase);
+        }
+
+        return text;
+    }
 
     /// <summary>Род по голосу: женский голос говорит «проверяла», «согласна». «Призрак открыл/оставил» не трогаем.</summary>
     public static string Feminine(string text)

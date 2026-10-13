@@ -31,26 +31,32 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// </summary>
     public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct)
     {
+        var manner = Speech.SpokenStyle.MannerOf(botId);
+        var profile = await (from b in db.BotProfiles.AsNoTracking()
+                             join u in db.Users.AsNoTracking() on b.UserId equals u.Id
+                             where b.UserId == botId
+                             select new { b.Voice, b.VoiceRole, b.About, u.Nickname }).FirstOrDefaultAsync(ct);
+        var (voice, role) = Speech.BotVoices.For(botId, profile?.Voice, profile?.VoiceRole);
+        var male = Speech.BotVoices.Find(voice)?.Male ?? true;
+        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null;
+        double? risk = null;
+        if (request.Channel == ChatChannels.Public && request.MediaId is null)
+        {
+            risk = (await MindAsync(state, botId, ct))?.Personality.Risk ?? .5;
+            // Фразы, выученные у людей с той же манерой, — тем же ботам, по характеру подходящих эмоций.
+            learned = await phrases.ForAsync(manner, ct);
+        }
+
         if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
         {
             var names = new List<string>();
             var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
             if (text.Length > 0)
             {
-                var profile = await (from b in db.BotProfiles.AsNoTracking()
-                                     join u in db.Users.AsNoTracking() on b.UserId equals u.Id
-                                     where b.UserId == botId
-                                     select new { b.Voice, b.VoiceRole, b.About, u.Nickname }).FirstOrDefaultAsync(ct);
-                var (voice, role) = Speech.BotVoices.For(botId, profile?.Voice, profile?.VoiceRole);
-                var male = Speech.BotVoices.Find(voice)?.Male ?? true;
                 var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
                 // Вслух — своими словами: YandexGPT (если подключён), иначе варианты фраз по правилам; шаблон остаётся в чате.
-                var manner = Speech.SpokenStyle.MannerOf(botId);
-                var risk = (await MindAsync(state, botId, ct))?.Personality.Risk ?? .5;
-                // Фразы, выученные у людей с той же манерой, — тем же ботам, по характеру подходящих эмоций.
-                var learned = await phrases.ForAsync(manner, ct);
                 text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
-                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk));
+                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
                 if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
                 {
                     try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
@@ -58,6 +64,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 }
             }
         }
+
+        // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
+        if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
+            request = request with
+            {
+                Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
+                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5)),
+            };
 
         await chat.SendAsync(state.Id, botId, request, ct);
     }

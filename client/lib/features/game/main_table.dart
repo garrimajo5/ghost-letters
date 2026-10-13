@@ -963,7 +963,7 @@ class _SeatTile extends StatelessWidget {
       if (ghost) 'Призрак',
       if (bot) 'бот',
       if (first) 'первым',
-      if (!ghost && !isMe && p.knownRole != null) T.role(p.knownRole),
+      if (!ghost && !isMe && shownRole(v, p) != null) T.role(shownRole(v, p)),
     ].join(' · ');
     final avatar = Stack(clipBehavior: Clip.none, children: [
       Container(
@@ -1788,12 +1788,17 @@ class _Dialog extends StatelessWidget {
     final mine = m.authorId == v.me?.id;
     final typed = typing.current?.id == m.id && typing.busy;
     final text = (m.text ?? '').replaceFirst(tablePostPrefix, '');
-    final Widget body = typed
-        ? Text(typing.text.startsWith(_Typing.prefixOf(screen, m)) ? typing.text.substring(_Typing.prefixOf(screen, m).length) : typing.text,
-            style: const TextStyle(fontSize: 13))
-        : m.kind != 'text' && text.isEmpty
-            ? const Text('🎤 голосовое', style: TextStyle(fontSize: 13))
-            : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints, text: text), keyPrefix: 'dialog-inline', mentions: screen.mentions);
+    // Пока бот «печатает» — та же лента с картинками карт, только обрезанная по набранному.
+    final shown = typed
+        ? (typing.text.startsWith(_Typing.prefixOf(screen, m)) ? typing.text.substring(_Typing.prefixOf(screen, m).length) : typing.text)
+        : text;
+    final Widget body = !typed && m.kind != 'text' && text.isEmpty
+        ? const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.mic_none, size: 15, color: AppColors.muted),
+            SizedBox(width: 4),
+            Text('голосовое', style: TextStyle(fontSize: 13)),
+          ])
+        : ChatCardText(message: m, parts: ChatCardText.parse(m, v.board, v.hints, text: shown), keyPrefix: 'dialog-inline', mentions: screen.mentions);
     final bubble = Container(
       key: Key('dialog-${m.id}'),
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .78),
