@@ -109,4 +109,15 @@ public sealed class ChatStyleTests
             a.Should().StartWith("Пуаро, отвечаю").And.Contain("мотив 4");
         }
     }
+
+    [Fact]
+    public void Defense_BeforeVersion_KeepsVersionHuman()
+    {
+        foreach (var seed in Enumerable.Range(0, 20))
+        {
+            var s = ChatStyle.Humanize("Аня, это не я. Боб, согласен. Версия: Ставлю на мотив, карта 2.", new Random(seed), SpokenStyle.Manner.Calm, true);
+            s.Should().StartWith("Аня, это не я.").And.NotContain("Версия:").And.Contain("Боб, ");
+            ChatStyle.Refs(s).Should().Equal("мотив 2");
+        }
+    }
 }

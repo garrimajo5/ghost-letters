@@ -107,6 +107,16 @@ public static partial class ChatStyle
         // Версия с откликом на чужое мнение, подозрением и оговоркой в одной строке — разбираем по частям.
         if (line.StartsWith("Версия: ", StringComparison.Ordinal) || Regex.IsMatch(line, @"^[^,.]{2,24}, (?:согласен|тут не соглашусь)\. Версия: "))
             return Version(line, c);
+        // Перед версией что-то ещё (ответ на обвинение): начало — обычными предложениями, версия — как версия.
+        var at = line.IndexOf("Версия: ", StringComparison.Ordinal);
+        if (at > 0)
+        {
+            var lead = Regex.Match(line[..at], @"(?:^|(?<=[.!?] ))[^,.!?]{2,24}, (?:согласен|тут не соглашусь)\. $");
+            var start = lead.Success ? lead.Index : at;
+            var head = line[..start].Trim();
+            var said = string.Join(" ", SentenceBreak().Split(head).Select(x => Sentence(x.Trim(), c)).Where(x => x.Length > 0));
+            return (said + " " + Version(line[start..], c)).Trim();
+        }
 
         var sentences = SentenceBreak().Split(line);
         return string.Join(" ", sentences.Select(s => Sentence(s.Trim(), c)).Where(s => s.Length > 0));
