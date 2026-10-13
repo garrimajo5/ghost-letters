@@ -196,12 +196,12 @@ public sealed record Accusation(Guid Author, Guid Target, double Strength);
 public static class AccusationReader
 {
     private static readonly System.Text.RegularExpressions.Regex Clauses = new(
-        @"[.!?\n;]+|,\s*(?:а|но|зато)\s+",
+        @"[.!?\n;]+|,\s*(?:а|но|зато|это)\s+",
         System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
     private static readonly System.Text.RegularExpressions.Regex Denial = new(
         @"\bне\s+(?:считаю|думаю|полагаю|уверен|уверена|подозреваю)\b|" +
         @"\bне\s+верю\s*,?\s*что\b|" +
-        @"\bне\s+(?:убийц\p{L}*|сообщник\p{L}*|подозрительн\p{L}*|(?:из\s+)?ч[её]рн\p{L}*)\b",
+        @"\bне\s+(?:убийц\p{L}*|сообщник\p{L}*|подозрительн\p{L}*|(?:из\s+)?ч[её]рн\p{L}*|врёт|врет|лжёт|лжет|темнит|мутн\p{L}*)\b",
         System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.NonBacktracking);
 
     public static IReadOnlyList<Accusation> Read(Guid author, string? text, IReadOnlyDictionary<Guid, string> names)
@@ -217,7 +217,10 @@ public static class AccusationReader
         {
             double strength = sentence.Contains("убийц") ? 1
                 : sentence.Contains("чёрн") || sentence.Contains("черн") || sentence.Contains("сообщник") || sentence.Contains("подозр") ? 0.6
-                : sentence.Contains("присмотр") || sentence.Contains("не верю") ? 0.4 : 0;
+                : sentence.Contains("присмотр") || sentence.Contains("не верю") ? 0.4
+                // Разговорное: «Пуаро темнит», «Марпл врёт», «мутный он какой-то».
+                : sentence.Contains("темнит") || sentence.Contains("врёт") || sentence.Contains("врет") || sentence.Contains("лжёт") ||
+                  sentence.Contains("лжет") || sentence.Contains("мутн") ? 0.5 : 0;
             // Negation belongs to its clause, not to a separate accusation after "но"/"а".
             // "Не верю Бобу" is distrust, while "не верю, что Боб убийца" denies the accusation.
             if (strength == 0 || Denial.IsMatch(sentence)) continue;

@@ -290,6 +290,15 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void ColloquialAccusations_AreRead_DenialOfSelfDoesNotHideThem()
+    {
+        var read = AccusationReader.Read(Ann, "Я не из чёрных, это Боб темнит!", Names);
+        read.Should().ContainSingle().Which.Should().Match<Accusation>(a => a.Target == Bob && a.Strength == .5);
+        AccusationReader.Read(Ann, "Боб врёт про своё письмо", Names).Should().ContainSingle(a => a.Target == Bob);
+        AccusationReader.Read(Ann, "Боб не врёт, я проверял", Names).Should().BeEmpty();
+    }
+
+    [Fact]
     public void Defense_IsNotReadAsAccusation()
     {
         foreach (var manner in Enum.GetValues<GhostLetters.Infrastructure.Speech.SpokenStyle.Manner>())
