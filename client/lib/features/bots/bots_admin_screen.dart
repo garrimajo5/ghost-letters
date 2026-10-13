@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'bot_relationships.dart';
-import 'learned_phrases.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
@@ -82,7 +81,7 @@ class BotsAdminScreen extends ConsumerWidget {
           key: const Key('bot-phrases'),
           tooltip: 'Фразы, выученные у людей',
           icon: const Icon(Icons.record_voice_over_outlined),
-          onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LearnedPhrasesScreen())),
+          onPressed: () => context.push('/admin/phrases'),
         ),
       ]),
       floatingActionButton: FloatingActionButton.extended(

@@ -215,4 +215,38 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
         response.StatusCode.Should().Be(expected, text);
         return JsonDocument.Parse(text).RootElement.Clone();
     }
+
+    [Fact]
+    public async Task LearnedPhrases_OnlyAdmin_SeesPlaysAndBlocks()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Лида");
+        var player = await TestPlayer.LoginAsync(_factory, "Гость");
+        MakeAdmin(admin);
+        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Пуаро", spectra = Spectra() });
+        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Холмс", spectra = Spectra() });
+        var id = Guid.NewGuid();
+        await _factory.WithDbAsync(async db =>
+        {
+            db.PhraseTemplates.Add(new PhraseTemplate { Id = id, Intent = "accuse", Emotion = "doubtful", Manner = "Calm",
+                Template = "Кажется, {player} темнит", Hash = "test-" + id.ToString("N")[..20], AuthorId = admin.Id, Seen = 2, CreatedAt = DateTimeOffset.UtcNow });
+            return await db.SaveChangesAsync();
+        });
+
+        (await player.GetAsync("/api/v1/admin/phrases", HttpStatusCode.Forbidden)).Code().Should().Be("FORBIDDEN");
+        (await player.PostAsync($"/api/v1/admin/phrases/{id}/play", new { }, HttpStatusCode.Forbidden)).Code().Should().Be("FORBIDDEN");
+
+        var list = await admin.GetAsync("/api/v1/admin/phrases");
+        var phrase = list.GetProperty("phrases").EnumerateArray().Single(p => p.GetProperty("id").GetGuid() == id);
+        phrase.GetProperty("author").GetString().Should().Be("Лида");
+        list.GetProperty("speakers").EnumerateObject().SelectMany(m => m.Value.EnumerateArray()).Should().HaveCountGreaterThanOrEqualTo(2, "оба бота включены");
+
+        var played = await admin.PostAsync($"/api/v1/admin/phrases/{id}/play", new { });
+        played.GetProperty("text").GetString().Should().StartWith("Кажется, ").And.EndWith(" темнит").And.NotContain("{").And.NotContain("Бот ");
+        played.GetProperty("speaker").GetString().Should().NotBeNullOrEmpty();
+        played.GetProperty("audio").ValueKind.Should().Be(JsonValueKind.Null, "в тестах синтеза нет — только текст");
+
+        await admin.PostAsync($"/api/v1/admin/phrases/{id}/block", new { blocked = true });
+        (await admin.GetAsync("/api/v1/admin/phrases")).GetProperty("phrases").EnumerateArray()
+            .Single(p => p.GetProperty("id").GetGuid() == id).GetProperty("blocked").GetBoolean().Should().BeTrue();
+    }
 }

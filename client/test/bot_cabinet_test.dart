@@ -33,6 +33,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.more_horiz).first);
     await tester.pumpAndSettle();
     expect(find.text('Боты (кабинет)'), findsNothing);
+    expect(find.text('Фразы ботов (кабинет)'), findsNothing);
   });
 
   testWidgets('админ: готовые характеры, новый бот со спектрами', (tester) async {
@@ -171,5 +172,35 @@ void main() {
     final created = app.api.botList.single;
     expect(app.api.named('uploadBotAvatar').single.$2.first, created.id);
     expect(created.avatarId, isNotNull);
+  });
+
+  testWidgets('кабинет фраз: только админ; фразу можно сразу проиграть голосом бота той же манеры и запретить', (tester) async {
+    final guest = await _start(tester, admin: true);
+    await tester.tap(find.byIcon(Icons.more_horiz).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Фразы ботов (кабинет)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ну короче, {card} — это оно!'), findsOneWidget);
+    expect(find.text('Кажется, {player} темнит'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('phrase-play-ph1')));
+    await tester.pumpAndSettle();
+    expect(guest.api.named('playPhrase').last.$2, ['ph1', null], reason: 'бот той же манеры — на выбор сервера');
+    expect(find.text('Пуаро: «Ну короче, клетка — это оно!»'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('phrase-speaker-ph1-b2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('phrase-play-ph1')));
+    await tester.pumpAndSettle();
+    expect(guest.api.named('playPhrase').last.$2, ['ph1', 'b2']);
+    expect(find.text('Марпл: «Ну короче, клетка — это оно!»'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('phrase-manner-Calm')));
+    await tester.pumpAndSettle();
+    expect(find.text('Ну короче, {card} — это оно!'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('phrase-block-ph2')));
+    await tester.pumpAndSettle();
+    expect(guest.api.named('blockPhrase').single.$2, ['ph2', true]);
   });
 }
