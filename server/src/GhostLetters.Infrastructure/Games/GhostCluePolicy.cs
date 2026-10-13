@@ -8,6 +8,9 @@ public static class GhostCluePolicy
 {
     public sealed record Assessment(double TrueMatch, double FalseMatch, double Risk, bool Reveal)
     {
+        /// <summary>Истина — среди сильных связей письма, а не побочная слабая ассоциация.</summary>
+        public bool Clear => TrueMatch > 0 && TrueMatch >= BotTuning.Current.GhostClear * Math.Max(TrueMatch, FalseMatch);
+
         public string Reason => TrueMatch < .08 ? "связь с истиной слишком слабая" :
             FalseMatch >= TrueMatch ? "может сильнее увести к ложной карте" : "истинная карта читается яснее ложных";
     }
@@ -30,7 +33,8 @@ public static class GhostCluePolicy
         var ranked = view.Board.SelectMany(r => r.Cards).OrderByDescending(Match).ToList();
         var breadth = Math.Max(1, (int)Math.Round(mind.TableBreadth));
         var readable = ranked.Take(breadth).Any(trueCards.Contains) ? yes : yes * .4;
-        var reveal = readable >= .18 - .10 * risk && yes - no >= .06 - .60 * risk;
+        var reveal = readable >= .18 - .10 * risk && yes - no >= .06 - .60 * risk &&
+            yes >= BotTuning.Current.GhostClear * Math.Max(yes, no);
         return new(yes, no, risk, reveal);
     }
 
@@ -66,7 +70,8 @@ public static class GhostCluePolicy
         {
             var best = candidates.Where(c => !chosen.Contains(c.Card))
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, .. chosen, c.Card], all.Where(x => x != c.Card && !chosen.Contains(x)).ToList(), Sim, focus) - current))
-                .Where(c => (c.Value.Reveal && c.Gain >= cost - tuning.GhostTolerance * risk * risk && c.Gain > -1e-9 - tuning.GhostTolerance * risk * risk) || c.Gain >= .35)
+                .Where(c => (c.Value.Reveal && c.Gain >= cost - tuning.GhostTolerance * risk * risk && c.Gain > -1e-9 - tuning.GhostTolerance * risk * risk) ||
+                    (c.Gain >= .35 && c.Value.Clear))
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (best.Card is null) break;
@@ -85,7 +90,7 @@ public static class GhostCluePolicy
             var fallback = candidates
                 .Select(c => (c.Card, c.Value, Gain: TableScore(view, truth, [.. shown, c.Card], all.Where(x => x != c.Card).ToList(), Sim, focus) - current))
                 // Только письмо, которое на истину похоже сильнее, чем на любую ложную карту: двусмысленное не открываем.
-                .Where(c => c.Value.TrueMatch >= .08 && (!tuning.GhostFallbackStrict || c.Value.TrueMatch > c.Value.FalseMatch * (starving ? .8 : 1)) &&
+                .Where(c => c.Value.TrueMatch >= .08 && c.Value.Clear && (!tuning.GhostFallbackStrict || c.Value.TrueMatch > c.Value.FalseMatch * (starving ? .8 : 1)) &&
                     c.Gain > -tuning.GhostFallback * (starving ? 1.5 : 1))
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();

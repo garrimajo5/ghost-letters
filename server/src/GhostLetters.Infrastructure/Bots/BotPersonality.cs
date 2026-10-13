@@ -157,8 +157,12 @@ public sealed record BotMind(
     IReadOnlyDictionary<Guid, double>? Breadth = null,
     IReadOnlyDictionary<Guid, int>? Affinities = null,
     IReadOnlyDictionary<Guid, GhostLetters.Domain.Roles.Role>? RoleClaims = null,
-    IReadOnlyDictionary<Guid, IReadOnlyList<ChatOpinion>>? LatestVersions = null)
+    IReadOnlyDictionary<Guid, IReadOnlyList<ChatOpinion>>? LatestVersions = null,
+    IReadOnlyList<ChatOpinion>? Own = null)
 {
+    /// <summary>Что этот бот сам показывал вслух («думаю, эта») в прошлых репликах — чтобы чёрный не твердил одну ложь.</summary>
+    public IReadOnlyList<ChatOpinion> OwnSaid => Own ?? [];
+
     /// <summary>Последняя версия игрока: мнения о картах из его последней реплики с картами поля.</summary>
     public IReadOnlyList<ChatOpinion> LatestOf(Guid author) => LatestVersions?.GetValueOrDefault(author) ?? [];
 
@@ -241,7 +245,12 @@ public static class AccusationReader
 }
 
 /// <summary>Мнение из чата: автор показал карту поля с подписью («думаю, эта», «проверял эту»).</summary>
-public sealed record ChatOpinion(Guid Author, string CardId, double Strength, bool IsCheck = false, string? SourceCard = null);
+/// <remarks>Round — раунд реплики; Public — сказано вслух (не в ночном чате команды): спорить вслух можно только с этим.</remarks>
+public sealed record ChatOpinion(Guid Author, string CardId, double Strength, bool IsCheck = false, string? SourceCard = null)
+{
+    public int? Round { get; init; }
+    public bool Public { get; init; } = true;
+}
 
 /// <summary>Готовые характеры — кабинет предлагает создать их одной кнопкой.</summary>
 public static class BotPresets

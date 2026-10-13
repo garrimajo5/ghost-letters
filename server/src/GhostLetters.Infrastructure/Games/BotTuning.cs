@@ -111,6 +111,15 @@ public sealed record BotTuning
     /// <summary>Доля подозрения по последней версии игрока (0 — все его мнения за партию одинаково).</summary>
     public double LatestVersionWeight { get; init; } = .8;
 
+    /// <summary>
+    /// Письмо «проверяет» только те карты поля, что похожи на него почти как самая похожая (доля от лучшего сходства).
+    /// Слабая побочная ассоциация — не проверка: Призрак-человек открыл бы письмо ради сильной связи, а не ради неё.
+    /// </summary>
+    public double CheckRelative { get; init; } = .7;
+
+    /// <summary>Призрак открывает письмо, только если истинная карта — среди сильных связей письма (доля от лучшего сходства).</summary>
+    public double GhostClear { get; init; } = .75;
+
     public static readonly BotTuning Default = new();
 
     private static readonly AsyncLocal<BotTuning?> Local = new();
@@ -170,6 +179,8 @@ public sealed record BotTuning
                 nameof(LatestVersionWeight) => t with { LatestVersionWeight = D() },
                 nameof(LieDetect) => t with { LieDetect = D() },
                 nameof(SuspectDistrust) => t with { SuspectDistrust = D() },
+                nameof(CheckRelative) => t with { CheckRelative = D() },
+                nameof(GhostClear) => t with { GhostClear = D() },
                 _ => throw new FormatException($"Неизвестная настройка: {kv[0]}"),
             };
         }
