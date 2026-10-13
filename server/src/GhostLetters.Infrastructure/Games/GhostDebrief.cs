@@ -3,7 +3,11 @@ using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Games;
 
-/// <summary>Retrospective card analysis. Never called with a live, unresolved game.</summary>
+/// <summary>
+/// Разбор Призрака после итогов — как рассказал бы живой Призрак: по раунду на реплику, коротко,
+/// кого открыл и почему, и пару самых заметных закрытых писем. Раньше — реплика на каждое письмо (до 30 подряд).
+/// Never called with a live, unresolved game.
+/// </summary>
 public static class GhostDebrief
 {
     public const string Completed = "Разбор завершён.";
@@ -18,25 +22,69 @@ public static class GhostDebrief
         var truth = view.Board.Select((r, i) => r.Cards[state.Truth[i]]).ToList();
         var letters = state.Hints.Where(h => h.Round == 0).SelectMany(h => h.Cards)
             .Select(c => (Card: c, Round: 0, Revealed: true, From: (Guid?)null))
-            .Concat(state.Letters.Select(l => (Card: l.CardId, l.Round, l.Revealed, From: (Guid?)l.From))).ToList();
-        var result = new List<Speech>();
-        foreach (var letter in letters)
+            .Concat(state.Letters.Select(l => (Card: l.CardId, l.Round, Revealed: l.Revealed == true, From: (Guid?)l.From))).ToList();
+        string Name(Guid? id)
         {
-            var target = truth.OrderByDescending(c => tags.Similarity(letter.Card, c, p.Attention, p.Details, p.SecondaryMeanings)).First();
-            var assessment = GhostCluePolicy.Assess(view, tags, mind, letter.Card);
-            var reason = tags.Explain(letter.Card, target, p.Attention, p.Details, p.SecondaryMeanings);
-            var verdict = letter.Revealed ? "Открыл это письмо" : "Оставил это письмо закрытым";
-            var analysis = assessment.TrueMatch < .08 ? "Связь с истиной очень слабая." :
-                assessment.FalseMatch >= assessment.TrueMatch ? "Неоднозначная карта: ложная улика выглядит не менее убедительно. Открывать её — риск." :
-                "Истинная улика выделяется лучше ложных.";
-            var feedback = letter.From is { } author && mind.Names.TryGetValue(author, out var name)
-                ? assessment.TrueMatch > .18 && assessment.TrueMatch > assessment.FalseMatch
-                    ? $" {name}, спасибо за понятную связь."
-                    : p.Compromise < .4 ? $" {name}, такая карта могла запутать стол; лучше искать более точную связь." : " В следующий раз попробуем найти связь яснее."
-                : "";
-            var text = $"{Prefix} · раунд {letter.Round}. {verdict}. Разбираю по итогам: {analysis} Связь с истинной уликой: {reason}.{feedback}";
-            result.Add(new(text.Length <= 1000 ? text : text[..1000], [letter.Card, target], [letter.Revealed ? "открыл" : "не открыл", "истинная улика"]));
+            if (id is not { } who || !mind.Names.TryGetValue(who, out var name)) return "письмо";
+            return name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
         }
+
+        string Short(string reason)
+        {
+            var first = reason.Split(';')[0].Trim();
+            var at = first.IndexOf(": ", StringComparison.Ordinal);
+            return at > 0 ? first[(at + 2)..] : first;
+        }
+
+        var result = new List<Speech>();
+        foreach (var round in letters.GroupBy(l => l.Round).OrderBy(g => g.Key))
+        {
+            var rated = round.Select(l =>
+            {
+                var target = truth.OrderByDescending(c => tags.Similarity(l.Card, c, p.Attention, p.Details, p.SecondaryMeanings)).First();
+                return (Letter: l, Target: target, Value: GhostCluePolicy.Assess(view, tags, mind, l.Card),
+                    Reason: Short(tags.Explain(l.Card, target, p.Attention, p.Details, p.SecondaryMeanings)));
+            }).ToList();
+            var parts = new List<string>();
+            var cards = new List<string>();
+            var notes = new List<string>();
+            if (round.Key == 0)
+            {
+                var clue = rated[0];
+                parts.Add($"Зацепку дал такую{(clue.Reason.Length > 0 ? $": {clue.Reason} — к истине" : "")}.");
+                cards.Add(clue.Letter.Card);
+                notes.Add("открыл");
+            }
+            else
+            {
+                var opened = rated.Where(x => x.Letter.Revealed).ToList();
+                var closed = rated.Where(x => !x.Letter.Revealed).OrderByDescending(x => x.Value.TrueMatch).ToList();
+                if (opened.Count > 0)
+                {
+                    var good = opened.Where(x => x.Value.TrueMatch > .18 && x.Value.TrueMatch > x.Value.FalseMatch).Select(x => Name(x.Letter.From)).Distinct().ToList();
+                    var first = opened[0];
+                    parts.Add($"Открыл: {string.Join(", ", opened.Select(x => Name(x.Letter.From)).Distinct())}" +
+                        (first.Reason.Length > 0 ? $" — {first.Reason}." : "."));
+                    if (good.Count > 0) parts.Add($"{string.Join(", ", good)}, спасибо за понятную связь.");
+                    foreach (var x in opened.Take(3)) { cards.Add(x.Letter.Card); notes.Add("открыл"); }
+                }
+                else parts.Add("Ничего не открыл.");
+
+                foreach (var x in closed.Take(cards.Count >= 3 ? 1 : 2))
+                {
+                    var why = x.Value.TrueMatch < .08 ? "связь с истиной слабая"
+                        : x.Value.FalseMatch >= x.Value.TrueMatch ? "похоже и на ложную карту, открывать — риск"
+                        : p.Compromise < .4 ? "можно было открыть, но я перестраховался" : "почти подошло";
+                    parts.Add($"{Name(x.Letter.From)} — оставил закрытым: {why}" + (x.Reason.Length > 0 && x.Value.TrueMatch >= .08 ? $" ({x.Reason})." : "."));
+                    cards.Add(x.Letter.Card);
+                    notes.Add("не открыл");
+                }
+            }
+
+            var text = $"{Prefix} · раунд {round.Key}. {string.Join(" ", parts)}";
+            result.Add(new(text.Length <= 1000 ? text : text[..1000], cards.Take(5).ToList(), notes.Take(5).ToList()));
+        }
+
         if (result.Count > 0)
         {
             var last = result[^1];
