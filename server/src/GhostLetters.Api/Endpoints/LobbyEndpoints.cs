@@ -86,6 +86,12 @@ public static class LobbyEndpoints
             .DisableAntiforgery()
             .WithName("VoiceTranscript");
 
+        // Ответ на переспрос бота: нажатая карта для непонятного названия.
+        games.MapPost("/voice/alias", (Guid id, Infrastructure.Voice.AliasRequest request, HttpContext http,
+                Infrastructure.Voice.VoiceService voice, CancellationToken ct) =>
+            voice.AnswerAsync(id, http.User.UserId(), request, ct))
+            .WithName("VoiceAlias");
+
         return api;
     }
 }

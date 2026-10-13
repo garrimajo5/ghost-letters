@@ -102,11 +102,42 @@ public sealed class LiveVoiceTests
         List<HintGroup> hints = [];
 
         var (cards, notes) = SpokenCards.Read("Я кидала кошку. Думаю, мотив два, а точно не ухо. И место второе?", board, hints, ["cat"], tags);
-        cards.Should().Equal("cat", "cage", "ear");
-        notes.Should().Equal("кидал эту", "думаю, эта", "исключаю");
+        cards.Should().Equal("cat", "cage", "ear", "bell");
+        notes.Should().Equal("кидал эту", "думаю, эта", "исключаю", "думаю, эта");
 
         SpokenCards.Read("Ставлю на клетку и розу", board, hints, [], tags).Cards.Should().Equal("cage", "rose");
         SpokenCards.Read("Привет всем", board, hints, [], tags).Cards.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void UnknownName_IsAskedBack_AndAliasIsUsedNextTime()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> { ["rake"] = [], ["ear"] = [] })
+            .WithNames("""{"rake": ["вилы"], "ear": ["ухо"]}""");
+        List<BoardRow> board = [new() { Category = Category.Motive, Cards = ["rake", "ear"] }];
+
+        var first = SpokenCards.Read("Ставлю на грабли, точно", board, [], [], tags);
+        first.Cards.Should().BeEmpty();
+        first.Unclear.Should().Be(new SpokenCards.Unknown("грабли", null, "думаю, эта"));
+
+        SpokenCards.Read("мотив ржавые грабли", board, [], [], tags).Unclear!.Should().Be(new SpokenCards.Unknown("ржавые грабли", Category.Motive, "думаю, эта"));
+        SpokenCards.Read("точно не грабли", board, [], [], tags).Unclear!.Note.Should().Be("исключаю");
+
+        var known = SpokenCards.Read("Ставлю на грабли", board, [], [], tags, new Dictionary<string, string> { ["грабли"] = "rake" });
+        known.Cards.Should().Equal("rake");
+        known.Unclear.Should().BeNull();
+    }
+
+    [Fact]
+    public void Naming_IsCheckedAgainstCardMarkup()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> { ["rake"] = [], ["ear"] = [] })
+            .WithNames("""{"rake": ["вилы", "грабли"], "ear": ["ухо"]}""")
+            .WithAssociations("""{"rake": [{"tag": "garden", "weight": 0.8, "label": "огород"}]}""");
+        CardNaming.Check("грабли", "rake", ["rake", "ear"], tags).Should().Be(CardNaming.Verdict.Valid);
+        CardNaming.Check("огородные", "rake", ["rake", "ear"], tags).Should().Be(CardNaming.Verdict.Valid, "ассоциация из разметки");
+        CardNaming.Check("ухо", "rake", ["rake", "ear"], tags).Should().Be(CardNaming.Verdict.Invalid, "это название другой карты на столе");
+        CardNaming.Check("штуковина", "rake", ["rake", "ear"], tags).Should().Be(CardNaming.Verdict.Unverified);
     }
 
     [Fact]

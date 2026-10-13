@@ -358,6 +358,10 @@ class Api {
     await _call(() => _dio.post<dynamic>('/games/$gameId/voice/transcript', data: form, options: Options(contentType: 'multipart/form-data')));
   }
 
+  /// Ответ на переспрос бота: нажатая карта для названия, которое он не понял.
+  Future<String> voiceAlias(String gameId, String questionId, String cardId) async =>
+      ((await post('/games/$gameId/voice/alias', {'questionId': questionId, 'cardId': cardId})) as Json)['verdict'] as String;
+
   Future<String> uploadVoice(MultipartFile file, int durationMs) async {
     final form = FormData.fromMap({
       'file': file,

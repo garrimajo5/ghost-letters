@@ -29,7 +29,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// Публичная реплика бота: если в партии боты говорят голосом и синтез настроен — с озвучкой его голосом.
     /// Озвучка не удалась — реплика уходит текстом, как раньше.
     /// </summary>
-    private async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct)
+    public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct)
     {
         if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
         {
