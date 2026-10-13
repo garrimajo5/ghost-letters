@@ -42,8 +42,8 @@ public static partial class PhraseBook
     [GeneratedRegex(@"[а-яё]+", RegexOptions.IgnoreCase)]
     private static partial Regex Words();
 
-    /// <summary>Карта сразу после предлога — её падеж зависит от названия, шаблон не годится.</summary>
-    [GeneratedRegex(@"(?<![а-яё])(?:на|в|во|за|про|под|к|ко|о|об|у|от|из|с|со|до|по|без|для|над|при)\s+(?:(?:мотив|место|способ|тайн[ау])\s*—\s*)?\{card\}", RegexOptions.IgnoreCase)]
+    /// <summary>Карта или имя сразу после предлога («про Ватсона») — падеж зависит от слова, шаблон не годится.</summary>
+    [GeneratedRegex(@"(?<![а-яё])(?:на|в|во|за|про|под|к|ко|о|об|у|от|из|с|со|до|по|без|для|над|при)\s+(?:(?:мотив|место|способ|тайн[ау])\s*—\s*)?\{(?:card|player)\}", RegexOptions.IgnoreCase)]
     private static partial Regex Prepositioned();
 
     [GeneratedRegex(@"(?<=[.!?…])\s+")]
