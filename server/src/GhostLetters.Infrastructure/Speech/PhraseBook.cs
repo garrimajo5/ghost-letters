@@ -36,7 +36,7 @@ public static partial class PhraseBook
         [Intents.Accuse] = ["{player}"], [Intents.Agree] = ["{player}"], [Intents.Disagree] = ["{player}"],
     };
 
-    [GeneratedRegex(@"(?<![а-яё])(мотив|место|способ|тайна)(?:\s*[,—:-]\s*(?:карт[ау]\s*)?|\s+)(\d+|один|два|три|четыре|пять|шесть|семь|перв\w*|втор\w*|трет\w*|четв\w*|пят\w*|шест\w*|седьм\w*)(?![а-яё\d])", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![а-яё])(мотив|место|способ|тайн[ау])(?:\s*[,—:-]\s*(?:карт[ау]\s*)?|\s+)(\d+|один|два|три|четыре|пять|шесть|семь|перв\w*|втор\w*|трет\w*|четв\w*|пят\w*|шест\w*|седьм\w*)(?![а-яё\d])", RegexOptions.IgnoreCase)]
     private static partial Regex CardByNumber();
 
     [GeneratedRegex(@"[а-яё]+", RegexOptions.IgnoreCase)]

@@ -67,11 +67,16 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
+        {
+            var earlier = await db.ChatMessages.AsNoTracking()
+                .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Public)
+                .OrderByDescending(m => m.CreatedAt).Take(6).Select(m => m.Text ?? "").ToListAsync(ct);
             request = request with
             {
                 Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
-                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5)),
+                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier),
             };
+        }
 
         await chat.SendAsync(state.Id, botId, request, ct);
     }
@@ -231,8 +236,13 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             _ => null,
         };
         var cards = columns is null ? new List<string>() : columns.Select((c, r) => view.Board[r].Cards[c]).Take(4).ToList();
-        var text = own.Count == 0 ? "Давайте обсудим выбор. Предлагаю эти карты — что изменим? Я ещё не подтверждаю." :
-            "Послушал предложения. Показываю текущий вариант; можно возразить до подтверждения.";
+        // Ночью Убийца говорит с командой коротко и по-разному, как человек.
+        string[] first = ["Думаю взять вот эти. Что скажете? Пока не подтверждаю.", "Мой вариант — эти карты. Поменяем что-нибудь?",
+            "Предлагаю такие. Если есть идея лучше — пишите, я ещё не нажал.", "Давайте обсудим: я бы загадал эти. Что изменим?"];
+        string[] next = ["Учёл ваши подсказки — вот что выходит. Можно ещё возразить.", "Ок, послушал. Сейчас так — есть возражения?",
+            "Подправил. Если всё устраивает — подтверждаю."];
+        var pick = new Random(HashCode.Combine(state.Id, bot, state.Round, own.Count));
+        var text = own.Count == 0 ? first[pick.Next(first.Length)] : next[pick.Next(next.Length)];
         try
         {
             await chat.SendAsync(state.Id, bot, new SendChatRequest(ChatChannels.KillerTeam, text, null, cards,
@@ -537,7 +547,22 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
-        var perMessage = messages.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, m.CardIds, m.CardNotes, board).ToList()).ToList();
+        var playerIds = state.Players.Select(p => p.Id).ToList();
+        var botPlayers = (await db.Users.AsNoTracking().Where(u => playerIds.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
+        var perMessage = messages.Select(m =>
+        {
+            IReadOnlyList<string> cards = m.CardIds;
+            IReadOnlyList<string> notes = m.CardNotes;
+            // Человек написал словами, без карт («мотив пять — оно», «точно не клетка») — боты понимают так же, как речь.
+            if (cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
+            {
+                var ownLetters = state.Letters.Where(l => l.From == m.AuthorId).Select(l => l.CardId).ToList();
+                var read = Speech.SpokenCards.Read(m.Text, state.Board, state.Hints, ownLetters, tags);
+                (cards, notes) = (read.Cards, read.Notes);
+            }
+
+            return (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, cards, notes, board).ToList();
+        }).ToList();
         var opinions = perMessage.SelectMany(o => o).ToList();
 
         var everyone = state.Players.Select(p => p.Id).ToList();

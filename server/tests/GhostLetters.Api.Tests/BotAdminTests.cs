@@ -79,6 +79,35 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Mind_UnderstandsCardsWrittenInWords()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Слова");
+        MakeAdmin(admin);
+        var bot = await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Читатель", spectra = Spectra() });
+        var botId = bot.Id("id");
+        var state = GameEngine.Create(Guid.NewGuid(), [botId, admin.Id], new GameSettings(),
+            Enumerable.Range(1, 300).Select(i => $"c{i:000}").ToList(), 7);
+        var gameId = state.Id;
+        try
+        {
+            await _factory.WithDbAsync(async db =>
+            {
+                db.Games.Add(new Game { Id = gameId, StartedAt = DateTimeOffset.UtcNow, Status = GameStatuses.Finished, FinishedAt = DateTimeOffset.UtcNow });
+                db.ChatMessages.Add(new ChatMessage { Id = Guid.NewGuid(), GameId = gameId, AuthorId = admin.Id, Channel = ChatChannels.Public, Round = 1,
+                    CreatedAt = DateTimeOffset.UtcNow, Text = "Ну короче, мотив два — это оно! Точно не место первое.", CardIds = [], CardNotes = [] });
+                return await db.SaveChangesAsync();
+            });
+            var mind = (await _factory.WithServiceAsync<BotService, BotMind?>(s => s.MindAsync(state, botId, CancellationToken.None)))!;
+            mind.Opinions.Should().Contain(o => o.Author == admin.Id && o.CardId == state.Board[0].Cards[1] && o.Strength > 0, "«мотив два» — версия");
+            mind.Opinions.Should().Contain(o => o.Author == admin.Id && o.CardId == state.Board[1].Cards[0] && o.Strength < 0, "«точно не» — исключение");
+        }
+        finally
+        {
+            await _factory.WithDbAsync(db => db.Games.Where(g => g.Id == gameId).ExecuteDeleteAsync());
+        }
+    }
+
+    [Fact]
     public async Task NotAdmin_CannotOpenCabinet()
     {
         var player = await TestPlayer.LoginAsync(_factory, "Игрок");

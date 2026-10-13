@@ -11,12 +11,12 @@ namespace GhostLetters.Infrastructure.Speech;
 /// </summary>
 public static partial class ChatStyle
 {
-    private const string Ref = @"(?:мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)\d+";
+    private const string Ref = @"(?:мотив|место|способ|тайн[ау])(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)\d+";
 
     [GeneratedRegex(Ref, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex CardRef();
 
-    [GeneratedRegex(@"(?<cat>мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(?<n>\d+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"(?<cat>мотив|место|способ|тайн[ау])(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(?<n>\d+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RefParts();
 
     [GeneratedRegex(@"(?<=[.!?])\s+(?=[А-ЯЁA-Z«])")]
@@ -26,8 +26,20 @@ public static partial class ChatStyle
     public const double LearnedShare = .35;
 
     private sealed record Ctx(Random Rng, SpokenStyle.Manner Manner, double Risk,
-        IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions)
+        IReadOnlyList<(string Intent, string Emotion, string Template)> Learned, IReadOnlyCollection<string>? Emotions,
+        IReadOnlyCollection<string> Earlier)
     {
+        /// <summary>Это обвинение бот уже говорил раньше — человек не повторяет его в каждой реплике.</summary>
+        public bool Repeats(string who)
+        {
+            var bare = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+            return Earlier.Any(e => e.Contains(bare, StringComparison.OrdinalIgnoreCase) &&
+                Regex.IsMatch(e, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase)) && Rng.NextDouble() < .8;
+        }
+
+        /// <summary>Сколько доводов «подсказка → карта» уже сказано в реплике.</summary>
+        public int Links { get; set; }
+
         public string Pick(params string[] options) => options[Rng.Next(options.Length)];
 
         public string? LearnedFor(string intent, string? card, string? player)
@@ -42,11 +54,13 @@ public static partial class ChatStyle
 
     /// <param name="learned">Фразы людей той же манеры (мысль, эмоция, шаблон с {card}/{player}).</param>
     /// <param name="emotions">Эмоции, которые подходят боту.</param>
+    /// <param name="earlier">Прежние реплики бота в этой партии: уже сказанные обвинения он не повторяет.</param>
     public static string Humanize(string? text, Random rng, SpokenStyle.Manner manner, bool male, double risk = .5,
-        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null)
+        IReadOnlyList<(string Intent, string Emotion, string Template)>? learned = null, IReadOnlyCollection<string>? emotions = null,
+        IReadOnlyCollection<string>? earlier = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return text ?? "";
-        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions);
+        var ctx = new Ctx(rng, manner, risk, learned ?? [], emotions, earlier ?? []);
         var result = "";
         var afterList = false;
         foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -103,12 +117,12 @@ public static partial class ChatStyle
             return c.Pick("Кинул вот эту, посмотрим.", "Моё — вот это. Ждём Призрака.", "Отправил вот эту, ждём.");
         if ((m = Regex.Match(bare, $@"^Проверял: (?<list>.+?) — (?<why>(?:по смыслу|по форме|по цвету|по деталям).+)$")).Success)
         {
-            var list = m.Groups["list"].Value;
+            var list = Acc(m.Groups["list"].Value);
             var why = Reason(m.Groups["why"].Value, c);
             return c.Manner switch
             {
                 SpokenStyle.Manner.Formal => c.Pick($"Письмом проверял {list}: {why}.", $"Целился в {list} — {why}."),
-                SpokenStyle.Manner.Lively => c.Pick($"Целился в {list} — {why}!", $"Думал про {list}: {why}.", $"Это было под {list} — {why}."),
+                SpokenStyle.Manner.Lively => c.Pick($"Целился в {list} — {why}!", $"Думал про {list}: {why}.", $"Хотел проверить {list} — {why}."),
                 _ => c.Pick($"Проверял {list} — {why}.", $"Целился в {list}: {why}.", $"Думал про {list}, {why}."),
             };
         }
@@ -137,12 +151,18 @@ public static partial class ChatStyle
         {
             var why = Reason(m.Groups["why"].Value, c);
             // Второй довод подряд человек обычно не пишет.
-            return c.Pick($"{m.Groups["hint"].Value} намекает на {m.Groups["to"].Value}: {why}.",
-                $"{m.Groups["hint"].Value} и {m.Groups["to"].Value} — {why}.",
-                $"Смотрите: {m.Groups["hint"].Value} — {why}, как и {m.Groups["to"].Value}.");
+            if (c.Links++ > 0 && c.Rng.NextDouble() < .7) return "";
+            var hint = m.Groups["hint"].Value;
+            var to = m.Groups["to"].Value;
+            return c.Pick($"{hint} намекает на {Acc(to)}: {why}.",
+                $"{hint} и {to} — {why}.",
+                $"Смотрите: {(hint == "Зацепка" ? "зацепка" : hint)} — {why}, как и {to}.");
         }
         if ((m = Regex.Match(bare, @"^Целиком думаю так: (?<list>.+)$")).Success)
             return c.Rng.NextDouble() < .4 ? "" : c.Pick($"В целом у меня так: {m.Groups["list"].Value}.", $"Итого: {m.Groups["list"].Value}.", $"Целиком: {m.Groups["list"].Value}.");
+        if ((m = Regex.Match(bare, @"^(?:Подозреваю, что (?<who>.+?) из чёрных|Думаю, Убийца — (?<who>.+?)|Мне кажется, Убийца — (?<who>.+?)|Я бы присмотрелся к (?<who>.+?)|Подозреваю (?<who>.+?): уже бывал Убийцей)(?:: .+)?$")).Success
+            && c.Repeats(m.Groups["who"].Value))
+            return "";
         if ((m = Regex.Match(bare, @"^Подозреваю, что (?<who>.+?) из чёрных(?:: (?<why>.+))?$")).Success)
         {
             var who = m.Groups["who"].Value;
@@ -167,6 +187,18 @@ public static partial class ChatStyle
         line = line.Replace("связь с открытыми уликами слабая, пока предположение", c.Pick("улик под неё мало, пока чутьё", "пока скорее наугад", "прямых улик нет, догадка"));
         line = Regex.Replace(line, @"(?<hint>Подсказка р\.\d+ №\d+|Зацепка): (?<why>по (?:смыслу|форме|цвету|деталям): [^.;]+(?:; [^.]+)?)",
             m => $"{m.Groups["hint"].Value} — {Reason(m.Groups["why"].Value, c)}");
+        line = Regex.Replace(line, @"Пересмотрел выбор: (?<from>" + Ref + @") → (?<to>" + Ref + @")\. ",
+            m => c.Pick($"Передумал: не {m.Groups["from"].Value}, а {m.Groups["to"].Value}. ", $"Пересмотрел: {m.Groups["to"].Value} вместо {m.Groups["from"].Value}. "), RegexOptions.IgnoreCase);
+        line = line.Replace("Учёл и свои исчезнувшие письма: их вес зависит от того, насколько я доверяю такой проверке.",
+            c.Pick("Свои исчезнувшие письма тоже учёл.", "Пропавшие письма учёл — в меру."));
+        line = line.Replace("Исчезновение своих писем не считаю доводом против карт: смотрю на другие улики.",
+            c.Pick("Свои пропавшие письма в расчёт не беру.", "Что мои письма исчезли — для меня не довод."));
+        line = line.Replace(" Остальные ряды моей версии — на прикреплённых картах.", " " + c.Pick("Остальное — на картах.", "Остальные ряды — на картах ниже."));
+        // Отклик союзнику: «твоя версия «…» сходится с подсказками; пока считаю тебя мирным».
+        line = Regex.Replace(line, @"^(?<who>[^,]{2,24}), твоя версия «(?<card>[^»]+)» сходится с подсказками; пока считаю тебя мирным\. ",
+            m => c.Pick($"{m.Groups["who"].Value}, с «{m.Groups["card"].Value}» согласен — сходится. ", $"{m.Groups["who"].Value}, «{m.Groups["card"].Value}» — да, похоже. Тебе пока верю. ",
+                $"{m.Groups["who"].Value}, поддержу «{m.Groups["card"].Value}». "));
+        line = line.Replace(" Какие ещё улики подтверждают нашу версию?", " " + c.Pick("Что ещё за неё?", "Какие ещё улики за неё?"));
         line = line.Replace(" По игрокам пока недостаточно оснований для уверенного обвинения.", " " + c.Pick("Кого подозревать — пока не знаю.", "По игрокам пока молчу.", "Подозреваемых пока не назову."));
         if (line.StartsWith("По игрокам пока недостаточно оснований для уверенного обвинения", StringComparison.Ordinal))
             line = c.Pick("Кого подозревать — пока не знаю.", "По игрокам пока молчу.");
@@ -216,15 +248,16 @@ public static partial class ChatStyle
         }
         else
         {
-            var r = refMatch.Groups["cat"].Value.ToLowerInvariant() + " " + refMatch.Groups["n"].Value;
+            var r = Nom(refMatch.Groups["cat"].Value) + " " + refMatch.Groups["n"].Value;
+            var ra = Acc(r);
             var exclude = Regex.IsMatch(rest, @"не подходит|Исключаю|Не верю в", RegexOptions.IgnoreCase);
             var tentative = !exclude && Regex.IsMatch(rest, @"Пока не ясно|Есть идея", RegexOptions.IgnoreCase);
             said.Add(exclude
-                ? c.Pick($"{Capital(r)} — мимо, по-моему.", $"Не верю в {r}.", $"{Capital(r)} отпадает: улики к ней притянуты.", $"Исключаю {r}.")
+                ? c.Pick($"{Capital(r)} — мимо, по-моему.", $"Не верю в {ra}.", $"{Capital(r)} отпадает: улики притянуты.", $"Исключаю {ra}.")
                 : tentative
-                    ? c.Pick($"Я бы проверил {r}.", $"А что если {r}?", $"Есть мысль про {r}, но пока сыро.")
+                    ? c.Pick($"Я бы проверил {ra}.", $"А что если {r}?", $"Есть мысль про {ra}, но пока сыро.")
                     : doubt
-                        ? c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? c.Pick($"Может, {r}?", $"Не уверен, но, кажется, {r}.", $"Склоняюсь к {r}, но не точно.")
+                        ? c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? c.Pick($"Может, {r}?", $"Не уверен, но, кажется, {r}.", $"Склоняюсь: {r}, но не точно.")
                         : c.LearnedFor(PhraseBook.Intents.Version, r, null) ?? Confident(r, sure, c));
         }
 
@@ -242,13 +275,13 @@ public static partial class ChatStyle
                 : c.Pick($"Уверен: {r}.", $"Здесь {r}, без вариантов.");
         return c.Manner switch
         {
-            SpokenStyle.Manner.Lively => c.Pick($"Ставлю на {r}!", $"Я за {r}. Кто против?", $"По-моему, {r} — оно."),
-            SpokenStyle.Manner.Formal => c.Pick($"Полагаю, {r}.", $"Предлагаю {r}.", $"Наиболее вероятно — {r}."),
-            _ => c.Pick($"Ставлю на {r}.", $"Думаю, {r}.", $"Мне больше всего нравится {r}.", $"По-моему, {r}. Кто против?"),
+            SpokenStyle.Manner.Lively => c.Pick($"Ставлю на {Acc(r)}!", $"Я за {Acc(r)}. Кто против?", $"По-моему, {r} — оно."),
+            SpokenStyle.Manner.Formal => c.Pick($"Полагаю, {r}.", $"Предлагаю {Acc(r)}.", $"Наиболее вероятно — {r}."),
+            _ => c.Pick($"Ставлю на {Acc(r)}.", $"Думаю, {r}.", $"Мне больше всего нравится {r}.", $"По-моему, {r}. Кто против?"),
         };
     }
 
-    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «оба про море».</summary>
+    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «общее — море».</summary>
     private static string Reason(string why, Ctx c)
     {
         var first = why.Split(';')[0].Trim();
@@ -257,7 +290,7 @@ public static partial class ChatStyle
         var what = m.Groups["what"].Value.Trim();
         return m.Groups["kind"].Value switch
         {
-            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"оба про {what}", $"общее — {what}", $"там тоже {what}"),
+            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"общее — {what}", $"там тоже {what}", $"связь — {what}"),
             "форме" => what == "похожий силуэт" ? "похожи формой" : c.Pick($"похожи формой ({what})", $"форма та же: {what}"),
             "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : c.Pick($"похожи цветом ({what})", $"тот же цвет — {what}"),
             _ => c.Pick($"деталь общая — {what}", $"совпадает деталь: {what}"),
@@ -272,9 +305,14 @@ public static partial class ChatStyle
         _ => why,
     };
 
+    /// <summary>«тайна 2» после «в», «на», «про», «за» — «тайну 2»; остальные ряды не склоняются.</summary>
+    private static string Acc(string refs) => Regex.Replace(refs, @"(?<![а-яё])тайна(?=\s*\d)", "тайну", RegexOptions.IgnoreCase);
+
+    private static string Nom(string category) => category.ToLowerInvariant().StartsWith("тайн", StringComparison.Ordinal) ? "тайна" : category.ToLowerInvariant();
+
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
     /// <summary>Ссылки на карты в тексте — для проверки, что пересказ ничего не потерял.</summary>
     public static IReadOnlyList<string> Refs(string text) =>
-        CardRef().Matches(text).Select(m => RefParts().Match(m.Value) is var p ? p.Groups["cat"].Value.ToLowerInvariant() + " " + p.Groups["n"].Value : m.Value).ToList();
+        CardRef().Matches(text).Select(m => RefParts().Match(m.Value) is var p ? Nom(p.Groups["cat"].Value) + " " + p.Groups["n"].Value : m.Value).ToList();
 }

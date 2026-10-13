@@ -17,7 +17,7 @@ public static partial class SpeechText
     private static readonly string[] Ordinals =
         ["нулевого", "первого", "второго", "третьего", "четвёртого", "пятого", "шестого", "седьмого", "восьмого", "девятого", "десятого"];
 
-    [GeneratedRegex(@"(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайна)(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])",
+    [GeneratedRegex(@"(?<![а-яёa-z])(Подсказка р\.(\d+) №(\d+)|(мотив|место|способ|тайн[ау])(?:\s*[,—:]\s*(?:карт[ау]\s*)?|\s+)(\d+)(?!\d)|вот эт[оу]|(Зацепка))(?![а-яёa-z])",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex CardRef();
 
@@ -57,7 +57,7 @@ public static partial class SpeechText
             {
                 var word = m.Groups[4].Value;
                 var column = int.Parse(m.Groups[5].Value) - 1;
-                var row = board.FirstOrDefault(r => string.Equals(CategoryWord(r.Category), word, StringComparison.OrdinalIgnoreCase));
+                var row = board.FirstOrDefault(r => string.Equals(CategoryWord(r.Category), word.StartsWith("тайн", StringComparison.OrdinalIgnoreCase) ? "тайна" : word, StringComparison.OrdinalIgnoreCase));
                 var name = row is not null && column >= 0 && column < row.Cards.Count ? tags.NameOf(row.Cards[column]) : null;
                 if (name is not null) namesUsed?.Add(name);
                 return name is null ? m.Value : $"{word} — {name}";
