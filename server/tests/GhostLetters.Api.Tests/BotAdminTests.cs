@@ -222,8 +222,8 @@ public sealed class BotAdminTests(PostgresFixture postgres) : IAsyncLifetime
         var admin = await TestPlayer.LoginAsync(_factory, "Лида");
         var player = await TestPlayer.LoginAsync(_factory, "Гость");
         MakeAdmin(admin);
-        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Пуаро", spectra = Spectra() });
-        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Холмс", spectra = Spectra() });
+        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Фразёр", spectra = Spectra() });
+        await admin.PostAsync("/api/v1/admin/bots", new { nickname = "Чтец", spectra = Spectra() });
         var id = Guid.NewGuid();
         await _factory.WithDbAsync(async db =>
         {
