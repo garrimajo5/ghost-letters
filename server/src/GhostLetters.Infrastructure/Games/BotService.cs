@@ -25,6 +25,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (int Version, DateTimeOffset Since)> Changed = new();
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (Phase Phase, int Round, DateTimeOffset Since)> PhaseStarted = new();
 
+    /// <summary>Когда бот впервые увидел этап голосования (партия, этап, попытка).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Guid, int, int), DateTimeOffset> StageStarted = new();
+
     /// <summary>
     /// Публичная реплика бота: если в партии боты говорят голосом и синтез настроен — с озвучкой его голосом.
     /// Озвучка не удалась — реплика уходит текстом, как раньше.
@@ -165,6 +168,17 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             if (state.Phase is Phase.Hunt or Phase.BlackmailerHunt && state.Player(botId).Role == Role.Accomplice &&
                 await HuntTalkAsync(state, botId, ct)) return 1;
             if (WaitsForTeam(state, botId, bots, row.PhaseDeadline, now, solo ? since : null))
+            {
+                continue;
+            }
+
+            if (StageStarted.Count > 20_000) StageStarted.Clear();
+            // Голос — не мгновенно: человек пару секунд смотрит на ряд. Свой темп у каждого бота; таймер не нарушаем.
+            if (state.Phase is Phase.Voting or Phase.VoteTie && state.VoteStageIndex < state.VoteStages.Count &&
+                !state.PendingVotes.Any(v => v.Voter == botId) &&
+                now - StageStarted.GetOrAdd((gameId, state.VoteStageIndex, state.VoteStages[state.VoteStageIndex].Attempt), now) <
+                    TimeSpan.FromSeconds(2 + (uint)HashCode.Combine(botId, state.VoteStageIndex) % 6) &&
+                (row.PhaseDeadline is not { } voteEnd || voteEnd - now > TimeSpan.FromSeconds(10)))
             {
                 continue;
             }
