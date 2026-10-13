@@ -669,7 +669,8 @@ class _TableArea extends StatelessWidget {
               },
             ),
             );
-      final board = pan
+      // Поле приближается двумя пальцами (щипком) прямо за столом; отпустили почти в исходный размер — вернулось.
+      final board = _PinchBoard(child: pan
           ? Row(key: const Key('main-board'), crossAxisAlignment: CrossAxisAlignment.start, children: [
               SingleChildScrollView(padding: EdgeInsets.fromLTRB(4, 2, 4, 8 + fanOver / .75), child: hintsColumn),
               Expanded(
@@ -715,7 +716,7 @@ class _TableArea extends StatelessWidget {
             ),
           ),
         ]),
-      );
+      ));
       if (dialog) {
         return Column(children: [
           if (strip)
@@ -2436,4 +2437,53 @@ class _AskStrip extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// Щипок по полю — приближение (до ×3), двигать приближенное поле — одним пальцем. Пока поле не приближено,
+/// одиночные касания и прокрутка работают как раньше: перетаскивание включается только после щипка.
+class _PinchBoard extends StatefulWidget {
+  const _PinchBoard({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PinchBoard> createState() => _PinchBoardState();
+}
+
+class _PinchBoardState extends State<_PinchBoard> {
+  final _controller = TransformationController();
+  bool _zoomed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onChange);
+  }
+
+  void _onChange() {
+    final zoomed = _controller.value.getMaxScaleOnAxis() > 1.02;
+    if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onChange);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => InteractiveViewer(
+        key: const Key('main-board-zoom'),
+        transformationController: _controller,
+        minScale: 1,
+        maxScale: 3,
+        panEnabled: _zoomed,
+        clipBehavior: Clip.hardEdge,
+        onInteractionEnd: (_) {
+          // Почти исходный размер — ровно исходный, без сдвига: поле снова целиком.
+          if (_controller.value.getMaxScaleOnAxis() < 1.08) _controller.value = Matrix4.identity();
+        },
+        child: widget.child,
+      );
 }
