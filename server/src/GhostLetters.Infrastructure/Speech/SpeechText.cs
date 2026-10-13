@@ -35,7 +35,7 @@ public static partial class SpeechText
         IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints, CardTags tags, ICollection<string>? namesUsed = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return "";
-        var source = text.Trim();
+        var source = French(text.Trim());
         // Показ человека со стола начинается так (клиент); боты так не пишут, но озвучка общая.
         const string tablePrefix = "Со стола: ";
         if (source.StartsWith(tablePrefix, StringComparison.Ordinal)) source = source[tablePrefix.Length..];
@@ -85,6 +85,20 @@ public static partial class SpeechText
         spoken = Symbols().Replace(spoken, " ");
         spoken = Spaces().Replace(spoken, " ").Replace(" .", ".").Replace(" ,", ",").Replace("..", ".").Trim();
         return Cut(spoken);
+    }
+
+    private static readonly (string From, string To)[] FrenchWords =
+    [
+        ("mon ami", "мон ами"), ("mon cher", "мон шер"), ("mon Dieu", "мон дьё"), ("voilà", "вуаля"), ("voila", "вуаля"),
+        ("mais oui", "мэ уи"), ("mais non", "мэ нон"), ("bien sûr", "бьен сюр"), ("n'est-ce pas", "нэс па"), ("parbleu", "парблё"),
+    ];
+
+    /// <summary>Французские словечки Пуаро вслух — по-русски, иначе синтез читает их по буквам.</summary>
+    private static string French(string text)
+    {
+        foreach (var (from, to) in FrenchWords)
+            text = Regex.Replace(text, @"(?<![\p{L}])" + Regex.Escape(from) + @"(?![\p{L}])", to, RegexOptions.IgnoreCase);
+        return text;
     }
 
     /// <summary>Обрезать по концу предложения, не длиннее <see cref="MaxLength"/>.</summary>

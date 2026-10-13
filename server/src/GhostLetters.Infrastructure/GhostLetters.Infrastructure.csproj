@@ -5,6 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Speech\Personas\*.json" LogicalName="Personas.%(Filename).json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GhostLetters.Application\GhostLetters.Application.csproj" />
   </ItemGroup>
 
