@@ -936,6 +936,79 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.PhraseTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_id");
+
+                    b.Property<bool>("Blocked")
+                        .HasColumnType("boolean")
+                        .HasColumnName("blocked");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Emotion")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("emotion");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("hash");
+
+                    b.Property<string>("Intent")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("intent");
+
+                    b.Property<string>("Manner")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("manner");
+
+                    b.Property<int>("Seen")
+                        .HasColumnType("integer")
+                        .HasColumnName("seen");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("template");
+
+                    b.Property<int>("Uses")
+                        .HasColumnType("integer")
+                        .HasColumnName("uses");
+
+                    b.HasKey("Id")
+                        .HasName("pk_phrase_templates");
+
+                    b.HasIndex("AuthorId")
+                        .HasDatabaseName("ix_phrase_templates_author_id");
+
+                    b.HasIndex("Hash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_phrase_templates_hash");
+
+                    b.HasIndex("Intent", "Manner")
+                        .HasDatabaseName("ix_phrase_templates_intent_manner");
+
+                    b.ToTable("phrase_templates", "public");
+                });
+
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.PlayerNote", b =>
                 {
                     b.Property<Guid>("GameId")
@@ -1609,6 +1682,16 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_media_users_owner_id");
+                });
+
+            modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.PhraseTemplate", b =>
+                {
+                    b.HasOne("GhostLetters.Infrastructure.Persistence.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_phrase_templates_users_author_id");
                 });
 
             modelBuilder.Entity("GhostLetters.Infrastructure.Persistence.Entities.PlayerNote", b =>
