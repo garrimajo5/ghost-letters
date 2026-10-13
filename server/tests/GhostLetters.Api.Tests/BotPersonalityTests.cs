@@ -294,7 +294,7 @@ public sealed class BotPersonalityTests
     {
         var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])]);
         var mind = Mind(new BotPersonality { Meaning = 1 });
-        var about = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, почему не роза в мотиве?", ["rose"])!.Value;
+        var about = BotPlayer.Answer(view, new Random(1), Tags, mind, "Аня", "Я, ты за розу в мотиве?", ["rose"])!.Value;
         about.Text.Should().StartWith("Аня, нет").And.Contain("мотив 1").And.Contain("Подсказка р.1 №1");
         about.Cards.Should().Equal("knife", "rose");
         about.Notes.Should().Equal("думаю, эта", "не эта");
