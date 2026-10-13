@@ -2,6 +2,7 @@ using GhostLetters.Application;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Games;
 using GhostLetters.Infrastructure.Persistence;
+using GhostLetters.Infrastructure.Persistence.Entities;
 using GhostLetters.Infrastructure.Speech;
 using Microsoft.EntityFrameworkCore;
 

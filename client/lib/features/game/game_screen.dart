@@ -1784,7 +1784,7 @@ class _Dock extends StatelessWidget {
           if (showChat) ...[
             const SizedBox(width: 10),
             _VoiceButton(screen: screen),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             _ChatButton(screen: screen),
           ],
         ]),
@@ -1906,7 +1906,7 @@ class _VoiceButton extends StatelessWidget {
             onLongPress: voice.joined ? voice.leave : null,
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              width: 52,
+              width: 44,
               height: 52,
               decoration: BoxDecoration(
                 color: voice.live ? AppColors.believed.withValues(alpha: .18) : AppColors.surface,

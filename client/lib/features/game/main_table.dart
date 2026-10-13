@@ -1108,7 +1108,7 @@ class _Actions extends StatelessWidget {
       Expanded(child: main),
       SizedBox(width: row ? 10 : 6),
       _VoiceButton(screen: screen),
-      const SizedBox(width: 6),
+      const SizedBox(width: 4),
       _ChatButton(screen: screen),
     ]);
   }
