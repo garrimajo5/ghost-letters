@@ -440,6 +440,12 @@ public static class BotPlayer
             if ((lower.Contains("кого") && (lower.Contains("подозр") || lower.Contains("убийц"))) || lower.Contains("кто убийца") || lower.Contains("кто из чёрных") || lower.Contains("кто из черных"))
             {
                 var accusation = Accusation().Trim();
+                // Подозревает самого спросившего — так и говорит, а не о нём в третьем лице.
+                if (accusation.Contains(call, StringComparison.Ordinal))
+                {
+                    var why = accusation.IndexOf(": ", StringComparison.Ordinal) is var at and > 0 ? accusation[(at + 2)..].TrimEnd('.') : null;
+                    return ($"{call}, если честно — тебя{(why is null ? "" : $": {why}")}. Подозреваю, что ты из чёрных.", [], []);
+                }
                 return (accusation.Length == 0
                     ? $"{call}, пока никого всерьёз не подозреваю — мало данных."
                     : $"{call}, {char.ToLowerInvariant(accusation[0])}{accusation[1..]}", [], []);
