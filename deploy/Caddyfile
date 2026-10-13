@@ -19,12 +19,14 @@
 
 	handle {
 		root * /srv/web
-		# Новая версия сразу: браузер каждый раз сверяется с сервером (304, если не менялось).
-		header Cache-Control "no-cache"
-		# Картинки карт, шрифты, звуки и движок меняются редко: час без запросов к серверу,
-		# а сутки после — показываем из кэша и тихо сверяемся в фоне. Код (main.dart.js) — как выше.
+		# Картинки карт, шрифты, звуки и движок меняются редко: сутки без запросов к серверу,
+		# неделя после — показываем из кэша и тихо сверяемся в фоне.
+		# (Раньше общий «no-cache» без условия перекрывал это правило: Caddy применяет его последним.)
 		@static path /assets/* /canvaskit/* /icons/*
-		header @static Cache-Control "public, max-age=3600, stale-while-revalidate=86400"
+		header @static Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+		# Код и index.html — новая версия сразу: браузер каждый раз сверяется с сервером (304, если не менялось).
+		@code not path /assets/* /canvaskit/* /icons/*
+		header @code Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}

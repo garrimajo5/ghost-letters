@@ -216,3 +216,7 @@ int? _linkOf(ChatMessage m, int index) {
   final negative = raw.startsWith('исключ') || raw.startsWith('не эта') || raw.contains('исчезла');
   return (source, negative);
 }
+
+/// Роль игрока, которую можно показать на столе. Пока я не открыл свою карту роли («убедитесь, что никто не смотрит»),
+/// чужие роли (кроме Призрака) не видны — иначе команда Убийцы выдаёт себя на экране.
+String? shownRole(GameView v, PlayerInfo p) => v.can('AckRole') && p.knownRole != 'Ghost' ? null : p.knownRole;

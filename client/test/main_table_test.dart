@@ -693,14 +693,14 @@ void main() {
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
-        id: 'b1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Думаю, что мотив — вторая карта.',
+        id: 'b1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Думаю, что дело не в мотиве.',
         cardIds: const [], createdAt: DateTime.now(), round: 4));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     final partial = tester.widget<Text>(find.byKey(const Key('say-statement'))).data!;
-    expect(partial.length, lessThan('Марпл: Думаю, что мотив — вторая карта.'.length));
+    expect(partial.length, lessThan('Марпл: Думаю, что дело не в мотиве.'.length));
     await tester.pump(const Duration(seconds: 6));
-    expect(find.text('Марпл: Думаю, что мотив — вторая карта.'), findsOneWidget);
+    expect(find.text('Марпл: Думаю, что дело не в мотиве.'), findsOneWidget);
   });
 
   testWidgets('длинная реплика: в строке видна строка, которую печатают сейчас', (tester) async {
