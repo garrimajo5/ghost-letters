@@ -27,6 +27,9 @@ public static partial class SpeechText
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
 
+    [GeneratedRegex(@"(—\s[^—.!?,:;\n]{1,40}?)\s—\s")]
+    private static partial Regex DoubleDash();
+
     /// <param name="namesUsed">Сюда складываются подставленные названия карт (для проверки пересказа).</param>
     public static string For(string? text, IReadOnlyList<string> cardIds, IReadOnlyList<string>? notes,
         IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints, CardTags tags, ICollection<string>? namesUsed = null)
@@ -77,6 +80,8 @@ public static partial class SpeechText
         });
 
         spoken = spoken.Replace("→", " указывает на ").Replace("\n", ". ");
+        // «тайна — клетка — это оно»: два тире подряд — две паузы, фраза рвётся. Второе тире — запятая.
+        spoken = DoubleDash().Replace(spoken, "$1, ");
         spoken = Symbols().Replace(spoken, " ");
         spoken = Spaces().Replace(spoken, " ").Replace(" .", ".").Replace(" ,", ",").Replace("..", ".").Trim();
         return Cut(spoken);
@@ -90,8 +95,11 @@ public static partial class SpeechText
         return end > MaxLength / 3 ? text[..(end + 1)] : text[..MaxLength].TrimEnd() + "…";
     }
 
+    /// <summary>Сколько SpeechKit v3 синтезирует одним запросом без unsafeMode (с запасом до 250).</summary>
+    public const int ChunkLimit = 240;
+
     /// <summary>Разбить на куски для синтеза (SpeechKit тарифицирует по 250 символов): по предложениям, затем по запятым.</summary>
-    public static IReadOnlyList<string> Chunks(string text, int max = 240)
+    public static IReadOnlyList<string> Chunks(string text, int max = ChunkLimit)
     {
         var result = new List<string>();
         var current = new StringBuilder();

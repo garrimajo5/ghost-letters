@@ -1851,6 +1851,8 @@ class _Typing extends ChangeNotifier {
   final _seen = <String>{};
   Timer? _timer;
   int _cue = 0, _hold = 0, _pause = 0;
+  /// До каких пор звучит голос текущей реплики: следующая не начинается и не обрывает его на полуслове.
+  DateTime? _voiceUntil;
   bool _disposed = false;
 
   bool get busy => _timer != null;
@@ -1907,6 +1909,7 @@ class _Typing extends ChangeNotifier {
   void _show(ChatMessage? m, {bool animate = true}) {
     _timer?.cancel();
     _timer = null;
+    _voiceUntil = null;
     current = m;
     revealed.clear();
     _mentionAt.clear();
@@ -1954,6 +1957,7 @@ class _Typing extends ChangeNotifier {
       _pause = 0;
       final letters = (_letters.length - shown).clamp(1, 100000);
       step = Duration(milliseconds: ((m.durationMs ?? 0) / letters).round().clamp(20, 120));
+      _voiceUntil = DateTime.now().add(Duration(milliseconds: (m.durationMs ?? 0) + 300));
       unawaited(screen.ref.read(voiceProvider).play(m.mediaId!).catchError((Object _) {}));
     }
     _timer = Timer.periodic(step, (_) => _step());
@@ -1994,7 +1998,8 @@ class _Typing extends ChangeNotifier {
       return;
     }
     // Пауза на чтение, затем следующая реплика.
-    if (++_hold >= 60) {
+    final voice = _voiceUntil;
+    if (++_hold >= 60 && (voice == null || !DateTime.now().isBefore(voice))) {
       _timer?.cancel();
       _timer = null;
       if (_queue.isNotEmpty) _show(_queue.removeAt(0));

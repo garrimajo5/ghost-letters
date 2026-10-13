@@ -39,7 +39,8 @@ public sealed class SpeechTests
     public void ClaimedLetter_IsNamed_UnknownRefsStayText()
     {
         SpeechText.For("Кидал вот эту — исчезла. Мотив 9 и тайна 1 — мимо.", ["cat"], ["кидал эту"], Board, Hints, Tags)
-            .Should().Be("Кидал вот эту — кошка — исчезла. Мотив 9 и тайна 1 — мимо.");
+            .Should().Be("Кидал вот эту — кошка, исчезла. Мотив 9 и тайна 1 — мимо.", "два тире подряд рвут фразу паузами");
+        SpeechText.For("Ну, мотив 2 — это оно!", [], null, Board, Hints, Tags).Should().Be("Ну, мотив — клетка, это оно!");
     }
 
     [Fact]
@@ -100,6 +101,20 @@ public sealed class SpeechTests
 
         handler.Fail = true;
         (await speech.SynthesizeAsync("Ошибка.", "julia", null, CancellationToken.None)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LongText_IsSynthesizedWhole_InOneRequest()
+    {
+        var handler = new FakeSpeechKit();
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Speech:ApiKey"] = "secret" }).Build();
+        var speech = new SpeechKit(config, NullLogger<SpeechKit>.Instance, TimeProvider.System, handler);
+        var text = string.Join(" ", Enumerable.Repeat("Думаю, мотив — клетка, и вот почему.", 12));
+        (await speech.SynthesizeAsync(text, "kirill", null, CancellationToken.None)).Should().NotBeNull();
+        handler.Requests.Should().ContainSingle("одна интонация на всю фразу, без стыков");
+        handler.Bodies[0].Should().Contain("\"unsafeMode\":true");
+        (await speech.SynthesizeAsync("Коротко.", "kirill", null, CancellationToken.None)).Should().NotBeNull();
+        handler.Bodies[1].Should().NotContain("unsafeMode");
     }
 
     [Fact]
