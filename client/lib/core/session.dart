@@ -32,7 +32,20 @@ class SessionController extends Notifier<Session> {
   SharedPreferences get _prefs => ref.read(prefsProvider);
 
   @override
-  Session build() {
+  Session build() => _stored();
+
+  /// Другая вкладка (или окно) того же браузера уже обновила токены: берём их из хранилища, а не
+  /// обновляем старым refresh-токеном — повтор старого сервер считает кражей и отзывает все сессии.
+  /// true — в хранилище новая пара, она принята.
+  Future<bool> adoptNewerStored() async {
+    await _prefs.reload();
+    final stored = _stored();
+    if (stored.refreshToken == null || stored.refreshToken == state.refreshToken) return false;
+    state = stored;
+    return true;
+  }
+
+  Session _stored() {
     final raw = _prefs.getString(_kSession);
     if (raw == null) return const Session();
     try {

@@ -116,6 +116,16 @@ class Api {
   }
 
   Future<bool> _doRefresh() async {
+    // Вкладки делят хранилище: если соседняя уже обновила пару, свежий access-токен берём у неё.
+    try {
+      if (await _ref.read(sessionProvider.notifier).adoptNewerStored()) {
+        final token = _ref.read(sessionProvider).accessToken;
+        final exp = token == null ? null : jwtExpiry(token);
+        if (exp != null && exp.difference(DateTime.now()) > const Duration(minutes: 1)) return true;
+      }
+    } catch (_) {
+      // Хранилище недоступно — обновляем как обычно.
+    }
     final refresh = _ref.read(sessionProvider).refreshToken;
     if (refresh == null) return false;
     try {
