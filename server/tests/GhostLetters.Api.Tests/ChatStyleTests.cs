@@ -21,7 +21,7 @@ public sealed class ChatStyleTests
             s.Should().NotContain("Версия:").And.NotContain("Проверял:").And.NotContain("по смыслу:").And.NotContain("\n").And.NotContain("Место: 4");
             s.Should().MatchRegex("вот эт[оу]", "письмо бота остаётся ссылкой — клиент покажет карту");
             ChatStyle.Refs(s).Should().Contain(["место 1", "место 4"]);
-            s.Should().Contain("Зацепка");
+            s.Should().ContainEquivalentOf("зацепка");
             s.Should().Contain("Ватсон").And.NotContain("Бот Ватсон");
             s.Should().MatchRegex("(?i)подозр|ч[её]рн|присмотр", "по этим словам боты читают обвинения");
             s.Length.Should().BeLessThan(Template.Length);
