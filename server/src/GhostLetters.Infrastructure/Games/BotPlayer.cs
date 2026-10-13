@@ -469,7 +469,7 @@ public static class BotPlayer
             var where = CardName(card);
             var text = why
                 ? askedCard is null || askedCard == card
-                    ? $"{call}, {where} — потому что {because}."
+                    ? $"{call}, {where}: {because}."
                     : $"{call}, я как раз не за неё: {where} лучше. {char.ToUpperInvariant(reason[0])}{reason[1..]}."
                 : askedCard is null
                     ? $"{call}, я за {where}. {char.ToUpperInvariant(reason[0])}{reason[1..]}."
