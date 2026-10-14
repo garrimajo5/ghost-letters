@@ -1104,14 +1104,29 @@ class _Actions extends StatelessWidget {
     final main = cta != null
         ? _Pulse(
             pulse: screen.turnPulse,
-            child: FilledButton.icon(
-              key: const Key('cta'),
-              style: cta.danger ? FilledButton.styleFrom(backgroundColor: AppColors.red, foregroundColor: Colors.white) : null,
-              onPressed: cta.onPressed,
-              icon: Icon(cta.icon ?? Icons.arrow_forward, size: 18),
-              // Узкая колонка: надпись ужимается, а не рвётся посреди слова.
-              label: FittedBox(fit: BoxFit.scaleDown, child: Text(cta.label.toUpperCase(), maxLines: 1)),
-            ),
+            // Узкая колонка: надпись — в две строки крупным шрифтом, значок прячется; ужимается только длинное слово.
+            child: LayoutBuilder(builder: (context, box) {
+              final narrow = box.maxWidth < 150;
+              final label = Text(cta.label.toUpperCase(),
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, height: 1.1, fontWeight: FontWeight.w800, letterSpacing: .3));
+              final style = FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                minimumSize: const Size(0, 48),
+                backgroundColor: cta.danger ? AppColors.red : null,
+                foregroundColor: cta.danger ? Colors.white : null,
+              );
+              return narrow
+                  ? FilledButton(key: const Key('cta'), style: style, onPressed: cta.onPressed, child: label)
+                  : FilledButton.icon(
+                      key: const Key('cta'),
+                      style: style,
+                      onPressed: cta.onPressed,
+                      icon: Icon(cta.icon ?? Icons.arrow_forward, size: 18),
+                      label: label,
+                    );
+            }),
           )
         : GestureDetector(onTap: onStatus, child: _StatusBar(text: actionHint(v), mine: needsMe(v), pulse: screen.turnPulse));
     // После результата можно сразу выйти: награды и разбор Призрака не держат за столом.
