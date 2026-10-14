@@ -102,6 +102,15 @@ public static class BotEndpoints
             })
             .WithName("AdminPlayPhrase");
 
+        // Проба: любой текст голосом бота, с пересказом YandexGPT, — чтобы послушать интонации без партии.
+        admin.MapPost("/phrases/try", async (TryPhraseRequest request, HttpContext http, BotAdminService bots,
+                Infrastructure.Speech.PhraseLearner phrases, CancellationToken ct) =>
+            {
+                bots.RequireAdmin(http.User.UserId());
+                return Results.Ok(await phrases.TryAsync(request.Text ?? "", request.BotId, ct));
+            })
+            .WithName("AdminTryPhrase");
+
         admin.MapPost("/phrases/{id:guid}/block", async (Guid id, BlockPhraseRequest request, HttpContext http, BotAdminService bots,
                 Infrastructure.Speech.PhraseLearner phrases, CancellationToken ct) =>
             {
@@ -126,3 +135,4 @@ public sealed record BlockPhraseRequest(bool Blocked);
 
 /// <summary>Проиграть фразу: каким ботом (пусто — случайный той же манеры).</summary>
 public sealed record PlayPhraseRequest(Guid? BotId);
+public sealed record TryPhraseRequest(string? Text, Guid? BotId);

@@ -287,6 +287,10 @@ class Api {
   /// Фразы, которым боты научились у людей (только админ).
   Future<LearnedPhrases> learnedPhrases() async => LearnedPhrases.fromJson(await get('/admin/phrases') as Json);
 
+  /// Проба голоса: любой текст голосом бота, как прозвучал бы в партии.
+  Future<PlayedPhrase> tryPhrase(String text, {String? botId}) async =>
+      PlayedPhrase.fromJson(await post('/admin/phrases/try', {'text': text, 'botId': botId}) as Json);
+
   Future<void> blockPhrase(String id, bool blocked) async => post('/admin/phrases/$id/block', {'blocked': blocked});
 
   /// Проиграть фразу голосом бота (botId пусто — случайный бот той же манеры).

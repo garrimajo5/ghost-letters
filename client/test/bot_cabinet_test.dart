@@ -202,5 +202,19 @@ void main() {
     await tester.tap(find.byKey(const Key('phrase-block-ph2')));
     await tester.pumpAndSettle();
     expect(guest.api.named('blockPhrase').single.$2, ['ph2', true]);
+
+    // Проба голоса любым текстом: видно, как прозвучало после пересказа и что было бы в чате.
+    await tester.tap(find.byKey(const Key('phrase-manner-all')));
+    await tester.pumpAndSettle();
+    await reveal(tester, 'probe-play');
+    expect(find.byKey(const Key('rephrase-status')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('probe-text')), 'Мотив два — оно.');
+    await tester.tap(find.byKey(const Key('probe-bot-b2')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('probe-play')));
+    await tester.pumpAndSettle();
+    expect(guest.api.named('tryPhrase').single.$2, ['Мотив два — оно.', 'b2']);
+    expect(find.text('Пуаро: «Ну, Мотив два — оно.»'), findsOneWidget);
+    expect(find.text('В чате было бы: «Мотив два — оно.»'), findsOneWidget);
   });
 }

@@ -192,6 +192,10 @@ class FakeApi extends Api {
         speaker: botId == 'b2' ? 'Бот Марпл' : 'Бот Пуаро'));
 
   @override
+  Future<PlayedPhrase> tryPhrase(String text, {String? botId}) async =>
+      _record('tryPhrase', [text, botId], () => PlayedPhrase(text: text, speaker: 'Бот Пуаро', spoken: 'Ну, $text'));
+
+  @override
   Future<void> blockPhrase(String id, bool blocked) async => _record('blockPhrase', [id, blocked], () {
         phrases = [
           for (final p in phrases)
