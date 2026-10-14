@@ -25,11 +25,89 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
   String? _playing;
   final Map<String, PlayedPhrase> _played = {};
   final Map<String, String> _speakerFor = {};
+  final _probe = TextEditingController(text: 'Думаю, мотив — клетка. Аня, ты права, а вот Жеглов что-то темнит!');
+  String? _probeBot;
+  PlayedPhrase? _probed;
 
   @override
   void dispose() {
     _player?.dispose();
+    _probe.dispose();
     super.dispose();
+  }
+
+  Future<void> _playAudio(PlayedPhrase played) async {
+    final audio = played.audio;
+    if (audio == null) return;
+    final player = _player ??= AudioPlayer();
+    await player.stop();
+    await player.play(BytesSource(audio, mimeType: 'audio/mpeg'));
+  }
+
+  Future<void> _try() async {
+    final text = _probe.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _playing = 'probe');
+    try {
+      final played = await runAction(context, () => ref.read(apiProvider).tryPhrase(text, botId: _probeBot));
+      if (played == null || !mounted) return;
+      setState(() => _probed = played);
+      await _playAudio(played);
+    } finally {
+      if (mounted) setState(() => _playing = null);
+    }
+  }
+
+  /// Статус пересказа YandexGPT и проба голоса любым текстом.
+  Widget _probePanel(LearnedPhrases book) {
+    final bots = {for (final list in book.speakers.values) for (final s in list) s.id: s.nickname};
+    final status = !book.rephrase
+        ? 'Пересказ YandexGPT выключен: на сервере нет каталога (YANDEX_FOLDER_ID) или ключа.'
+        : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
+            '${book.rephraseProblem == null ? '' : '\nПоследний не удался: ${book.rephraseProblem}'}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Panel(
+        padding: const EdgeInsets.all(10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text(status, key: const Key('rephrase-status'), style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4)),
+          const SizedBox(height: 8),
+          TextField(
+            key: const Key('probe-text'),
+            controller: _probe,
+            minLines: 1,
+            maxLines: 3,
+            decoration: const InputDecoration(labelText: 'Проба голоса: что сказать', isDense: true),
+          ),
+          const SizedBox(height: 6),
+          Wrap(spacing: 4, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final e in bots.entries)
+              ChoiceChip(
+                key: Key('probe-bot-${e.key}'),
+                visualDensity: VisualDensity.compact,
+                label: Text(e.value.replaceFirst('Бот ', ''), style: const TextStyle(fontSize: 12)),
+                selected: _probeBot == e.key,
+                onSelected: (on) => setState(() => _probeBot = on ? e.key : null),
+              ),
+            FilledButton.icon(
+              key: const Key('probe-play'),
+              onPressed: _playing == null ? _try : null,
+              icon: _playing == 'probe'
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.play_arrow),
+              label: const Text('Сказать'),
+            ),
+          ]),
+          if (_probed case final p?) ...[
+            const SizedBox(height: 6),
+            Text('${p.speaker.replaceFirst('Бот ', '')}: «${p.spoken ?? p.text}»',
+                key: const Key('probe-said'), style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
+            if (p.spoken != null)
+              Text('В чате было бы: «${p.text}»', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          ],
+        ]),
+      ),
+    );
   }
 
   Future<void> _play(LearnedPhrase p) async {
@@ -38,12 +116,7 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
       final played = await runAction(context, () => ref.read(apiProvider).playPhrase(p.id, botId: _speakerFor[p.id]));
       if (played == null || !mounted) return;
       setState(() => _played[p.id] = played);
-      final audio = played.audio;
-      if (audio != null) {
-        final player = _player ??= AudioPlayer();
-        await player.stop();
-        await player.play(BytesSource(audio, mimeType: 'audio/mpeg'));
-      }
+      await _playAudio(played);
     } finally {
       if (mounted) setState(() => _playing = null);
     }
@@ -90,6 +163,8 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
                 child: Text('Пока ничего не выучено — сыграйте с ботами и поговорите в чате или голосом.', style: TextStyle(color: AppColors.muted)),
               ),
             for (final p in list) _phrase(p, book.speakers[p.manner] ?? const []),
+            const SizedBox(height: 12),
+            _probePanel(book),
           ]);
         },
       ),
@@ -142,7 +217,7 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
               if (played != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: Text('${played.speaker.replaceFirst('Бот ', '')}: «${played.text}»',
+                  child: Text('${played.speaker.replaceFirst('Бот ', '')}: «${played.spoken ?? played.text}»',
                       key: Key('phrase-said-${p.id}'), style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic)),
                 ),
             ]),

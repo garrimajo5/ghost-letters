@@ -67,6 +67,8 @@ public sealed class SpokenStyleTests
 
         handler.Answer = "Что-то совсем другое.";
         (await writer.RephraseAsync("Отправлял вот эту — кошка — исчезла.", ["кошка"], speaker, CancellationToken.None)).Should().BeNull();
+        writer.AcceptedToday.Should().Be(1);
+        writer.LastProblem.Should().Contain("не прошёл проверку", "в кабинете видно, почему пересказ не взят");
 
         var off = new SpeechWriter(new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Speech:ApiKey"] = "key" }).Build(),
             NullLogger<SpeechWriter>.Instance, TimeProvider.System, handler);

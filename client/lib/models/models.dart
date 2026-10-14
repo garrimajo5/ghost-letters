@@ -1379,7 +1379,8 @@ class LearnedPhrase {
 
 /// Выученные фразы и какие боты говорят каждой манерой.
 class LearnedPhrases {
-  const LearnedPhrases({required this.voiceEnabled, required this.phrases, required this.speakers});
+  const LearnedPhrases({required this.voiceEnabled, required this.phrases, required this.speakers,
+      this.rephrase = false, this.rephraseModel, this.rephrasedToday = 0, this.rephraseProblem});
   factory LearnedPhrases.fromJson(Json j) => LearnedPhrases(
         voiceEnabled: j['voiceEnabled'] as bool? ?? false,
         phrases: [for (final e in (j['phrases'] as List? ?? const [])) LearnedPhrase.fromJson(Map<String, dynamic>.from(e as Map))],
@@ -1389,21 +1390,37 @@ class LearnedPhrases {
               for (final b in (e.value as List)) (id: (b as Map)['id'] as String, nickname: b['nickname'] as String),
             ],
         },
+        rephrase: j['rephrase'] as bool? ?? false,
+        rephraseModel: j['rephraseModel'] as String?,
+        rephrasedToday: (j['rephrasedToday'] as num?)?.toInt() ?? 0,
+        rephraseProblem: j['rephraseProblem'] as String?,
       );
   final bool voiceEnabled;
+
+  /// Пересказ для голоса через YandexGPT подключён на сервере.
+  final bool rephrase;
+  final String? rephraseModel;
+  final int rephrasedToday;
+
+  /// Почему не удался последний пересказ; null — удался (или ещё не было).
+  final String? rephraseProblem;
   final List<LearnedPhrase> phrases;
   final Map<String, List<({String id, String nickname})>> speakers;
 }
 
 /// Проигранная фраза: текст, кто сказал, MP3 (null — озвучка выключена).
 class PlayedPhrase {
-  const PlayedPhrase({required this.text, required this.speaker, this.audio});
+  const PlayedPhrase({required this.text, required this.speaker, this.audio, this.spoken});
   factory PlayedPhrase.fromJson(Json j) => PlayedPhrase(
         text: j['text'] as String? ?? '',
         speaker: j['speaker'] as String? ?? '',
         audio: j['audio'] is String ? base64Decode(j['audio'] as String) : null,
+        spoken: j['spoken'] as String?,
       );
   final String text;
+
+  /// Пересказ YandexGPT, которым фраза прозвучала; null — прозвучал сам текст.
+  final String? spoken;
   final String speaker;
   final Uint8List? audio;
 }
