@@ -49,11 +49,13 @@ public sealed class SpeechKit
     private DateOnly Today => DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
 
     /// <summary>Озвучить текст; null — озвучки нет (нет ключа, лимит, ошибка SpeechKit). Ошибки не бросает.</summary>
-    public async Task<SpeechAudio?> SynthesizeAsync(string text, string voice, string? role, CancellationToken ct)
+    /// <param name="speed">Темп (1 — обычный; SpeechKit принимает 0.1–3).</param>
+    public async Task<SpeechAudio?> SynthesizeAsync(string text, string voice, string? role, CancellationToken ct, double speed = 1)
     {
         text = text.Trim();
         if (!Enabled || text.Length == 0) return null;
-        var key = $"{voice}|{role}|{text}";
+        speed = Math.Clamp(speed, .5, 2);
+        var key = $"{voice}|{role}|{speed:0.00}|{text}";
         if (cache.TryGetValue(key, out var hit)) return hit;
         lock (gate)
         {
@@ -72,13 +74,13 @@ public sealed class SpeechKit
             using var audio = new MemoryStream();
             // Целиком, одним запросом: склеенные куски звучат рублено — у каждого своя интонация и паузы на стыке.
             // Длиннее 250 символов SpeechKit v3 синтезирует только в unsafeMode; не вышло — по кускам, как раньше.
-            var whole = await RequestAsync(text, voice, role, ct, unsafeMode: text.Length > SpeechText.ChunkLimit);
+            var whole = await RequestAsync(text, voice, role, ct, unsafeMode: text.Length > SpeechText.ChunkLimit, speed: speed);
             if (whole is { Length: > 0 }) audio.Write(whole);
             else if (text.Length <= SpeechText.ChunkLimit) return null;
             else
                 foreach (var chunk in SpeechText.Chunks(text))
                 {
-                    var bytes = await RequestAsync(chunk, voice, role, ct);
+                    var bytes = await RequestAsync(chunk, voice, role, ct, speed: speed);
                     if (bytes is null) return null;
                     audio.Write(bytes);
                 }
@@ -146,10 +148,11 @@ public sealed class SpeechKit
         }
     }
 
-    private async Task<byte[]?> RequestAsync(string text, string voice, string? role, CancellationToken ct, bool unsafeMode = false)
+    private async Task<byte[]?> RequestAsync(string text, string voice, string? role, CancellationToken ct, bool unsafeMode = false, double speed = 1)
     {
         var hints = new List<object> { new { voice } };
         if (role is not null) hints.Add(new { role });
+        if (Math.Abs(speed - 1) > .001) hints.Add(new { speed });
         var request0 = new Dictionary<string, object>
         {
             ["text"] = text,
