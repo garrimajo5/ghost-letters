@@ -77,7 +77,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 // Вслух — то же, что в чате (уже живым текстом), с названиями карт; YandexGPT (если подключён) пересказывает.
                 text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
                        ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
-                if (await speech.SynthesizeAsync(text, voice, role, ct) is { } audio)
+                // Интонация: ударение на карте, о которой речь, амплуа по настроению, темп по манере.
+                var spokenRole = Speech.SpeechProsody.RoleFor(voice, role, Speech.SpeechProsody.MoodOf(text));
+                text = Speech.SpeechProsody.Mark(text, names);
+                if (await speech.SynthesizeAsync(text, voice, spokenRole, ct, Speech.SpeechProsody.SpeedOf(manner)) is { } audio)
                 {
                     try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
                     catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }

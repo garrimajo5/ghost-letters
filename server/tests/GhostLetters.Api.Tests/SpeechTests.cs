@@ -115,6 +115,8 @@ public sealed class SpeechTests
         handler.Bodies[0].Should().Contain("\"unsafeMode\":true");
         (await speech.SynthesizeAsync("Коротко.", "kirill", null, CancellationToken.None)).Should().NotBeNull();
         handler.Bodies[1].Should().NotContain("unsafeMode");
+        (await speech.SynthesizeAsync("Быстро.", "kirill", null, CancellationToken.None, speed: 1.08)).Should().NotBeNull();
+        handler.Bodies[2].Should().Contain("\"speed\":1.08");
     }
 
     [Fact]
