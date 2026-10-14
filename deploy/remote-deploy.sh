@@ -49,6 +49,8 @@ if [ -n "${YANDEX_SPEECHKIT_API_KEY:-}" ]; then
 fi
 
 # Каталог Yandex Cloud (переменная репозитория YANDEX_FOLDER_ID) — живые формулировки реплик через YandexGPT.
+# В логе деплоя видно, дошёл ли каталог до сервера (сам ID не секрет, но печатаем только факт).
+if [ -n "${YANDEX_FOLDER_ID:-}" ]; then echo "YandexGPT: каталог задан"; else echo "YandexGPT: каталог не задан (переменная YANDEX_FOLDER_ID пуста)"; fi
 if [ -n "${YANDEX_FOLDER_ID:-}" ]; then
   if grep -q '^YANDEX_FOLDER_ID=' .env; then
     sed -i "s|^YANDEX_FOLDER_ID=.*|YANDEX_FOLDER_ID=$YANDEX_FOLDER_ID|" .env
