@@ -1546,6 +1546,15 @@ class _SayStrip extends StatelessWidget {
   final ChatMessage? statement;
   final _Typing? typing;
 
+  /// Чёрные роли: им ложь о своём письме — обычный приём.
+  static bool _black(GameView v) => const {'Killer', 'Accomplice', 'Blackmailer', 'Imitator'}.contains(v.me?.role);
+
+  /// «Соврать о письме»: выбрать, какую карту называть своим письмом, и сразу начать показ на столе.
+  Future<void> _lie(BuildContext context, MyLetter letter) async {
+    await LetterSheet.show(context, screen, letter);
+    if (screen.mounted && !say.active) say.start();
+  }
+
   Future<void> _send(BuildContext context) async {
     final v = screen.view!;
     final sent = await runAction(
@@ -1594,14 +1603,30 @@ class _SayStrip extends StatelessWidget {
             onLongPress: change,
             child: Tooltip(
               message: 'Моё письмо. Удержание — сменить карту, которую называю своей',
-              child: Opacity(opacity: 0.7, child: CardImage(cardId: thrown, size: 36, radius: 6)),
+              child: Stack(clipBehavior: Clip.none, children: [
+                Opacity(opacity: 0.7, child: CardImage(cardId: thrown, size: 36, radius: 6)),
+                // Называю своим не то, что кидал, — себе напоминание: это ложь.
+                if (letter != null && thrown != letter.cardId)
+                  const Positioned(right: -4, top: -4, child: Icon(Icons.theater_comedy, key: Key('say-lying'), size: 16, color: AppColors.redBright)),
+              ]),
             ),
+          ),
+        // Чёрным — явно: можно назвать своим письмом другую карту.
+        if (say.sources.isEmpty && letter != null && _black(v))
+          TextButton.icon(
+            key: const Key('say-lie'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.redBright, padding: const EdgeInsets.symmetric(horizontal: 6)),
+            onPressed: change,
+            icon: const Icon(Icons.theater_comedy_outlined, size: 18),
+            label: Text(thrown != letter.cardId ? 'Другая ложь' : 'Соврать'),
           ),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             say.source == null
-                ? 'Карты поля — ваша версия; улика слева — связать её с картами'
+                ? letter != null && _black(v)
+                    ? 'Нажмите своё письмо, чтобы связать его с полем, — или «Соврать»: назвать своим другую карту'
+                    : 'Карты поля — ваша версия; улика слева — связать её с картами'
                 : say.hint
                     ? 'Улика → карты поля: нажатие — указывает сюда, ещё раз — снять. Ещё улика — своим цветом'
                     : say.vanished.contains(say.source)
@@ -1690,6 +1715,23 @@ class _SayStrip extends StatelessWidget {
       } else {
         children.add(const Spacer());
       }
+      // Чёрным — отдельная кнопка: назвать своим письмом другую карту (стол не узнает, пока Призрак его не откроет).
+      final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
+      if (_canSay(v) && letter != null && _black(v))
+        children.add(m != null
+            ? IconButton(
+                key: const Key('say-lie-start'),
+                tooltip: 'Соврать: назвать своим письмом другую карту',
+                onPressed: () => _lie(context, letter),
+                icon: const Icon(Icons.theater_comedy_outlined, color: AppColors.redBright),
+              )
+            : TextButton.icon(
+                key: const Key('say-lie-start'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.redBright),
+                onPressed: () => _lie(context, letter),
+                icon: const Icon(Icons.theater_comedy_outlined, size: 18),
+                label: const Text('Соврать о письме'),
+              ));
       if (_canSay(v))
         // Рядом с чужим заявлением места мало — только значок; на пустой строке — с подписью.
         children.add(m != null
