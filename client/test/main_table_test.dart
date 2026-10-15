@@ -701,6 +701,28 @@ void main() {
     expect(app.api.named('sendChat').last.$2[4], ['кидал', 'исключаю:0']);
   });
 
+  testWidgets('чёрному явно предлагают соврать о своём письме; детективу — нет', (tester) async {
+    Future<void> openAs(String role) => _open(tester, phone, allowed: const ['EndTurn'], edit: (view) {
+          view['currentSpeaker'] = 'u2';
+          (view['me'] as Json)['role'] = role;
+          (view['me'] as Json)['letters'] = [
+            {'round': 4, 'cardId': 'orig_0200', 'revealed': false},
+          ];
+        });
+    await openAs('Detective');
+    expect(find.byKey(const Key('say-lie-start')), findsNothing);
+
+    await openAs('Accomplice');
+    await tester.tap(find.byKey(const Key('say-lie-start')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('claim-lie-hint')), findsOneWidget, reason: 'в окне письма — что можно соврать');
+    // Закрыть окно письма — нажатием мимо него.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('claim-lie-hint')), findsNothing);
+    expect(find.byKey(const Key('say-lie')), findsOneWidget, reason: 'в показе на столе — кнопка «Соврать»');
+  });
+
   testWidgets('реплика бота печатается по буквам', (tester) async {
     final app = await _open(tester, phone);
     app.realtime.chatCtl.add(ChatMessage(
