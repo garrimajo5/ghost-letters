@@ -716,8 +716,10 @@ void main() {
     await tester.tap(find.byKey(const Key('say-lie-start')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('claim-lie-hint')), findsOneWidget, reason: 'в окне письма — что можно соврать');
-    await tester.tap(find.text('Готово'));
+    // Закрыть окно письма — нажатием мимо него.
+    await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
+    expect(find.byKey(const Key('claim-lie-hint')), findsNothing);
     expect(find.byKey(const Key('say-lie')), findsOneWidget, reason: 'в показе на столе — кнопка «Соврать»');
   });
 

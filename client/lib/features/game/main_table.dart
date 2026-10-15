@@ -1551,8 +1551,8 @@ class _SayStrip extends StatelessWidget {
 
   /// «Соврать о письме»: выбрать, какую карту называть своим письмом, и сразу начать показ на столе.
   Future<void> _lie(BuildContext context, MyLetter letter) async {
+    if (!say.active) say.start();
     await LetterSheet.show(context, screen, letter);
-    if (screen.mounted && !say.active) say.start();
   }
 
   Future<void> _send(BuildContext context) async {
