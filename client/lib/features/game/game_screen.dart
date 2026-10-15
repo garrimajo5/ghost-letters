@@ -90,6 +90,17 @@ class GameScreenState extends ConsumerState<GameScreen> {
   final thoughtChanges = ValueNotifier<int>(0);
   int unread = 0;
 
+  /// Видно ли это сообщение в чате сейчас: общий канал — всегда; канал команды Убийцы — её участникам ночью и на охоте,
+  /// Призраку — только на охоте (как в окне чата).
+  bool chatReadable(ChatMessage m) {
+    if (m.channel != 'killer_team') return true;
+    final v = view;
+    if (v == null) return false;
+    final hunt = const {'Hunt', 'BlackmailerHunt'}.contains(v.phase);
+    final team = const {'Killer', 'Accomplice'}.contains(v.me?.role);
+    return (team && (hunt || v.phase == 'Night')) || (v.isGhost && hunt);
+  }
+
   /// Эмодзи, что сейчас летят по столу (последние секунды), и счётчик у аватара отправителя.
   final reactions = <Reaction>[];
   final reactionChanges = ValueNotifier<int>(0);
@@ -204,12 +215,15 @@ class GameScreenState extends ConsumerState<GameScreen> {
         thoughtChanges.value++;
         return;
       }
-      if (!chatDocked && !_chatOpen && !_audioBaseline && _audioActive &&
+      // Сообщение канала, который сейчас не показывается (команда Убийцы вне ночи и охоты, Призраку ночью), —
+      // без звука и без счётчика: иначе видно, что «что-то написали», а прочитать нельзя.
+      final readable = chatReadable(m);
+      if (readable && !chatDocked && !_chatOpen && !_audioBaseline && _audioActive &&
           m.authorId != view?.me?.id && DateTime.now().difference(m.createdAt).abs() < const Duration(seconds: 10)) {
         ref.read(soundProvider).play(Sfx.chat);
       }
       chat.add(m);
-      if (!chatDocked && !_chatOpen) unread++;
+      if (readable && !chatDocked && !_chatOpen) unread++;
       chatChanges.value++;
     }));
     _subs.add(_realtime.reactions.listen((r) {
