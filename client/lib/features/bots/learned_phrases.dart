@@ -58,20 +58,34 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
     }
   }
 
-  /// Статус пересказа YandexGPT и проба голоса любым текстом.
+  /// Включён ли пересказ для голоса через YandexGPT — первой строкой кабинета, чтобы не искать.
+  Widget _rephraseStatus(LearnedPhrases book) {
+    final on = book.rephrase;
+    final problem = book.rephraseProblem;
+    final text = !on
+        ? 'Пересказ YandexGPT выключен: сервер не получил каталог (переменная YANDEX_FOLDER_ID) или ключ. '
+            'Добавьте переменную и перевыложите сервер (Actions → Deploy server → Run workflow).'
+        : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
+            '${problem == null ? '' : '\nПоследний не удался: $problem'}';
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(on ? (problem == null ? Icons.check_circle_outline : Icons.warning_amber_rounded) : Icons.cancel_outlined,
+            size: 18, color: on ? (problem == null ? AppColors.believed : AppColors.amber) : AppColors.redBright),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, key: const Key('rephrase-status'), style: const TextStyle(fontSize: 12, height: 1.4))),
+      ]),
+    );
+  }
+
+  /// Проба голоса любым текстом.
   Widget _probePanel(LearnedPhrases book) {
     final bots = {for (final list in book.speakers.values) for (final s in list) s.id: s.nickname};
-    final status = !book.rephrase
-        ? 'Пересказ YandexGPT выключен: на сервере нет каталога (YANDEX_FOLDER_ID) или ключа.'
-        : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
-            '${book.rephraseProblem == null ? '' : '\nПоследний не удался: ${book.rephraseProblem}'}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Panel(
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(status, key: const Key('rephrase-status'), style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4)),
-          const SizedBox(height: 8),
           TextField(
             key: const Key('probe-text'),
             controller: _probe,
@@ -148,6 +162,7 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
               'те боты, у кого похожая манера. Вместо карты — {card}, вместо имени — {player}. ▶ — проиграть голосом бота.',
               style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
             ),
+            _rephraseStatus(book),
             if (!book.voiceEnabled)
               const Padding(
                 padding: EdgeInsets.only(top: 6),
