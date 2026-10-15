@@ -57,14 +57,14 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
             .Select(p => (p.Intent, p.Emotion, p.Template)).ToList();
     }
 
-    private sealed record BotRow(Guid Id, string Nickname, string Voice, string VoiceRole, string? Gender);
+    private sealed record BotRow(Guid Id, string Nickname, string Voice, string VoiceRole, string? Gender, string About = "");
 
     private async Task<List<BotRow>> BotsAsync(CancellationToken ct) =>
         await (from b in db.BotProfiles.AsNoTracking()
                join u in db.Users.AsNoTracking() on b.UserId equals u.Id
                where b.Enabled
                orderby u.Nickname
-               select new BotRow(b.UserId, u.Nickname, b.Voice, b.VoiceRole, u.Gender)).ToListAsync(ct);
+               select new BotRow(b.UserId, u.Nickname, b.Voice, b.VoiceRole, u.Gender, b.About)).ToListAsync(ct);
 
     /// <summary>Выученные фразы для кабинета: новые сверху, с автором и ботами, которые говорят этой манерой.</summary>
     public async Task<PhraseListDto> ListAsync(int take, CancellationToken ct)
@@ -117,7 +117,7 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
         if (female) text = SpokenStyle.Feminine(text);
         // Как в партии: YandexGPT (если подключён) пересказывает для голоса — в кабинете видно оба текста.
         var spoken = text.Length == 0 ? null : await writer.RephraseAsync(text, named,
-            new Speaker((speaker?.Nickname ?? "").Replace("Бот ", ""), "", !female), ct);
+            new Speaker((speaker?.Nickname ?? "").Replace("Бот ", ""), speaker?.About ?? "", !female), ct);
         var said = spoken ?? text;
         var audio = speech.Enabled && said.Length > 0
             ? await speech.SynthesizeAsync(SpeechProsody.Mark(said, named), voice, SpeechProsody.RoleFor(voice, role, SpeechProsody.MoodOf(said)), ct,
