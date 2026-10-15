@@ -58,22 +58,35 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
     }
   }
 
-  /// Включён ли пересказ для голоса через YandexGPT — первой строкой кабинета, чтобы не искать.
-  Widget _rephraseStatus(LearnedPhrases book) {
+  /// Включён ли пересказ для голоса через YandexGPT — под заголовком (не сдвигает список); нажатие — подробности.
+  Widget _rephraseStatus(BuildContext context, LearnedPhrases? book) {
+    if (book == null) return const Text('ФРАЗЫ БОТОВ');
     final on = book.rephrase;
     final problem = book.rephraseProblem;
-    final text = !on
-        ? 'Пересказ YandexGPT выключен: сервер не получил каталог (переменная YANDEX_FOLDER_ID) или ключ. '
-            'Добавьте переменную и перевыложите сервер (Actions → Deploy server → Run workflow).'
+    final short = !on ? 'YandexGPT: выключен' : problem == null ? 'YandexGPT: включён · ${book.rephrasedToday} сегодня' : 'YandexGPT: ошибка';
+    final full = !on
+        ? 'Пересказ YandexGPT выключен: сервер не получил каталог (переменная репозитория YANDEX_FOLDER_ID) или ключ. '
+            'Добавьте переменную во вкладке Variables (не Secrets и не Environments) и перевыложите сервер: Actions → Deploy server → Run workflow.'
         : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
-            '${problem == null ? '' : '\nПоследний не удался: $problem'}';
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(on ? (problem == null ? Icons.check_circle_outline : Icons.warning_amber_rounded) : Icons.cancel_outlined,
-            size: 18, color: on ? (problem == null ? AppColors.believed : AppColors.amber) : AppColors.redBright),
-        const SizedBox(width: 6),
-        Expanded(child: Text(text, key: const Key('rephrase-status'), style: const TextStyle(fontSize: 12, height: 1.4))),
+            '${problem == null ? '' : '\n\nПоследний не удался: $problem'}';
+    final color = on ? (problem == null ? AppColors.believed : AppColors.amber) : AppColors.redBright;
+    return InkWell(
+      key: const Key('rephrase-status'),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Пересказ для голоса'),
+          content: Text(full, key: const Key('rephrase-details')),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Понятно'))],
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        const Text('ФРАЗЫ БОТОВ'),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(on ? (problem == null ? Icons.check_circle_outline : Icons.warning_amber_rounded) : Icons.cancel_outlined, size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(child: Text(short, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: color, letterSpacing: 0))),
+        ]),
       ]),
     );
   }
@@ -150,7 +163,7 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(learnedPhrasesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('ФРАЗЫ БОТОВ')),
+      appBar: AppBar(title: _rephraseStatus(context, data.valueOrNull)),
       body: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorRetry(message: ApiError.from(e).message, onRetry: () => ref.invalidate(learnedPhrasesProvider)),
@@ -162,7 +175,6 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
               'те боты, у кого похожая манера. Вместо карты — {card}, вместо имени — {player}. ▶ — проиграть голосом бота.',
               style: TextStyle(fontSize: 13, color: AppColors.muted, height: 1.4),
             ),
-            _rephraseStatus(book),
             if (!book.voiceEnabled)
               const Padding(
                 padding: EdgeInsets.only(top: 6),
