@@ -36,7 +36,8 @@ public sealed partial class SpeechWriter
         this.time = time;
         apiKey = (configuration["Speech:LlmApiKey"] is { Length: > 0 } own ? own : configuration["Speech:ApiKey"])?.Trim();
         folderId = configuration["Speech:FolderId"]?.Trim();
-        model = configuration["Speech:LlmModel"] is { Length: > 0 } m ? m.Trim() : "yandexgpt-lite/latest";
+        // Полная YandexGPT: облегчённая пересказывает плоско. Можно сменить переменной YANDEX_LLM_MODEL.
+        model = configuration["Speech:LlmModel"] is { Length: > 0 } m ? m.Trim() : "yandexgpt/latest";
         dailyCalls = configuration.GetValue("Speech:LlmDailyCalls", 3000);
         http = handler is null ? new HttpClient() : new HttpClient(handler);
         http.Timeout = TimeSpan.FromSeconds(8);
@@ -87,7 +88,12 @@ public sealed partial class SpeechWriter
             .Append("Длинные предложения дели на короткие. Сохрани смысл, все факты, обращения по имени и род слов (кто «права», кто «прав»). ")
             .Append("Названия карт оставь узнаваемыми (падеж менять можно). Не добавляй новых карт, улик, имён и выводов. ")
             .Append("Не упоминай игру, правила и что ты ИИ. ")
-            .Append($"Не длиннее {limit} символов. Без списков, кавычек, эмодзи, латиницы и разметки. Ответь только текстом реплики.")
+            .Append($"Не длиннее {limit} символов. Без списков, кавычек, эмодзи, латиницы и разметки. Ответь только текстом реплики.\n")
+            .Append("Примеры.\n")
+            .Append("Реплика: Ставлю на мотив — клетка. Связь с уликами слабая, это догадка.\n")
+            .Append("Ответ: Хм… я бы поставил на мотив — клетку. Хотя, честно, это пока догадка.\n")
+            .Append("Реплика: Кидал вот эту — колокол, исчезла. Значит, скорее мимо.\n")
+            .Append("Ответ: Я кидал вот эту — колокол… и она исчезла. Значит, скорее мимо!")
             .ToString();
         var user = (cardNames.Count > 0 ? "Карты: " + string.Join("; ", cardNames) + "\n" : "") + "Реплика: " + spoken;
         try
@@ -96,7 +102,7 @@ public sealed partial class SpeechWriter
             {
                 model = $"gpt://{folderId}/{model}",
                 messages = new[] { new { role = "system", content = system }, new { role = "user", content = user } },
-                temperature = 0.9,
+                temperature = 0.7,
                 max_tokens = 300,
             });
             using var request = new HttpRequestMessage(HttpMethod.Post, Endpoint)

@@ -31,6 +31,7 @@ services:
       Admin__UserIds: ${ADMIN_USER_IDS:-}
       Speech__ApiKey: ${YANDEX_SPEECHKIT_API_KEY:-}
       Speech__FolderId: ${YANDEX_FOLDER_ID:-}
+      Speech__LlmModel: ${YANDEX_LLM_MODEL:-}
       LiveKit__ApiKey: ${LIVEKIT_API_KEY:-}
       LiveKit__ApiSecret: ${LIVEKIT_API_SECRET:-}
       LiveKit__PublicUrl: wss://livekit.${DOMAIN}

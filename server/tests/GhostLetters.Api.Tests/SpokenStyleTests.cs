@@ -66,7 +66,7 @@ public sealed class SpokenStyleTests
         var speaker = new Speaker("Марпл", "Помнит всех и всё.", Male: false);
         (await writer.RephraseAsync("Отправлял вот эту — кошка — исчезла. Проверял: ухо.", ["кошка", "ухо"], speaker, CancellationToken.None))
             .Should().Be("Моё письмо, кошка, пропало — значит, ухо под вопросом.");
-        System.Text.RegularExpressions.Regex.Unescape(handler.Body!).Should().Contain("gpt://b1g/yandexgpt-lite/latest").And.Contain("Марпл");
+        System.Text.RegularExpressions.Regex.Unescape(handler.Body!).Should().Contain("gpt://b1g/yandexgpt/latest").And.Contain("Марпл");
         handler.Project.Should().Be("b1g");
 
         handler.Answer = "Что-то совсем другое.";
