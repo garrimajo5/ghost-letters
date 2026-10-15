@@ -216,5 +216,11 @@ void main() {
     expect(guest.api.named('tryPhrase').single.$2, ['Мотив два — оно.', 'b2']);
     expect(find.text('Пуаро: «Ну, Мотив два — оно.»'), findsOneWidget);
     expect(find.text('В чате было бы: «Мотив два — оно.»'), findsOneWidget);
+
+    // Статус пересказа — под заголовком; нажатие — что сделать, если выключен.
+    expect(find.text('YandexGPT: выключен'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rephrase-status')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('rephrase-details')), findsOneWidget);
   });
 }

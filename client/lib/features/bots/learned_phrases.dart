@@ -58,20 +58,47 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
     }
   }
 
-  /// Статус пересказа YandexGPT и проба голоса любым текстом.
+  /// Включён ли пересказ для голоса через YandexGPT — под заголовком (не сдвигает список); нажатие — подробности.
+  Widget _rephraseStatus(BuildContext context, LearnedPhrases? book) {
+    if (book == null) return const Text('ФРАЗЫ БОТОВ');
+    final on = book.rephrase;
+    final problem = book.rephraseProblem;
+    final short = !on ? 'YandexGPT: выключен' : problem == null ? 'YandexGPT: включён · ${book.rephrasedToday} сегодня' : 'YandexGPT: ошибка';
+    final full = !on
+        ? 'Пересказ YandexGPT выключен: сервер не получил каталог (переменная репозитория YANDEX_FOLDER_ID) или ключ. '
+            'Добавьте переменную во вкладке Variables (не Secrets и не Environments) и перевыложите сервер: Actions → Deploy server → Run workflow.'
+        : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
+            '${problem == null ? '' : '\n\nПоследний не удался: $problem'}';
+    final color = on ? (problem == null ? AppColors.believed : AppColors.amber) : AppColors.redBright;
+    return InkWell(
+      key: const Key('rephrase-status'),
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Пересказ для голоса'),
+          content: Text(full, key: const Key('rephrase-details')),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Понятно'))],
+        ),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        const Text('ФРАЗЫ БОТОВ'),
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(on ? (problem == null ? Icons.check_circle_outline : Icons.warning_amber_rounded) : Icons.cancel_outlined, size: 13, color: color),
+          const SizedBox(width: 4),
+          Flexible(child: Text(short, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: color, letterSpacing: 0))),
+        ]),
+      ]),
+    );
+  }
+
+  /// Проба голоса любым текстом.
   Widget _probePanel(LearnedPhrases book) {
     final bots = {for (final list in book.speakers.values) for (final s in list) s.id: s.nickname};
-    final status = !book.rephrase
-        ? 'Пересказ YandexGPT выключен: на сервере нет каталога (YANDEX_FOLDER_ID) или ключа.'
-        : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
-            '${book.rephraseProblem == null ? '' : '\nПоследний не удался: ${book.rephraseProblem}'}';
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Panel(
         padding: const EdgeInsets.all(10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(status, key: const Key('rephrase-status'), style: const TextStyle(fontSize: 12, color: AppColors.muted, height: 1.4)),
-          const SizedBox(height: 8),
           TextField(
             key: const Key('probe-text'),
             controller: _probe,
@@ -136,7 +163,7 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(learnedPhrasesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('ФРАЗЫ БОТОВ')),
+      appBar: AppBar(title: _rephraseStatus(context, data.valueOrNull)),
       body: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorRetry(message: ApiError.from(e).message, onRetry: () => ref.invalidate(learnedPhrasesProvider)),
