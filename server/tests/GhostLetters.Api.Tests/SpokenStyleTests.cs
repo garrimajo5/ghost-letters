@@ -43,10 +43,14 @@ public sealed class SpokenStyleTests
     public void Writer_AcceptsOnlyAnswersWithAllCards()
     {
         string[] cards = ["клетка", "птичья клетка", "ухо"];
-        SpeechWriter.Accept("Ставлю на птичью клетку, а ухо — мимо.", "x", cards, 200).Should().Be("Ставлю на птичью клетку, а ухо — мимо.");
-        SpeechWriter.Accept("Ставлю на клетку.", "x", cards, 200).Should().BeNull("пропало ухо");
-        SpeechWriter.Accept("**Клетка** и ухо", "x", cards, 200).Should().BeNull("разметка");
-        SpeechWriter.Accept(new string('а', 300) + " клетка птичья ухо", "x", cards, 200).Should().BeNull("слишком длинно");
+        const string x = "Мотив — птичья клетка, место — ухо.";
+        SpeechWriter.Accept("Ставлю на птичью клетку, а ухо — мимо.", x, cards, 200).Should().Be("Ставлю на птичью клетку, а ухо — мимо.");
+        SpeechWriter.Accept("Ставлю на клетку.", x, cards, 200).Should().BeNull("пропало ухо");
+        SpeechWriter.Accept("**Клетка** и ухо", x, cards, 200).Should().BeNull("разметка");
+        SpeechWriter.Accept(new string('а', 300) + " клетка птичья ухо", x, cards, 200).Should().BeNull("слишком длинно");
+        SpeechWriter.Check("Пуаро темнит, мутный он какой-то.", "Пуаро темнит, он мутный.", ["клетка"], 200).Text
+            .Should().NotBeNull("карты нет и в исходной реплике — её не требуем");
+        SpeechWriter.Check("Думаю, это оно.", "Думаю, мотив — клетка.", ["клетка"], 200).Why.Should().Contain("клетка");
     }
 
     [Fact]

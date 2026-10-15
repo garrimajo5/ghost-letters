@@ -116,8 +116,8 @@ public sealed partial class SpeechWriter
 
             using var doc = JsonDocument.Parse(payload);
             var text = doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
-            var result = Accept(text, spoken, cardNames, limit);
-            Done(result, $"ответ не прошёл проверку: «{(text is { Length: > 120 } t ? t[..120] + "…" : text)}»");
+            var (result, why) = Check(text, spoken, cardNames, limit);
+            Done(result, $"ответ не прошёл проверку ({why}): «{(text is { Length: > 120 } t ? t[..120] + "…" : text)}»");
             return result;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException or KeyNotFoundException or InvalidOperationException or IndexOutOfRangeException)
@@ -175,19 +175,29 @@ public sealed partial class SpeechWriter
     private static partial Regex Foreign();
 
     /// <summary>Ответ модели годится, если в нём есть все карты (по основе слов), он не длиннее нормы и без разметки.</summary>
-    public static string? Accept(string? text, string spoken, IReadOnlyCollection<string> cardNames, int limit)
+    public static string? Accept(string? text, string spoken, IReadOnlyCollection<string> cardNames, int limit) =>
+        Check(text, spoken, cardNames, limit).Text;
+
+    /// <summary>Как <see cref="Accept"/>, но с причиной отказа — она видна в кабинете фраз.</summary>
+    public static (string? Text, string? Why) Check(string? text, string spoken, IReadOnlyCollection<string> cardNames, int limit)
     {
-        if (string.IsNullOrWhiteSpace(text)) return null;
+        if (string.IsNullOrWhiteSpace(text)) return (null, "пустой ответ");
         var clean = Regex.Replace(text.Trim().Trim('"', '«', '»'), @"\s+", " ");
-        if (clean.Length < 8 || clean.Length > limit || Foreign().IsMatch(clean)) return null;
+        if (clean.Length < 8) return (null, "слишком коротко");
+        if (clean.Length > limit) return (null, $"длиннее {limit} символов");
+        if (Foreign().IsMatch(clean)) return (null, "латиница или разметка");
         var lower = clean.ToLowerInvariant();
+        var source = spoken.ToLowerInvariant();
         foreach (var name in cardNames)
         {
             // «клетка» → «клетку»: сверяем основы слов названия (без двух последних букв, не короче 3).
-            var words = name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length >= 3);
-            if (!words.All(w => lower.Contains(w.Length > 4 ? w[..^2] : w[..3]))) return null;
+            var words = name.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length >= 3).ToList();
+            string Stem(string w) => w.Length > 4 ? w[..^2] : w[..3];
+            // Карты, которой нет и в исходной реплике, не требуем.
+            if (words.Count == 0 || !words.All(w => source.Contains(Stem(w)))) continue;
+            if (!words.All(w => lower.Contains(Stem(w)))) return (null, $"пропала карта «{name}»");
         }
 
-        return clean;
+        return (clean, null);
     }
 }

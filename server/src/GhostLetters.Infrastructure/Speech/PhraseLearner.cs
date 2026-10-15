@@ -96,7 +96,8 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
         var card = cards.Count > 0 ? tags.NameOf(cards[Random.Shared.Next(cards.Count)]) : "клетка";
         var other = bots.Where(b => b.Id != speaker?.Id).Select(b => b.Nickname).OrderBy(_ => Random.Shared.Next()).FirstOrDefault() ?? "Аня";
         var text = PhraseBook.Fill(row.Template, card ?? "клетка", other);
-        return await SpeakAsync(text, card is null ? Array.Empty<string>() : new[] { card }, speaker, ct);
+        // Карта — только если она есть в фразе: «{player} темнит» карты не называет, и пересказ её требовать не должен.
+        return await SpeakAsync(text, card is not null && row.Template.Contains("{card}", StringComparison.Ordinal) ? new[] { card } : Array.Empty<string>(), speaker, ct);
     }
 
     /// <summary>Проба голоса в кабинете: любой текст голосом бота — так, как он прозвучал бы в партии (с пересказом YandexGPT).</summary>
