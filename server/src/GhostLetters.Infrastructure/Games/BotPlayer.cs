@@ -2,6 +2,7 @@ using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Domain.Rules;
 using GhostLetters.Infrastructure.Bots;
+using GhostLetters.Infrastructure.Speech;
 using System.Buffers.Binary;
 using System.Security.Cryptography;
 using System.Text;
@@ -108,6 +109,16 @@ public static class BotPlayer
         }
 
         return new Brain(view, me, rng, tags ?? CardTags.Empty, mind).Say();
+    }
+
+    /// <summary>Как <see cref="Say"/>, плюс то же самое мыслями (<see cref="SpeechIntent"/>) — для живых фраз.</summary>
+    public static ((string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line, SpeechIntent? Intent)? SayPlanned(
+        PlayerView view, Random rng, CardTags tags, BotMind? mind)
+    {
+        if (view.Me is not { } me || me.Role == Role.Ghost || view.Board.Count == 0) return null;
+        var brain = new Brain(view, me, rng, tags, mind);
+        var line = brain.Say();
+        return (line, brain.Intent);
     }
 
     private sealed class Brain(PlayerView view, MeView me, Random rng, CardTags tags, BotMind? mind)
@@ -1000,8 +1011,18 @@ public static class BotPlayer
         /// осторожный молчит (иначе его вычислят на охоте). Детектив с сильной памятью
         /// вспоминает, кто часто бывал Убийцей.
         /// </summary>
+        /// <summary>Обвинение последней <see cref="Accusation"/> — мыслью для речи (кого, насколько, почему).</summary>
+        private Thought? _accused;
+
+        private string Accused(string text, string who, double strength, string? why = null)
+        {
+            _accused = new Thought(ThoughtKind.Accuse, Who: who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who, Why: why, Strength: strength);
+            return text;
+        }
+
         public string Accusation()
         {
+            _accused = null;
             if (Classic)
             {
                 return "";
@@ -1019,12 +1040,12 @@ public static class BotPlayer
 
                 if (P.Risk > 0.7 && rng.NextDouble() < P.Risk)
                 {
-                    return $" Мне кажется, Убийца — {name}.";
+                    return Accused($" Мне кажется, Убийца — {name}.", name, 1);
                 }
 
                 if (P.Risk > 0.4 && rng.NextDouble() < P.Risk)
                 {
-                    return $" Я бы присмотрелся к {name}.";
+                    return Accused($" Я бы присмотрелся к {name}.", name, .4);
                 }
 
                 return "";
@@ -1048,7 +1069,7 @@ public static class BotPlayer
                 var target = others.Where(p => !team.Contains(p.Id))
                     .OrderByDescending(p => mind!.AccusationList.Where(a => a.Author == p.Id && team.Contains(a.Target)).Sum(a => a.Strength) + rng.NextDouble() * 0.3)
                     .FirstOrDefault();
-                return target is not null && NameOf(target.Id) is { } framed ? $" Подозреваю, что {framed} из чёрных." : "";
+                return target is not null && NameOf(target.Id) is { } framed ? Accused($" Подозреваю, что {framed} из чёрных.", framed, .6) : "";
             }
 
             // Белые: говорят о подозрениях, если они достаточно сильные; смелый — раньше, осторожный — только при уверенности.
@@ -1061,12 +1082,48 @@ public static class BotPlayer
 
             if (top.s > 2)
             {
-                return $" Думаю, Убийца — {who}: {BehaviourReason(top.Id)}.";
+                return Accused($" Думаю, Убийца — {who}: {BehaviourReason(top.Id)}.", who, 1, BehaviourReason(top.Id));
             }
 
             return PastSuspicion(top.Id) > 0.25 && rng.Next(2) == 0
-                ? $" Подозреваю {who}: уже бывал Убийцей."
-                : $" Подозреваю, что {who} из чёрных: {BehaviourReason(top.Id)}.";
+                ? Accused($" Подозреваю {who}: уже бывал Убийцей.", who, .6, "уже бывал Убийцей")
+                : Accused($" Подозреваю, что {who} из чёрных: {BehaviourReason(top.Id)}.", who, .6, BehaviourReason(top.Id));
+        }
+
+        /// <summary>Что бот решил сказать последним <see cref="Say"/> — мыслями, для подбора живых фраз.</summary>
+        public SpeechIntent? Intent { get; private set; }
+
+        /// <summary>
+        /// Настроение — из того, что с ботом происходит в партии: обвиняют ли его, открыли ли его письмо,
+        /// сколько писем исчезло, насколько ясны ряды и насколько сильны его подозрения.
+        /// </summary>
+        public SpeechMood Mood()
+        {
+            if (Classic) return SpeechMood.Calm;
+            if (Accused(me.Id) >= .5) return SpeechMood.Defensive;
+            var letter = me.Letters.LastOrDefault();
+            if (letter is { Revealed: true } && letter.Round >= view.Round - 1) return P.Risk > .5 ? SpeechMood.Excited : SpeechMood.Confident;
+            if (letter is { Revealed: false } && me.Letters.Count(l => l.Revealed == false) >= 2) return SpeechMood.Frustrated;
+            if (_accused is { Strength: >= .6 }) return SpeechMood.Suspicious;
+            var clear = view.Board.Count == 0 ? 0 : Enumerable.Range(0, view.Board.Count).Max(Certainty);
+            if (clear > .3) return P.Risk > .7 ? SpeechMood.Excited : SpeechMood.Confident;
+            if (clear < .08 || view.Hints.Sum(h => h.Cards.Count) <= 1) return SpeechMood.Doubtful;
+            return SpeechMood.Calm;
+        }
+
+        /// <summary>Положение за столом: раунд, сколько улик и сколько игроков вслух за мою карту в этом ряду и против.</summary>
+        private TableSituation Situation(int row, int column)
+        {
+            int agreeing = 0, disagreeing = 0;
+            if (mind is not null)
+                foreach (var p in view.Players.Where(p => p.Id != me.Id && !p.IsGhost))
+                {
+                    var said = mind.LatestOf(p.Id).FirstOrDefault(o => o.Strength > 0 && view.Board[row].Cards.Contains(o.CardId));
+                    if (said is null) continue;
+                    if (said.CardId == Card(row, column)) agreeing++;
+                    else disagreeing++;
+                }
+            return new TableSituation(view.Round, view.TotalRounds, view.Hints.Sum(h => h.Cards.Count), agreeing, disagreeing);
         }
 
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
@@ -1154,12 +1211,26 @@ public static class BotPlayer
                     $"Не верю в {Where(target, column)}, ищите в этом ряду другую.",
                 ];
             var reply = Reply(target, card, exclude);
-            var opinion = reply + "Версия: " + Tone(lines[rng.Next(lines.Length)]);
-            var links = exclude ? new List<string>() : view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2)
-                .Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
+            var toned = Tone(lines[rng.Next(lines.Length)]);
+            var opinion = reply + "Версия: " + toned;
+            // Та же реплика — мыслями: что сказать, без слов (слова подберёт SpeechComposer).
+            var thoughts = new List<Thought>();
+            if (_reply is { } replied0) thoughts.Add(replied0);
+            thoughts.Add(new Thought(exclude ? ThoughtKind.Exclude
+                : Evidence(card) <= 0 ? ThoughtKind.Tentative
+                : toned.StartsWith("Не уверен", StringComparison.Ordinal) ? ThoughtKind.VersionDoubt
+                : toned.Contains("— уверен", StringComparison.Ordinal) ? ThoughtKind.VersionSure : ThoughtKind.Version, Where(target, column)));
+            var linked = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
+                .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2).ToList();
+            if (exclude) linked.Clear();
+            var links = linked.Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
+            thoughts.AddRange(linked.Select(h => new Thought(ThoughtKind.Link, Where(target, column), Why: Connection(h.Id, card), Hint: BotDiscussion.HintRef(h.Round, h.Number))));
             if (links.Count > 0) opinion += "\n" + string.Join("\n", links);
-            else if (!exclude) opinion += " Связь с открытыми уликами слабая — это только предположение.";
+            else if (!exclude)
+            {
+                opinion += " Связь с открытыми уликами слабая — это только предположение.";
+                thoughts.Add(new Thought(ThoughtKind.Weak));
+            }
             // Карты «целиком думаю так» прикладываются к реплике — их подсвечивает стол.
             var versionCards = new List<string>();
             if (!Classic && view.Board.Count > 1)
@@ -1182,23 +1253,36 @@ public static class BotPlayer
                         versionCards.Add(Card(r, best));
                     }
                 }
-                if (version.Count > 1) opinion += "\nЦеликом думаю так: " + string.Join(", ", version) + ".";
+                if (version.Count > 1)
+                {
+                    opinion += "\nЦеликом думаю так: " + string.Join(", ", version) + ".";
+                    thoughts.Add(new Thought(ThoughtKind.Whole, Cards: version));
+                }
                 else versionCards.Clear();
             }
             var accusation = Accusation();
             // «Фандорин, согласен… Подозреваю, что Фандорин из чёрных» — так не говорят: соглашаться с подозреваемым не будем.
             if (reply.Length > 0 && accusation.Length > 0 && reply.Split(',')[0] is { Length: > 1 } replied && accusation.Contains(replied, StringComparison.Ordinal))
+            {
                 opinion = opinion[reply.Length..];
+                if (_reply is not null) thoughts.Remove(_reply);
+            }
             opinion += accusation;
+            if (_accused is { } accused0) thoughts.Add(accused0);
             if (blind)
             {
                 var wait = claimCard is null
                     ? new[] { "Улик пока мало — версию не строю, жду подсказок.", "Пока гадать рано: подсказок почти нет.", "Подожду улик, наугад называть не буду." }[rng.Next(3)]
                     : "";
                 opinion = (wait + accusation).Trim();
+                thoughts.Clear();
+                if (wait.Length > 0) thoughts.Add(new Thought(ThoughtKind.NoClues));
+                if (_accused is { } accused1) thoughts.Add(accused1);
             }
+            var situation = Situation(target, column);
             if (claimCard is null)
             {
+                Intent = new SpeechIntent(Mood(), thoughts, situation);
                 if (blind) return (opinion, new List<string>(), new List<string>());
                 var only = new List<string> { card };
                 var onlyNotes = new List<string> { exclude ? "исключаю" : "думаю, эта" };
@@ -1271,6 +1355,19 @@ public static class BotPlayer
                 : claimText.Contains("открыл", StringComparison.Ordinal)
                     ? checkedCards.Count > 0 ? "Открытие письма усиливает эти связи." : "Письмо открыто, но явных связей с картами поля я не вижу."
                     : "Пока жду результат проверки.";
+            // Мысли о письме — перед мнением, в том же порядке, что и в тексте.
+            var letterThoughts = new List<Thought>
+            {
+                new(claimText.Contains("исчезла", StringComparison.Ordinal) ? ThoughtKind.ClaimLost
+                    : claimText.Contains("открылось", StringComparison.Ordinal) ? ThoughtKind.ClaimOpen : ThoughtKind.ClaimWait),
+                checkedCards.Count == 0 ? new(ThoughtKind.CheckNothing)
+                    : new(ThoughtKind.Check, Cards: checkedNames, Why: Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))),
+            };
+            if (vanished && checkedCards.Count > 0)
+                letterThoughts.Add(new(NegativeWeight > 0 ? ThoughtKind.LostConclusion : ThoughtKind.LostIgnored));
+            else if (!vanished && claimText.Contains("открыл", StringComparison.Ordinal) && checkedCards.Count > 0)
+                letterThoughts.Add(new(ThoughtKind.OpenConclusion));
+            Intent = new SpeechIntent(Mood(), [.. letterThoughts, .. thoughts], situation);
             // Лимит чата соблюдаем по законченным строкам, не обрывая объяснение посреди слова.
             var sections = new[] { claimText, checkedText, conclusion, opinion }.Where(x => x.Length > 0);
             var text = string.Join("\n", sections);
@@ -1290,8 +1387,12 @@ public static class BotPlayer
         /// <summary>
         /// Отклик на последнее чужое мнение о том же ряду — как в живом разговоре: «Аня, согласен» или «Боб, не соглашусь».
         /// </summary>
+        /// <summary>Отклик последнего <see cref="Reply"/> — мыслью для речи.</summary>
+        private Thought? _reply;
+
         private string Reply(int row, string card, bool exclude = false)
         {
+            _reply = null;
             if (mind is null) return "";
             // Отвечают только на сказанное вслух: ночной шёпот команды и мысли у доски никто, кроме своих, не слышал.
             var said = mind.Opinions.Where(o => o.Public && !o.IsCheck && o.Strength > 0 && o.Author != me.Id
@@ -1304,6 +1405,7 @@ public static class BotPlayer
             {
                 // Спор с давней репликой — с пометкой, о каком раунде речь, иначе непонятно, с чем спорят.
                 var when = view.Round - spokenIn == 1 ? "в прошлом раунде" : "раньше";
+                _reply = new Thought(agree ? ThoughtKind.Agree : ThoughtKind.Disagree, CardName(last.CardId), who, Round: spokenIn);
                 return agree
                     ? $"{who}, {when} у тебя тоже был {CardName(last.CardId)}, теперь и я так думаю. "
                     : $"{who}, {when} у тебя был {CardName(last.CardId)}, тут не соглашусь. ";
@@ -1311,7 +1413,9 @@ public static class BotPlayer
             // Сверяемся с тем, что игрок сказал в последней реплике об этом ряду, а не с давним упоминанием.
             var theirs = mind.LatestOf(last.Author).FirstOrDefault(o => o.Strength > 0 && view.Board[row].Cards.Contains(o.CardId))?.CardId ?? last.CardId;
             // Исключаю карту, за которую он, — это спор, а не согласие.
-            return (theirs == card) != exclude ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
+            var agrees = (theirs == card) != exclude;
+            _reply = new Thought(agrees ? ThoughtKind.Agree : ThoughtKind.Disagree, CardName(theirs), who);
+            return agrees ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
         }
 
         /// <summary>

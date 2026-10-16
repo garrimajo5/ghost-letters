@@ -1,3 +1,4 @@
+using GhostLetters.Infrastructure.Speech;
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Bots;
@@ -153,6 +154,25 @@ public sealed class BotWinrateTests
         var texts = Enumerable.Range(0, 20).Select(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(opinions: earlier))!.Value.Text).ToList();
         texts.Where(t => t.StartsWith("Аня,") || t.Contains("\nАня,") || t.Contains(" Аня,")).Should().NotBeEmpty()
             .And.OnlyContain(t => t.Contains("в прошлом раунде") || t.Contains("раньше"));
+    }
+
+    [Fact]
+    public void Bot_PlansWhatToSay_FromTheGame()
+    {
+        var hints = new[] { new HintGroupView(1, ["purse", "dagger"]) };
+        var view = View(Role.Detective, [], ["stone"], phase: Phase.Discussion, hints: hints);
+        var planned = BotPlayer.SayPlanned(view, new Random(3), Tags, Mind())!.Value;
+        planned.Intent.Should().NotBeNull();
+        var version = planned.Intent!.Thoughts.First(t => t.Kind is ThoughtKind.Version or ThoughtKind.VersionSure or ThoughtKind.VersionDoubt or ThoughtKind.Tentative);
+        planned.Line.Text.Should().ContainEquivalentOf(version.Card!.Split(' ')[0]).And.Contain(version.Card!.Split(' ')[1]);
+        planned.Intent.Thoughts.Should().Contain(t => t.Kind == ThoughtKind.Link && t.Hint != null);
+
+        // Два письма исчезли подряд — досада; письмо открыли — радость или уверенность.
+        var lost = view with { Me = view.Me! with { Letters = [new MyLetterView(1, "crown", false), new MyLetterView(1, "tulip", false)] } };
+        BotPlayer.SayPlanned(lost, new Random(3), Tags, Mind())!.Value.Intent!.Mood.Should().Be(SpeechMood.Frustrated);
+        var open = view with { Me = view.Me! with { Letters = [new MyLetterView(1, "purse", true)] } };
+        BotPlayer.SayPlanned(open, new Random(3), Tags, Mind())!.Value.Intent!.Mood.Should().BeOneOf(SpeechMood.Excited, SpeechMood.Confident);
+        BotPlayer.SayPlanned(open, new Random(3), Tags, Mind())!.Value.Intent!.Thoughts[0].Kind.Should().Be(ThoughtKind.ClaimOpen);
     }
 
     [Fact]
