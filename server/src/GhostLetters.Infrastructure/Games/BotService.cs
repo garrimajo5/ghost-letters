@@ -74,28 +74,36 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         }
 
         // Голос читает то же, что написано в чате (раньше — свой пересказ шаблона, и текст с голосом расходились).
-        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null)
-        {
-            var names = new List<string>();
-            var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
-            if (text.Length > 0)
-            {
-                var name = (profile?.Nickname ?? "").Replace("Бот ", "").Trim();
-                // Вслух — то же, что в чате (уже живым текстом), с названиями карт; YandexGPT (если подключён) пересказывает.
-                text = await writer.RephraseAsync(text, names.Distinct().ToList(), new Speech.Speaker(name, profile?.About ?? "", male), ct)
-                       ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, male, learned, Speech.PhraseBook.EmotionsFor(manner, risk ?? .5));
-                // Интонация: ударение на карте, о которой речь, амплуа по настроению, темп по манере.
-                var spokenRole = Speech.SpeechProsody.RoleFor(voice, role, Speech.SpeechProsody.MoodOf(text));
-                text = Speech.SpeechProsody.Mark(text, names);
-                if (await speech.SynthesizeAsync(text, voice, spokenRole, ct, Speech.SpeechProsody.SpeedOf(manner)) is { } audio)
-                {
-                    try { request = request with { MediaId = await chat.SaveBotVoiceAsync(botId, audio, ct) }; }
-                    catch (AppException e) { logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message); }
-                }
-            }
-        }
+        if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null &&
+            await VoiceAsync(state, botId, request, new Speech.Speaker(BotNames.Bare(profile?.Nickname ?? "").Trim(), profile?.About ?? "", male),
+                voice, role, manner, learned, risk ?? .5, intent?.Mood, ct) is { } mediaId)
+            request = request with { MediaId = mediaId };
 
         await chat.SendAsync(state.Id, botId, request, ct);
+    }
+
+    /// <summary>
+    /// Озвучка реплики голосом бота: названия карт вместо ссылок, пересказ YandexGPT (если подключён), ударение на карте,
+    /// амплуа по настроению (замысла реплики, если он есть), темп по манере. Не вышло — null, реплика уйдёт текстом.
+    /// </summary>
+    private async Task<Guid?> VoiceAsync(GameState state, Guid botId, SendChatRequest request, Speech.Speaker speaker, string voice, string? role,
+        Speech.SpokenStyle.Manner manner, IReadOnlyList<(string Intent, string Emotion, string Template)>? learned, double risk,
+        Speech.SpeechMood? mood, CancellationToken ct)
+    {
+        var names = new List<string>();
+        var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
+        if (text.Length == 0) return null;
+        text = await writer.RephraseAsync(text, names.Distinct().ToList(), speaker, ct)
+               ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, speaker.Male, learned, Speech.PhraseBook.EmotionsFor(manner, risk));
+        var spokenRole = Speech.SpeechProsody.RoleFor(voice, role, mood is { } m ? Speech.SpeechProsody.MoodOf(m) : Speech.SpeechProsody.MoodOf(text));
+        text = Speech.SpeechProsody.Mark(text, names);
+        if (await speech.SynthesizeAsync(text, voice, spokenRole, ct, Speech.SpeechProsody.SpeedOf(manner)) is not { } audio) return null;
+        try { return await chat.SaveBotVoiceAsync(botId, audio, ct); }
+        catch (AppException e)
+        {
+            logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message);
+            return null;
+        }
     }
 
     /// <summary>

@@ -27,6 +27,14 @@ public static partial class SpeechProsody
         return Joy().IsMatch(text) || text.Count(c => c == '!') >= 2 ? Mood.Warm : Mood.Calm;
     }
 
+    /// <summary>Тон голоса по замыслу реплики: подозревает или защищается — строже, рад или уверен — теплее.</summary>
+    public static Mood MoodOf(SpeechMood mood) => mood switch
+    {
+        SpeechMood.Suspicious or SpeechMood.Defensive => Mood.Stern,
+        SpeechMood.Excited or SpeechMood.Confident => Mood.Warm,
+        _ => Mood.Calm,
+    };
+
     /// <summary>
     /// Амплуа для этой реплики. Выбранное в кабинете «строго» или «зловеще» — характер, его не меняем;
     /// спокойный и радушный голос строже звучит в обвинении и теплее — в радости, если голос так умеет.

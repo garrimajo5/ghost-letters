@@ -23,5 +23,8 @@ public sealed class SpeechProsodyTests
         SpeechProsody.RoleFor("lera", "neutral", SpeechProsody.Mood.Stern).Should().Be("neutral", "строгого у голоса нет");
         SpeechProsody.RoleFor("jane", "evil", SpeechProsody.Mood.Warm).Should().Be("evil", "амплуа из кабинета — характер");
         SpeechProsody.SpeedOf(SpokenStyle.Manner.Lively).Should().BeGreaterThan(1);
+        SpeechProsody.MoodOf(SpeechMood.Suspicious).Should().Be(SpeechProsody.Mood.Stern, "тон — по замыслу реплики, а не только по словам");
+        SpeechProsody.MoodOf(SpeechMood.Excited).Should().Be(SpeechProsody.Mood.Warm);
+        SpeechProsody.MoodOf(SpeechMood.Frustrated).Should().Be(SpeechProsody.Mood.Calm);
     }
 }
