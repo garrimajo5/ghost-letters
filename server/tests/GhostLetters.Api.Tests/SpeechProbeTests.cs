@@ -19,7 +19,7 @@ public sealed class SpeechProbeTests
         {
             var report = BotSandboxRunner.Run("full-game", seed, deck, tags, default);
             var names = report.Seats.ToDictionary(s => s.Id, s => s.Name);
-            lines.AddRange(report.Messages.Where(m => m.Spoken is not null).Take(14).Select(m => $"[{names[m.Author]}] {m.Spoken}"));
+            lines.AddRange(report.Messages.Where(m => m.Spoken is not null).Take(18).Select(m => $"[{names[m.Author]}] {m.Spoken}"));
         }
         Assert.Fail("ОБРАЗЦЫ\n" + string.Join("\n", lines));
     }
