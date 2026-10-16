@@ -33,7 +33,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// Озвучка не удалась — реплика уходит текстом, как раньше.
     /// </summary>
     /// <param name="answering">Ответ на прямой вопрос: прежние обвинения повторять можно — о них и спросили.</param>
-    public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct, bool answering = false)
+    /// <param name="intent">Что бот решил сказать мыслями: слова подберёт <see cref="Speech.SpeechComposer"/>; null — пересказ шаблона.</param>
+    public async Task SayAsync(GameState state, Guid botId, SendChatRequest request, CancellationToken ct, bool answering = false,
+        Speech.SpeechIntent? intent = null)
     {
         var manner = Speech.SpokenStyle.MannerOf(botId);
         var profile = await (from b in db.BotProfiles.AsNoTracking()
@@ -58,11 +60,16 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             var earlier = answering ? new List<string>() : await db.ChatMessages.AsNoTracking()
                 .Where(m => m.GameId == state.Id && m.AuthorId == botId && m.Channel == ChatChannels.Public)
                 .OrderByDescending(m => m.CreatedAt).Take(6).Select(m => m.Text ?? "").ToListAsync(ct);
+            var persona = Speech.PersonaLines.KeyOf(profile?.Nickname);
+            var genders = await GendersAsync(state, ct);
+            var emotions = Speech.PhraseBook.EmotionsFor(manner, risk ?? .5);
+            // Мысли → слова по настроению и столу; не сложилось — пересказ шаблона, как раньше.
+            var composed = intent is null ? null : Speech.SpeechComposer.Compose(intent,
+                new Speech.SpeechComposer.Voice(Random.Shared, manner, male, persona, learned, emotions, earlier, genders));
             request = request with
             {
-                Text = Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
-                    Speech.PhraseBook.EmotionsFor(manner, risk ?? .5), earlier, Speech.PersonaLines.KeyOf(profile?.Nickname),
-                    await GendersAsync(state, ct)),
+                Text = composed ?? Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
+                    emotions, earlier, persona, genders),
             };
         }
 
@@ -638,7 +645,12 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (said.Count > 0 && !await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.Round == state.Round &&
             m.Channel == ChatChannels.Public && m.AuthorId != null && m.AuthorId != botId && m.CreatedAt > said[0].CreatedAt, ct))
             return false;
-        var speech = said.Count == 0 ? BotPlayer.Say(view, rng, tags, mind) : BotPlayer.Reply(view, rng, tags, mind);
+        Speech.SpeechIntent? intent = null;
+        (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? speech;
+        if (said.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned)
+            (speech, intent) = (planned.Line, planned.Intent);
+        else
+            speech = said.Count == 0 ? null : BotPlayer.Reply(view, rng, tags, mind);
         if (speech is not { } line)
         {
             return false;
@@ -646,11 +658,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
 
         // Обвинили — человек сначала отвечает на это, потом говорит о картах.
         if (mind is not null && await AccusedByAsync(state, botId, mind, said.Count > 0 ? said[0].CreatedAt : null, ct) is { } accuser)
+        {
             line = (Defense(accuser, Speech.SpokenStyle.MannerOf(botId), rng, Speech.PersonaLines.KeyOf(mind.Names.GetValueOrDefault(botId))) + line.Text, line.Cards, line.Notes);
+            intent = intent?.With(new Speech.Thought(Speech.ThoughtKind.Defense, Who: accuser));
+        }
 
         try
         {
-            await SayAsync(state, botId, TableReasoning.Speech(view, tags, mind, line), ct);
+            await SayAsync(state, botId, TableReasoning.Speech(view, tags, mind, line), ct, intent: intent);
             return true;
         }
         catch (AppException e)
