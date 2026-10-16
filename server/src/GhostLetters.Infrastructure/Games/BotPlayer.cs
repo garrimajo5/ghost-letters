@@ -111,6 +111,15 @@ public static class BotPlayer
         return new Brain(view, me, rng, tags ?? CardTags.Empty, mind).Say();
     }
 
+    /// <summary>Как <see cref="Reply"/>, плюс то же самое мыслями.</summary>
+    public static ((string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line, SpeechIntent? Intent)? ReplyPlanned(
+        PlayerView view, Random rng, CardTags tags, BotMind? mind)
+    {
+        if (view.Me is not { Role: not Role.Ghost } me) return null;
+        var brain = new Brain(view, me, rng, tags, mind);
+        return brain.Reply() is { } line ? (line, brain.Intent) : null;
+    }
+
     /// <summary>Как <see cref="Say"/>, плюс то же самое мыслями (<see cref="SpeechIntent"/>) — для живых фраз.</summary>
     public static ((string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line, SpeechIntent? Intent)? SayPlanned(
         PlayerView view, Random rng, CardTags tags, BotMind? mind)
@@ -434,12 +443,24 @@ public static class BotPlayer
             if (ally.Opinion is null || NameOf(ally.Player.Id) is not { } name) return null;
             var card = ally.Opinion.CardId;
             var text = $"{name}, твоя версия «{CardName(card)}» сходится с подсказками; пока считаю тебя мирным. ";
+            var who = BotNames.Bare(name);
+            List<Thought> thoughts = [new(ThoughtKind.Agree, CardName(card), who), new(ThoughtKind.Trust, Who: who)];
             var suspect = candidates.Where(p => p.Id != ally.Player.Id && (Known(p.Id) is null || Known(p.Id)!.Value.IsKillerTeam()))
                 .OrderByDescending(p => Suspicion(p.Id)).FirstOrDefault();
+            _accused = null;
             if (suspect is not null && Suspicion(suspect.Id) >= 1.3 - 0.9 * P.Risk && NameOf(suspect.Id) is { } target)
+            {
                 text += $"Подозреваю, что {target} из чёрных: {BehaviourReason(suspect.Id)}. Предлагаю вместе голосовать против него.";
+                _accused = new Thought(ThoughtKind.Accuse, Who: BotNames.Bare(target), Why: BehaviourReason(suspect.Id), Strength: .6);
+                thoughts.AddRange([_accused, new Thought(ThoughtKind.VoteAgainst, Who: BotNames.Bare(target))]);
+            }
             else
+            {
                 text += $"Предлагаю поддержать «{CardName(card)}». Какие ещё улики подтверждают нашу версию?";
+                thoughts.Add(new Thought(ThoughtKind.Support, CardName(card)));
+            }
+            var (row, column) = Position(card);
+            Intent = new SpeechIntent(Mood(), thoughts, row < 0 ? new TableSituation(view.Round, view.TotalRounds, 0, 0, 0) : Situation(row, column));
             return (text, new[] { card }, new[] { "думаю, эта" });
         }
 

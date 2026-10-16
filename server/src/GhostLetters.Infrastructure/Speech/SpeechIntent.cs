@@ -49,6 +49,15 @@ public enum ThoughtKind
     Whole,
     Accuse,
     NoClues,
+
+    /// <summary>Доверяю игроку: «пока считаю тебя мирным».</summary>
+    Trust,
+
+    /// <summary>Зову поддержать карту: «давайте вместе за мотив 2».</summary>
+    Support,
+
+    /// <summary>Зову голосовать против подозреваемого.</summary>
+    VoteAgainst,
 }
 
 /// <summary>
