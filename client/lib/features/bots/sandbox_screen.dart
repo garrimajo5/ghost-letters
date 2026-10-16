@@ -498,6 +498,12 @@ class _SandboxReplayScreenState extends ConsumerState<SandboxReplayScreen> {
                                               style: const TextStyle(
                                                   color: AppColors.muted)),
                                           Text(m['text'] as String),
+                                          if (m['spoken'] is String)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Text('За столом: «${m['spoken']}»',
+                                                  style: const TextStyle(fontStyle: FontStyle.italic, color: AppColors.ice)),
+                                            ),
                                           _cards((m['cards'] as List)
                                               .cast<String>()),
                                         ]))),
