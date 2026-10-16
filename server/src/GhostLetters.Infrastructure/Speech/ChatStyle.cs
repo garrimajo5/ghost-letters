@@ -344,32 +344,11 @@ public static partial class ChatStyle
         };
     }
 
-    /// <summary>«по смыслу: море; по форме: предмет расположен по диагонали» → «там тоже море» (без тире и двоеточий — их ставит фраза вокруг).</summary>
-    private static string Reason(string why, Ctx c)
-    {
-        var first = why.Split(';')[0].Trim();
-        var m = Regex.Match(first, @"^по (?<kind>смыслу|форме|цвету|деталям): (?<what>.+)$");
-        if (!m.Success) return first;
-        var what = m.Groups["what"].Value.Trim();
-        return m.Groups["kind"].Value switch
-        {
-            "смыслу" => what == "общий предмет или тема" ? "общая тема" : c.Pick($"там тоже {what}", $"и там {what}", $"там опять {what}"),
-            "форме" => what == "похожий силуэт" ? "похожи формой" : c.Pick($"похожи формой ({what})", $"форма похожа ({what})"),
-            "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : c.Pick($"похожи цветом ({what})", $"цвет тот же ({what})"),
-            _ => c.Pick($"общая деталь ({what})", $"совпадает деталь ({what})"),
-        };
-    }
+    private static string Reason(string why, Ctx c) => SpeechWords.Reason(why, c.Rng);
 
-    private static string Behaviour(string why) => why switch
-    {
-        "его версия хуже объясняет открытые подсказки, чем соседние карты" => "его версия плохо сходится с подсказками",
-        "его голоса расходятся с моим чтением подсказок" => "голосует мимо подсказок",
-        "пока опираюсь на подозрения стола и прошлые встречи, прямой улики нет" => "пока просто чутьё",
-        _ => why,
-    };
+    private static string Behaviour(string why) => SpeechWords.Behaviour(why);
 
-    /// <summary>«тайна 2» после «в», «на», «про», «за» — «тайну 2»; остальные ряды не склоняются.</summary>
-    private static string Acc(string refs) => Regex.Replace(refs, @"(?<![а-яё])тайна(?=\s*\d)", "тайну", RegexOptions.IgnoreCase);
+    private static string Acc(string refs) => SpeechWords.Acc(refs);
 
     private static string Nom(string category) => category.ToLowerInvariant().StartsWith("тайн", StringComparison.Ordinal) ? "тайна" : category.ToLowerInvariant();
 
