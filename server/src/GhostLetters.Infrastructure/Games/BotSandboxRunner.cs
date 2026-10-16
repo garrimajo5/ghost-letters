@@ -145,7 +145,7 @@ public static class BotSandboxRunner
                             new Random(HashCode.Combine(seed, step, seat.Id)), Speech.SpokenStyle.MannerOf(seat.Id),
                             Speech.PersonaLines.IsFemale(seat.Name) != true, Speech.PersonaLines.KeyOf(seat.Name),
                             Genders: names.Values.Where(n => Speech.PersonaLines.IsFemale(n) is not null)
-                                .ToDictionary(n => n.StartsWith("Бот ", StringComparison.Ordinal) ? n[4..] : n, n => Speech.PersonaLines.IsFemale(n)!.Value)));
+                                .ToDictionary(n => BotNames.Bare(n), n => Speech.PersonaLines.IsFemale(n)!.Value)));
                         Say(seat.Id, said.Text, said.Cards, said.Notes, spoken);
                         Capture("Сообщение", seat.Id, observation: view); moved = true; break;
                     }

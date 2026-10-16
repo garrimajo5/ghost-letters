@@ -446,7 +446,7 @@ public static class BotPlayer
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Answer(string who, string question, IReadOnlyList<string> asked)
         {
             if (Classic) return null;
-            var call = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+            var call = BotNames.Bare(who);
             var lower = question.ToLowerInvariant();
             if ((lower.Contains("кого") && (lower.Contains("подозр") || lower.Contains("убийц"))) || lower.Contains("кто убийца") || lower.Contains("кто из чёрных") || lower.Contains("кто из черных"))
             {
@@ -1016,7 +1016,7 @@ public static class BotPlayer
 
         private string Accused(string text, string who, double strength, string? why = null)
         {
-            _accused = new Thought(ThoughtKind.Accuse, Who: who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who, Why: why, Strength: strength);
+            _accused = new Thought(ThoughtKind.Accuse, Who: BotNames.Bare(who), Why: why, Strength: strength);
             return text;
         }
 
@@ -1399,7 +1399,7 @@ public static class BotPlayer
                 && view.Board[row].Cards.Contains(o.CardId)).ToList();
             var last = said.LastOrDefault(o => o.Round is null || o.Round == view.Round) ?? said.LastOrDefault();
             if (last is null || NameOf(last.Author) is not { } who) return "";
-            if (who.StartsWith("Бот ", StringComparison.Ordinal)) who = who[4..];
+            who = BotNames.Bare(who);
             var agree = (last.CardId == card) != exclude;
             if (last.Round is { } spokenIn && spokenIn < view.Round)
             {

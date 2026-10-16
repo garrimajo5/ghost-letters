@@ -1547,7 +1547,7 @@ class _SayStrip extends StatelessWidget {
   final _Typing? typing;
 
   /// Чёрные роли: им ложь о своём письме — обычный приём.
-  static bool _black(GameView v) => const {'Killer', 'Accomplice', 'Blackmailer', 'Imitator'}.contains(v.me?.role);
+  static bool _black(GameView v) => isBlackRole(v.me?.role);
 
   /// «Соврать о письме»: выбрать, какую карту называть своим письмом, и сразу начать показ на столе.
   Future<void> _lie(BuildContext context, MyLetter letter) async {

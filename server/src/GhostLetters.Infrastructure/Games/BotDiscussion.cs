@@ -85,7 +85,7 @@ public static class BotDiscussion
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
         string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
         // Обращаются, как люди за столом: «Ватсон, …», а не «Бот Ватсон, …».
-        string Call(Guid id) => Name(id).StartsWith("Бот ", StringComparison.Ordinal) ? Name(id)[4..] : Name(id);
+        string Call(Guid id) => BotNames.Bare(Name(id));
         string Revision(int row)
         {
             // Read only this bot's previous public choices. A multi-card comparison

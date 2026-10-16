@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Speech;
 
@@ -119,7 +120,7 @@ public static partial class PhraseBook
 
         foreach (var name in playerNames.Where(n => n.Length >= 2).OrderByDescending(n => n.Length))
         {
-            var bare = name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+            var bare = BotNames.Bare(name);
             text = Regex.Replace(text, $@"(?<![а-яёa-z])(?:Бот\s+)?{Regex.Escape(bare)}[а-яё]{{0,3}}(?![а-яёa-z])", "{player}", RegexOptions.IgnoreCase);
         }
 
@@ -188,7 +189,7 @@ public static partial class PhraseBook
         var text = Regex.Replace(template, @"(?<![а-яё])(?:мотив|место|способ|тайн[ау])\s*—\s*\{card\}", "{card}", RegexOptions.IgnoreCase);
         if (Prepositioned().IsMatch(text)) return "";
         if (card is not null) text = text.Replace("{card}", card);
-        if (player is not null) text = text.Replace("{player}", player.StartsWith("Бот ", StringComparison.Ordinal) ? player[4..] : player);
+        if (player is not null) text = text.Replace("{player}", BotNames.Bare(player));
         return text.Contains('{') ? "" : char.ToUpperInvariant(text[0]) + text[1..];
     }
 }

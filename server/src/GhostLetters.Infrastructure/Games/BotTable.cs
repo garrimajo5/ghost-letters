@@ -40,7 +40,7 @@ public static class BotTable
         double Sim(string a, string b) => tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
         string Name(Guid id) => mind?.Names.GetValueOrDefault(id) ?? "Игрок";
         // Имя без «Бот »: «Пуаро: р.1 — это мотив 2. Согласен.»
-        string Call(Guid id) => Name(id).StartsWith("Бот ", StringComparison.Ordinal) ? Name(id)[4..] : Name(id);
+        string Call(Guid id) => BotNames.Bare(Name(id));
         int Count(string note) => recent.Count(t => t.Notes.Contains(note));
         var last = recent.Count > 0 ? recent[^1] : null;
 

@@ -7,6 +7,7 @@ using GhostLetters.Infrastructure.Persistence;
 using GhostLetters.Infrastructure.Persistence.Entities;
 using GhostLetters.Infrastructure.Speech;
 using Microsoft.EntityFrameworkCore;
+using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Voice;
 
@@ -113,7 +114,7 @@ public sealed class VoiceService(GhostLettersDbContext db, GameService games, Vo
         if (Questions.Values.Any(q => q.GameId == state.Id && q.UserId == userId && q.Phrase == unclear.Phrase)) return;
         var bot = botIds[Random.Shared.Next(botIds.Count)];
         var name = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Nickname).FirstAsync(ct);
-        if (name.StartsWith("Бот ", StringComparison.Ordinal)) name = name[4..];
+        name = BotNames.Bare(name);
         var where = unclear.Row is { } row ? $" в ряду «{RowName(row)}»" : "";
         var variants = new[]
         {
@@ -168,7 +169,7 @@ public sealed class VoiceService(GhostLettersDbContext db, GameService games, Vo
         });
         var name = tags.NameOf(request.CardId) ?? "эта карта";
         var playerName = await db.Users.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Nickname).FirstAsync(ct);
-        if (playerName.StartsWith("Бот ", StringComparison.Ordinal)) playerName = playerName[4..];
+        playerName = BotNames.Bare(playerName);
         if (verdict == CardNaming.Verdict.Invalid)
         {
             var others = state.Players.Select(p => p.Id).ToList();

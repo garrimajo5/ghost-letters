@@ -139,6 +139,9 @@ bool needsMe(GameView v) =>
     v.me != null && v.allowedCommands.any((c) => !_optionalCommands.contains(c) && !(c == 'TeamSuggest' && suggestedToKiller(v)));
 
 /// Сообщник уже подсказал Убийце в этой фазе (подсказку можно поменять, но ход уже не ждут).
+/// Чёрные роли: им ложь о своём письме — обычный приём.
+bool isBlackRole(String? role) => const {'Killer', 'Accomplice', 'Blackmailer', 'Imitator'}.contains(role);
+
 bool suggestedToKiller(GameView v) => v.me != null && v.teamSuggestions.any((s) => s.from == v.me!.id);
 
 /// Раунды по правилам: 2–4 игрока → 5, 5–7 → 4, 8–10 → 3, 11–12 → 2.
