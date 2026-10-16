@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Speech;
 
@@ -65,7 +66,7 @@ public static partial class PersonaLines
     public static string? KeyOf(string? nickname)
     {
         if (string.IsNullOrWhiteSpace(nickname)) return null;
-        var bare = nickname.StartsWith("Бот ", StringComparison.Ordinal) ? nickname[4..] : nickname;
+        var bare = BotNames.Bare(nickname);
         // «Бот Пуаро 2» в песочнице — тоже Пуаро.
         bare = System.Text.RegularExpressions.Regex.Replace(bare, @"\s+\d+$", "");
         return Keys.TryGetValue(bare.Trim(), out var key) && All.Value.ContainsKey(key) ? key : null;

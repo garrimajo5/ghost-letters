@@ -27,7 +27,7 @@ public static class GhostDebrief
         {
             if (id == state.Ghost.Id) return "моё";
             if (id is not { } who || !mind.Names.TryGetValue(who, out var name)) return "письмо";
-            return name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+            return BotNames.Bare(name);
         }
 
         string Short(string reason)
