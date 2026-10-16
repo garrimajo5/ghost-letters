@@ -137,7 +137,8 @@ public static class BotSandboxRunner
                     else if (BotLetterTactics.Pending(seat.Id, discussion)) line = null;
                     else if (state.IsFinalTalk) line = BotDiscussion.Compose(view, tags, mind, discussion, rng);
                     else if (own.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned) (line, intent) = (planned.Line, planned.Intent);
-                    else line = own.Count > 0 && mayReply ? BotPlayer.Reply(view, rng, tags, mind) : null;
+                    else if (own.Count > 0 && mayReply && BotPlayer.ReplyPlanned(view, rng, tags, mind) is { } replied) (line, intent) = (replied.Line, replied.Intent);
+                    else line = null;
                     if (line is { } said)
                     {
                         // Шаблон остаётся для разбора ботами; рядом — как это прозвучало бы за столом.
