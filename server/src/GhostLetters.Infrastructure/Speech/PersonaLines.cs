@@ -101,7 +101,7 @@ public static partial class PersonaLines
     }
 
     /// <summary>«тайна 2» → «тайну 2»; мотив, место и способ в винительном не меняются.</summary>
-    public static string Accusative(string refs) => Regex.Replace(refs, @"(?<![а-яё])тайна(?=\s*\d)", "тайну", RegexOptions.IgnoreCase);
+    public static string Accusative(string refs) => SpeechWords.Acc(refs);
 
     [GeneratedRegex(@"\{(\w+)\}")]
     private static partial Regex Placeholder();

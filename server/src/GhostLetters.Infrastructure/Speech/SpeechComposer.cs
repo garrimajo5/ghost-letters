@@ -301,31 +301,9 @@ public static partial class SpeechComposer
         return options.Length == 0 ? null : options[rng.Next(options.Length)];
     }
 
-    /// <summary>«тайна 2» после «в», «на», «про», «за» — «тайну 2».</summary>
-    private static string Acc(string refs) => Regex.Replace(refs, @"(?<![а-яё])тайна(?=\s*\d)", "тайну", RegexOptions.IgnoreCase);
+    private static string Acc(string refs) => SpeechWords.Acc(refs);
 
-    /// <summary>«по смыслу: море; по форме: …» → «там тоже море».</summary>
-    private static string Reason(string why, Random rng)
-    {
-        var first = why.Split(';')[0].Trim();
-        var m = Regex.Match(first, @"^по (?<kind>смыслу|форме|цвету|деталям): (?<what>.+)$");
-        if (!m.Success) return first;
-        var what = m.Groups["what"].Value.Trim();
-        string P(params string[] o) => o[rng.Next(o.Length)];
-        return m.Groups["kind"].Value switch
-        {
-            "смыслу" => what == "общий предмет или тема" ? "общая тема" : P($"там тоже {what}", $"и там {what}", $"там опять {what}"),
-            "форме" => what == "похожий силуэт" ? "похожи формой" : P($"похожи формой ({what})", $"форма похожа ({what})"),
-            "цвету" => what == "выраженный цветовой акцент" ? "похожи цветом" : P($"похожи цветом ({what})", $"цвет тот же ({what})"),
-            _ => P($"общая деталь ({what})", $"совпадает деталь ({what})"),
-        };
-    }
+    private static string Reason(string why, Random rng) => SpeechWords.Reason(why, rng);
 
-    private static string Behaviour(string why) => why switch
-    {
-        "его версия хуже объясняет открытые подсказки, чем соседние карты" => "его версия плохо сходится с подсказками",
-        "его голоса расходятся с моим чтением подсказок" => "голосует мимо подсказок",
-        "пока опираюсь на подозрения стола и прошлые встречи, прямой улики нет" => "пока просто чутьё",
-        _ => why,
-    };
+    private static string Behaviour(string why) => SpeechWords.Behaviour(why);
 }
