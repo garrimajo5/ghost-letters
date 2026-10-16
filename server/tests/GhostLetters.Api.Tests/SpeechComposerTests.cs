@@ -80,6 +80,14 @@ public sealed class SpeechComposerTests
     }
 
     [Fact]
+    public void Agreement_NeedsOnlyTheName_UnlessItIsAnOldDispute()
+    {
+        foreach (var persona in new string?[] { null, "marple" })
+            Many(Intent(SpeechMood.Calm, new Thought(ThoughtKind.Agree, "мотив 2", "Аня")), persona: persona)
+                .Should().OnlyContain(s => s != null && s.Contains("Аня"), "фразы согласия у персонажей карту не называют — и не должны");
+    }
+
+    [Fact]
     public void Gender_OfSpeakerAndAddressee()
     {
         var said = Many(Intent(SpeechMood.Confident, new Thought(ThoughtKind.VersionSure, "мотив 2"), new Thought(ThoughtKind.Agree, "мотив 2", "Аня")),

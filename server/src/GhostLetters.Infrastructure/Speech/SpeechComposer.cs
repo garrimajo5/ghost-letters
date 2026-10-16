@@ -148,6 +148,10 @@ public static partial class SpeechComposer
         ThoughtKind.ClaimLost or ThoughtKind.ClaimOpen or ThoughtKind.ClaimWait => Regex.IsMatch(said, "вот эт[оу]", RegexOptions.IgnoreCase),
         ThoughtKind.Accuse => t.Who is not null && said.Contains(t.Who, StringComparison.OrdinalIgnoreCase) &&
                               Regex.IsMatch(said, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase),
+        // Согласие и спор — обращение по имени; карту называет только давний спор («в прошлом раунде у тебя был…»).
+        ThoughtKind.Agree or ThoughtKind.Disagree or ThoughtKind.Trust => t.Who is not null && said.Contains(t.Who, StringComparison.OrdinalIgnoreCase) &&
+            (t.Round is null || t.Card is null || said.Contains(t.Card, StringComparison.OrdinalIgnoreCase) || said.Contains(Acc(t.Card), StringComparison.OrdinalIgnoreCase)),
+        ThoughtKind.VoteAgainst => t.Who is not null && said.Contains(t.Who, StringComparison.OrdinalIgnoreCase),
         ThoughtKind.Defense => !Regex.IsMatch(Regex.Replace(said, @"не\s+(?:из\s+)?ч[её]рн\p{L}*|не\s+убийц\p{L}*", "", RegexOptions.IgnoreCase),
             "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase),
         _ => t.Card is null || said.Contains(t.Card, StringComparison.OrdinalIgnoreCase) || (Acc(t.Card) is var a && said.Contains(a, StringComparison.OrdinalIgnoreCase)),
