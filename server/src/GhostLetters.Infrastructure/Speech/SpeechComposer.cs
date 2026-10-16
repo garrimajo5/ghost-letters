@@ -43,8 +43,11 @@ public static partial class SpeechComposer
         var mood = EmotionsOf(intent.Mood);
         var parts = new List<string>();
         var links = 0;
+        var reasons = new HashSet<string>();
         foreach (var t in thoughts)
         {
+            // Одна и та же причина дважды подряд («там тоже животные… и там животные») звучит как заевшая пластинка.
+            if (t.Kind is ThoughtKind.Check or ThoughtKind.Link && t.Why is { } why0 && !reasons.Add(why0.Split(';')[0].Trim()) && t.Kind == ThoughtKind.Link) continue;
             if (t.Kind == ThoughtKind.Link && links++ > 0 && rng.NextDouble() < .7) continue;
             if (t.Kind == ThoughtKind.Whole && rng.NextDouble() < .5) continue;
             if (t.Kind is ThoughtKind.LostConclusion or ThoughtKind.OpenConclusion && rng.NextDouble() < .3) continue;
@@ -54,7 +57,8 @@ public static partial class SpeechComposer
         if (parts.Count == 0) return null;
 
         // Вступление — по настроению и столу, и не каждый раз: иначе оно само становится шаблоном.
-        if (Opener(intent, voice, parts[0]) is { } opener) parts.Insert(0, opener);
+        // У персонажа свои присказки — общее вступление ему реже нужно.
+        if ((voice.Persona is null || rng.NextDouble() < .5) && Opener(intent, voice, parts[0]) is { } opener) parts.Insert(0, opener);
         var text = string.Join(" ", parts.Select(End));
         text = Regex.Replace(text, @"\s+", " ").Replace(" .", ".").Replace("..", ".").Trim();
         text = Regex.Replace(text, @"(?<=[.!?…] )[а-яё]", m => m.Value.ToUpperInvariant());
@@ -82,6 +86,10 @@ public static partial class SpeechComposer
         if (letter.Count > 0 && opinion.Count > 0 && rng.NextDouble() < .25) ordered.AddRange([.. opinion, .. letter]);
         else ordered.AddRange([.. letter, .. opinion]);
         ordered.AddRange(accusation.Except(ordered));
+        // «Давайте вместе против него» — после того, как сказал, кого подозревает.
+        var against = ordered.Where(t => t.Kind == ThoughtKind.VoteAgainst).ToList();
+        ordered.RemoveAll(t => t.Kind == ThoughtKind.VoteAgainst);
+        ordered.AddRange(against);
         return ordered;
     }
 
@@ -260,6 +268,9 @@ public static partial class SpeechComposer
                 ? ["Я подозреваю, что {who} из чёрных — {why}.", "{who}, по-моему, из чёрных: {why}.", "Присмотритесь к игроку {who}: похоже, из чёрных."]
                 : ["Подозреваю, что {who} из чёрных.", "{who}, по-моему, из чёрных.", "Присмотритесь к игроку {who}: похоже, из чёрных."],
             ThoughtKind.NoClues => ["Улик пока мало — версию не строю, жду подсказок.", "Пока гадать рано: подсказок почти нет.", "Подожду улик, наугад называть не буду."],
+            ThoughtKind.Trust => ["{who}, тебе я пока верю.", "Похоже, {who} играет за стол.", "{who}, с тобой мы, кажется, заодно."],
+            ThoughtKind.Support => ["Давайте поддержим {card_acc}.", "Предлагаю вместе за {card_acc}.", "Я бы всем столом взял {card_acc}."],
+            ThoughtKind.VoteAgainst => ["Давайте вместе голосовать против игрока {who}.", "Предлагаю голосовать против игрока {who}."],
             _ => [],
         };
     }
@@ -268,7 +279,7 @@ public static partial class SpeechComposer
     private static string? Opener(SpeechIntent intent, Voice voice, string first)
     {
         var rng = voice.Rng;
-        if (rng.NextDouble() >= .35 || Regex.IsMatch(first, @"^(?:ну|хм|эх|так|слушайте|смотрите|итак|mon|voilà|т-)", RegexOptions.IgnoreCase)) return null;
+        if (rng.NextDouble() >= .35 || Regex.IsMatch(first, @"^(?:ну|хм|эх|ах|ох|ой|о,|увы|так|слушайте|смотрите|итак|знаете|mon|voilà|bien|mais|т-|б-|к-)", RegexOptions.IgnoreCase)) return null;
         var s = intent.Situation;
         string[] options =
             s.LastRound && rng.NextDouble() < .5 ? ["Последний раунд — давайте соберёмся.", "Последний шанс, так что по делу."]

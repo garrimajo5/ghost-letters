@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Speech;
 
@@ -38,7 +39,7 @@ public static partial class ChatStyle
         /// <summary>Это обвинение бот уже говорил раньше — человек не повторяет его в каждой реплике.</summary>
         public bool Repeats(string who)
         {
-            var bare = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+            var bare = BotNames.Bare(who);
             return Earlier.Any(e => e.Contains(bare, StringComparison.OrdinalIgnoreCase) &&
                 Regex.IsMatch(e, "подозр|ч[её]рн|убийц|присмотр", RegexOptions.IgnoreCase)) && Rng.NextDouble() < .8;
         }
@@ -377,7 +378,7 @@ public static partial class ChatStyle
 
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
 
-    private static string Bare(string name) => name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+    private static string Bare(string name) => BotNames.Bare(name);
 
     /// <summary>Ссылки на карты в тексте — для проверки, что пересказ ничего не потерял.</summary>
     public static IReadOnlyList<string> Refs(string text) =>

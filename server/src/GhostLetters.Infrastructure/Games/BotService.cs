@@ -118,7 +118,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             if (female is null && r.IsBot) female = Speech.PersonaLines.IsFemale(r.Nickname);
             if (female is null && r.IsBot) female = Speech.BotVoices.Find(Speech.BotVoices.For(r.Id, r.Voice, r.Role).Voice)?.Male == false;
             if (female is null) continue;
-            var name = r.Nickname.StartsWith("Бот ", StringComparison.Ordinal) ? r.Nickname[4..] : r.Nickname;
+            var name = BotNames.Bare(r.Nickname);
             result[name] = female.Value;
         }
         return result;
@@ -285,7 +285,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (phaseStart == DateTimeOffset.MinValue || await db.ChatMessages.AnyAsync(m => m.GameId == state.Id && m.AuthorId == bot &&
                 m.Channel == ChatChannels.KillerTeam && m.CreatedAt >= phaseStart, ct)) return false;
         var name = await db.Users.AsNoTracking().Where(u => u.Id == target).Select(u => u.Nickname).FirstOrDefaultAsync(ct) ?? "";
-        if (name.StartsWith("Бот ", StringComparison.Ordinal)) name = name[4..];
+        name = BotNames.Bare(name);
         var role = suggestion.Guess switch
         {
             Role.Witness => "Свидетель", Role.Expert => "Эксперт", Role.Blackmailer => "Шантажист", _ => null,
@@ -370,7 +370,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         var ids = state.Players.Select(p => p.Id).ToList();
         var names = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
         var mine = names.GetValueOrDefault(botId, "");
-        var bare = mine.StartsWith("Бот ", StringComparison.Ordinal) ? mine[4..] : mine;
+        var bare = BotNames.Bare(mine);
         string? emoji = null;
         if (AccusationReader.Read(last.AuthorId!.Value, text, names).Any(a => a.Target == botId))
             emoji = rng.NextDouble() < .7 ? new[] { "😮", "🙈", "🤡" }[rng.Next(3)] : null;
@@ -625,7 +625,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 if (AccusationReader.Read(question.AuthorId!.Value, question.Text, mind.Names).Any(a => a.Target == botId))
                 {
                     var who = mind.Names.GetValueOrDefault(question.AuthorId!.Value, "");
-                    var call = who.StartsWith("Бот ", StringComparison.Ordinal) ? who[4..] : who;
+                    var call = BotNames.Bare(who);
                     // «Тестер, это не я. Тестер, тайна 2: …» — имя второй раз не повторяем.
                     var rest = answer.Text.StartsWith(call + ", ", StringComparison.Ordinal) ? Capital(answer.Text[(call.Length + 2)..]) : answer.Text;
                     answer = (Defense(call, Speech.SpokenStyle.MannerOf(botId), rng, Speech.PersonaLines.KeyOf(mind.Names.GetValueOrDefault(botId))) + rest, answer.Cards, answer.Notes);
@@ -649,8 +649,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? speech;
         if (said.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned)
             (speech, intent) = (planned.Line, planned.Intent);
+        else if (said.Count > 0 && BotPlayer.ReplyPlanned(view, rng, tags, mind) is { } replied)
+            (speech, intent) = (replied.Line, replied.Intent);
         else
-            speech = said.Count == 0 ? null : BotPlayer.Reply(view, rng, tags, mind);
+            speech = null;
         if (speech is not { } line)
         {
             return false;
@@ -689,7 +691,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             AccusationReader.Read(m.AuthorId!.Value, m.Text, mind.Names).Any(a => a.Target == botId));
         if (accuser is null) return null;
         var name = mind.Names.GetValueOrDefault(accuser.AuthorId!.Value, "");
-        return name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+        return BotNames.Bare(name);
     }
 
     private static string Capital(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
@@ -713,7 +715,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     private async Task<ChatMessage?> QuestionToAsync(GameState state, Guid botId, BotMind mind, DateTimeOffset? since, CancellationToken ct)
     {
         var name = mind.Names.GetValueOrDefault(botId, "");
-        var bare = name.StartsWith("Бот ", StringComparison.Ordinal) ? name[4..] : name;
+        var bare = BotNames.Bare(name);
         if (bare.Length < 2) return null;
         var after = since ?? DateTimeOffset.MinValue;
         var recent = await db.ChatMessages.AsNoTracking().Where(m => m.GameId == state.Id && m.Round == state.Round &&

@@ -1365,7 +1365,7 @@ class _LetterSheetState extends State<LetterSheet> {
           Text('ЧТО Я ГОВОРЮ ДРУГИМ', style: sectionLabel()),
           const SizedBox(height: 4),
           const Text('Видите только вы. Если называете другую карту — запомните, какую.', style: hint),
-          if (const {'Killer', 'Accomplice', 'Blackmailer', 'Imitator'}.contains(me?.role)) ...[
+          if (isBlackRole(me?.role)) ...[
             const SizedBox(height: 4),
             const Text(
               'Вы из чёрных: можно соврать — назвать своим письмом другую карту. Стол не узнает, пока Призрак не откроет ваше письмо.',
