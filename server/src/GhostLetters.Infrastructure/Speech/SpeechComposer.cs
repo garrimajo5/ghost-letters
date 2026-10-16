@@ -86,6 +86,10 @@ public static partial class SpeechComposer
         if (letter.Count > 0 && opinion.Count > 0 && rng.NextDouble() < .25) ordered.AddRange([.. opinion, .. letter]);
         else ordered.AddRange([.. letter, .. opinion]);
         ordered.AddRange(accusation.Except(ordered));
+        // «Давайте вместе против него» — после того, как сказал, кого подозревает.
+        var against = ordered.Where(t => t.Kind == ThoughtKind.VoteAgainst).ToList();
+        ordered.RemoveAll(t => t.Kind == ThoughtKind.VoteAgainst);
+        ordered.AddRange(against);
         return ordered;
     }
 
@@ -264,6 +268,9 @@ public static partial class SpeechComposer
                 ? ["Я подозреваю, что {who} из чёрных — {why}.", "{who}, по-моему, из чёрных: {why}.", "Присмотритесь к игроку {who}: похоже, из чёрных."]
                 : ["Подозреваю, что {who} из чёрных.", "{who}, по-моему, из чёрных.", "Присмотритесь к игроку {who}: похоже, из чёрных."],
             ThoughtKind.NoClues => ["Улик пока мало — версию не строю, жду подсказок.", "Пока гадать рано: подсказок почти нет.", "Подожду улик, наугад называть не буду."],
+            ThoughtKind.Trust => ["{who}, тебе я пока верю.", "Похоже, {who} играет за стол.", "{who}, с тобой мы, кажется, заодно."],
+            ThoughtKind.Support => ["Давайте поддержим {card_acc}.", "Предлагаю вместе за {card_acc}.", "Я бы всем столом взял {card_acc}."],
+            ThoughtKind.VoteAgainst => ["Давайте вместе голосовать против игрока {who}.", "Предлагаю голосовать против игрока {who}."],
             _ => [],
         };
     }

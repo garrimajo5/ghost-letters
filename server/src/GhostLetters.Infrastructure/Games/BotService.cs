@@ -649,8 +649,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? speech;
         if (said.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned)
             (speech, intent) = (planned.Line, planned.Intent);
+        else if (said.Count > 0 && BotPlayer.ReplyPlanned(view, rng, tags, mind) is { } replied)
+            (speech, intent) = (replied.Line, replied.Intent);
         else
-            speech = said.Count == 0 ? null : BotPlayer.Reply(view, rng, tags, mind);
+            speech = null;
         if (speech is not { } line)
         {
             return false;

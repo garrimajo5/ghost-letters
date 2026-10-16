@@ -63,6 +63,23 @@ public sealed class SpeechComposerTests
     }
 
     [Fact]
+    public void AllyReply_TrustsAndRallies_WithoutAccusingTheAlly()
+    {
+        var names = new Dictionary<Guid, string> { [Guid.NewGuid()] = "Аня", [Guid.NewGuid()] = "Боб" };
+        var anna = names.First(x => x.Value == "Аня").Key;
+        var bob = names.First(x => x.Value == "Боб").Key;
+        var said = Many(Intent(SpeechMood.Suspicious, new Thought(ThoughtKind.Agree, "мотив 2", "Аня"), new Thought(ThoughtKind.Trust, Who: "Аня"),
+            new Thought(ThoughtKind.Accuse, Who: "Боб", Strength: .6), new Thought(ThoughtKind.VoteAgainst, Who: "Боб")));
+        foreach (var s in said)
+        {
+            var read = GhostLetters.Infrastructure.Bots.AccusationReader.Read(Guid.NewGuid(), s, names);
+            read.Should().Contain(a => a.Target == bob, s);
+            read.Should().NotContain(a => a.Target == anna, $"союзника не обвиняем: {s}");
+            s.IndexOf("против", StringComparison.Ordinal).Should().BeGreaterThan(s.IndexOf("Боб", StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
     public void Gender_OfSpeakerAndAddressee()
     {
         var said = Many(Intent(SpeechMood.Confident, new Thought(ThoughtKind.VersionSure, "мотив 2"), new Thought(ThoughtKind.Agree, "мотив 2", "Аня")),
