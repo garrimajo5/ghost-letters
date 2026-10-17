@@ -137,6 +137,7 @@ class LobbySettings {
     this.ghostUserId,
     this.ranked = true,
     this.botVoice = true,
+    this.aiSpeech = false,
   });
 
   factory LobbySettings.fromJson(Json j) => LobbySettings(
@@ -158,6 +159,7 @@ class LobbySettings {
         ghostUserId: j['ghostUserId'] as String?,
         ranked: j['ranked'] as bool? ?? true,
         botVoice: j['botVoice'] as bool? ?? true,
+        aiSpeech: j['aiSpeech'] as bool? ?? false,
       );
 
   final bool useSecretRow;
@@ -212,6 +214,9 @@ class LobbySettings {
   /// Боты говорят голосом (если на сервере настроен синтез речи).
   final bool botVoice;
 
+  /// Боты 2.0: реплики ботов пишет ИИ-модель (меняет только администратор).
+  final bool aiSpeech;
+
   int timer(String key, int fallback) => timers[key] ?? fallback;
 
   LobbySettings copyWith({
@@ -230,6 +235,7 @@ class LobbySettings {
     bool clearGhost = false,
     bool? ranked,
     bool? botVoice,
+    bool? aiSpeech,
   }) {
     // Выбор того же значения в меню — не правка: шаблон остаётся «чистым».
     final rulesChanged = (useSecretRow != null && useSecretRow != this.useSecretRow) ||
@@ -264,6 +270,7 @@ class LobbySettings {
         ghostUserId: clearGhost ? null : ghostUserId ?? this.ghostUserId,
         ranked: ranked ?? this.ranked,
         botVoice: botVoice ?? this.botVoice,
+        aiSpeech: aiSpeech ?? this.aiSpeech,
       );
   }
 
@@ -284,6 +291,7 @@ class LobbySettings {
         'ghostUserId': ghostUserId,
         'ranked': ranked,
         'botVoice': botVoice,
+        'aiSpeech': aiSpeech,
       };
 }
 
@@ -1380,7 +1388,7 @@ class LearnedPhrase {
 /// Выученные фразы и какие боты говорят каждой манерой.
 class LearnedPhrases {
   const LearnedPhrases({required this.voiceEnabled, required this.phrases, required this.speakers,
-      this.rephrase = false, this.rephraseModel, this.rephrasedToday = 0, this.rephraseProblem});
+      this.rephrase = false, this.rephraseModel, this.rephrasedToday = 0, this.rephraseProblem, this.writtenToday = 0, this.writeProblem});
   factory LearnedPhrases.fromJson(Json j) => LearnedPhrases(
         voiceEnabled: j['voiceEnabled'] as bool? ?? false,
         phrases: [for (final e in (j['phrases'] as List? ?? const [])) LearnedPhrase.fromJson(Map<String, dynamic>.from(e as Map))],
@@ -1394,7 +1402,13 @@ class LearnedPhrases {
         rephraseModel: j['rephraseModel'] as String?,
         rephrasedToday: (j['rephrasedToday'] as num?)?.toInt() ?? 0,
         rephraseProblem: j['rephraseProblem'] as String?,
+        writtenToday: (j['writtenToday'] as num?)?.toInt() ?? 0,
+        writeProblem: j['writeProblem'] as String?,
       );
+
+  /// Боты 2.0: сколько реплик написала модель сегодня и почему не прошла последняя.
+  final int writtenToday;
+  final String? writeProblem;
   final bool voiceEnabled;
 
   /// Пересказ для голоса через YandexGPT подключён на сервере.

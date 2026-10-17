@@ -54,6 +54,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             learned = await phrases.ForAsync(manner, ct);
         }
 
+        var aiWritten = false;
         // В чат — как написал бы человек: короче, своими словами, в манере бота и его роде; карты остаются ссылками.
         if (request.Channel == ChatChannels.Public && !string.IsNullOrWhiteSpace(request.Text))
         {
@@ -71,12 +72,24 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
                 Text = composed ?? Speech.ChatStyle.Humanize(request.Text, Random.Shared, manner, male, risk ?? .5, learned,
                     emotions, earlier, persona, genders),
             };
+
+            // Боты 2.0 (включает админ): ту же мысль пишет ИИ-модель — по замыслу, характеру, адресату и тому, что звучало за столом.
+            if (writer.Enabled && await AiSpeechAsync(state.Id, ct))
+            {
+                var passport = await PassportAsync(state, botId, request.Text!, intent, persona, manner,
+                    new Speech.Speaker(BotNames.Bare(profile?.Nickname ?? "").Trim(), profile?.About ?? "", male), genders, earlier, ct);
+                if ((await writer.WriteAsync(passport, ct)).Text is { } written)
+                {
+                    request = request with { Text = written };
+                    aiWritten = true;
+                }
+            }
         }
 
         // Голос читает то же, что написано в чате (раньше — свой пересказ шаблона, и текст с голосом расходились).
         if (speech.Enabled && state.Settings.BotVoice && request.Channel == ChatChannels.Public && request.MediaId is null &&
             await VoiceAsync(state, botId, request, new Speech.Speaker(BotNames.Bare(profile?.Nickname ?? "").Trim(), profile?.About ?? "", male),
-                voice, role, manner, learned, risk ?? .5, intent?.Mood, ct) is { } mediaId)
+                voice, role, manner, learned, risk ?? .5, intent?.Mood, ct, rephrase: !aiWritten) is { } mediaId)
             request = request with { MediaId = mediaId };
 
         await chat.SendAsync(state.Id, botId, request, ct);
@@ -88,12 +101,14 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
     /// </summary>
     private async Task<Guid?> VoiceAsync(GameState state, Guid botId, SendChatRequest request, Speech.Speaker speaker, string voice, string? role,
         Speech.SpokenStyle.Manner manner, IReadOnlyList<(string Intent, string Emotion, string Template)>? learned, double risk,
-        Speech.SpeechMood? mood, CancellationToken ct)
+        Speech.SpeechMood? mood, CancellationToken ct, bool rephrase = true)
     {
         var names = new List<string>();
         var text = Speech.SpeechText.For(request.Text, request.CardIds ?? [], request.CardNotes, state.Board, state.Hints, tags, names);
         if (text.Length == 0) return null;
-        text = await writer.RephraseAsync(text, names.Distinct().ToList(), speaker, ct)
+        // Реплику уже написала модель (Боты 2.0) — голос читает её как есть, без второго пересказа.
+        if (rephrase)
+            text = await writer.RephraseAsync(text, names.Distinct().ToList(), speaker, ct)
                ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, speaker.Male, learned, Speech.PhraseBook.EmotionsFor(manner, risk));
         var spokenRole = Speech.SpeechProsody.RoleFor(voice, role, mood is { } m ? Speech.SpeechProsody.MoodOf(m) : Speech.SpeechProsody.MoodOf(text));
         text = Speech.SpeechProsody.Mark(text, names);
@@ -104,6 +119,32 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             logger.LogWarning("Озвучка бота не сохранена: {Error}", e.Message);
             return null;
         }
+    }
+
+    /// <summary>Включены ли в партии Боты 2.0 (настройка лобби, её меняет только админ — и во время партии).</summary>
+    private async Task<bool> AiSpeechAsync(Guid gameId, CancellationToken ct)
+    {
+        var json = await db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => g.Settings).FirstOrDefaultAsync(ct);
+        return json is not null && GameJson.Deserialize<LobbySettings>(json).AiSpeech;
+    }
+
+    /// <summary>
+    /// Паспорт реплики для модели: только публичное — замысел бота, его черновик, имена за столом, последние реплики
+    /// общего чата и что бот уже говорил. Истина, роли и ночной чат сюда не попадают.
+    /// </summary>
+    private async Task<Speech.SpeechPassport> PassportAsync(GameState state, Guid botId, string draft, Speech.SpeechIntent? intent,
+        string? persona, Speech.SpokenStyle.Manner manner, Speech.Speaker speaker, IReadOnlyDictionary<string, bool> genders,
+        IReadOnlyList<string> earlier, CancellationToken ct)
+    {
+        var ids = state.Players.Select(p => p.Id).ToList();
+        var nicks = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => BotNames.Bare(u.Nickname), ct);
+        var recent = await db.ChatMessages.AsNoTracking()
+            .Where(m => m.GameId == state.Id && m.Channel == ChatChannels.Public && m.AuthorId != null && m.Text != null && m.Text != "")
+            .OrderByDescending(m => m.CreatedAt).Take(5).Select(m => new { m.AuthorId, m.Text }).ToListAsync(ct);
+        return new Speech.SpeechPassport(speaker, persona, manner, intent, draft,
+            Speech.SpeechPassport.AddresseesOf(intent, genders),
+            recent.AsEnumerable().Reverse().Select(m => new Speech.TableLine(nicks.GetValueOrDefault(m.AuthorId!.Value, "игрок"), m.Text!)).ToList(),
+            earlier, nicks.Where(n => n.Key != botId).Select(n => n.Value).ToList());
     }
 
     /// <summary>

@@ -68,7 +68,9 @@ class _LearnedPhrasesScreenState extends ConsumerState<LearnedPhrasesScreen> {
         ? 'Пересказ YandexGPT выключен: сервер не получил каталог (переменная репозитория YANDEX_FOLDER_ID) или ключ. '
             'Добавьте переменную во вкладке Variables (не Secrets и не Environments) и перевыложите сервер: Actions → Deploy server → Run workflow.'
         : 'Пересказ YandexGPT включён (${book.rephraseModel ?? 'модель по умолчанию'}), сегодня принято: ${book.rephrasedToday}.'
-            '${problem == null ? '' : '\n\nПоследний не удался: $problem'}';
+            '${problem == null ? '' : '\n\nПоследний не удался: $problem'}'
+            '\n\nБоты 2.0 (реплики пишет ИИ): сегодня написано ${book.writtenToday}.'
+            '${book.writeProblem == null ? '' : '\nПоследняя не прошла: ${book.writeProblem}'}';
     final color = on ? (problem == null ? AppColors.believed : AppColors.amber) : AppColors.redBright;
     return InkWell(
       key: const Key('rephrase-status'),

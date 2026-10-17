@@ -83,6 +83,9 @@ class SandboxScreen extends ConsumerStatefulWidget {
 
 class _SandboxScreenState extends ConsumerState<SandboxScreen> {
   final _seed = TextEditingController(text: '1000');
+
+  /// Боты 2.0: дописать к первым репликам вариант ИИ-модели.
+  bool _ai = false;
   String _scenario = 'full-game';
   bool _busy = false;
   String? _batchSummary;
@@ -114,7 +117,7 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
     final completed = <Json>[];
     for (var i = 0; i < count; i++) {
       final result = await runAction(
-          context, () => ref.read(apiProvider).runSandbox(_scenario, seed + i));
+          context, () => ref.read(apiProvider).runSandbox(_scenario, seed + i, ai: _ai && count == 1));
       if (!mounted) return;
       if (result == null) break;
       completed.add(result);
@@ -182,6 +185,13 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
                 labelText: 'Номер расклада',
                 helperText:
                     'Одинаковый номер повторяет расклад при той же версии ботов и разметке.')),
+        SwitchListTile(
+            key: const Key('sandbox-ai'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Боты 2.0: фразы ИИ'),
+            subtitle: const Text('Первые 12 реплик ещё раз словами ИИ-модели (YandexGPT) — рядом с шаблоном. Только для одиночного запуска.'),
+            value: _ai,
+            onChanged: _busy ? null : (v) => setState(() => _ai = v)),
         const SizedBox(height: 12),
         FilledButton(
             key: const Key('sandbox-run'),
@@ -503,6 +513,17 @@ class _SandboxReplayScreenState extends ConsumerState<SandboxReplayScreen> {
                                               padding: const EdgeInsets.only(top: 4),
                                               child: Text('За столом: «${m['spoken']}»',
                                                   style: const TextStyle(fontStyle: FontStyle.italic, color: AppColors.ice)),
+                                            ),
+                                          if (m['ai'] is String)
+                                            Padding(
+                                              padding: const EdgeInsets.only(top: 4),
+                                              child: Text(
+                                                  (m['ai'] as String).startsWith('не принято')
+                                                      ? 'ИИ: ${m['ai']}'
+                                                      : 'ИИ: «${m['ai']}»',
+                                                  style: TextStyle(
+                                                      fontStyle: FontStyle.italic,
+                                                      color: (m['ai'] as String).startsWith('не принято') ? AppColors.muted : AppColors.believed)),
                                             ),
                                           _cards((m['cards'] as List)
                                               .cast<String>()),

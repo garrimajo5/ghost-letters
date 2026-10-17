@@ -475,7 +475,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
   Future<void> editSettings() async {
     final l = lobby;
     if (l == null) return;
-    final s = await SettingsSheet.show(context, l.settings, inGame: true, players: view?.players.length);
+    final admin = await ref.read(apiProvider).isAdmin().catchError((_) => false);
+    if (!mounted) return;
+    final s = await SettingsSheet.show(context, l.settings, inGame: true, players: view?.players.length, admin: admin);
     if (s == null || !mounted) return;
     final updated = await runAction(context, () => ref.read(apiProvider).saveSettings(l.id, s));
     // Настройки, поменянные посреди партии, тоже запоминаются на следующие столы.

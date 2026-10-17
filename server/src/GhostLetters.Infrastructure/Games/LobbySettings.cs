@@ -111,6 +111,12 @@ public sealed record LobbySettings
     /// <summary>Боты говорят голосом (если на сервере настроен синтез речи).</summary>
     public bool BotVoice { get; init; } = true;
 
+    /// <summary>
+    /// Боты 2.0: реплики ботов пишет ИИ-модель по замыслу бота (с проверкой; не вышло — шаблон).
+    /// Включить или выключить может только администратор; во время партии — тоже.
+    /// </summary>
+    public bool AiSpeech { get; init; }
+
     /// <summary>Назначенный хостом Призрак (id игрока лобби); null — по жребию. Если игрок ушёл — тоже по жребию.</summary>
     public Guid? GhostUserId { get; init; }
 

@@ -2,6 +2,8 @@ using System.Net;
 using System.Text.Json;
 using GhostLetters.Domain.Game;
 using GhostLetters.Infrastructure.Games;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GhostLetters.Api.Tests;
 
@@ -60,6 +62,27 @@ public sealed class LobbyTests(PostgresFixture postgres) : IAsyncLifetime
             .Code().Should().Be("GAME_IN_PROGRESS");
         await late.PostAsync($"/api/v1/lobbies/{code}/join", new { mode = "table" });
         (await late.ViewAsync(gameId)).GetProperty("me").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task AiSpeech_OnlyAdminTurnsItOnOrOff()
+    {
+        var host = await TestPlayer.LoginAsync(_factory, "Хост");
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = admin.Id.ToString();
+
+        (await host.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings { AiSpeech = true } }, HttpStatusCode.Forbidden))
+            .Code().Should().Be("FORBIDDEN");
+        var lobby = await host.PostAsync("/api/v1/lobbies", new { });
+        (await host.PutAsync($"/api/v1/lobbies/{lobby.Id("id")}/settings", new LobbySettings { AiSpeech = true }, HttpStatusCode.Forbidden))
+            .Code().Should().Be("FORBIDDEN");
+        (await host.PutAsync($"/api/v1/lobbies/{lobby.Id("id")}/settings", new LobbySettings { Columns = 6 }))
+            .GetProperty("settings").GetProperty("aiSpeech").GetBoolean().Should().BeFalse();
+
+        var own = await admin.PostAsync("/api/v1/lobbies", new { settings = new LobbySettings { AiSpeech = true } });
+        own.GetProperty("settings").GetProperty("aiSpeech").GetBoolean().Should().BeTrue();
+        (await admin.PutAsync($"/api/v1/lobbies/{own.Id("id")}/settings", new LobbySettings { AiSpeech = false }))
+            .GetProperty("settings").GetProperty("aiSpeech").GetBoolean().Should().BeFalse();
     }
 
     [Fact]

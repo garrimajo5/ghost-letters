@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GhostLetters.Infrastructure.Games;
 
-public sealed record SandboxRequest(string Scenario, int Seed);
+/// <param name="Ai">Боты 2.0: дописать к первым репликам вариант ИИ-модели (до <see cref="BotSandboxService.AiLines"/>).</param>
+public sealed record SandboxRequest(string Scenario, int Seed, bool Ai = false);
 public sealed record SandboxSummary(Guid Id, DateTimeOffset CreatedAt, string Scenario, int Seed, string Status,
     string? Error, bool? Passed, int CorrectRows, int TotalRows, string? Winner, long ElapsedMs, int Steps, int Messages);
 public sealed record SandboxReplay(SandboxSummary Summary, IReadOnlyList<SandboxSeat> Seats);
@@ -17,8 +18,11 @@ public sealed record SandboxStep(int Index, int Total, string Action, Guid? Acto
 public sealed class SandboxGate { public SemaphoreSlim Semaphore { get; } = new(1, 1); }
 
 public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService admins, CardCatalog catalog,
-    CardTagStore tagStore, SandboxGate gate, TimeProvider time)
+    CardTagStore tagStore, SandboxGate gate, TimeProvider time, Speech.SpeechWriter writer)
 {
+    /// <summary>Сколько реплик прогона отдаём ИИ-модели — дальше дорого и долго.</summary>
+    public const int AiLines = 12;
+
     public async Task<IReadOnlyList<SandboxSummary>> ListAsync(Guid admin, CancellationToken ct)
     {
         admins.RequireAdmin(admin);
@@ -38,6 +42,7 @@ public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService 
             if (deck.Count < 120) throw AppException.Validation("Для песочницы нужно не менее 120 активных карт.");
             var tags = await tagStore.LoadAsync(ct);
             var report = await Task.Run(() => BotSandboxRunner.Run(request.Scenario, request.Seed, deck, tags, ct), ct);
+            if (request.Ai) report = report with { Messages = await WithAiAsync(report, ct) };
             var id = Guid.NewGuid(); var created = time.GetUtcNow();
             var summary = new SandboxSummary(id, created, request.Scenario, request.Seed, report.Status, report.Error,
                 report.Passed, report.CorrectRows, report.TotalRows, report.Winner, report.ElapsedMs, report.Frames.Count, report.Messages.Count);
@@ -47,6 +52,42 @@ public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService 
             return summary;
         }
         finally { gate.Semaphore.Release(); }
+    }
+
+    /// <summary>
+    /// Боты 2.0 в песочнице: первые реплики-замыслы ещё раз — словами ИИ-модели, с причиной, если ответ не прошёл проверку.
+    /// Тот же паспорт, что за столом: замысел, черновик «За столом», имена и последние реплики.
+    /// </summary>
+    private async Task<IReadOnlyList<SandboxMessage>> WithAiAsync(SandboxReport report, CancellationToken ct)
+    {
+        if (!writer.Enabled) return report.Messages.Select(m => m.Intent is null ? m : m with { Ai = "не принято: YandexGPT не подключён" }).ToList();
+        var names = report.Seats.ToDictionary(s => s.Id, s => BotNames.Bare(s.Name));
+        var genders = report.Seats.Where(s => Speech.PersonaLines.IsFemale(s.Name) is not null)
+            .ToDictionary(s => BotNames.Bare(s.Name), s => Speech.PersonaLines.IsFemale(s.Name)!.Value);
+        var list = report.Messages.ToList();
+        var targets = list.Select((m, i) => (m, i)).Where(x => x.m.Intent is not null).Take(AiLines).ToList();
+        using var limit = new SemaphoreSlim(4);
+        await Task.WhenAll(targets.Select(async x =>
+        {
+            await limit.WaitAsync(ct);
+            try
+            {
+                var (m, i) = x;
+                var seat = report.Seats.First(s => s.Id == m.Author);
+                var draft = m.Spoken ?? m.Text;
+                var passport = new Speech.SpeechPassport(
+                    new Speech.Speaker(BotNames.Bare(seat.Name), "", Speech.PersonaLines.IsFemale(seat.Name) != true),
+                    Speech.PersonaLines.KeyOf(seat.Name), Speech.SpokenStyle.MannerOf(seat.Id), m.Intent, draft,
+                    Speech.SpeechPassport.AddresseesOf(m.Intent, genders),
+                    list.Take(i).Where(p => p.Round == m.Round).TakeLast(5).Select(p => new Speech.TableLine(names[p.Author], p.Spoken ?? p.Text)).ToList(),
+                    list.Take(i).Where(p => p.Author == m.Author).TakeLast(4).Select(p => p.Spoken ?? p.Text).ToList(),
+                    names.Where(n => n.Key != m.Author).Select(n => n.Value).ToList());
+                var (text, why) = await writer.WriteAsync(passport, ct);
+                lock (list) list[i] = m with { Ai = text ?? "не принято: " + why };
+            }
+            finally { limit.Release(); }
+        }));
+        return list;
     }
 
     private async Task<SandboxRun> ReadAsync(Guid admin, Guid id, CancellationToken ct)
