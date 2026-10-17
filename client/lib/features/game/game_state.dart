@@ -189,7 +189,7 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId, {Set<
             return [
               // Только проверки, связанные с уликой или письмом («:N»); голая версия «думаю, эта» — мнение, не проверка.
               for (var i = 0; i < m.cardIds.length; i++)
-                // «проверял эту, ждём» — письмо ещё не открыто: ни «за», ни «против».
+                // «проверял эту, ждём» / «выложили лучше» — ни «за», ни «против».
                 if (m.cardIds[i] == cardId && !theoryNote(m, i).$1 && !_pending(m, i) && (_linkOf(m, i) ?? sources.length) < sources.length)
                   () {
                     return CardEvidence(
@@ -205,7 +205,9 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId, {Set<
           }(),
     ];
 
-bool _pending(ChatMessage m, int index) => index < m.cardNotes.length && m.cardNotes[index].contains('ждём');
+/// «ждём» — письмо ещё не открыто; «выложили лучше» — исчезло, но открытая подсказка ведёт сюда не хуже.
+bool _pending(ChatMessage m, int index) =>
+    index < m.cardNotes.length && (m.cardNotes[index].contains('ждём') || m.cardNotes[index].contains('выложили лучше'));
 
 /// Номер улики, с которой связана карта [index] («думаю, эта:1» → 1), или null.
 int? _linkOf(ChatMessage m, int index) {

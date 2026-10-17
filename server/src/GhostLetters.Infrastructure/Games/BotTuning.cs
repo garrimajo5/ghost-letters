@@ -34,6 +34,12 @@ public sealed record BotTuning
     /// <summary>Письма — проверки: однозначные, по правдоподобным картам неясных рядов, разные у разных игроков.</summary>
     public bool Probe { get; init; } = true;
 
+    /// <summary>
+    /// Письмо исчезло, но Призрак в том же раунде выложил другую подсказку, ещё ближе к проверенной карте, —
+    /// значит, он просто выбрал лучшее. Штраф карте умножается на это (1 — как раньше, отвергаем полностью).
+    /// </summary>
+    public double Outshone { get; init; } = .2;
+
     /// <summary>Вес чужих исчезнувших писем (по их публичным «кидал эту — проверял…») относительно своих.</summary>
     public double OthersVanished { get; init; } = .5;
 
@@ -164,6 +170,7 @@ public sealed record BotTuning
                 nameof(KillerBlendChance) => t with { KillerBlendChance = D() },
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
+                nameof(Outshone) => t with { Outshone = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },
                 nameof(WitnessQuiet) => t with { WitnessQuiet = B() },

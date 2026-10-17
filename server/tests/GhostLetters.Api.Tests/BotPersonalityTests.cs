@@ -351,8 +351,9 @@ public sealed class BotPersonalityTests
     [Fact]
     public void VanishedLetterWeakensButDoesNotExcludeCardSupportedByOtherClues()
     {
+        // Кинжал открыли в прошлом раунде — с исчезновением меча он не связан.
         var view = View(Phase.Discussion, [], Role.Detective,
-            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(2, ["dagger"])]);
+            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(1, ["dagger"])]);
         var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Negative = 0.1, Compromise = 0 });
         var withoutVanishing = view with { Me = view.Me! with { Letters = [] } };
         BotPlayer.Evidence(view, Tags, mind, "knife").Should().BeLessThan(
@@ -362,6 +363,24 @@ public sealed class BotPersonalityTests
         index.Should().BeGreaterThanOrEqualTo(0);
         line.Notes[index].Should().Be("думаю, эта", "версия по другой улике, а не удачная проверка исчезнувшим письмом");
         line.Text.Should().NotContain("исключаю эти карты").And.Contain("ослабляет");
+    }
+
+    [Fact]
+    public void VanishedLetter_OutshoneByBetterClueSameRound_DoesNotRejectTheCard()
+    {
+        // Меч исчез, но в том же раунде Призрак открыл кинжал — к ножу он не хуже: Призрак выбрал лучшее.
+        var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Negative = 1, Compromise = 0 });
+        PlayerView Of(int hintRound) => View(Phase.Discussion, [], Role.Detective,
+            letters: [new MyLetterView(2, "sword", false)], hints: [new HintGroupView(hintRound, ["dagger"])]);
+        var noLetter = Of(2) with { Me = Of(2).Me! with { Letters = [] } };
+        var outshone = BotPlayer.Evidence(Of(2), Tags, mind, "knife");
+        var rejected = BotPlayer.Evidence(Of(1), Tags, mind, "knife");
+        outshone.Should().BeGreaterThan(rejected, "кинжал того же раунда объясняет, почему меч не вытащили");
+        outshone.Should().BeGreaterThan(0).And.BeLessThanOrEqualTo(BotPlayer.Evidence(noLetter, Tags, mind, "knife"));
+
+        var line = BotPlayer.Say(Of(2), new Random(3), Tags, mind)!.Value;
+        line.Text.Should().Contain("выбрал лучшее");
+        line.Notes.Should().NotContain(n => n.Contains("исчезла"), "нож не вычёркиваем");
     }
 
     [Theory]

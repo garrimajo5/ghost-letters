@@ -37,6 +37,9 @@ public enum ThoughtKind
     LostConclusion,
     LostIgnored,
     OpenConclusion,
+
+    /// <summary>Письмо исчезло, но открытая подсказка ведёт к той же карте не хуже: Призрак выбрал лучшее, карту не вычёркиваю.</summary>
+    LostOutshone,
     Agree,
     Disagree,
     Version,
