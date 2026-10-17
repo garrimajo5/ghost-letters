@@ -838,7 +838,10 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
         var claims = PublicRoleClaims.Read(messages.Select(m => (m.AuthorId!.Value, m.Text ?? "")));
         return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities, claims,
-            BotMind.Latest(perMessage.Where(o => o.Count > 0 && o[0].Public)), own);
+            BotMind.Latest(perMessage.Where(o => o.Count > 0 && o[0].Public)), own,
+            messages.Where(m => m.Channel == ChatChannels.Public)
+                .SelectMany(m => m.CardIds.Select((c, i) => (Card: c, Note: i < m.CardNotes.Count ? m.CardNotes[i] : "")).Where(x => x.Note.StartsWith("кидал", StringComparison.Ordinal))
+                    .Select(x => new ClaimedLetter(m.AuthorId!.Value, x.Card, m.Round))).ToList());
     }
 
     /// <summary>

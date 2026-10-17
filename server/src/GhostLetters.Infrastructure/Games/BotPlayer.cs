@@ -413,7 +413,19 @@ public static partial class BotPlayer
         /// <summary>Итоговое подозрение к игроку: память, чужие обвинения и странные советы в чате.</summary>
         private double Suspicion(Guid id) => 3 * PastSuspicion(id) + 1.5 * Accused(id) +
             (0.5 + P.Strictness) * ChatContrarian(id) + Contrarian(id) - .25 * (mind?.AffinityBias(id) ?? 0) +
-            (KillerTeam ? 0 : BotTuning.Current.LieDetect * LiedChecks(id));
+            (KillerTeam ? 0 : BotTuning.Current.LieDetect * LiedChecks(id) + ClaimConflict(id));
+
+        /// <summary>
+        /// Два игрока назвали своим одно письмо — один из них точно врёт: подозрение обоим. Если назвали моё письмо —
+        /// врёт он наверняка.
+        /// </summary>
+        private double ClaimConflict(Guid id)
+        {
+            if (Classic || mind is null) return 0;
+            var theirs = mind.ClaimList.Where(c => c.Author == id).ToList();
+            if (theirs.Any(c => me.Letters.Any(l => l.CardId == c.Card && l.Round == c.Round))) return 3;
+            return theirs.Any(c => mind.ClaimList.Any(o => o.Card == c.Card && o.Author != id)) ? 1.2 : 0;
+        }
 
         private string CardName(string card)
         {
