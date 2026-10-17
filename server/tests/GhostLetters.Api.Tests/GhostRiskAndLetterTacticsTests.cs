@@ -112,7 +112,7 @@ public sealed class GhostRiskAndLetterTacticsTests
         BotLetterTactics.Compose(View(Role.Killer), Mind(0), spoken.Take(1).ToList(), new Random(1), Now.AddSeconds(5)).Should().BeNull();
 
         // Назвал моё письмо своим — бот уверен, что он врёт: подозрение уже без других улик.
-        var told = mind with { Claims = [new LetterClaim(Other, "clear", 1)] };
+        var told = mind with { Claims = [new ClaimedLetter(Other, "clear", 1)] };
         BotPlayer.DiscussionSuspicion(view, Tags, told, new Random(1)).Should().Contain("Аня");
         BotPlayer.DiscussionSuspicion(view, Tags, mind, new Random(1)).Should().NotContain("Аня");
     }

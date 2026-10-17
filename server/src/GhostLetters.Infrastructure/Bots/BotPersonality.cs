@@ -159,10 +159,10 @@ public sealed record BotMind(
     IReadOnlyDictionary<Guid, GhostLetters.Domain.Roles.Role>? RoleClaims = null,
     IReadOnlyDictionary<Guid, IReadOnlyList<ChatOpinion>>? LatestVersions = null,
     IReadOnlyList<ChatOpinion>? Own = null,
-    IReadOnlyList<LetterClaim>? Claims = null)
+    IReadOnlyList<ClaimedLetter>? Claims = null)
 {
     /// <summary>Кто какую карту назвал своим письмом (вслух, по подписи «кидал эту»).</summary>
-    public IReadOnlyList<LetterClaim> ClaimList => Claims ?? [];
+    public IReadOnlyList<ClaimedLetter> ClaimList => Claims ?? [];
 
     /// <summary>Что этот бот сам показывал вслух («думаю, эта») в прошлых репликах — чтобы чёрный не твердил одну ложь.</summary>
     public IReadOnlyList<ChatOpinion> OwnSaid => Own ?? [];
@@ -249,7 +249,7 @@ public static class AccusationReader
 }
 
 /// <summary>Игрок назвал карту своим письмом в раунде.</summary>
-public sealed record LetterClaim(Guid Author, string Card, int Round);
+public sealed record ClaimedLetter(Guid Author, string Card, int Round);
 
 /// <summary>Мнение из чата: автор показал карту поля с подписью («думаю, эта», «проверял эту»).</summary>
 /// <remarks>Round — раунд реплики; Public — сказано вслух (не в ночном чате команды): спорить вслух можно только с этим.</remarks>
