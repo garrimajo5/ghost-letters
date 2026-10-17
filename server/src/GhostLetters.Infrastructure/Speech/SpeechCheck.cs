@@ -78,7 +78,7 @@ public static partial class SpeechCheck
     [GeneratedRegex(@"(?<![\p{L}])вот\s+(?:это|эту|эта|этот)(?![\p{L}])")]
     private static partial Regex This();
 
-    [GeneratedRegex(@"[A-Za-z*#_`\[\]<>{}]|\p{So}|\p{Cs}")]
+    [GeneratedRegex(@"[A-Za-z*#_`\[\]<>{}]|(?!№)\p{So}|\p{Cs}")]
     private static partial Regex Foreign();
 
     [GeneratedRegex(@"(?<![\p{L}])(?:ии|нейросет\p{L}*|языков\p{L}* модел\p{L}*|я\s+модель|как\s+бот)(?![\p{L}])", RegexOptions.IgnoreCase)]
