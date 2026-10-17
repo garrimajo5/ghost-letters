@@ -214,6 +214,9 @@ public static class GameProjection
             case Phase.Refill when !done && state.Round < state.TotalRounds:
                 list.Add(nameof(Discard));
                 break;
+            case Phase.Discussion when ghost:
+                list.Add(nameof(HurryDiscussion));
+                break;
             case Phase.Discussion when !ghost:
                 if (state.EffectiveDiscussion == DiscussionMode.Radio)
                 {

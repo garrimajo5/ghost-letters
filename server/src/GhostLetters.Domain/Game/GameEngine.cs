@@ -170,6 +170,14 @@ public static partial class GameEngine
                 }
 
                 break;
+            case HurryDiscussion:
+                RequirePhase(state, Phase.Discussion);
+                RequireGhost(state, actor);
+                events.Add(new GameEvent("DiscussionHurried", actor.Id));
+                // В последнем раунде — сразу голосование, без отдельного общего обсуждения.
+                if (state.Round >= state.TotalRounds) StartVoting(state, events);
+                else EndDiscussion(state, events);
+                break;
             default:
                 if (!ExecuteFinale(state, actor, command, events))
                 {

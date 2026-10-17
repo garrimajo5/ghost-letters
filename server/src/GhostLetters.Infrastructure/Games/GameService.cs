@@ -170,10 +170,24 @@ public sealed class GameService(
                     $"Состояние изменилось: версия {state.Version}, а не {expected}. Обновите вид.");
             }
 
+            if (command is HurryDiscussion) await RequireHumansReadyAsync(state, ct);
             var events = GameEngine.Execute(state, userId, command);
             return (new CommandResult(state.Version, Duplicate: false),
                 new Applied(events, userId, clientId, $"Command:{command.GetType().Name}"));
         });
+    }
+
+    /// <summary>
+    /// Призрак торопит обсуждение, только когда все люди-игроки (кроме него) готовы — нажали «Готов»;
+    /// боты не в счёт: они договорят за пару реплик. В рации «готов» не бывает — там можно, только если людей нет.
+    /// </summary>
+    private async Task RequireHumansReadyAsync(GameState state, CancellationToken ct)
+    {
+        var ids = state.Investigators.Select(p => p.Id).ToList();
+        var bots = (await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
+        var waiting = ids.Where(id => !bots.Contains(id) && (state.EffectiveDiscussion == DiscussionMode.Radio || !state.Done.Contains(id))).ToList();
+        if (waiting.Count > 0)
+            throw AppException.Conflict(AppException.Codes.Conflict, "Не все игроки готовы: дождитесь, пока все люди нажмут «Готов».");
     }
 
     /// <summary>Хост меняет число раундов во время партии.</summary>

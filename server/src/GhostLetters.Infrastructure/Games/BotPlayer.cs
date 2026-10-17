@@ -18,7 +18,7 @@ namespace GhostLetters.Infrastructure.Games;
 /// </summary>
 public static partial class BotPlayer
 {
-    private static readonly HashSet<string> Passive = [nameof(Like), nameof(RaiseHand), nameof(GiveFloor)];
+    private static readonly HashSet<string> Passive = [nameof(Like), nameof(RaiseHand), nameof(GiveFloor), nameof(HurryDiscussion)];
 
     /// <summary>Порог, с которого письмо «похоже» на улику.</summary>
     private const double Hint = 0.2;
