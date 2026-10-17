@@ -19,7 +19,24 @@ public sealed class CardTags
 
     private readonly IReadOnlyDictionary<string, HashSet<string>> _tags;
 
-    public CardTags(IReadOnlyDictionary<string, HashSet<string>> tags) => _tags = tags;
+    public CardTags(IReadOnlyDictionary<string, HashSet<string>> tags) => _tags = Trusted(tags);
+
+    /// <summary>
+    /// Форма из нарезки угадана по контуру картинки и часто мимо: «острые выступы» у кнута и шампуня, «по диагонали»
+    /// у всего, что лежит наискось. Человек так не связывает карты. Ориентацию и «компактность» не считаем формой вовсе,
+    /// «острое» — только у того, что и по смыслу острое.
+    /// </summary>
+    private static IReadOnlyDictionary<string, HashSet<string>> Trusted(IReadOnlyDictionary<string, HashSet<string>> tags)
+    {
+        if (!tags.Values.Any(t => t.Any(Untrusted))) return tags;
+        return tags.ToDictionary(e => e.Key, e => e.Value.Any(Untrusted)
+            ? e.Value.Where(t => !Untrusted(t) || (t == "shape-spiky" && e.Value.Overlaps(SharpThings))).ToHashSet()
+            : e.Value);
+    }
+
+    private static bool Untrusted(string tag) => tag is "shape-diagonal" or "shape-compact" or "shape-spiky";
+
+    private static readonly HashSet<string> SharpThings = ["sharp", "cactus", "thorn", "spike", "star", "starfish"];
 
     public int Count => _tags.Count;
 
@@ -197,6 +214,9 @@ public sealed class CardTags
         foreach (var d in db)
             if (details > 0 && va.Contains(d.Tag))
                 reasons.Add((details * d.Weight, "по деталям: " + d.Label));
+        // Форма — слабая подсказка: человек вспомнит её, только если общего смысла или детали не нашлось.
+        if (reasons.Any(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal)))
+            reasons.RemoveAll(r => r.Text.StartsWith("по форме", StringComparison.Ordinal));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
     }
@@ -229,9 +249,8 @@ public sealed class CardTags
         ["shape-round"] = "круглая форма", ["shape-long"] = "вытянутая форма",
         ["shape-square"] = "квадратная форма", ["shape-triangle"] = "треугольная форма",
         ["shape-rectangle"] = "прямоугольная форма", ["shape-curved"] = "изогнутая форма",
-        ["shape-compact"] = "компактный силуэт", ["shape-spiky"] = "острые выступы",
+        ["shape-spiky"] = "острые выступы",
         ["shape-tall"] = "высокий вытянутый силуэт", ["shape-wide"] = "широкий силуэт",
-        ["shape-diagonal"] = "предмет расположен по диагонали",
         ["tool"] = "инструменты", ["old"] = "старинные предметы", ["nature"] = "природа",
         ["clothes"] = "одежда", ["clothing"] = "одежда", ["toy"] = "игрушки",
         ["insect"] = "насекомые", ["war"] = "война", ["jewelry"] = "украшения",
