@@ -259,7 +259,7 @@ public static partial class BotPlayer
                 var version = new List<string>();
                 // Карты, проверенные исчезнувшим письмом, бот покажет красными — в «целиком думаю так» их не зовут.
                 HashSet<(int Row, int Column)> gone = claimCard is not null && claimText.Contains("исчезла", StringComparison.Ordinal)
-                    ? Checked(claimCard).ToHashSet()
+                    ? Checked(claimCard).Where(x => OutshoneBy(claimCard, RoundOf(claimCard), Card(x.Row, x.Column)) is null).ToHashSet()
                     : [];
                 for (var r = 0; r < view.Board.Count; r++)
                 {
@@ -331,6 +331,11 @@ public static partial class BotPlayer
                     checkedCards = [(row, lieTruth[row])];
                 }
             }
+            // Письмо исчезло, но подсказка того же раунда ведёт к проверенной карте не хуже — Призрак выбрал лучшее.
+            var lostRound = RoundOf(claimCard);
+            var outshone = checkedCards.Select(x => (x.Row, x.Column, By: OutshoneBy(claimCard, lostRound, Card(x.Row, x.Column))))
+                .Where(x => x.By is not null).ToList();
+            if (!claimText.Contains("исчезла", StringComparison.Ordinal)) outshone.Clear();
             var cards = new List<string> { claimCard };
             var notes = new List<string> { "кидал эту" };
             foreach (var (r, c) in checkedCards)
@@ -343,7 +348,9 @@ public static partial class BotPlayer
                 var pending = !Classic && !gone && !claimText.Contains("открылось", StringComparison.Ordinal);
                 var version = !Classic && !blind && !exclude && Card(r, c) == card;
                 // Исчезло, но другие улики всё же ведут сюда — это версия бота, а не удачная проверка письмом: без связи с письмом.
+                var better = outshone.Any(x => x.Row == r && x.Column == c);
                 if (gone && version) notes.Add("думаю, эта");
+                else if (gone && better) notes.Add("проверял эту, выложили лучше:0");
                 else notes.Add((gone ? "проверял эту, исчезла" : pending ? "проверял эту, ждём"
                     : version ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
             }
@@ -370,7 +377,10 @@ public static partial class BotPlayer
                 $"Проверял: {(checkedNames.Count == 1 ? checkedNames[0] : string.Join(", ", checkedNames[..^1]) + " и " + checkedNames[^1])}" +
                 $" — {Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))}.";
             var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
-            var conclusion = vanished
+            var outshoneText = outshone.Count == 0 ? "" :
+                $"Но {OutshoneHint(lostRound!.Value, outshone[0].By!)} ведёт на {SpeechWords.Acc(Where(outshone[0].Row, outshone[0].Column))} не хуже — Призрак просто выбрал лучшее, эту карту не вычёркиваю.";
+            var conclusion = vanished && outshone.Count > 0 && outshone.Count == checkedCards.Count ? outshoneText
+                : vanished
                 ? checkedCards.Count == 0 ? "Письмо исчезло, но явных связей с картами поля я не вижу."
                     : NegativeWeight > 0 ? new[]
                         {
@@ -390,8 +400,13 @@ public static partial class BotPlayer
                 checkedCards.Count == 0 ? new(ThoughtKind.CheckNothing)
                     : new(ThoughtKind.Check, Cards: checkedNames, Why: Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))),
             };
-            if (vanished && checkedCards.Count > 0)
+            if (vanished && checkedCards.Count > 0 && outshone.Count < checkedCards.Count)
                 letterThoughts.Add(new(NegativeWeight > 0 ? ThoughtKind.LostConclusion : ThoughtKind.LostIgnored));
+            if (vanished && outshone.Count > 0)
+            {
+                letterThoughts.Add(new(ThoughtKind.LostOutshone, Where(outshone[0].Row, outshone[0].Column), Hint: OutshoneHint(lostRound!.Value, outshone[0].By!)));
+                if (outshone.Count < checkedCards.Count) conclusion += " " + outshoneText;
+            }
             else if (!vanished && claimText.Contains("открыл", StringComparison.Ordinal) && checkedCards.Count > 0)
                 letterThoughts.Add(new(ThoughtKind.OpenConclusion));
             Intent = new SpeechIntent(Mood(), [.. letterThoughts, .. thoughts], situation);
@@ -443,6 +458,16 @@ public static partial class BotPlayer
             var agrees = (theirs == card) != exclude;
             _reply = new Thought(agrees ? ThoughtKind.Agree : ThoughtKind.Disagree, CardName(theirs), who);
             return agrees ? $"{who}, согласен. " : $"{who}, тут не соглашусь. ";
+        }
+
+        /// <summary>Раунд своего исчезнувшего письма с этой картой; не моё (соврал) — null.</summary>
+        private int? RoundOf(string? letter) => letter is null ? null : me.Letters.LastOrDefault(l => l.CardId == letter && l.Revealed == false)?.Round;
+
+        /// <summary>«Подсказка р.2 №1» — открытая карта раунда, которой Призрак «перебил» письмо.</summary>
+        private string OutshoneHint(int round, string card)
+        {
+            var cards = view.Hints.Where(h => h.Round == round).SelectMany(h => h.Cards).ToList();
+            return BotDiscussion.HintRef(round, Math.Max(0, cards.IndexOf(card)) + 1);
         }
     }
 }

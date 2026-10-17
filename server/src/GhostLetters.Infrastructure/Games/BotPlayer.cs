@@ -585,8 +585,8 @@ public static partial class BotPlayer
             if (_evidence.TryGetValue(card, out var score)) return score;
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
-                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus));
+            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
+                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus)) * OutshoneFactor(l.CardId, l.Round, card));
             return _evidence[card] = hints - NegativeWeight * (vanished + OthersVanished(card));
         }
 
@@ -607,9 +607,29 @@ public static partial class BotPlayer
                 {
                     var o = g.First();
                     var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : HistoryTrust(o.Author) * DistrustFactor(o.Author);
-                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus);
+                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus) * OutshoneFactor(g.Key, o.Round, card);
                 });
         }
+
+        /// <summary>
+        /// Призрак в том раунде выложил подсказку, которая ведёт к карте не хуже исчезнувшего письма: он просто выбрал
+        /// лучшую — карту не отвергаем. Возвращает, во сколько ослабить штраф (1 — не ослаблять).
+        /// </summary>
+        private double OutshoneFactor(string letter, int? round, string card) =>
+            Outshone(letter, round, card) ? BotTuning.Current.Outshone : 1;
+
+        /// <summary>Чем Призрак «перебил» исчезнувшее письмо для этой карты: открытая в том же раунде подсказка, не хуже по сходству; нет — null.</summary>
+        private string? OutshoneBy(string letter, int? round, string card)
+        {
+            if (Classic || round is null) return null;
+            var mine = Sim(letter, card);
+            if (mine <= 0) return null;
+            return view.Hints.Where(h => h.Round == round).SelectMany(h => h.Cards).Where(h => h != letter)
+                .Select(h => (Card: h, Score: Sim(h, card))).Where(x => x.Score >= mine)
+                .OrderByDescending(x => x.Score).Select(x => x.Card).FirstOrDefault();
+        }
+
+        private bool Outshone(string letter, int? round, string card) => OutshoneBy(letter, round, card) is not null;
 
         /// <summary>Лучший столбец ряда по подсказкам (среди кандидатов, если заданы).</summary>
         public int BestColumn(int row, IReadOnlyList<int>? candidates)

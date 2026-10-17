@@ -78,7 +78,8 @@ public static partial class SpeechComposer
         var defense = list.Where(t => t.Kind == ThoughtKind.Defense).ToList();
         list.RemoveAll(t => t.Kind == ThoughtKind.Defense);
         var letter = list.Where(t => t.Kind is ThoughtKind.ClaimLost or ThoughtKind.ClaimOpen or ThoughtKind.ClaimWait or ThoughtKind.Check
-            or ThoughtKind.CheckNothing or ThoughtKind.LostConclusion or ThoughtKind.LostIgnored or ThoughtKind.OpenConclusion).ToList();
+            or ThoughtKind.CheckNothing or ThoughtKind.LostConclusion or ThoughtKind.LostIgnored or ThoughtKind.OpenConclusion
+            or ThoughtKind.LostOutshone).ToList();
         var accusation = list.Where(t => t.Kind == ThoughtKind.Accuse).ToList();
         var opinion = list.Except(letter).Except(accusation).ToList();
         var ordered = new List<Thought>(defense);
@@ -249,6 +250,10 @@ public static partial class SpeechComposer
                 ? ["Значит, опять не туда. Но вычёркивать рано.", "Ладно, минус этим картам — но не приговор."]
                 : ["Значит, скорее мимо, но одной проверки мало.", "Под вопросом, но вычёркивать рано.", "Слабее, но не приговор."],
             ThoughtKind.LostIgnored => ["Но я из этого выводов не делаю.", "Исчезло — ну и ладно, это ещё ничего не значит."],
+            ThoughtKind.LostOutshone => [
+                "Но {hint} ведёт на {card_acc} даже точнее — Призрак просто выбрал лучшее. {card} не вычёркиваю.",
+                "Зато открыли {hint}, а она ведёт на {card_acc} ещё точнее. Так что {card} остаётся.",
+                "Ну и понятно: {hint} указывает на {card_acc} лучше моего. Карту не отбрасываю."],
             ThoughtKind.OpenConclusion => (mood is SpeechMood.Excited or SpeechMood.Confident)
                 ? ["Значит, я на верном пути!", "Тепло, очень тепло!"] : ["Значит, я на верном пути.", "Это в плюс этим картам."],
             ThoughtKind.Agree => earlier
