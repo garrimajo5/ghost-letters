@@ -234,6 +234,30 @@ public class RoundTests
     }
 
     [Fact]
+    public void Ghost_HurriesDiscussion_ToNextRound_AndInLastRoundStraightToVoting()
+    {
+        var state = TestGame.Create(players: 4, settings: new GameSettings { Discussion = DiscussionMode.FreeChat, Rounds = 2 });
+        state.ToRound1();
+        state.SendAll();
+        state.Run(state.Ghost, new RevealHints([]));
+        state.KeepAll();
+        GameProjection.For(state, state.Ghost.Id).AllowedCommands.Should().Contain(nameof(HurryDiscussion));
+        var detective = () => state.Run(state.Investigators.First(), new HurryDiscussion());
+        detective.Should().Throw<GameRuleException>("торопить может только Призрак");
+
+        state.Run(state.Ghost, new HurryDiscussion());
+        state.Round.Should().Be(2);
+        state.Phase.Should().Be(Phase.Mailbox);
+
+        state.SendAll();
+        state.Run(state.Ghost, new RevealHints([]));
+        state.KeepAll();
+        state.Phase.Should().Be(Phase.Discussion);
+        state.Run(state.Ghost, new HurryDiscussion());
+        state.Phase.Should().Be(Phase.Voting, "в последнем раунде — сразу голосование, без общего обсуждения");
+    }
+
+    [Fact]
     public void LastRound_LeadsToVoting()
     {
         var state = TestGame.Create(players: 7, settings: new GameSettings { Rounds = 2 });

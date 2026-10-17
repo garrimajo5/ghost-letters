@@ -18,6 +18,13 @@ class Cta {
   final bool danger;
 }
 
+/// Все люди за столом, кроме Призрака, готовы к следующему раунду (в рации — людей нет); ботов не ждём.
+bool humansReady(GameScreenState screen) {
+  final v = screen.view!;
+  final people = v.players.where((p) => !p.isGhost && !screen.isBot(p.id));
+  return v.discussion == 'Radio' ? people.isEmpty : people.every((p) => p.hasActed);
+}
+
 /// Ачивки, на которые выдвигают в конце партии.
 const awardTitles = {
   'steel_balls': 'Стальные яйца',
@@ -113,6 +120,10 @@ class ActionPanel extends StatelessWidget {
     }
     if (v.can('EndTurn')) return Cta('Закончить слово', () => screen.send('EndTurn'), icon: Icons.mic_off_outlined);
     if (v.can('ReadyNextRound')) return Cta('Готов', () => screen.send('ReadyNextRound'), icon: Icons.check);
+    // Призрак не ждёт ботов: когда все люди готовы (или их нет), он сам ведёт партию дальше.
+    if (v.can('HurryDiscussion') && humansReady(screen)) {
+      return Cta(v.round >= v.totalRounds ? 'К голосованию' : 'Следующий раунд', () => screen.send('HurryDiscussion'), icon: Icons.fast_forward);
+    }
     if (v.can('CastVote')) {
       final stage = v.finale?.currentStage;
       if (stage == null) return null;

@@ -34,6 +34,12 @@ public sealed record RaiseHand(bool Raised) : GameCommand;
 /// <summary>Свободный чат: игрок готов к следующему раунду.</summary>
 public sealed record ReadyNextRound : GameCommand;
 
+/// <summary>
+/// Призрак заканчивает обсуждение раньше: к следующему раунду, а в последнем — сразу к голосованию.
+/// Сервер разрешает, только когда все люди-игроки готовы (остальные — боты).
+/// </summary>
+public sealed record HurryDiscussion : GameCommand;
+
 /// <summary>Событие партии для журнала и рассылки. OnlyFor — личное событие.</summary>
 public sealed record GameEvent(string Type, Guid? Actor = null, Guid? OnlyFor = null, string? Detail = null);
 
