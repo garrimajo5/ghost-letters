@@ -341,8 +341,11 @@ public static partial class BotPlayer
                 var gone = !Classic && claimText.Contains("исчезла", StringComparison.Ordinal);
                 // Письмо ещё не открыто — проверка не удалась и не провалилась: «ждём», без зелёной метки.
                 var pending = !Classic && !gone && !claimText.Contains("открылось", StringComparison.Ordinal);
-                notes.Add((gone ? "проверял эту, исчезла" : pending ? "проверял эту, ждём"
-                    : !Classic && !blind && !exclude && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
+                var version = !Classic && !blind && !exclude && Card(r, c) == card;
+                // Исчезло, но другие улики всё же ведут сюда — это версия бота, а не удачная проверка письмом: без связи с письмом.
+                if (gone && version) notes.Add("думаю, эта");
+                else notes.Add((gone ? "проверял эту, исчезла" : pending ? "проверял эту, ждём"
+                    : version ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
             if (!blind && !cards.Contains(card) && cards.Count < ChatService.MaxCards)

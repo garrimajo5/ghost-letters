@@ -360,7 +360,7 @@ public sealed class BotPersonalityTests
         var line = BotPlayer.Say(view, new Random(3), Tags, mind)!.Value;
         var index = line.Cards.ToList().IndexOf("knife");
         index.Should().BeGreaterThanOrEqualTo(0);
-        line.Notes[index].Should().Contain("думаю, эта");
+        line.Notes[index].Should().Be("думаю, эта", "версия по другой улике, а не удачная проверка исчезнувшим письмом");
         line.Text.Should().NotContain("исключаю эти карты").And.Contain("ослабляет");
     }
 
