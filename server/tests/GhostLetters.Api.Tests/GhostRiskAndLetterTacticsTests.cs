@@ -96,6 +96,28 @@ public sealed class GhostRiskAndLetterTacticsTests
     }
 
     [Fact]
+    public void HonestBot_WhoseLetterWasClaimed_SaysSoAtOnce_AndSuspectsTheThief()
+    {
+        var view = View(Role.Detective);
+        var mind = Mind(.2);
+        List<DiscussionLine> spoken = [new(Other, "Я отправлял вот эту — она открылась.", ["clear"], Now, Notes: ["кидал эту"])];
+        var callout = BotLetterTactics.Compose(view, mind, spoken, new Random(1), Now.AddSeconds(5))!.Value;
+        callout.Cards.Should().Equal("clear");
+        callout.Notes.Should().Equal("кидал эту");
+        AccusationReader.Read(Me, callout.Text, mind.Names).Should().Contain(a => a.Target == Other && a.Strength >= .6);
+        spoken.Add(new(Me, callout.Text, callout.Cards, Now.AddSeconds(5), Notes: callout.Notes));
+        BotLetterTactics.Compose(view, mind, spoken, new Random(1), Now.AddSeconds(30)).Should().BeNull("второй раз не повторяет");
+
+        // Чёрный, у которого «украли» письмо, не разоблачает.
+        BotLetterTactics.Compose(View(Role.Killer), Mind(0), spoken.Take(1).ToList(), new Random(1), Now.AddSeconds(5)).Should().BeNull();
+
+        // Назвал моё письмо своим — бот уверен, что он врёт: подозрение уже без других улик.
+        var told = mind with { Claims = [new LetterClaim(Other, "clear", 1)] };
+        BotPlayer.DiscussionSuspicion(view, Tags, told, new Random(1)).Should().Contain("Аня");
+        BotPlayer.DiscussionSuspicion(view, Tags, mind, new Random(1)).Should().NotContain("Аня");
+    }
+
+    [Fact]
     public void DebriefIsSilentUntilResult_ThenExplainsRevealedAndWithheldLetters()
     {
         var state = new GameState { Players = [new() { Id = Ghost, Role = Role.Ghost }, new() { Id = Other, Role = Role.Detective }],

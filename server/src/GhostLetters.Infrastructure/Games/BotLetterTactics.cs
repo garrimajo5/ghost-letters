@@ -28,6 +28,16 @@ public static class BotLetterTactics
         var letter = me.Letters.LastOrDefault(l => l.Round == view.Round);
         var claims = messages.SelectMany(m => m.Cards.Select((c, i) => (Message: m, Card: c, Index: i)))
             .Where(x => IsClaim(x.Message, x.Index)).ToList();
+        // Моё письмо назвал своим кто-то другой — это ложь наверняка: говорю об этом сразу и прямо.
+        // Чёрный не разоблачает (ему выгоднее молчать, а «вор» может быть своим).
+        if (!me.Role.IsKillerTeam() && letter is not null &&
+            claims.LastOrDefault(c => c.Card == letter.CardId && c.Message.Author != me.Id) is { Message: not null } stolen &&
+            !own.Any(m => m.At > stolen.Message.At && m.Cards.Contains(letter.CardId)))
+        {
+            var thief = BotNames.Bare(mind.Names.GetValueOrDefault(stolen.Message.Author, "Игрок"));
+            return ($"{thief}, ты назвал моё письмо своим — вот эту карту кидал я. Значит, ты врёшь. Подозреваю, что {thief} из чёрных.",
+                [letter.CardId], ["кидал эту"]);
+        }
         var remaining = view.Players.Where(p => !p.IsGhost && p.Id != me.Id && !p.HasActed && !messages.Any(m => m.Author == p.Id)).ToList();
         var waited = own.FirstOrDefault(m => m.Text == WaitLine);
         if (waited is not null && !own.Any(m => m.At > waited.At && m.Notes?.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)) == true) && letter is not null)
