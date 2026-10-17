@@ -339,7 +339,10 @@ public static partial class BotPlayer
                 // «:0» связывает проверку с письмом — так стол знает, какое письмо проверяло эту карту.
                 // Письмо исчезло — проверенные им карты бот показывает красным: по его рассуждению, это «не они».
                 var gone = !Classic && claimText.Contains("исчезла", StringComparison.Ordinal);
-                notes.Add((!Classic && !blind && !exclude && Card(r, c) == card ? "проверял эту; думаю, эта" : gone ? "проверял эту, исчезла" : "проверял эту") + (Classic ? "" : ":0"));
+                // Письмо ещё не открыто — проверка не удалась и не провалилась: «ждём», без зелёной метки.
+                var pending = !Classic && !gone && !claimText.Contains("открылось", StringComparison.Ordinal);
+                notes.Add((gone ? "проверял эту, исчезла" : pending ? "проверял эту, ждём"
+                    : !Classic && !blind && !exclude && Card(r, c) == card ? "проверял эту; думаю, эта" : "проверял эту") + (Classic ? "" : ":0"));
             }
 
             if (!blind && !cards.Contains(card) && cards.Count < ChatService.MaxCards)

@@ -160,6 +160,32 @@ public sealed class BotStrictnessTests
         ((CastVote)BotPlayer.Decide(view, new Random(2), Tags, Mind(p))!).Column;
 
     [Fact]
+    public void LetterNotOpened_NeverMarksItsCheckedCardsAsConfirmed()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["coin"] = ["coin", "money", "silver"],
+            ["ring"] = ["money", "ring"],
+            ["wallet"] = ["money", "wallet"],
+            ["boat"] = ["water"],
+        });
+        var personality = new BotPersonality { Strictness = 1, Meaning = 1, Shape = 0, Color = 0 };
+        foreach (var (revealed, mark) in new (bool?, string)[] { (null, "проверял эту, ждём:0"), (false, "проверял эту, исчезла:0"), (true, "проверял эту") })
+        {
+            var view = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(2, "coin", revealed)],
+                hints: revealed == true ? [new HintGroupView(2, ["coin"])] : []);
+            for (var seed = 0; seed < 20; seed++)
+            {
+                var said = BotPlayer.Say(view, new Random(seed), tags, Mind(personality))!.Value;
+                var checks = said.Notes.Where(n => n.StartsWith("проверял", StringComparison.Ordinal)).ToList();
+                checks.Should().NotBeEmpty();
+                if (revealed == true) checks.Should().OnlyContain(n => n.StartsWith(mark, StringComparison.Ordinal));
+                else checks.Should().OnlyContain(n => n == mark, "неоткрытое письмо не подтверждает проверку");
+            }
+        }
+    }
+
+    [Fact]
     public void EqualSimilarity_StrictReaderAndGhostAgreeOnTheOneCheckedCard()
     {
         var tags = new CardTags(new Dictionary<string, HashSet<string>>
