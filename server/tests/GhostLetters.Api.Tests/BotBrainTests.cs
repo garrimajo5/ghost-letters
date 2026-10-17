@@ -1,3 +1,4 @@
+using GhostLetters.Infrastructure.Speech;
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Games;
@@ -269,6 +270,27 @@ public sealed class BotBrainTests
         tags.Similarity("apple", "ball").Should().BeGreaterThan(0, "красное и круглое");
         tags.Similarity("apple", "brick").Should().Be(0);
         tags.Similarity("apple", "pear").Should().BeGreaterThan(tags.Similarity("apple", "ball"), "общий смысл весит больше цвета и формы");
+    }
+
+    [Fact]
+    public void Shape_FromCutterNoise_IsNotAnAssociation_AndMeaningWinsTheExplanation()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["whip"] = ["whip", "leather", "shape-spiky", "shape-diagonal"],
+            ["shampoo"] = ["shampoo", "bottle", "shape-spiky", "shape-diagonal", "shape-compact"],
+            ["cactus"] = ["cactus", "plant", "sharp", "shape-spiky"],
+            ["knife"] = ["knife", "sharp", "weapon", "shape-spiky", "shape-long"],
+            ["sword"] = ["sword", "sharp", "weapon", "shape-long"],
+        });
+        tags.Of("whip").Should().NotContain(["shape-spiky", "shape-diagonal"], "у кнута нет острых углов, а «наискось» — не форма");
+        tags.Similarity("whip", "shampoo", (.2, .8, 0)).Should().Be(0);
+        tags.Of("cactus").Should().Contain("shape-spiky");
+        tags.Similarity("cactus", "knife", (.2, .8, 0)).Should().BeGreaterThan(0);
+
+        var why = tags.Explain("knife", "sword", (.5, .5, 0), 0);
+        why.Should().Contain("по смыслу").And.NotContain("по форме", "общий смысл есть — про форму не говорят");
+        SpeechWords.Reason("по форме: вытянутая форма", new Random(1)).Should().Contain("оба вытянутые");
     }
 
     [Fact]
