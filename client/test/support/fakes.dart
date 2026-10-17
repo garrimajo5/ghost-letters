@@ -32,7 +32,7 @@ class FakeApi extends Api {
   @override
   Future<List<Json>> sandboxRuns() async => _record('sandboxRuns', [], () => sandboxList);
   @override
-  Future<Json> runSandbox(String scenario, int seed) async => _record('runSandbox', [scenario, seed], () => sandboxResult);
+  Future<Json> runSandbox(String scenario, int seed, {bool ai = false}) async => _record('runSandbox', [scenario, seed], () => sandboxResult);
   @override
   Future<Json> sandboxReplay(String id) async => _record('sandboxReplay', [id], () => sandboxReplayResult);
   @override

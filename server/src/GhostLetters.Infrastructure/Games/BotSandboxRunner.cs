@@ -9,8 +9,10 @@ using GhostLetters.Infrastructure.Bots;
 namespace GhostLetters.Infrastructure.Games;
 
 /// <param name="Spoken">Как бот сказал бы это за столом (живыми словами по замыслу); null — так же, как Text.</param>
+/// <param name="Ai">Боты 2.0: как это написала ИИ-модель (или «не принято: …»); null — не запрашивали.</param>
+/// <param name="Intent">Замысел реплики — для ИИ-прохода после прогона; в отчёт не сохраняется.</param>
 public sealed record SandboxMessage(Guid Author, int Round, string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes, DateTimeOffset At,
-    string? Spoken = null);
+    string? Spoken = null, string? Ai = null, [property: System.Text.Json.Serialization.JsonIgnore] Speech.SpeechIntent? Intent = null);
 public sealed record SandboxFrame(string Action, Guid? Actor, JsonElement? Command, GameState State, PlayerView? Observation, int MessageCount);
 public sealed record SandboxSeat(Guid Id, string Name, BotPersonality Personality);
 public sealed record SandboxReport(int Format, string EngineVersion, string Scenario, int Seed, string Status, string? Error,
@@ -66,9 +68,10 @@ public static class BotSandboxRunner
         SandboxFrame Frame(string action, Guid? actor, GameCommand? command, PlayerView? observation) => new(
             action, actor, command is null ? null : JsonSerializer.SerializeToElement(command, command.GetType(), GameJson.Options),
             GameJson.Deserialize<GameState>(GameJson.Serialize(state)), observation, messages.Count);
-        void Say(Guid actor, string text, IReadOnlyList<string> cards, IReadOnlyList<string> notes, string? spoken = null)
+        void Say(Guid actor, string text, IReadOnlyList<string> cards, IReadOnlyList<string> notes, string? spoken = null,
+            Speech.SpeechIntent? intent = null)
         {
-            messages.Add(new(actor, state.Round, text, cards, notes, clock, spoken));
+            messages.Add(new(actor, state.Round, text, cards, notes, clock, spoken, Intent: intent));
             parsedAccusations.AddRange(AccusationReader.Read(actor, text, names));
         }
 
@@ -147,7 +150,7 @@ public static class BotSandboxRunner
                             Speech.PersonaLines.IsFemale(seat.Name) != true, Speech.PersonaLines.KeyOf(seat.Name),
                             Genders: names.Values.Where(n => Speech.PersonaLines.IsFemale(n) is not null)
                                 .ToDictionary(n => BotNames.Bare(n), n => Speech.PersonaLines.IsFemale(n)!.Value)));
-                        Say(seat.Id, said.Text, said.Cards, said.Notes, spoken);
+                        Say(seat.Id, said.Text, said.Cards, said.Notes, spoken, intent);
                         Capture("Сообщение", seat.Id, observation: view); moved = true; break;
                     }
                     if (BotLetterTactics.Pending(seat.Id, discussion)) { waiting = true; continue; }

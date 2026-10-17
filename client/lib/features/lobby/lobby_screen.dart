@@ -183,7 +183,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
   }
 
   Future<void> _openSettings(Lobby lobby, int players) async {
-    final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players);
+    final admin = await ref.read(apiProvider).isAdmin().catchError((_) => false);
+    if (!mounted) return;
+    final s = await SettingsSheet.show(context, lobby.settings, inGame: lobby.status == 'in_game', players: players, admin: admin);
     if (s != null && mounted) await _saveSettings(lobby.id, s);
   }
 

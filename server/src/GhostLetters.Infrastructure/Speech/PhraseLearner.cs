@@ -76,7 +76,7 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
             .ToDictionary(g => g.Key, g => g.Select(b => new PhraseSpeakerDto(b.Id, b.Nickname)).ToList());
         return new PhraseListDto(speech.Enabled,
             rows.Select(r => new PhraseDto(r.Id, r.Intent, r.Emotion, r.Manner, r.Template, names.GetValueOrDefault(r.AuthorId, "—"), r.Seen, r.Blocked, r.CreatedAt)).ToList(),
-            speakers, writer.Enabled, writer.Model, writer.AcceptedToday, writer.LastProblem);
+            speakers, writer.Enabled, writer.Model, writer.AcceptedToday, writer.LastProblem, writer.WrittenToday, writer.LastWriteProblem);
     }
 
     /// <summary>
@@ -137,9 +137,12 @@ public sealed class PhraseLearner(GhostLettersDbContext db, CardTagStore tagStor
 }
 
 /// <param name="Rephrase">Пересказ для голоса через YandexGPT подключён (FolderId и ключ есть).</param>
+/// <param name="WrittenToday">Боты 2.0: сколько реплик модель написала сегодня (принятых проверкой).</param>
+/// <param name="WriteProblem">Почему не прошла последняя реплика Ботов 2.0; null — прошла или не было.</param>
 /// <param name="RephraseProblem">Почему не удался последний пересказ (ошибка API или ответ не прошёл проверку); null — последний удался.</param>
 public sealed record PhraseListDto(bool VoiceEnabled, IReadOnlyList<PhraseDto> Phrases, IReadOnlyDictionary<string, List<PhraseSpeakerDto>> Speakers,
-    bool Rephrase = false, string? RephraseModel = null, int RephrasedToday = 0, string? RephraseProblem = null);
+    bool Rephrase = false, string? RephraseModel = null, int RephrasedToday = 0, string? RephraseProblem = null,
+    int WrittenToday = 0, string? WriteProblem = null);
 
 public sealed record PhraseSpeakerDto(Guid Id, string Nickname);
 

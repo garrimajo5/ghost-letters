@@ -7,7 +7,10 @@ import 'presets_sheet.dart';
 
 /// Редактор настроек лобби. Во время партии меняются только раунды, режим обсуждения, темп и таймеры.
 class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({super.key, required this.initial, required this.inGame, this.players, this.personal = false});
+  const SettingsSheet({super.key, required this.initial, required this.inGame, this.players, this.personal = false, this.admin = false});
+
+  /// Администратор видит переключатель «Боты 2.0» (реплики ботов пишет ИИ).
+  final bool admin;
 
   final LobbySettings initial;
   final bool inGame;
@@ -16,12 +19,13 @@ class SettingsSheet extends StatefulWidget {
   /// Сколько игроков — чтобы показать число раундов по правилам.
   final int? players;
 
-  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial, {bool inGame = false, int? players, bool personal = false}) =>
+  static Future<LobbySettings?> show(BuildContext context, LobbySettings initial,
+          {bool inGame = false, int? players, bool personal = false, bool admin = false}) =>
       showModalBottomSheet<LobbySettings>(
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (_) => SettingsSheet(initial: initial, inGame: inGame, players: players, personal: personal),
+        builder: (_) => SettingsSheet(initial: initial, inGame: inGame, players: players, personal: personal, admin: admin),
       );
 
   @override
@@ -92,6 +96,14 @@ class _SettingsSheetState extends State<SettingsSheet> {
             value: s.botVoice,
             onChanged: _rulesLocked ? null : (v) => setState(() => s = s.copyWith(botVoice: v)),
           ),
+          if (widget.admin && !widget.personal)
+            SwitchListTile(
+              key: const Key('ai-speech'),
+              title: const Text('Боты 2.0: фразы пишет ИИ'),
+              subtitle: const Text('Реплики ботов пишет ИИ-модель по их замыслу, характеру и разговору за столом; не прошла проверку — бот говорит как обычно. Только для администратора, можно и во время партии.'),
+              value: s.aiSpeech,
+              onChanged: (v) => setState(() => s = s.copyWith(aiSpeech: v)),
+            ),
           SwitchListTile(
             title: const Text('Ряд «Тайна»'),
             subtitle: const Text('Четвёртый ряд улик из дополнения'),

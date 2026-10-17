@@ -29,6 +29,7 @@ public sealed class LobbyService(
     {
         var settings = request.Settings ?? new LobbySettings();
         settings.Validate();
+        if (settings.AiSpeech) RequireAiAdmin(userId);
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct) ?? throw AppException.NotFound("Игрок не найден.");
         var title = string.IsNullOrWhiteSpace(request.Title) ? $"Стол {user.Nickname}" : request.Title.Trim();
         if (title.Length > MaxTitleLength)
@@ -283,6 +284,7 @@ public sealed class LobbyService(
     {
         var lobby = await RequireHostAsync(lobbyId, hostId, ct);
         settings.Validate();
+        if (settings.AiSpeech != GameJson.Deserialize<LobbySettings>(lobby.Settings).AiSpeech) RequireAiAdmin(hostId);
 
         if (lobby.Status == LobbyStatuses.InGame && lobby.CurrentGameId is { } gameId)
         {
@@ -294,6 +296,7 @@ public sealed class LobbyService(
                 Tempo = current.Tempo, TurnHours = current.TurnHours, Timers = current.Timers, Rounds = current.Rounds,
                 Discussion = current.Discussion,
                 RulesPreset = current.RulesPreset,
+                AiSpeech = current.AiSpeech,
             };
             if (GameJson.Serialize(rulesOnly) != GameJson.Serialize(current))
             {
@@ -321,6 +324,13 @@ public sealed class LobbyService(
         lobby.Settings = GameJson.Serialize(settings);
         await db.SaveChangesAsync(ct);
         return await PublishAsync(lobbyId, ct);
+    }
+
+    /// <summary>Боты 2.0 (реплики пишет ИИ) включает и выключает только администратор.</summary>
+    private void RequireAiAdmin(Guid userId)
+    {
+        if (!services.GetRequiredService<Bots.BotAdminService>().IsAdmin(userId))
+            throw AppException.Forbidden("Боты 2.0 включает только администратор.");
     }
 
     /// <summary>Старт: только хост, все игроки готовы, состав ролей и колода подходят.</summary>
