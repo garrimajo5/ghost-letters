@@ -13,7 +13,14 @@ namespace GhostLetters.Infrastructure.Games;
 /// </summary>
 public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastructure.Bots.BotRelationshipService relationships)
 {
-    public const int EloK = 32;
+    /// <summary>Сколько даёт победа над столом равных: выигрыш крупнее проигрыша — рейтинг в среднем растёт с опытом.</summary>
+    public const int WinK = 40;
+
+    /// <summary>Сколько отнимает поражение за столом равных.</summary>
+    public const int LoseK = 24;
+
+    /// <summary>За доигранную рейтинговую партию — всегда.</summary>
+    public const int Participation = 2;
 
     public async Task RecordAsync(Game game, GameState state, bool hadResult, Phase phaseBefore, DateTimeOffset now, CancellationToken ct)
     {
@@ -37,18 +44,22 @@ public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastr
         }
     }
 
-    /// <summary>Победа команды: детективы с Призраком против Убийцы с Сообщниками. Остальные роли рейтинг не меняют.</summary>
-    public static (int Detectives, int Killers) EloDelta(double detectivesRating, double killersRating, WinningSide side)
+    /// <summary>
+    /// Изменение рейтинга игрока за партию. Ожидание <c>e</c> — насколько игрок сильнее стола (средний рейтинг всех за столом,
+    /// по формуле Эло): равный столу — 0.5. Победа даёт <see cref="WinK"/>·(1 − e), поражение отнимает <see cref="LoseK"/>·e,
+    /// плюс <see cref="Participation"/> за партию. Равный столу: +22 / −10 — рейтинг в основном растёт; чем выше рейтинг
+    /// относительно стола, тем меньше выигрыш и больше риск: на 200 выше стола — +12 / −16, на 400 выше — +6 / −20.
+    /// Ничья (победителей нет) — только за участие.
+    /// </summary>
+    public static int Delta(double rating, double tableAverage, bool? won)
     {
-        var score = side switch
+        var e = 1.0 / (1.0 + Math.Pow(10, (tableAverage - rating) / 400.0));
+        return won switch
         {
-            WinningSide.Detectives => 1.0,
-            WinningSide.Killer => 0.0,
-            _ => 0.5,
+            true => Math.Max(3, (int)Math.Round(WinK * (1 - e), MidpointRounding.AwayFromZero)) + Participation,
+            false => -Math.Max(2, (int)Math.Round(LoseK * e, MidpointRounding.AwayFromZero)) + Participation,
+            null => Participation,
         };
-        var expected = 1.0 / (1.0 + Math.Pow(10, (killersRating - detectivesRating) / 400.0));
-        var delta = (int)Math.Round(EloK * (score - expected), MidpointRounding.AwayFromZero);
-        return (delta, -delta);
     }
 
     private void RecordVotes(Guid gameId, GameState state, DateTimeOffset now)
@@ -99,21 +110,18 @@ public sealed class GameRecorder(GhostLettersDbContext db, GhostLetters.Infrastr
         }
 
         // Кооператив (без Убийцы) рейтинг не меняет: соперника нет, сравнивать не с кем.
-        var detectives = state.Players.Where(p => p.Role.IsDetectiveTeam()).ToList();
-        var killers = state.Players.Where(p => p.Role.IsKillerTeam()).ToList();
-        if (!state.HasKiller || detectives.Count == 0 || killers.Count == 0)
+        if (!state.HasKiller || !state.Players.Any(p => p.Role.IsKillerTeam()))
         {
             return;
         }
 
-        var (dDelta, kDelta) = EloDelta(
-            detectives.Average(p => stats[p.Id].Rating),
-            killers.Average(p => stats[p.Id].Rating),
-            result.Side);
-        var changes = detectives.Select(p => (p, dDelta)).Concat(killers.Select(p => (p, kDelta)));
-        foreach (var (p, delta) in changes)
+        // Каждый — со своим ожиданием относительно всего стола: кто сильнее остальных, рискует больше.
+        var table = state.Players.Average(p => stats[p.Id].Rating);
+        var draw = result.Winners.Count == 0;
+        foreach (var p in state.Players)
         {
             var s = stats[p.Id];
+            var delta = Delta(s.Rating, table, draw ? null : result.Winners.Contains(p.Id));
             s.Rating += delta;
             db.RatingHistoryRecords.Add(new RatingHistory
             {

@@ -75,7 +75,7 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
             stats.GetProperty("wins").GetInt32().Should().Be(winners.Contains(p.Id) ? 1 : 0);
         }
 
-        // Рейтинг: у всех, кроме Подражателя/Шантажиста (их тут нет), есть запись истории, сумма изменений ~0.
+        // Рейтинг: запись истории у каждого; победители — в плюсе.
         var history = await _factory.WithDbAsync(db => db.RatingHistoryRecords.AsNoTracking()
             .Where(h => h.GameId == game.GameId).ToListAsync());
         history.Should().HaveCount(7);
@@ -119,12 +119,19 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public void Elo_TeamDelta_IsSymmetricAndFavoursUnderdog()
+    public void Rating_MostlyGrows_AndStrongerThanTableRisksMore()
     {
-        GameRecorder.EloDelta(1000, 1000, Domain.Game.WinningSide.Detectives).Should().Be((16, -16));
-        GameRecorder.EloDelta(1000, 1000, Domain.Game.WinningSide.Killer).Should().Be((-16, 16));
-        GameRecorder.EloDelta(1000, 1000, Domain.Game.WinningSide.Blackmailer).Should().Be((0, 0));
-        GameRecorder.EloDelta(1200, 1000, Domain.Game.WinningSide.Detectives).Detectives.Should().BeLessThan(16);
-        GameRecorder.EloDelta(1000, 1200, Domain.Game.WinningSide.Detectives).Detectives.Should().BeGreaterThan(16);
+        GameRecorder.Delta(1000, 1000, true).Should().Be(22);
+        GameRecorder.Delta(1000, 1000, false).Should().Be(-10);
+        GameRecorder.Delta(1000, 1000, null).Should().Be(2);
+        // Равный столу при половине побед — в плюсе.
+        (GameRecorder.Delta(1000, 1000, true) + GameRecorder.Delta(1000, 1000, false)).Should().BePositive();
+        // Сильнее стола: выигрыш меньше, проигрыш больше.
+        GameRecorder.Delta(1200, 1000, true).Should().BeLessThan(22);
+        GameRecorder.Delta(1200, 1000, false).Should().BeLessThan(-10);
+        GameRecorder.Delta(1400, 1000, false).Should().BeLessThan(GameRecorder.Delta(1200, 1000, false));
+        // Слабее стола: выигрыш крупнее, проигрыш мягче.
+        GameRecorder.Delta(800, 1000, true).Should().BeGreaterThan(22);
+        GameRecorder.Delta(800, 1000, false).Should().BeGreaterThan(-10);
     }
 }

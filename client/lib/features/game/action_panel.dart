@@ -124,6 +124,12 @@ class ActionPanel extends StatelessWidget {
     if (v.can('HurryDiscussion') && humansReady(screen)) {
       return Cta(v.round >= v.totalRounds ? 'К голосованию' : 'Следующий раунд', () => screen.send('HurryDiscussion'), icon: Icons.fast_forward);
     }
+    // «Можно поднять руку» — и кнопка там же, где эта надпись, а не в глубине панели.
+    if (v.can('RaiseHand')) {
+      final raised = v.raisedHands.contains(v.me?.id);
+      return Cta(raised ? 'Опустить руку' : 'Поднять руку', () => screen.send('RaiseHand', {'raised': !raised}),
+          icon: raised ? Icons.do_not_touch_outlined : Icons.pan_tool_outlined);
+    }
     if (v.can('CastVote')) {
       final stage = v.finale?.currentStage;
       if (stage == null) return null;
