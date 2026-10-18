@@ -118,8 +118,9 @@ void main() {
       'Ваше слово'
     ),
     'рация, слушаю': (
+      // Рука уже поднята — кнопка внизу, где раньше была только надпись «Можно поднять руку».
       phaseSnapshot('Discussion', const ['RaiseHand'], view: {'currentSpeaker': 'u3', 'raisedHands': ['u2']}),
-      'Можно поднять руку'
+      'ОПУСТИТЬ РУКУ'
     ),
     'свободный чат': (
       phaseSnapshot('Discussion', const ['ReadyNextRound'], view: {'discussion': 'FreeChat'}),
