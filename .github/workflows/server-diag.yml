@@ -1,0 +1,34 @@
+name: Server diagnostics
+
+# Только чтение: состояние контейнеров, место на диске, память и ошибки из логов API — аннотациями.
+# Запускается пушем в ветку diag/** (или вручную).
+on:
+  push:
+    branches: ['diag/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.DEPLOY_HOST }}
+      SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
+      APP_DIR: /opt/ghost-letters
+    steps:
+      - name: Collect
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
+          note() { tail -c 3800 <<< "$2" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed "s/^/::warning title=$1::/"; }
+          run() { ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
+          note "ps" "$(run 'docker compose -f docker-compose.prod.yml ps -a; uptime')"
+          note "disk-mem" "$(run 'df -h / /var/lib/docker 2>/dev/null; free -m; du -sh /opt/ghost-letters/* 2>/dev/null | sort -h | tail -8')"
+          note "api-errors" "$(run 'docker compose -f docker-compose.prod.yml logs --no-color --since 48h api | grep -iE -A6 \"fail|error|exception|unhandled\" | grep -v -iE \"password|token|api-key|secret\" | tail -120')"
+          note "api-tail" "$(run 'docker compose -f docker-compose.prod.yml logs --no-color --tail 40 api | grep -v -iE \"password|token|api-key|secret\"')"
+          note "db" "$(run 'docker compose -f docker-compose.prod.yml logs --no-color --since 48h db 2>/dev/null | tail -30')"
