@@ -178,7 +178,9 @@ public sealed class BotStrictnessTests
             {
                 var said = BotPlayer.Say(view, new Random(seed), tags, Mind(personality))!.Value;
                 var checks = said.Notes.Where(n => n.StartsWith("проверял", StringComparison.Ordinal)).ToList();
-                checks.Should().NotBeEmpty();
+                // Исчезло, а проверенная карта — версия бота по другой улике: она идёт как «думаю, эта», без проверки.
+                if (revealed != false) checks.Should().NotBeEmpty();
+                else said.Notes.Should().NotContain(n => n.Contains("проверял") && n.Contains("думаю"));
                 if (revealed == true) checks.Should().OnlyContain(n => n.StartsWith(mark, StringComparison.Ordinal));
                 else checks.Should().OnlyContain(n => n == mark, "неоткрытое письмо не подтверждает проверку");
             }
