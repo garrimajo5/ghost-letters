@@ -28,9 +28,6 @@ jobs:
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
           note() { tail -c 3800 <<< "$2" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed "s/^/::warning title=$1::/"; }
           run() { timeout 90 ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
-          note "docker-df" "$(run "df -h /; timeout 60 docker system df")"
-          note "big-dirs" "$(run "timeout 70 du -xsh /var/lib/docker/volumes/* /var/lib/docker/containers /var/lib/docker/overlay2 /var/log /root /tmp /home 2>/dev/null | sort -h | tail -12")"
-          note "container-logs" "$(run "ls -laS /var/lib/docker/containers/*/*-json.log 2>/dev/null | head -6; journalctl --disk-usage 2>/dev/null")"
-          note "images" "$(run "docker images --format '{{.Repository}}:{{.Tag}} {{.Size}} {{.CreatedSince}}' | head -20")"
-          note "postgres" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --tail 25 postgres")"
-          note "api-errors" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 24h api | grep -iE -A4 'fail|exception|unhandled' | grep -viE 'password|token|api-key|secret' | tail -60")"
+          note "who" "$(run "docker ps -a --no-trunc --format '{{.ID}} {{.Names}}' | grep fe11b94; docker inspect -f '{{.Name}} {{.HostConfig.LogConfig}}' fe11b94bcbf4 2>&1")"
+          note "spam" "$(run "tail -c 4000 /var/lib/docker/containers/fe11b94bcbf4a4179e251a4558f3cdf363597d0fc4bf04b83817575e711360da/*-json.log | cut -c1-400 | tail -8")"
+          note "spam-head" "$(run "head -c 300000000 /var/lib/docker/containers/fe11b94bcbf4a4179e251a4558f3cdf363597d0fc4bf04b83817575e711360da/*-json.log | tail -c 3000 | cut -c1-400")"
