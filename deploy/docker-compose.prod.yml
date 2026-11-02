@@ -1,9 +1,19 @@
 # Продакшен: Caddy (HTTPS от Let's Encrypt) → API → PostgreSQL.
 # Настройки — в файле .env рядом (образец — .env.example).
+
+# Логи контейнеров — не больше 3 × 20 МБ на сервис: без ограничения лог API за две недели занял 23 ГБ,
+# диск заполнился, и PostgreSQL перестал запускаться.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_DB: ghost_letters
       POSTGRES_USER: ghost
@@ -19,6 +29,7 @@ services:
   api:
     image: ${API_IMAGE:-ghcr.io/garrimajo5/ghost-letters-api:latest}
     restart: unless-stopped
+    logging: *logging
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=ghost_letters;Username=ghost;Password=${POSTGRES_PASSWORD}"
@@ -55,6 +66,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       DOMAIN: ${DOMAIN:?задайте DOMAIN в .env}
     ports:
@@ -76,6 +88,7 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     restart: unless-stopped
+    logging: *logging
     command: ["--config", "/etc/livekit.yaml"]
     environment:
       LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-devsecret-devsecret-devsecret-devsecret}"

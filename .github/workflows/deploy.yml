@@ -55,7 +55,8 @@ jobs:
       - name: Copy files
         if: steps.cfg.outputs.skip != 'true'
         run: |
-          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR"
+          # Логи контейнеров больше 500 МБ (до ограничения в compose) обнуляем: на полном диске не встанут ни файлы, ни образ.
+          ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "find /var/lib/docker/containers -name '*-json.log' -size +500M -exec truncate -s 0 {} + 2>/dev/null; df -h / | tail -1; mkdir -p $APP_DIR"
           scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml deploy/Caddyfile deploy/livekit.yaml \
             client/assets/cards/cards.json client/assets/cards/tags.json client/assets/cards/details.json client/assets/cards/associations.json client/assets/cards/names.json "$SSH_USER@$HOST:$APP_DIR/"
           ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "mkdir -p $APP_DIR/www/download"
