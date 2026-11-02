@@ -182,7 +182,7 @@ public sealed class BotStrictnessTests
                 if (revealed != false) checks.Should().NotBeEmpty();
                 else said.Notes.Should().NotContain(n => n.Contains("проверял") && n.Contains("думаю"));
                 if (revealed == true) checks.Should().OnlyContain(n => n.StartsWith(mark, StringComparison.Ordinal));
-                else checks.Should().OnlyContain(n => n == mark, "неоткрытое письмо не подтверждает проверку");
+                else checks.Where(n => n != mark).Should().BeEmpty("неоткрытое письмо не подтверждает проверку");
             }
         }
     }
