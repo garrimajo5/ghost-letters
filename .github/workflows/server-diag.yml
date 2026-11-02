@@ -13,6 +13,7 @@ permissions:
 jobs:
   diag:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     env:
       HOST: ${{ vars.DEPLOY_HOST }}
       SSH_USER: ${{ vars.DEPLOY_USER || 'root' }}
@@ -26,8 +27,10 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
           note() { tail -c 3800 <<< "$2" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed "s/^/::warning title=$1::/"; }
-          run() { ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
-          note "disk" "$(run "df -h /; docker system df; du -xsh /var/lib/docker/* /var/log /var/lib/docker/containers/* /root /tmp 2>/dev/null | sort -h | tail -15; journalctl --disk-usage 2>/dev/null")"
-          note "volumes" "$(run "docker system df -v 2>/dev/null | sed -n '/VOLUME NAME/,/^$/p'; docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}} {{.CreatedSince}}' | head -30")"
+          run() { timeout 90 ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
+          note "docker-df" "$(run "df -h /; timeout 60 docker system df")"
+          note "big-dirs" "$(run "timeout 70 du -xsh /var/lib/docker/volumes/* /var/lib/docker/containers /var/lib/docker/overlay2 /var/log /root /tmp /home 2>/dev/null | sort -h | tail -12")"
+          note "container-logs" "$(run "ls -laS /var/lib/docker/containers/*/*-json.log 2>/dev/null | head -6; journalctl --disk-usage 2>/dev/null")"
+          note "images" "$(run "docker images --format '{{.Repository}}:{{.Tag}} {{.Size}} {{.CreatedSince}}' | head -20")"
           note "postgres" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --tail 25 postgres")"
           note "api-errors" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 24h api | grep -iE -A4 'fail|exception|unhandled' | grep -viE 'password|token|api-key|secret' | tail -60")"
