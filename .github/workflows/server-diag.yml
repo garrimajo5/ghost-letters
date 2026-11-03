@@ -28,6 +28,7 @@ jobs:
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
           note() { tail -c 3800 <<< "$2" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed "s/^/::warning title=$1::/"; }
           run() { timeout 90 ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
-          note "who" "$(run "docker ps -a --no-trunc --format '{{.ID}} {{.Names}}' | grep fe11b94; docker inspect -f '{{.Name}} {{.HostConfig.LogConfig}}' fe11b94bcbf4 2>&1")"
-          note "spam" "$(run "tail -c 4000 /var/lib/docker/containers/fe11b94bcbf4a4179e251a4558f3cdf363597d0fc4bf04b83817575e711360da/*-json.log | cut -c1-400 | tail -8")"
-          note "spam-head" "$(run "head -c 300000000 /var/lib/docker/containers/fe11b94bcbf4a4179e251a4558f3cdf363597d0fc4bf04b83817575e711360da/*-json.log | tail -c 3000 | cut -c1-400")"
+          note "state" "$(run "df -h / | tail -1; docker compose -f docker-compose.prod.yml ps --format '{{.Service}} {{.Status}}'; ls -laS /var/lib/docker/containers/*/*-json.log | head -3 | awk '{print \$5}'")"
+          note "health" "$(run "docker compose -f docker-compose.prod.yml exec -T caddy wget -qO- http://api:8080/health 2>&1 | head -c 200")"
+          note "postgres" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --tail 8 postgres")"
+          note "api-errors" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 30m api | grep -iE -A3 'fail|exception' | grep -viE 'password|token|api-key|secret' | tail -30")"
