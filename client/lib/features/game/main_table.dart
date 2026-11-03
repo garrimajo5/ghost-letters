@@ -1911,6 +1911,16 @@ class _Typing extends ChangeNotifier {
   int _cue = 0, _hold = 0, _pause = 0;
   /// До каких пор звучит голос текущей реплики: следующая не начинается и не обрывает его на полуслове.
   DateTime? _voiceUntil;
+
+  /// Голос бота ждёт тишины: пока в голосовом чате говорит человек, бот «печатает…» и не перебивает.
+  ChatMessage? _voiceWaiting;
+  DateTime _lastTalk = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Сколько тишины нужно после человека, прежде чем бот заговорит.
+  static const silence = Duration(milliseconds: 1200);
+
+  bool get _peopleTalking =>
+      screen.voiceStarted && screen.voiceChat.speaking.any((id) => !screen.isBot(id));
   bool _disposed = false;
 
   bool get busy => _timer != null;
@@ -1968,6 +1978,7 @@ class _Typing extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     _voiceUntil = null;
+    _voiceWaiting = null;
     current = m;
     revealed.clear();
     _mentionAt.clear();
@@ -2009,15 +2020,33 @@ class _Typing extends ChangeNotifier {
     _hold = 0;
     // Пауза «печатает…» — от длины реплики: 0,6–2 с.
     _pause = (15 + _letters.length ~/ 12).clamp(15, 50);
-    var step = tick;
-    // Бот говорит голосом: слышно сразу, а текст идёт вровень с речью.
+    // Бот говорит голосом: слышно сразу, а текст идёт вровень с речью. Но людей не перебивает —
+    // пока в голосовом чате кто-то говорит, бот «печатает…» и ждёт паузы.
     if (m.isVoice && screen.isBot(m.authorId) && screen.ref.read(soundSettingsProvider).botVoices) {
-      _pause = 0;
-      final letters = (_letters.length - shown).clamp(1, 100000);
-      step = Duration(milliseconds: ((m.durationMs ?? 0) / letters).round().clamp(20, 120));
-      _voiceUntil = DateTime.now().add(Duration(milliseconds: (m.durationMs ?? 0) + 300));
-      unawaited(screen.ref.read(voiceProvider).play(m.mediaId!).catchError((Object _) {}));
+      if (_peopleTalking || DateTime.now().difference(_lastTalk) < silence) {
+        if (_peopleTalking) _lastTalk = DateTime.now();
+        _voiceWaiting = m;
+        _pause = 1;
+        _timer = Timer.periodic(tick, (_) => _step());
+        _notify();
+        return;
+      }
+      _speak(m);
+      return;
     }
+    _timer = Timer.periodic(tick, (_) => _step());
+    _notify();
+  }
+
+  /// Голос бота пошёл: текст печатается вровень с речью.
+  void _speak(ChatMessage m) {
+    _timer?.cancel();
+    _voiceWaiting = null;
+    _pause = 0;
+    final letters = (_letters.length - shown).clamp(1, 100000);
+    final step = Duration(milliseconds: ((m.durationMs ?? 0) / letters).round().clamp(20, 120));
+    _voiceUntil = DateTime.now().add(Duration(milliseconds: (m.durationMs ?? 0) + 300));
+    unawaited(screen.ref.read(voiceProvider).play(m.mediaId!).catchError((Object _) {}));
     _timer = Timer.periodic(step, (_) => _step());
     _notify();
   }
@@ -2025,6 +2054,17 @@ class _Typing extends ChangeNotifier {
   void _step() {
     final m = current;
     if (m == null || _disposed) return;
+    if (_voiceWaiting != null) {
+      if (_peopleTalking) _lastTalk = DateTime.now();
+      // Ждём тишины, но не бесконечно: через 20 с бот всё-таки скажет.
+      if ((_peopleTalking || DateTime.now().difference(_lastTalk) < silence) && ++_hold < 20000 ~/ tick.inMilliseconds) {
+        if (_hold % 6 == 0) _tick();
+        return;
+      }
+      _hold = 0;
+      _speak(m);
+      return;
+    }
     if (_pause > 0) {
       _pause--;
       // Конец паузы меняет вид строки («печатает…» → текст) — это видит весь стол.
