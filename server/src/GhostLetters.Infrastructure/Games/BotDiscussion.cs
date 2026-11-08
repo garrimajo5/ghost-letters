@@ -83,7 +83,7 @@ public static class BotDiscussion
         var plan = PublicPlan(view, tags, mind);
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
-        string Name(Guid id) => BotNames.Bare(mind.Names.GetValueOrDefault(id, "Игрок"));
+        string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
         // Обращаются, как люди за столом: «Ватсон, …», а не «Бот Ватсон, …».
         string Call(Guid id) => BotNames.Bare(Name(id));
         string Revision(int row)
@@ -236,7 +236,7 @@ public static class BotDiscussion
                 .OrderByDescending(x => x.Shared.Count + mind.AffinityBias(x.Message.Author) * .5).FirstOrDefault();
             if (ally.Message is not null)
             {
-                var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Name(ally.Message.Author)} из", StringComparison.Ordinal)
+                var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Call(ally.Message.Author)} из", StringComparison.Ordinal)
                     ? " По подозрениям у нас могут быть разногласия." : suspicion;
                 // Финальное обсуждение — после последнего раунда: новых улик уже не будет.
                 return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты." + sharedSuspicion +
