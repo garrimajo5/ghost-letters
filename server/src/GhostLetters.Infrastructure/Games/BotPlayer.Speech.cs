@@ -111,7 +111,10 @@ public static partial class BotPlayer
                 // Модель игроков: говорю, когда уверен, что игрок чёрный, и называю главную причину.
                 var (id, black) = others.Where(p => p.KnownRole is not { } r || r.IsKillerTeam())
                     .Select(p => (p.Id, Black(p.Id))).OrderByDescending(x => x.Item2).FirstOrDefault();
-                if (id == Guid.Empty || NameOf(id) is not { } suspect || black < .8 - .35 * P.Risk) return "";
+                // Порог — относительно «чёрного по умолчанию» (число чёрных / число неизвестных): за маленьким столом
+                // вероятность выше и без улик, поэтому требуем заметного перевеса над ней.
+                var prior = Math.Min(1, BlackCount() / (double)Math.Max(1, others.Count(p => p.KnownRole is null)));
+                if (id == Guid.Empty || NameOf(id) is not { } suspect || black < Math.Max(.8 - .35 * P.Risk, prior + .35)) return "";
                 var why = RoleReason(id);
                 return black > .9 && BlackCount() == 1
                     ? Accused($" Думаю, Убийца — {suspect}: {why}.", suspect, 1, why)
