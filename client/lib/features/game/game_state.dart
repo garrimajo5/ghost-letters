@@ -103,6 +103,7 @@ String actionHint(GameView v) {
   if (v.allowedCommands.isEmpty || (v.allowedCommands.length == 1 && v.can('Like'))) {
     return switch (v.phase) {
       'Discussion' when v.isRadio => 'Слушаем говорящего',
+      'Night' => nightWaiting,
       'Finished' => 'Партия окончена',
       _ => 'Ждём других игроков',
     };
@@ -115,7 +116,7 @@ String actionHint(GameView v) {
 
   return switch (v.phase) {
     'RoleReveal' => 'Посмотрите свою роль',
-    'Night' => 'Выберите по одной истинной улике в каждом ряду',
+    'Night' => 'Загадайте карты: по одной истинной улике в каждом ряду',
     'FirstClue' => 'Можно выложить первую зацепку',
     'Mailbox' => lettersPerPlayer(v) == 2 ? 'Отправьте в ящик две карты' : 'Отправьте в ящик одну карту',
     'GhostPick' when v.isGhost => 'Откройте письма-подсказки',
@@ -208,7 +209,15 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId, {Set<
 
 /// «ждём» — письмо ещё не открыто; «выложили лучше» — исчезло, но открытая подсказка ведёт сюда не хуже.
 /// Что я делаю в свой ход: пока Призрак выбирает письма, мой ход — сброс, а не «Призрак».
-String myTurnPhase(GameView v) => v.phase == 'GhostPick' && v.can('Discard') ? 'Сброс' : T.shortPhase(v.phase);
+String myTurnPhase(GameView v) => switch (v.phase) {
+      'GhostPick' when v.can('Discard') => 'Сброс',
+      'Night' when v.can('ChooseTruth') => 'Загадайте карты',
+      'Night' when v.can('TeamSuggest') => 'Подскажите Убийце',
+      _ => T.shortPhase(v.phase),
+    };
+
+/// Ночь глазами того, кто не загадывает: всем видно, что сейчас идёт загадывание.
+const nightWaiting = 'Убийца и сообщники загадывают карты';
 
 bool _pending(ChatMessage m, int index) =>
     index < m.cardNotes.length && (m.cardNotes[index].contains('ждём') || m.cardNotes[index].contains('выложили лучше'));

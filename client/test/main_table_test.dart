@@ -591,6 +591,24 @@ void main() {
     expect(app.api.named('command').where((c) => c.$2[0] == 'GiveFloor'), isNotEmpty);
   });
 
+  testWidgets('пока говорит другой, по портрету можно сделать заметку об игроке', (tester) async {
+    await _open(tester, phone, allowed: const ['RaiseHand']);
+    await tester.tap(find.byKey(const Key('player-u3')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('note-player-u3')));
+    await tester.pumpAndSettle();
+    expect(find.byType(NoteSheet), findsOneWidget);
+  });
+
+  testWidgets('Убийца видит на портрете своего сообщника', (tester) async {
+    await _open(tester, phone, allowed: const ['RaiseHand'], edit: (view) {
+      (view['me'] as Json)['role'] = 'Killer';
+      (view['players'] as List)[2]['knownRole'] = 'Accomplice';
+    });
+    expect(find.byKey(const Key('seat-role-u3')), findsOneWidget);
+    expect(find.byTooltip('Сообщник'), findsOneWidget);
+  });
+
   testWidgets('эмодзи — карта в руке: вытащил — выбор реакции, на стол не играется', (tester) async {
     final app = await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
     await tester.drag(find.byKey(const Key('fan-emoji')), const Offset(0, -150));
