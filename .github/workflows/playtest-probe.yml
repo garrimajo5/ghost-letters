@@ -1,0 +1,29 @@
+name: Playtest probe
+on:
+  push:
+    branches: ['probe/playtest']
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+      - name: Run
+        env:
+          PLAYTEST_OUT: ${{ github.workspace }}/playtest
+        working-directory: server
+        run: dotnet test tests/GhostLetters.Api.Tests -c Release --filter "FullyQualifiedName~PlaytestProbeTests" --logger "console;verbosity=minimal"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan playtest-out
+          git rm -rfq --cached .
+          git add playtest/*.txt
+          git commit -qm "playtest transcripts"
+          git push -f origin HEAD:refs/heads/probe/playtest-out

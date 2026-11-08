@@ -47,6 +47,12 @@ public sealed class PlaytestProbeTests
         b.Append("ПОДСКАЗКИ: " + string.Join(" | ", final.Hints.Select(h => $"р{h.Round}: " + string.Join(", ", h.Cards.Select(N)))) + "\n");
         b.Append("ПИСЬМА: " + string.Join(" | ", final.Letters.Select(l => $"р{l.Round} {seat.GetValueOrDefault(l.From, "?")}: {N(l.CardId)}{(l.Revealed ? "+" : "-")}")) + "\n");
         var text = b.ToString();
+        if (Environment.GetEnvironmentVariable("PLAYTEST_OUT") is { Length: > 0 } outDir)
+        {
+            Directory.CreateDirectory(outDir);
+            File.WriteAllText(Path.Combine(outDir, $"game-{seed}.txt"), text);
+            return;
+        }
         Assert.Fail(text.Length > 60000 ? text[..60000] : text);
     }
 }
