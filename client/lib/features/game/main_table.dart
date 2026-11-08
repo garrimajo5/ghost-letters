@@ -625,7 +625,8 @@ class _TableArea extends StatelessWidget {
                         return _LinkBorder(key: Key('say-mark-$id'), colors: l.colors.ifEmpty(color), numbers: l.numbers, child: child);
                       }();
                 // Чья отметка: портрет говорящего на карте, пока его слово (видно, кто её связал или отклонил).
-                if (!say.active && statement != null && color != null) {
+                // В голосовании портрет убираем: голос — свой, а не за последнюю версию.
+                if (!voting && !say.active && statement != null && color != null) {
                   final a = statement.authorId;
                   out = Stack(clipBehavior: Clip.none, children: [
                     out,
