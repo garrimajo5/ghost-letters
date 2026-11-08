@@ -20,13 +20,30 @@ public sealed class TableModel
     private readonly double[][] _p;
     private readonly Func<string, string, double> _sim;
     private readonly double _focus;
+    private readonly double _clarity;
 
-    private TableModel(IReadOnlyList<IReadOnlyList<string>> rows, double[][] p, Func<string, string, double> sim, double focus)
+    private TableModel(IReadOnlyList<IReadOnlyList<string>> rows, double[][] p, Func<string, string, double> sim, double focus, double clarity = 0)
     {
         _rows = rows;
         _p = p;
         _sim = sim;
         _focus = focus;
+        _clarity = clarity;
+    }
+
+    /// <summary>
+    /// Та же модель, но Призрак в ней осторожен: двусмысленное письмо (так же похоже на соседнюю карту ряда)
+    /// открывает реже — оно могло бы увести стол к ложной. <paramref name="clarity"/> — сила поправки, 0…1.
+    /// </summary>
+    public TableModel WithClarity(double clarity) => new(_rows, _p, _sim, _focus, Math.Clamp(clarity, 0, 1));
+
+    /// <summary>Указание письма с поправкой на осторожность Призрака.</summary>
+    private double[][] Readable(string letter)
+    {
+        var w = Pointing(letter);
+        if (_clarity <= 0) return w;
+        return w.Select(row => row.Select((x, c) =>
+            x * (1 - _clarity * row.Where((_, o) => o != c).DefaultIfEmpty(0).Max())).ToArray()).ToArray();
     }
 
     /// <summary>Чистая модель: все карты ряда равновероятны.</summary>
@@ -72,7 +89,7 @@ public sealed class TableModel
     /// <summary>Шанс, что Призрак откроет письмо — по текущим вероятностям рядов.</summary>
     public double RevealChance(string letter)
     {
-        var w = Pointing(letter);
+        var w = Readable(letter);
         var none = 1.0;
         for (var r = 0; r < _rows.Count; r++)
             none *= 1 - Enumerable.Range(0, _rows[r].Count).Sum(c => _p[r][c] * Lambda(w[r][c]));
@@ -87,7 +104,7 @@ public sealed class TableModel
     /// </summary>
     public TableModel With(string letter, bool revealed, double weight = 1)
     {
-        var w = Pointing(letter);
+        var w = Readable(letter);
         // Вероятность, что ряд r «не сработал» (Призрак не открыл бы письмо ради этого ряда), в среднем по ряду.
         var miss = Enumerable.Range(0, _rows.Count)
             .Select(r => 1 - Enumerable.Range(0, _rows[r].Count).Sum(c => _p[r][c] * Lambda(w[r][c]))).ToArray();
@@ -107,7 +124,7 @@ public sealed class TableModel
             next[r] = sum <= 0 ? (double[])_p[r].Clone() : row.Select(x => x / sum).ToArray();
         }
 
-        return new TableModel(_rows, next, _sim, _focus);
+        return new TableModel(_rows, next, _sim, _focus, _clarity);
     }
 
     /// <summary>Ожидаемая информация письма в битах: насколько в среднем уменьшится неопределённость рядов.</summary>

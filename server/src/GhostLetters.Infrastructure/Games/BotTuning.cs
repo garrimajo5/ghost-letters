@@ -30,6 +30,12 @@ public sealed record BotTuning
     /// <summary>Боты 3.0: мирный выбирает письмо по ожидаемой информации на модели стола (широкое в начале, узкое потом).</summary>
     public bool LetterModel { get; init; }
 
+    /// <summary>
+    /// Насколько мирный в модели письма учитывает, что Призрак не откроет двусмысленное письмо:
+    /// указание на карту ослабляется, если письмо так же похоже на соседнюю карту ряда (0 — не учитывает).
+    /// </summary>
+    public double LetterClarity { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -178,6 +184,7 @@ public sealed record BotTuning
                 nameof(GhostModelVanish) => t with { GhostModelVanish = D() },
                 nameof(GhostModelHonest) => t with { GhostModelHonest = D() },
                 nameof(LetterModel) => t with { LetterModel = B() },
+                nameof(LetterClarity) => t with { LetterClarity = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

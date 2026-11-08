@@ -869,7 +869,8 @@ public static partial class BotPlayer
         private Bots.TableModel Model()
         {
             if (_model is not null) return _model;
-            var model = Bots.TableModel.Uniform(view.Board.Select(r => (IReadOnlyList<string>)r.Cards).ToList(), Sim, 4 + 8 * P.Strictness);
+            var model = Bots.TableModel.Uniform(view.Board.Select(r => (IReadOnlyList<string>)r.Cards).ToList(), Sim, 4 + 8 * P.Strictness)
+                .WithClarity(BotTuning.Current.LetterClarity);
             var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
             foreach (var hint in shown) model = model.With(hint, true);
             foreach (var l in me.Letters.Where(l => l.Revealed == false)) model = model.With(l.CardId, false);
