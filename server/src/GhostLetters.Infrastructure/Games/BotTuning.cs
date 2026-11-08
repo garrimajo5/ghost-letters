@@ -27,6 +27,9 @@ public sealed record BotTuning
     /// <summary>Насколько стол верит исчезновению чужого письма (узнаёт о нём со слов отправителя).</summary>
     public double GhostModelVanish { get; init; } = .5;
 
+    /// <summary>Боты 3.0: мирный выбирает письмо по ожидаемой информации на модели стола (широкое в начале, узкое потом).</summary>
+    public bool LetterModel { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -174,6 +177,7 @@ public sealed record BotTuning
                 nameof(GhostModelCost) => t with { GhostModelCost = D() },
                 nameof(GhostModelVanish) => t with { GhostModelVanish = D() },
                 nameof(GhostModelHonest) => t with { GhostModelHonest = D() },
+                nameof(LetterModel) => t with { LetterModel = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

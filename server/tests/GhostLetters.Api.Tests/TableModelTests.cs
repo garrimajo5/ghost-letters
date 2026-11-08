@@ -63,4 +63,24 @@ public sealed class TableModelTests
             GhostCluePolicy.Choose(view, Tags, mind, ["dagger", "cloud"]).Should().BeEmpty("уводящее письмо лучше не открывать");
         }
     }
+
+    [Fact]
+    public void Detective_SendsTheMostInformativeLetter_BroadEarly_NarrowWhenRowIsClear()
+    {
+        var me = Guid.NewGuid();
+        PlayerView View(IReadOnlyList<HintGroupView> hints) => new(Guid.NewGuid(), 1, Phase.Mailbox, hints.Count + 1, 4, DiscussionMode.FreeChat,
+            [new(Category.Motive, ["gun", "knife", "rose", "book"]), new(Category.Place, ["sea", "forest", "sword", "house"])], hints, 0,
+            [new(Guid.NewGuid(), 0, true, null, false, 0), new(me, 1, false, Role.Detective, false, 4)],
+            new(me, Role.Detective, ["pistol", "brick", "cloud", "lily"], []), null, 0, null, null, null, null, [], ["SendLetter"], null);
+        var mind = BotMind.Neutral with { Personality = new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Variability = 0 } };
+        using (BotTuning.Use(BotTuning.Default with { LetterModel = true }))
+        {
+            var early = (SendLetter)BotPlayer.Decide(View([]), new Random(1), Tags, mind)!;
+            // Широкая проверка: оружие (пистолет, нож, меч) или растения (роза, лес) — не узкий кирпич и не пустое облако.
+            early.CardIds.Single().Should().BeOneOf("pistol", "lily");
+            // Ряды уже ясны подсказками — та же широкая проверка теряет смысл.
+            var clear = (SendLetter)BotPlayer.Decide(View([new(1, ["pistol"]), new(2, ["lily"])]), new Random(1), Tags, mind)!;
+            clear.CardIds.Single().Should().NotBe("cloud");
+        }
+    }
 }
