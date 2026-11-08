@@ -782,7 +782,7 @@ public static partial class BotPlayer
 
         public string? FirstClue()
         {
-            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, me.Hand).FirstOrDefault() ?? GhostCluePolicy.FirstClueFallback(view, tags, mind!, me.Hand);
+            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, me.Hand, letters: false).FirstOrDefault() ?? GhostCluePolicy.FirstClueFallback(view, tags, mind!, me.Hand);
             if (Truth is not { } truth || me.Hand.Count == 0)
             {
                 return null;
