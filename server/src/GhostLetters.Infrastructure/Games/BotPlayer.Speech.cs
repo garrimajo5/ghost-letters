@@ -59,12 +59,25 @@ public static partial class BotPlayer
                     return "";
                 }
 
-                if (P.Risk > 0.7 && rng.NextDouble() < P.Risk)
+                // Свидетель не выдаёт знание раньше улик: обвинение без повода в первом раунде — прямая
+                // подсказка Убийце, кого назвать на охоте. Говорит, только когда у стола есть повод:
+                // кто-то уже подозревает Убийцу или его ход сам по себе подозрителен, — и с этой причиной.
+                var reason = ChatContrarian(killer.Id) > 0 || Contrarian(killer.Id) > 0 ? BehaviourReason(killer.Id) : null;
+                var backed = Accused(killer.Id) >= .3 || reason is not null;
+                var late = view.Round >= Math.Max(2, view.TotalRounds - 1);
+                if (view.Round <= 1 || (!backed && !late))
                 {
-                    return Accused($" Мне кажется, Убийца — {name}.", name, 1);
+                    return "";
                 }
 
-                if (P.Risk > 0.4 && rng.NextDouble() < P.Risk)
+                if (backed && P.Risk > 0.7 && rng.NextDouble() < P.Risk * .6)
+                {
+                    return reason is not null
+                        ? Accused($" Мне кажется, Убийца — {name}: {reason}.", name, 1, reason)
+                        : Accused($" Согласен, {name} подозрителен.", name, .6);
+                }
+
+                if (P.Risk > 0.4 && rng.NextDouble() < P.Risk * (backed ? .6 : .3))
                 {
                     return Accused($" Я бы присмотрелся к {name}.", name, .4);
                 }

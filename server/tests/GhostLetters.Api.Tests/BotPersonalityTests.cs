@@ -155,7 +155,7 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
-    public void Risk_WitnessAccusesKillerByName()
+    public void Witness_DoesNotGiveHimselfAway_AccusesOnlyWithAReason()
     {
         var players = new[]
         {
@@ -165,23 +165,25 @@ public sealed class BotPersonalityTests
             new PlayerInfoView(Bob, 3, false, Role.Killer, false, 5),
         };
         var view = View(Phase.Discussion, [], Role.Witness, hints: [new HintGroupView(1, ["sword"])], players: players);
+        int Says(PlayerView v, BotMind mind, string text) =>
+            Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(v, new Random(seed), Tags, mind)!.Value.Text.Contains(text));
 
-        // Здесь стол не побеждает и Убийцу не подозревает — тихий режим Свидетеля проверяется отдельно.
         using (BotTuning.Use(BotTuning.Default with { WitnessQuiet = false }))
         {
-        var bold = Enumerable.Range(0, 30).Count(seed =>
-            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Боб"));
-        var careful = Enumerable.Range(0, 30).Count(seed =>
-            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0 }))!.Value.Text.Contains("Боб"));
+            var bold = Mind(new BotPersonality { Risk = 1, Compromise = 1 });
+            // Первый раунд, у стола нет повода — обвинение выдало бы Свидетеля Убийце на охоте.
+            Says(view with { Round = 1 }, bold, "Боб").Should().Be(0, "в первом раунде Свидетель не называет Убийцу");
+            Says(view, bold, "Убийца — Боб").Should().Be(0, "без повода — не прямо");
 
-        bold.Should().BeGreaterThan(20, "рисковый Свидетель говорит прямо");
-        careful.Should().Be(0, "осторожный Свидетель молчит, чтобы его не вычислили");
+            // Стол уже подозревает Боба — рисковый Свидетель подхватывает.
+            var backed = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, .5)]);
+            Says(view, backed, "Боб").Should().BeGreaterThan(10, "рисковый Свидетель поддерживает подозрение стола");
+            Says(view, Mind(new BotPersonality { Risk = 0 }), "Боб").Should().Be(0, "осторожный Свидетель молчит");
         }
 
-        // Стол уже подозревает Убийцу: даже рисковый Свидетель молчит, чтобы не выдать себя на охоте.
+        // Стол уже подозревает Убийцу: в тихом режиме даже рисковый Свидетель молчит, чтобы не выдать себя.
         var accused = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, 1)]);
-        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Боб"))
-            .Should().Be(0);
+        Says(view, accused, "Убийца — Боб").Should().Be(0);
     }
 
     [Fact]
