@@ -219,6 +219,21 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void RoleModel_NamesTheLiar_WithTheReason_AndVotesForHim()
+    {
+        // Боб назвал своим моё письмо — врёт наверняка. За столом один чёрный: подозрение к Ане падает.
+        using var _ = BotTuning.Use(BotTuning.Default with { RoleModel = true });
+        var mind = Mind(new BotPersonality { Risk = .5, Memory = 0 }) with { Claims = [new(Bob, "sword", 1)] };
+        var talk = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(1, "sword", false)]);
+        var lines = Enumerable.Range(0, 20).Select(seed => BotPlayer.Say(talk, new Random(seed), Tags, mind)?.Text ?? "").ToList();
+        lines.Should().Contain(t => t.Contains("Боб") && t.Contains("назвал своим письмо"));
+        lines.Should().NotContain(t => t.Contains("Аня") && t.Contains("чёрн"));
+
+        var vote = View(Phase.Voting, [nameof(CastVote)], Role.Detective, letters: [new MyLetterView(1, "sword", false)], finale: KillerStage());
+        Enumerable.Range(0, 20).Should().OnlyContain(seed => ((CastVote)BotPlayer.Decide(vote, new Random(seed), Tags, mind)!).Suspect == Bob);
+    }
+
+    [Fact]
     public void Accusations_AgreeableBotsListenToTheTable()
     {
         var accusations = new[] { new Accusation(Ann, Bob, 1), new Accusation(Ann, Bob, 1) };
