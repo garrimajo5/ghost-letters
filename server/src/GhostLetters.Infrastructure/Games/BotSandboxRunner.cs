@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
+using GhostLetters.Domain.Rules;
 using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Games;
