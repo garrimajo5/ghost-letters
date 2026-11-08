@@ -83,7 +83,7 @@ public static class BotDiscussion
         var plan = PublicPlan(view, tags, mind);
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
-        string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
+        string Name(Guid id) => BotNames.Bare(mind.Names.GetValueOrDefault(id, "Игрок"));
         // Обращаются, как люди за столом: «Ватсон, …», а не «Бот Ватсон, …».
         string Call(Guid id) => BotNames.Bare(Name(id));
         string Revision(int row)
@@ -208,7 +208,7 @@ public static class BotDiscussion
             var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
             var comparison = offered is null ? "вот мой текущий выбор" : offered == view.Board[row].Cards[plan[row]] ? "здесь наши версии совпадают" : "здесь я пока не согласен";
             var text = $"{Call(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
-                $"{Revision(row)}Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
+                $"{Revision(row)}Сейчас выберу {Speech.SpeechWords.Acc(Where(row, plan[row]))}. {Argument(row)}. " +
                 "Остальные ряды моей версии — на прикреплённых картах." + suspicion;
             return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Call(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
         }
@@ -223,7 +223,7 @@ public static class BotDiscussion
             var row = me.Id.GetHashCode() % view.Board.Count;
             row = Math.Abs(row);
             return Line($"{Call(target.Id)}, за какую карту в ряду «{Where(row, plan[row]).Split(' ')[0]}» будешь голосовать? " +
-                $"Я выбираю {Where(row, plan[row])}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
+                $"Я выбираю {Speech.SpeechWords.Acc(Where(row, plan[row]))}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
         }
         if (own.Count >= 2 && !own.Any(m => m.Text.Contains("Предлагаю голосовать вместе", StringComparison.Ordinal)))
         {
