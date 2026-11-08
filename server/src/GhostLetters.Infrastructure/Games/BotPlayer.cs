@@ -281,7 +281,8 @@ public static partial class BotPlayer
 
         private Role? Known(Guid id) => view.Players.FirstOrDefault(p => p.Id == id)?.KnownRole;
 
-        private string? NameOf(Guid id) => mind?.Names.GetValueOrDefault(id);
+        /// <summary>Имя игрока, как его называют за столом: без «Бот».</summary>
+        private string? NameOf(Guid id) => mind?.Names.GetValueOrDefault(id) is { } name ? BotNames.Bare(name) : null;
 
         /// <summary>
         /// Память: насколько игрок подозрителен по прошлым партиям с этим ботом (0 — как все, до +1.5).

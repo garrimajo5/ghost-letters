@@ -208,7 +208,7 @@ public static class BotDiscussion
             var offered = incoming.Cards.FirstOrDefault(view.Board[row].Cards.Contains);
             var comparison = offered is null ? "вот мой текущий выбор" : offered == view.Board[row].Cards[plan[row]] ? "здесь наши версии совпадают" : "здесь я пока не согласен";
             var text = $"{Call(incoming.Author)}, {(question is null ? "сверил твой ответ с уликами" : "отвечаю про голосование")}: {comparison}. " +
-                $"{Revision(row)}Сейчас выберу {Where(row, plan[row])}. {Argument(row)}. " +
+                $"{Revision(row)}Сейчас выберу {Speech.SpeechWords.Acc(Where(row, plan[row]))}. {Argument(row)}. " +
                 "Остальные ряды моей версии — на прикреплённых картах." + suspicion;
             return Line(text.Length <= ChatService.MaxTextLength ? text : $"{Call(incoming.Author)}, отвечаю: сейчас выберу {Where(row, plan[row])}. Версия основана на уликах всех раундов.", row);
         }
@@ -223,7 +223,7 @@ public static class BotDiscussion
             var row = me.Id.GetHashCode() % view.Board.Count;
             row = Math.Abs(row);
             return Line($"{Call(target.Id)}, за какую карту в ряду «{Where(row, plan[row]).Split(' ')[0]}» будешь голосовать? " +
-                $"Я выбираю {Where(row, plan[row])}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
+                $"Я выбираю {Speech.SpeechWords.Acc(Where(row, plan[row]))}. {Argument(row)}. Какие улики поддерживают твою версию? А кого подозреваешь?", row);
         }
         if (own.Count >= 2 && !own.Any(m => m.Text.Contains("Предлагаю голосовать вместе", StringComparison.Ordinal)))
         {
@@ -236,7 +236,7 @@ public static class BotDiscussion
                 .OrderByDescending(x => x.Shared.Count + mind.AffinityBias(x.Message.Author) * .5).FirstOrDefault();
             if (ally.Message is not null)
             {
-                var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Name(ally.Message.Author)} из", StringComparison.Ordinal)
+                var sharedSuspicion = suspicion.Contains($"Подозреваю, что {Call(ally.Message.Author)} из", StringComparison.Ordinal)
                     ? " По подозрениям у нас могут быть разногласия." : suspicion;
                 // Финальное обсуждение — после последнего раунда: новых улик уже не будет.
                 return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты." + sharedSuspicion +

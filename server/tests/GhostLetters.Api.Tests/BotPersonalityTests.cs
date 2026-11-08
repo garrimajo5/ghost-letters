@@ -170,7 +170,7 @@ public sealed class BotPersonalityTests
         using (BotTuning.Use(BotTuning.Default with { WitnessQuiet = false }))
         {
         var bold = Enumerable.Range(0, 30).Count(seed =>
-            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Бот Боб"));
+            BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 1 }))!.Value.Text.Contains("Убийца — Боб"));
         var careful = Enumerable.Range(0, 30).Count(seed =>
             BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0 }))!.Value.Text.Contains("Боб"));
 
@@ -180,7 +180,7 @@ public sealed class BotPersonalityTests
 
         // Стол уже подозревает Убийцу: даже рисковый Свидетель молчит, чтобы не выдать себя на охоте.
         var accused = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, 1)]);
-        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Бот Боб"))
+        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Боб"))
             .Should().Be(0);
     }
 
@@ -240,7 +240,7 @@ public sealed class BotPersonalityTests
             .Select(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0.8, Compromise = 0.9 }, accusations: accusations))!.Value.Text)
             .ToList();
 
-        lines.Should().OnlyContain(t => t.Contains("Убийца — Бот Боб"), "подозрение сильное — говорит прямо");
+        lines.Should().OnlyContain(t => t.Contains("Убийца — Боб"), "подозрение сильное — говорит прямо");
         AccusationReader.Read(Me, lines[0], Names).Should().Contain(a => a.Target == Bob, "и другие боты прочитают это обвинение");
     }
 
@@ -403,7 +403,7 @@ public sealed class BotPersonalityTests
             [new ChatOpinion(Ann, "knife", 1), new ChatOpinion(Bob, "rose", 1)]);
         var reply = BotPlayer.Reply(view, new Random(0), Tags, mind)!.Value;
         reply.Text.Should().Contain("Аня,").And.Contain("пока считаю тебя мирным")
-            .And.Contain("Бот Боб из чёрных").And.Contain("хуже объясняет").And.Contain("голосовать против");
+            .And.Contain("Боб из чёрных").And.Contain("хуже объясняет").And.Contain("голосовать против");
         AccusationReader.Read(Me, reply.Text, Names).Should().ContainSingle().Which.Target.Should().Be(Bob);
         BotPlayer.Reply(view with { Me = view.Me! with { Role = Role.Ghost } }, new Random(0), Tags, mind).Should().BeNull();
         BotPlayer.Reply(view with { Hints = [] }, new Random(0), Tags, mind).Should().BeNull("без улик не объявляем мирным");
@@ -431,8 +431,8 @@ public sealed class BotPersonalityTests
             [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", 1, IsCheck: true, SourceCard: "coin")]);
         using var _ = BotTuning.Use(BotTuning.Default with { LieDetect = lieDetect ? 2 : 0 });
         var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
-        if (lieDetect) reply.Should().Contain("Бот Боб из чёрных", "отверг карту, на которую потом ясно указала подсказка");
-        else reply.Should().NotContain("Бот Боб из чёрных");
+        if (lieDetect) reply.Should().Contain("Боб из чёрных", "отверг карту, на которую потом ясно указала подсказка");
+        else reply.Should().NotContain("Боб из чёрных");
     }
 
     [Theory]
@@ -447,8 +447,8 @@ public sealed class BotPersonalityTests
         var mind = Mind(new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = 1, Strictness = 0.5, Memory = 0 },
             [new ChatOpinion(Ann, "boat", 1), new ChatOpinion(Bob, "knife", -1)]);
         var reply = BotPlayer.Reply(view, new Random(0), tags, mind)!.Value.Text;
-        if (tied) reply.Should().NotContain("Бот Боб из чёрных", "другая карта ряда объясняет улики столь же хорошо");
-        else reply.Should().Contain("Бот Боб из чёрных", "отрицание единственной хорошо поддержанной версии всё ещё учитывается");
+        if (tied) reply.Should().NotContain("Боб из чёрных", "другая карта ряда объясняет улики столь же хорошо");
+        else reply.Should().Contain("Боб из чёрных", "отрицание единственной хорошо поддержанной версии всё ещё учитывается");
     }
 
     [Fact]

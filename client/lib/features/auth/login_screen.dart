@@ -128,11 +128,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         child: Avatar(nickname: nick, color: c, size: 44, highlight: c == _color),
                       ),
                   ]),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Портреты персонажей не используем — их легко спутать с картами персонажей в игре.',
-                    style: TextStyle(fontSize: 12, color: AppColors.muted),
-                  ),
                   const SizedBox(height: 32),
                   FilledButton(
                     key: const Key('login'),

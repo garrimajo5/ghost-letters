@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api.dart';
@@ -642,13 +643,13 @@ class ChatSheet extends ConsumerStatefulWidget {
           ? await showDialog<String>(
               context: context,
               useSafeArea: false,
-              builder: (_) => Dialog.fullscreen(backgroundColor: AppColors.bg, child: SafeArea(child: ChatSheet(screen: screen, full: true))),
+              builder: (c) => _escClose(c, Dialog.fullscreen(backgroundColor: AppColors.bg, child: SafeArea(child: ChatSheet(screen: screen, full: true)))),
             )
           : await showModalBottomSheet<String>(
               context: context,
               isScrollControlled: true,
               useSafeArea: true,
-              builder: (_) => ChatSheet(screen: screen),
+              builder: (c) => _escClose(c, ChatSheet(screen: screen)),
             );
       if (next == 'full') {
         full = true;
@@ -659,6 +660,12 @@ class ChatSheet extends ConsumerStatefulWidget {
       }
     }
   }
+
+  /// Esc закрывает чат и на компьютере, даже когда фокус в поле ввода.
+  static Widget _escClose(BuildContext context, Widget child) => CallbackShortcuts(
+        bindings: {const SingleActivator(LogicalKeyboardKey.escape): () => Navigator.of(context).maybePop()},
+        child: child,
+      );
 
   @override
   ConsumerState<ChatSheet> createState() => _ChatSheetState();
