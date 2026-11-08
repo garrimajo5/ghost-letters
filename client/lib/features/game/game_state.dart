@@ -1,4 +1,5 @@
 import '../../models/models.dart';
+import '../../core/texts.dart';
 
 /// Пометка на карте: ✕ и ✓ (по словам кого), «считаю истинной», чьё это письмо (для подсказок)
 /// и какую карту я называю своим письмом (для моих писем — можно и соврать).
@@ -206,6 +207,9 @@ List<CardEvidence> cardEvidence(Iterable<ChatMessage> chat, String cardId, {Set<
     ];
 
 /// «ждём» — письмо ещё не открыто; «выложили лучше» — исчезло, но открытая подсказка ведёт сюда не хуже.
+/// Что я делаю в свой ход: пока Призрак выбирает письма, мой ход — сброс, а не «Призрак».
+String myTurnPhase(GameView v) => v.phase == 'GhostPick' && v.can('Discard') ? 'Сброс' : T.shortPhase(v.phase);
+
 bool _pending(ChatMessage m, int index) =>
     index < m.cardNotes.length && (m.cardNotes[index].contains('ждём') || m.cardNotes[index].contains('выложили лучше'));
 

@@ -93,7 +93,7 @@ public static class GhostDebrief
                 }
             }
 
-            var text = $"{Prefix} · раунд {round.Key}. {string.Join(" ", parts)}";
+            var text = $"{Prefix} · {(round.Key == 0 ? "зацепка" : $"раунд {round.Key}")}. {string.Join(" ", parts)}";
             result.Add(new(text.Length <= 1000 ? text : text[..1000], cards.Take(5).ToList(), notes.Take(5).ToList()));
         }
 

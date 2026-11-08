@@ -257,8 +257,8 @@ public sealed class BotFinalDiscussionTests
     [InlineData("Какая карта места убедительнее?", Category.Place, "место")]
     [InlineData("По способу что выбираешь?", Category.Method, "способ")]
     [InlineData("Что со способом?", Category.Method, "способ")]
-    [InlineData("Какую карту тайны поддерживаешь?", Category.Secret, "тайна")]
-    [InlineData("С ТАЙНОЙ определился?", Category.Secret, "тайна")]
+    [InlineData("Какую карту тайны поддерживаешь?", Category.Secret, "тайну")]
+    [InlineData("С ТАЙНОЙ определился?", Category.Secret, "тайну")]
     public void CardlessQuestionsUnderstandRowInflections(string text, Category category, string label)
     {
         var view = View with { Board = [new(Category.Motive, ["knife", "rose"]), new(category, ["boat", "cat"])] };

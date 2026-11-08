@@ -908,7 +908,7 @@ class _Header extends StatelessWidget {
               decoration: BoxDecoration(color: pillColor, borderRadius: BorderRadius.circular(99)),
               child: Text(
                 mine
-                    ? 'Ваш ход · ${T.shortPhase(v.phase)}'
+                    ? 'Ваш ход · ${myTurnPhase(v)}'
                     : '${T.shortPhase(v.phase)}${counted && v.players.isNotEmpty ? ' · $acted из ${v.players.length}' : ''}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

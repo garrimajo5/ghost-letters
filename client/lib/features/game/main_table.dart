@@ -414,7 +414,7 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              mine ? 'Ваш ход · ${T.shortPhase(v.phase)}' : T.shortPhase(v.phase),
+              mine ? 'Ваш ход · ${myTurnPhase(v)}' : T.shortPhase(v.phase),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: mine && !killerNight ? AppColors.onAmber : AppColors.text),
