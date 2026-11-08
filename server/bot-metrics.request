@@ -1,0 +1,2 @@
+150
+variants: модель Призрака: GhostModel=true | модель строже: GhostModel=true, GhostModelHonest=1.3

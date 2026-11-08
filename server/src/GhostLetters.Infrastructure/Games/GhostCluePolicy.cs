@@ -134,13 +134,25 @@ public static class GhostCluePolicy
         var late = view.TotalRounds <= 1 ? 1 : Math.Clamp((view.Round - 1.0) / (view.TotalRounds - 1), 0, 1);
         var risk = Math.Clamp(mind.Personality.Risk + (1 - mind.Personality.Risk) * late * .8, 0, 1);
         var cost = tuning.GhostModelCost * (1 - risk);
+        // Письмо, которое сильнее указывает на ложную карту, чем на любую истинную, не открываем вовсе:
+        // стол «объясняет» подсказку лучшим совпадением, и уводить его потом дорого (в крайнем случае — 50/50).
+        bool Honest(string letter)
+        {
+            var w = table.Pointing(letter);
+            double t = 0, f = 0;
+            for (var r = 0; r < w.Length; r++)
+                for (var c = 0; c < w[r].Length; c++)
+                    if (c == truth[r]) t = Math.Max(t, w[r][c]); else f = Math.Max(f, w[r][c]);
+            return t > 0 && t >= f * tuning.GhostModelHonest;
+        }
+
         var chosen = new List<string>();
         var current = After(chosen);
         var score = current.TruthScore(truth);
         var right = current.RowsRight(truth);
         while (true)
         {
-            var best = cards.Where(c => !chosen.Contains(c)).Select(c =>
+            var best = cards.Where(c => !chosen.Contains(c) && Honest(c)).Select(c =>
             {
                 var next = After([.. chosen, c]);
                 var misleads = Enumerable.Range(0, truth.Count).Any(r => current.Best(r) == truth[r] && next.Best(r) != truth[r]);
