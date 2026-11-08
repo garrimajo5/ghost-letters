@@ -23,7 +23,21 @@ public sealed record SandboxReport(int Format, string EngineVersion, string Scen
 /// Состав серийного прогона: число игроков, раунды (null — как в лобби по умолчанию), роли и нужны ли снимки
 /// каждого шага (для просмотра в кабинете; серия баланса без них в разы быстрее).
 /// </summary>
-public sealed record SandboxOptions(int Players = 6, int? Rounds = 3, RoleOptions? Roles = null, bool Frames = true);
+public sealed record SandboxOptions(int Players = 6, int? Rounds = 3, RoleOptions? Roles = null, bool Frames = true)
+{
+    /// <summary>Карт в ряду; null — как в лобби по умолчанию.</summary>
+    public int? Columns { get; init; }
+
+    /// <summary>Ряд «Тайна».</summary>
+    public bool SecretRow { get; init; } = true;
+
+    /// <summary>Правила пресета «Озон» для этого состава: поле, раунды и роли по таблице Озона.</summary>
+    public static SandboxOptions Ozon(int players, bool frames = false)
+    {
+        var s = new LobbySettings { RulesPreset = "ozon" }.ResolveForPlayers(players);
+        return new SandboxOptions(players, s.Rounds, s.Roles, frames) { Columns = s.Columns, SecretRow = s.UseSecretRow };
+    }
+}
 
 /// <summary>Isolated engine: no users, live games, ratings, relationships or persistence services.</summary>
 public static class BotSandboxRunner
@@ -52,6 +66,8 @@ public static class BotSandboxRunner
         var names = seats.ToDictionary(s => s.Id, s => s.Name);
         var state = GameEngine.Create(StableId(seed, -1), seats.Select(s => s.Id).ToList(), new GameSettings {
             Rounds = custom ? options.Rounds : 3, Discussion = DiscussionMode.FreeChat, Ranked = false,
+            Columns = custom && options.Columns is { } columns ? columns : GameDefaults.DefaultColumns,
+            UseSecretRow = !custom || options.SecretRow,
             Roles = custom ? options.Roles ?? new RoleOptions() : new RoleOptions(KillerEnabled: scenario != "clear-hints")
         }, deck.Order(StringComparer.Ordinal).ToList(), seed);
         var messages = new List<SandboxMessage>();
