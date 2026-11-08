@@ -47,6 +47,18 @@ public sealed class TableModelTests
     }
 
     [Fact]
+    public void CarefulGhost_RarelyOpensAmbiguousLetters()
+    {
+        // Кинжал одинаково похож на нож и меч — осторожный Призрак его реже откроет, и ждём от него меньше.
+        var naive = Uniform();
+        var careful = Uniform().WithClarity(1);
+        careful.RevealChance("dagger").Should().BeLessThan(naive.RevealChance("dagger"));
+        // Однозначное письмо (кирпич → дом) почти не теряет.
+        (naive.RevealChance("brick") - careful.RevealChance("brick")).Should().BeLessThan(naive.RevealChance("dagger") - careful.RevealChance("dagger"));
+        careful.InfoGain("brick").Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public void ModelGhost_OpensWhatLeadsToTruth_AndNotWhatLeadsAway()
     {
         var ghost = Guid.NewGuid();

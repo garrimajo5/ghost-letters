@@ -1,0 +1,2 @@
+150
+variants: письма, ясность .6: LetterModel=true, LetterClarity=.6 | письма, ясность 1: LetterModel=true, LetterClarity=1 | Призрак, цена .3: GhostModel=true, GhostModelCost=.3
