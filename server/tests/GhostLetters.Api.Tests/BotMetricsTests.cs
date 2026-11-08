@@ -16,11 +16,13 @@ public sealed class BotMetricsTests
 {
     private static readonly IReadOnlyList<string> Deck = Enumerable.Range(1, 758).Select(i => $"orig_{i:0000}").ToList();
 
+    /// <summary>Целимся в правила «Озона» — по ним играют опытные игроки.</summary>
     private static readonly (string Name, SandboxOptions Options)[] Configs =
     [
-        ("6 игроков", new SandboxOptions(6, null, null, false)),
-        ("7 (Сообщник, Свидетель)", new SandboxOptions(7, null, null, false)),
-        ("10 (Свидетель, Эксперт)", new SandboxOptions(10, null, null, false)),
+        ("Озон, 5 игроков (6 карт, 4 раунда)", SandboxOptions.Ozon(5)),
+        ("Озон, 6 игроков (+Сообщник, 4 раунда)", SandboxOptions.Ozon(6)),
+        ("Озон, 8 игроков (3 раунда)", SandboxOptions.Ozon(8)),
+        ("Озон, 10 игроков (3 раунда)", SandboxOptions.Ozon(10)),
     ];
 
     private static CardTags RealTags()
@@ -139,7 +141,7 @@ public sealed class BotMetricsTests
     {
         var tags = RealTags();
         var metrics = new Metrics();
-        var (report, state) = BotSandboxRunner.Simulate("full-game", 3, Deck, tags, CancellationToken.None, new SandboxOptions(6, null, null, false));
+        var (report, state) = BotSandboxRunner.Simulate("full-game", 3, Deck, tags, CancellationToken.None, SandboxOptions.Ozon(6));
         metrics.Add(report, state, tags);
         metrics.Games.Should().Be(1);
         metrics.GhostRounds.Should().BeGreaterThan(0);

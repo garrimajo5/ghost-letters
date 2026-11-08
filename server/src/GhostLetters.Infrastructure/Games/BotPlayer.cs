@@ -783,7 +783,7 @@ public static partial class BotPlayer
 
         public string? FirstClue()
         {
-            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, me.Hand).FirstOrDefault() ?? GhostCluePolicy.FirstClueFallback(view, tags, mind!, me.Hand);
+            if (!Classic) return GhostCluePolicy.Choose(view, tags, mind!, me.Hand, letters: false).FirstOrDefault() ?? GhostCluePolicy.FirstClueFallback(view, tags, mind!, me.Hand);
             if (Truth is not { } truth || me.Hand.Count == 0)
             {
                 return null;
@@ -834,6 +834,13 @@ public static partial class BotPlayer
                 var fakes = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
                 target = Card(row, fakes[rng.Next(fakes.Count)]);
             }
+            else if (!Classic && !KillerTeam && BotTuning.Current.LetterModel && !ExpertAims() && me.Hand.Count > count)
+            {
+                // Боты 3.0: письмо, которое по модели стола даст больше всего информации. В начале это широкая
+                // проверка (похожа на несколько правдоподобных карт), когда ряды проясняются — узкая, по неясному.
+                var model = Model();
+                return me.Hand.OrderByDescending(h => model.InfoGain(h) + P.Variability * .05 * rng.NextDouble() + Noise()).Take(count).ToList();
+            }
             else if (!Classic && BotTuning.Current.Probe && !ExpertAims() && Probe() is { } probe)
             {
                 return [probe, .. me.Hand.Where(h => h != probe).OrderByDescending(h => ProbeValue(h) + Noise()).Take(count - 1)];
@@ -851,6 +858,25 @@ public static partial class BotPlayer
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
             return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
+        }
+
+        private Bots.TableModel? _model;
+
+        /// <summary>
+        /// Модель стола глазами бота: открытые подсказки, свои исчезнувшие письма и чужие — со слов игроков
+        /// («кидал эту», письмо не открыто), с доверием к ним. Похожесть — своя, строгий читает подсказку узко.
+        /// </summary>
+        private Bots.TableModel Model()
+        {
+            if (_model is not null) return _model;
+            var model = Bots.TableModel.Uniform(view.Board.Select(r => (IReadOnlyList<string>)r.Cards).ToList(), Sim, 4 + 8 * P.Strictness);
+            var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
+            foreach (var hint in shown) model = model.With(hint, true);
+            foreach (var l in me.Letters.Where(l => l.Revealed == false)) model = model.With(l.CardId, false);
+            if (mind is not null)
+                foreach (var c in mind.ClaimList.Where(c => c.Author != me.Id && c.Round < view.Round && !shown.Contains(c.Card)))
+                    model = model.With(c.Card, false, BotTuning.Current.OthersVanished * DistrustFactor(c.Author));
+            return _model = model;
         }
 
         /// <summary>Эксперт шлёт письмо под истинную карту; осторожный — не каждый раунд (иначе слишком метко).</summary>

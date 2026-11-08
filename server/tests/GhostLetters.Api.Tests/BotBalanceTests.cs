@@ -25,6 +25,13 @@ public sealed class BotBalanceTests
         new("7 игроков (Сообщник, Свидетель)", new SandboxOptions(7, null, null, false)),
         new("8 игроков, +Шантажист", new SandboxOptions(8, null, new RoleOptions(UseBlackmailer: true), false)),
         new("10 игроков (Свидетель, Эксперт)", new SandboxOptions(10, null, null, false)),
+        // Правила «Озона» — по ним играют опытные игроки; в них и целимся.
+        new("Озон, 4 игрока (Убийцы может не быть)", SandboxOptions.Ozon(4)),
+        new("Озон, 5 игроков", SandboxOptions.Ozon(5)),
+        new("Озон, 6 игроков (+Сообщник)", SandboxOptions.Ozon(6)),
+        new("Озон, 7 игроков", SandboxOptions.Ozon(7)),
+        new("Озон, 8 игроков", SandboxOptions.Ozon(8)),
+        new("Озон, 10 игроков", SandboxOptions.Ozon(10)),
     ];
 
     private static readonly IReadOnlyList<string> Deck = Enumerable.Range(1, 758).Select(i => $"orig_{i:0000}").ToList();
@@ -197,7 +204,8 @@ public sealed class BotBalanceTests
             variants.Add(colon < 0 ? (part, BotTuning.Parse(part)) : (part[..colon].Trim(), BotTuning.Parse(part[(colon + 1)..])));
         }
 
-        Config[] configs = [Configs[0], Configs[2], Configs[4], Configs[5], Configs[6], Configs[7]];
+        // A/B — по составам «Озона».
+        Config[] configs = [.. Configs.Where(c => c.Name.StartsWith("Озон", StringComparison.Ordinal))];
         var tags = RealTags();
         var md = new StringBuilder();
         var commit = Environment.GetEnvironmentVariable("GITHUB_SHA") is { Length: >= 7 } sha ? sha[..7] : "локально";

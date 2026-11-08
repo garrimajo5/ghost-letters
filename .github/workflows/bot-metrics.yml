@@ -55,4 +55,4 @@ jobs:
           if [ -f bot-metrics.request ]; then git rm -q bot-metrics.request; fi
           git add ../docs/bot-metrics.md
           git commit -m "Метрики ботов: ${{ steps.req.outputs.games }} партий"
-          git push
+          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done

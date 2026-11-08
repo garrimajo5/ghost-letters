@@ -15,6 +15,24 @@ public sealed record BotTuning
     /// <summary>Призрак примеряет письма на стол (иначе — прежний отбор по ясности каждого письма).</summary>
     public bool GhostPlans { get; init; } = true;
 
+    /// <summary>
+    /// Боты 3.0: Призрак решает по модели стола (TableModel) — открывает письма, которые
+    /// поднимают вероятность истины в глазах стола, и не открывает те, что уводят ряд к ложной карте.
+    /// </summary>
+    public bool GhostModel { get; init; }
+
+    /// <summary>Сколько выигрыша (в log-вероятности истины) нужно письму, чтобы его стоило открыть осторожному Призраку.</summary>
+    public double GhostModelCost { get; init; } = .15;
+
+    /// <summary>Насколько стол верит исчезновению чужого письма (узнаёт о нём со слов отправителя).</summary>
+    public double GhostModelVanish { get; init; } = .5;
+
+    /// <summary>Боты 3.0: мирный выбирает письмо по ожидаемой информации на модели стола (широкое в начале, узкое потом).</summary>
+    public bool LetterModel { get; init; }
+
+    /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
+    public double GhostModelHonest { get; init; } = 1;
+
     /// <summary>Сколько вреда для стола рискованный Призрак готов стерпеть ради сомнительного письма (× риск²).</summary>
     public double GhostTolerance { get; init; } = 0;
 
@@ -155,6 +173,11 @@ public sealed record BotTuning
                 nameof(FocusBase) => t with { FocusBase = D() },
                 nameof(FocusStrict) => t with { FocusStrict = D() },
                 nameof(GhostPlans) => t with { GhostPlans = B() },
+                nameof(GhostModel) => t with { GhostModel = B() },
+                nameof(GhostModelCost) => t with { GhostModelCost = D() },
+                nameof(GhostModelVanish) => t with { GhostModelVanish = D() },
+                nameof(GhostModelHonest) => t with { GhostModelHonest = D() },
+                nameof(LetterModel) => t with { LetterModel = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

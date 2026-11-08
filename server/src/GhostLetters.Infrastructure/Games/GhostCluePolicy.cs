@@ -44,10 +44,12 @@ public static class GhostCluePolicy
     /// письма, пока они делают истинные карты заметнее ложных. Осторожность по-прежнему решает, можно ли
     /// открыть сомнительное письмо; очень полезное для стола письмо открывается и у осторожного.
     /// </summary>
-    public static IReadOnlyList<string> Choose(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> cards)
+    /// <param name="letters">Карты — письма этого раунда (неоткрытые исчезнут); false — карты руки для зацепки.</param>
+    public static IReadOnlyList<string> Choose(PlayerView view, CardTags tags, BotMind mind, IEnumerable<string> cards, bool letters = true)
     {
         if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return [];
         var tuning = BotTuning.Current;
+        if (tuning.GhostModel) return ModelChoose(view, tags, mind, cards.Distinct().ToList(), truth, letters);
         if (!tuning.GhostPlans)
             return cards.Select(c => (Card: c, Value: Assess(view, tags, mind, c))).Where(x => x.Value.Reveal)
                 .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch * (1 - x.Value.Risk)).Select(x => x.Card).ToList();
@@ -95,6 +97,74 @@ public static class GhostCluePolicy
                 .OrderByDescending(c => c.Gain).ThenByDescending(c => c.Value.TrueMatch - c.Value.FalseMatch)
                 .FirstOrDefault();
             if (fallback.Card is not null) chosen.Add(fallback.Card);
+        }
+
+        return chosen;
+    }
+
+    /// <summary>
+    /// Боты 3.0: Призрак примеряет письма на модель стола (<see cref="TableModel"/>). Стол видит открытые подсказки
+    /// и узнаёт, что остальные письма исчезли. Призрак жадно открывает письма, пока истина становится вероятнее
+    /// (сумма log-вероятностей истинных карт) — минимум открытий нормален. Письмо, после которого ряд, где стол
+    /// уже верно видел истину, уходит к ложной карте, не открывается, если оно не прибавляет верных рядов в целом.
+    /// Осторожность (риск характера и срочность к концу партии) снижает порог: под конец Призрак рискует и
+    /// дальней подсказкой — если она хоть немного поднимает истину, которую никто не нашёл.
+    /// </summary>
+    private static IReadOnlyList<string> ModelChoose(PlayerView view, CardTags tags, BotMind mind, IReadOnlyList<string> cards,
+        IReadOnlyList<int> truth, bool letters)
+    {
+        if (cards.Count == 0) return [];
+        var tuning = BotTuning.Current;
+        var memo = new Dictionary<(string, string), double>();
+        double Sim(string a, string b) => memo.TryGetValue((a, b), out var v) ? v : memo[(a, b)] = tags.Similarity(a, b);
+        var breadth = Math.Clamp(mind.TableBreadth, 1, 4);
+        var focus = 4 + 8 * (1 - (breadth - 1) / 3);
+        var table = TableModel.Uniform(view.Board.Select(r => (IReadOnlyList<string>)r.Cards).ToList(), Sim, focus);
+        foreach (var hint in view.Hints.SelectMany(h => h.Cards)) table = table.With(hint, true);
+
+        TableModel After(IReadOnlyCollection<string> open)
+        {
+            var t = table;
+            foreach (var c in open) t = t.With(c, true);
+            if (letters)
+                foreach (var c in cards.Where(c => !open.Contains(c))) t = t.With(c, false, tuning.GhostModelVanish);
+            return t;
+        }
+
+        var late = view.TotalRounds <= 1 ? 1 : Math.Clamp((view.Round - 1.0) / (view.TotalRounds - 1), 0, 1);
+        var risk = Math.Clamp(mind.Personality.Risk + (1 - mind.Personality.Risk) * late * .8, 0, 1);
+        var cost = tuning.GhostModelCost * (1 - risk);
+        // Письмо, которое сильнее указывает на ложную карту, чем на любую истинную, не открываем вовсе:
+        // стол «объясняет» подсказку лучшим совпадением, и уводить его потом дорого (в крайнем случае — 50/50).
+        bool Honest(string letter)
+        {
+            var w = table.Pointing(letter);
+            double t = 0, f = 0;
+            for (var r = 0; r < w.Length; r++)
+                for (var c = 0; c < w[r].Length; c++)
+                    if (c == truth[r]) t = Math.Max(t, w[r][c]); else f = Math.Max(f, w[r][c]);
+            return t > 0 && t >= f * tuning.GhostModelHonest;
+        }
+
+        var chosen = new List<string>();
+        var current = After(chosen);
+        var score = current.TruthScore(truth);
+        var right = current.RowsRight(truth);
+        while (true)
+        {
+            var best = cards.Where(c => !chosen.Contains(c) && Honest(c)).Select(c =>
+            {
+                var next = After([.. chosen, c]);
+                var misleads = Enumerable.Range(0, truth.Count).Any(r => current.Best(r) == truth[r] && next.Best(r) != truth[r]);
+                return (Card: c, Next: next, Gain: next.TruthScore(truth) - score, Right: next.RowsRight(truth), Misleads: misleads);
+            })
+                .Where(x => x.Gain > cost && (!x.Misleads || x.Right > right))
+                .OrderByDescending(x => x.Gain).FirstOrDefault();
+            if (best.Card is null) break;
+            chosen.Add(best.Card);
+            current = best.Next;
+            score += best.Gain;
+            right = best.Right;
         }
 
         return chosen;
