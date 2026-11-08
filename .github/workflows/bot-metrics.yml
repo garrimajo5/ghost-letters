@@ -1,0 +1,58 @@
+name: Bot metrics
+
+# Боты 3.0: метрики качества игры ботов (Призрак, письма по ролям, подозрения, эхо).
+# Запуск: число партий на состав в server/bot-metrics.request (вторая строка «variants: имя: Настройка=значение | …» —
+# сравнить варианты BotTuning) и push ветки. Отчёт docs/bot-metrics.md коммитится в ту же ветку, файл-запрос удаляется.
+on:
+  push:
+    paths:
+      - server/bot-metrics.request
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot-metrics-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: server/global.json
+      - name: Read request
+        id: req
+        run: |
+          games=100; variants=""
+          if [ -f bot-metrics.request ]; then
+            games=$(head -n1 bot-metrics.request | tr -cd '0-9'); games=${games:-100}
+            variants=$(grep '^variants:' bot-metrics.request | sed 's/^variants: *//' || true)
+          fi
+          if [ "$games" -gt 400 ]; then games=400; fi
+          echo "games=$games" >> "$GITHUB_OUTPUT"
+          echo "variants=$variants" >> "$GITHUB_OUTPUT"
+      - name: Run metrics
+        env:
+          BOT_METRICS_GAMES: ${{ steps.req.outputs.games }}
+          BOT_METRICS_VARIANTS: ${{ steps.req.outputs.variants }}
+          BOT_METRICS_OUT: ${{ github.workspace }}/docs/bot-metrics.md
+        run: |
+          dotnet test tests/GhostLetters.Api.Tests -c Release --filter "FullyQualifiedName~BotMetricsTests.Metrics_Report" --logger "console;verbosity=minimal"
+          test -s "$BOT_METRICS_OUT"
+          echo "::notice title=Bot metrics::$(head -c 3000 "$BOT_METRICS_OUT" | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g')"
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f bot-metrics.request ]; then git rm -q bot-metrics.request; fi
+          git add ../docs/bot-metrics.md
+          git commit -m "Метрики ботов: ${{ steps.req.outputs.games }} партий"
+          git push
