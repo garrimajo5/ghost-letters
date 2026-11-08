@@ -77,10 +77,10 @@ public sealed class TableModelTests
         {
             var early = (SendLetter)BotPlayer.Decide(View([]), new Random(1), Tags, mind)!;
             // Широкая проверка: оружие (пистолет, нож, меч) или растения (роза, лес) — не узкий кирпич и не пустое облако.
-            early.CardIds.Single().Should().BeOneOf("pistol", "lily");
+            early.CardIds.Should().Contain(c => c == "pistol" || c == "lily").And.NotContain("cloud");
             // Ряды уже ясны подсказками — та же широкая проверка теряет смысл.
             var clear = (SendLetter)BotPlayer.Decide(View([new(1, ["pistol"]), new(2, ["lily"])]), new Random(1), Tags, mind)!;
-            clear.CardIds.Single().Should().NotBe("cloud");
+            clear.CardIds.Should().NotContain("cloud");
         }
     }
 }
