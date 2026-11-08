@@ -180,7 +180,7 @@ public sealed class BotPersonalityTests
 
         // Стол уже подозревает Убийцу: даже рисковый Свидетель молчит, чтобы не выдать себя на охоте.
         var accused = Mind(new BotPersonality { Risk = 1, Compromise = 1 }, accusations: [new(Ann, Bob, 1)]);
-        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Бот Боб"))
+        Enumerable.Range(0, 30).Count(seed => BotPlayer.Say(view, new Random(seed), Tags, accused)!.Value.Text.Contains("Убийца — Боб"))
             .Should().Be(0);
     }
 
@@ -240,7 +240,7 @@ public sealed class BotPersonalityTests
             .Select(seed => BotPlayer.Say(view, new Random(seed), Tags, Mind(new BotPersonality { Risk = 0.8, Compromise = 0.9 }, accusations: accusations))!.Value.Text)
             .ToList();
 
-        lines.Should().OnlyContain(t => t.Contains("Убийца — Бот Боб"), "подозрение сильное — говорит прямо");
+        lines.Should().OnlyContain(t => t.Contains("Убийца — Боб"), "подозрение сильное — говорит прямо");
         AccusationReader.Read(Me, lines[0], Names).Should().Contain(a => a.Target == Bob, "и другие боты прочитают это обвинение");
     }
 
