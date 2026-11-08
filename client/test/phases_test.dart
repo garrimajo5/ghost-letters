@@ -102,8 +102,8 @@ void main() {
   // Каждая фаза отрисовывается без ошибок и показывает понятную подсказку.
   final cases = <String, (GameSnapshot, String)>{
     'роль': (phaseSnapshot('RoleReveal', const ['AckRole']), 'ВАША РОЛЬ'),
-    'ночь, Убийца': (phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'), 'Выберите по одной истинной улике в каждом ряду'),
-    'ночь, детектив': (phaseSnapshot('Night', const []), 'Ждём других игроков'),
+    'ночь, Убийца': (phaseSnapshot('Night', const ['ChooseTruth'], role: 'Killer'), 'Загадайте карты: по одной истинной улике в каждом ряду'),
+    'ночь, детектив': (phaseSnapshot('Night', const []), 'Убийца и сообщники загадывают карты'),
     'первая зацепка': (phaseSnapshot('FirstClue', const ['GiveFirstClue'], role: 'Ghost'), 'Можно выложить первую зацепку'),
     'выбор Призрака': (
       phaseSnapshot('GhostPick', const ['RevealHints', 'Discard'], role: 'Ghost', view: {

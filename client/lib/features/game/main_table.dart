@@ -414,7 +414,7 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              mine ? 'Ваш ход · ${myTurnPhase(v)}' : T.shortPhase(v.phase),
+              mine ? 'Ваш ход · ${myTurnPhase(v)}' : (v.phase == 'Night' ? nightWaiting : T.shortPhase(v.phase)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: mine && !killerNight ? AppColors.onAmber : AppColors.text),
@@ -978,7 +978,7 @@ class _SeatTile extends StatelessWidget {
             photoId: screen.photoOf(p.id),
             // Портреты крупнее: ботов и людей должно быть хорошо видно.
             size: avatarSize ?? (compact ? 38 : 44),
-            ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : null),
+            ring: isMe ? AppColors.amber : (ghost ? AppColors.ice : (isKillerTeam(shownRole(v, p)) ? AppColors.redSoft : null)),
           ),
         ),
       ),
@@ -992,6 +992,28 @@ class _SeatTile extends StatelessWidget {
             padding: const EdgeInsets.all(1.5),
             decoration: const BoxDecoration(color: AppColors.surface2, shape: BoxShape.circle),
             child: const Icon(Icons.smart_toy_outlined, size: 12, color: AppColors.ice),
+          ),
+        ),
+      // Известная роль — значком на портрете (в узком ряду подписи под именем нет места).
+      if (!ghost && !isMe && shownRole(v, p) != null)
+        Positioned(
+          left: -5,
+          bottom: -4,
+          child: Tooltip(
+            message: T.role(shownRole(v, p)),
+            child: Container(
+              key: Key('seat-role-${p.id}'),
+              width: 16,
+              height: 16,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isKillerTeam(shownRole(v, p)) ? AppColors.red : AppColors.surface2,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.bg, width: 1.5),
+              ),
+              child: Text(T.role(shownRole(v, p)).characters.first,
+                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: AppColors.text)),
+            ),
           ),
         ),
       if (p.hasActed)
@@ -1032,6 +1054,11 @@ class _SeatTile extends StatelessWidget {
                       avatar,
                       const SizedBox(height: 2),
                       Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: nameStyle.copyWith(fontSize: 10)),
+                      // Известная мне роль (Убийце — сообщник, Сообщнику — Убийца, Свидетелю — Убийца).
+                      if (avatarSize != null && !ghost && !isMe && shownRole(v, p) != null)
+                        Text(T.role(shownRole(v, p)), key: Key('seat-role-text-${p.id}'), maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
+                                color: isKillerTeam(shownRole(v, p)) ? AppColors.redSoft : AppColors.muted)),
                     ])
                   : Tooltip(message: name, child: avatar)
               : Row(children: [
@@ -1069,6 +1096,8 @@ Future<void> _askMenu(BuildContext context, GameView v, PlayerInfo p) async {
     context: context,
     position: RelativeRect.fromLTRB(at.dx, at.dy + box.size.height, at.dx + box.size.width, 0),
     items: [
+      // Заметка об игроке — в любой момент, даже пока говорят другие.
+      PopupMenuItem(value: 'note', key: Key('note-player-${p.id}'), child: const Text('Заметка об игроке')),
       PopupMenuItem(
         value: 'ask',
         key: Key('ask-version-${p.id}'),
@@ -1079,6 +1108,10 @@ Future<void> _askMenu(BuildContext context, GameView v, PlayerInfo p) async {
     ],
   );
   if (choice == null) return;
+  if (choice == 'note') {
+    if (screen.mounted) NoteSheet.show(screen.context, screen, p.id);
+    return;
+  }
   final name = screen.nick(p.id).startsWith('Бот ') ? screen.nick(p.id).substring(4) : screen.nick(p.id);
   if (choice == 'ask') {
     await screen.ref.read(apiProvider).sendChat(v.gameId, '$name, покажи свою версию: на что указывают улики?', channel: 'public');
