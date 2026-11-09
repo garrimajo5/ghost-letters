@@ -46,7 +46,13 @@ public static partial class BotPlayer
             }
 
             var target = Math.Min(black, unknown.Count - .05);
-            var score = unknown.ToDictionary(id => id, RoleEvidence);
+            // Пока считаем модель игроков, доверие к словам — по-старому (иначе круг: доверие → улики → модель).
+            _computingBlack = true;
+            Dictionary<Guid, double> score;
+            try { score = unknown.ToDictionary(id => id, RoleEvidence); }
+            finally { _computingBlack = false; }
+            // Улики о картах дальше пересчитаем уже с доверием из модели.
+            if (BotTuning.Current.UnifiedTrust) _evidence.Clear();
             // Сдвиг подбираем так, чтобы сумма вероятностей = числу чёрных среди неизвестных.
             double lo = -20, hi = 20;
             for (var i = 0; i < 50; i++)
@@ -70,6 +76,23 @@ public static partial class BotPlayer
             if (BlackCount() <= 1) return black;
             var loud = BotTuning.Current.LieDetect * LiedChecks(id) + ClaimConflict(id);
             return black * Math.Exp(-BotTuning.Current.AccompliceLoud * loud);
+        }
+
+        private bool _computingBlack;
+
+        /// <summary>
+        /// Боты 4.0, шаг 2: насколько верить словам игрока — из той же модели игроков, по которой бот подозревает
+        /// и голосует (1 — как случайному игроку за столом, 0 — точно чёрный, выше 1 не бывает). Раньше доверие
+        /// считалось отдельной формулой и расходилось с подозрениями.
+        /// </summary>
+        private double Trust(Guid id)
+        {
+            if (!BotTuning.Current.UnifiedTrust || Classic || KillerTeam || _computingBlack)
+                return HistoryTrust(id) * DistrustFactor(id);
+            if (Known(id) is { } known) return known.IsKillerTeam() ? 0 : 1;
+            var unknown = view.Players.Count(p => !p.IsGhost && p.Id != me.Id && p.KnownRole is null);
+            var prior = Math.Min(.9, Math.Max(0, BlackCount() - (me.Role.IsKillerTeam() ? 1 : 0)) / (double)Math.Max(1, unknown));
+            return Math.Clamp((1 - Black(id)) / (1 - prior), 0, 1);
         }
 
         private static double Logistic(double x) => 1 / (1 + Math.Exp(-x));
