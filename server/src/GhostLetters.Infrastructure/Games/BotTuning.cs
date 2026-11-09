@@ -64,7 +64,7 @@ public sealed record BotTuning
     public bool HuntTells { get; init; } = true;
 
     /// <summary>Боты 3.0, этап 4: Эксперт целит каждым письмом в свою истинную карту (раньше — все письма в одну).</summary>
-    public bool ExpertAllLetters { get; init; }
+    public bool ExpertAllLetters { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
