@@ -180,7 +180,7 @@ public static partial class BotPlayer
                 var killer = view.Players.FirstOrDefault(p => p.KnownRole == Role.Killer);
                 if (killer is not null && Accused(killer.Id) >= .5) return .15;
                 if (Accused(me.Id) >= .5) return .35;
-                return view.Round >= view.TotalRounds ? .85 : .5;
+                return view.Round >= view.TotalRounds ? .85 : BotTuning.Current.AccompliceSpoilBase;
             }
         }
 
