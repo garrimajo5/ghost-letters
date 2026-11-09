@@ -51,6 +51,32 @@ public static partial class SpeechProsody
         return wanted.FirstOrDefault(option.Roles.Contains) ?? role;
     }
 
+    /// <summary>Сколько символов в секунду читает голос при темпе 1 (русский, SpeechKit — около 14).</summary>
+    public const double CharsPerSecond = 14;
+
+    /// <summary>Сколько секунд может длиться голос бота.</summary>
+    public const double MaxSeconds = 15;
+
+    /// <summary>
+    /// Уложить голос в <see cref="MaxSeconds"/>: сначала чуть быстрее (до 1.25), если всё ещё длинно —
+    /// только первые предложения, которые влезают. Первое предложение остаётся всегда.
+    /// </summary>
+    public static (string Text, double Speed) Fit(string text, double speed)
+    {
+        double Seconds(string t, double s) => t.Length / (CharsPerSecond * s);
+        if (Seconds(text, speed) <= MaxSeconds) return (text, speed);
+        var faster = Math.Min(1.25, Math.Max(speed, text.Length / (CharsPerSecond * MaxSeconds)));
+        if (Seconds(text, faster) <= MaxSeconds) return (text, faster);
+        var sentences = System.Text.RegularExpressions.Regex.Split(text, @"(?<=[.!?…])\s+").Where(x => x.Length > 0).ToList();
+        var kept = new System.Text.StringBuilder(sentences[0]);
+        foreach (var sentence in sentences.Skip(1))
+        {
+            if (Seconds(kept + " " + sentence, faster) > MaxSeconds) break;
+            kept.Append(' ').Append(sentence);
+        }
+        return (kept.ToString(), faster);
+    }
+
     /// <summary>Темп по манере: живой говорит чуть быстрее, официальный — размереннее.</summary>
     public static double SpeedOf(SpokenStyle.Manner manner) => manner switch
     {
