@@ -76,7 +76,7 @@ public sealed record BotTuning
     public bool ExpertModestClaims { get; init; }
 
     /// <summary>Боты 3.0, этап 5: в финале полную сводку дают двое, остальные — только расхождения.</summary>
-    public bool FinalShort { get; init; }
+    public bool FinalShort { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
