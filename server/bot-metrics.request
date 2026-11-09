@@ -1,0 +1,2 @@
+150
+variants: модель, только голос: RoleModel=true, RoleModelSpeech=false | модель, только речь: RoleModel=true, RoleModelVote=false

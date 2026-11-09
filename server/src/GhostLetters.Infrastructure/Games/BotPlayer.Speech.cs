@@ -106,7 +106,7 @@ public static partial class BotPlayer
                 return target is not null && NameOf(target.Id) is { } framed ? Accused($" Подозреваю, что {framed} из чёрных.", framed, .6) : "";
             }
 
-            if (BotTuning.Current.RoleModel)
+            if (BotTuning.Current is { RoleModel: true, RoleModelSpeech: true })
             {
                 // Модель игроков: говорю, когда уверен, что игрок чёрный, и называю главную причину.
                 var (id, black) = others.Where(p => p.KnownRole is not { } r || r.IsKillerTeam())

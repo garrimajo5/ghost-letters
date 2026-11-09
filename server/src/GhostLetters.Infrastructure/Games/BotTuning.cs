@@ -42,6 +42,12 @@ public sealed record BotTuning
     /// <summary>Модель игроков: насколько «громкие» улики (ложь о проверках, чужие письма) при нескольких чёрных уводят подозрение с Убийцы на Сообщника.</summary>
     public double AccompliceLoud { get; init; } = .7;
 
+    /// <summary>Для A/B: модель игроков в подозрениях вслух.</summary>
+    public bool RoleModelSpeech { get; init; } = true;
+
+    /// <summary>Для A/B: модель игроков в голосе за Убийцу.</summary>
+    public bool RoleModelVote { get; init; } = true;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -193,6 +199,8 @@ public sealed record BotTuning
                 nameof(LetterClarity) => t with { LetterClarity = D() },
                 nameof(RoleModel) => t with { RoleModel = B() },
                 nameof(AccompliceLoud) => t with { AccompliceLoud = D() },
+                nameof(RoleModelSpeech) => t with { RoleModelSpeech = B() },
+                nameof(RoleModelVote) => t with { RoleModelVote = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

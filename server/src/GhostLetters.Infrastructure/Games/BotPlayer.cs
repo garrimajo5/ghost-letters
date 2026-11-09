@@ -767,7 +767,7 @@ public static partial class BotPlayer
                 // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
                 // Память добавляет подозрение тем, кто часто бывал Убийцей в прошлых партиях с ботом.
                 // Подозрения: память о прошлых партиях, обвинения стола и странные советы в чате.
-                return BotTuning.Current.RoleModel
+                return BotTuning.Current is { RoleModel: true, RoleModelVote: true }
                     ? candidates.OrderByDescending(c => rng.NextDouble() * 0.3 + Killer(c)).First()
                     : candidates.OrderByDescending(c => rng.NextDouble() * 0.5 + Suspicion(c)).First();
             }
