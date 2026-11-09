@@ -42,7 +42,7 @@ public sealed class BotMetricsTests
         public int GhostRounds, GhostReveals, GhostEmptyRounds, RevealTruth, RevealFalse, WithheldTruth;
         public readonly Dictionary<string, (int Letters, int AimTruth, double Breadth, double Clarity, int CutTruth, int Checks)> Letters = new();
         public int KillerAccusedGames, KillerAccusedRoundSum, Accusations, AccusationsBlack;
-        public int Messages, Echo, DiscussionRounds;
+        public int Messages, Echo, EchoCard, DiscussionRounds;
 
         public void Add(SandboxReport report, GameState state, CardTags tags)
         {
@@ -121,8 +121,11 @@ public sealed class BotMetricsTests
             var discussion = report.Messages.Where(m => role.GetValueOrDefault(m.Author) != Role.Ghost).ToList();
             Messages += discussion.Count;
             DiscussionRounds += discussion.Select(m => m.Round).Distinct().Count();
-            Echo += discussion.Count(m => m.Cards.Count <= 1 && m.Notes.All(n => n.StartsWith("думаю", StringComparison.Ordinal))
-                && !m.Text.Contains("Убийц", StringComparison.Ordinal) && !m.Text.Contains("чёрн", StringComparison.Ordinal));
+            bool Echoes(SandboxMessage m) => m.Cards.Count <= 1 && m.Notes.All(n => n.StartsWith("думаю", StringComparison.Ordinal))
+                && !m.Text.Contains("Убийц", StringComparison.Ordinal) && !m.Text.Contains("чёрн", StringComparison.Ordinal);
+            Echo += discussion.Count(Echoes);
+            // Отдельно — поддакивание картой («думаю, эта»); остальное эхо — реплики без карт («Аня, согласен»).
+            EchoCard += discussion.Count(m => m.Cards.Count == 1 && Echoes(m));
         }
 
         private static string Group(Role r) => r switch
@@ -171,7 +174,7 @@ public sealed class BotMetricsTests
             - **Призрак: открыто / раунд** — среднее число открытых писем; **пустых** — раундов без открытий; **к истине / к ложной** — доля открытых писем, чьё самое похожее на поле — истинная / ложная карта; **придержал истину** — неоткрытых писем, ясно указывающих на истину, на партию.
             - **Письма по ролям:** **в истину** — доля писем, чьё самое похожее — истина; **ширина** — сколько карт поля похожи на письмо почти как лучшая (≥ 60 %); **ясность** — отрыв лучшей карты от второй; **отсёк истину** — доля «проверок» в речи, которые отвергли истинную карту.
             - **Подозрения:** **Убийцу обвинили** — доля партий, где мирный всерьёз назвал Убийцу, и средний раунд первого обвинения; **точность** — доля серьёзных обвинений мирных, попавших в чёрных.
-            - **Эхо** — доля реплик без своих улик (только «думаю, эта» на одной карте); **реплик / раунд** — сколько говорят боты.
+            - **Эхо** — доля реплик без своих улик (только «думаю, эта» на одной карте или реплика без карт; в скобках — с картой); **реплик / раунд** — сколько говорят боты.
             """).AppendLine();
 
         foreach (var (configName, options) in Configs)
@@ -195,7 +198,7 @@ public sealed class BotMetricsTests
                 md.AppendLine($"| {name} | {Pct(m.DetWins, m.Games)} | {Pct(m.RowsOk, m.Rows)} | {Num(m.GhostReveals, m.GhostRounds)} | {Pct(m.GhostEmptyRounds, m.GhostRounds)} | " +
                     $"{Pct(m.RevealTruth, revealed)} / {Pct(m.RevealFalse, revealed)} | {Num(m.WithheldTruth, m.Games)} | " +
                     $"{Pct(m.KillerAccusedGames, m.Games)} ({Num(m.KillerAccusedRoundSum, m.KillerAccusedGames)}) | {Pct(m.AccusationsBlack, m.Accusations)} | " +
-                    $"{Pct(m.Echo, m.Messages)} | {Num(m.Messages, m.DiscussionRounds)} |");
+                    $"{Pct(m.Echo, m.Messages)} (картой {Pct(m.EchoCard, m.Messages)}) | {Num(m.Messages, m.DiscussionRounds)} |");
                 foreach (var (group, x) in m.Letters.OrderBy(g => g.Key))
                     letterLines.Add($"| {name} | {group} | {x.Letters} | {Pct(x.AimTruth, x.Letters)} | {Num(x.Breadth, x.Letters)} | {Num(x.Clarity, x.Letters, "0.00")} | {Pct(x.CutTruth, x.Checks)} из {x.Checks} |");
             }
