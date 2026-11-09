@@ -868,6 +868,24 @@ public static partial class BotPlayer
             {
                 return [probe, .. me.Hand.Where(h => h != probe).OrderByDescending(h => ProbeValue(h) + Noise()).Take(count - 1)];
             }
+            else if (!Classic && BotTuning.Current.ExpertAllLetters && ExpertAims() && Truth is { } known && me.Hand.Count > 1)
+            {
+                // Боты 3.0, этап 4: Эксперт знает истину — каждое письмо целит в истинную карту своего ряда
+                // (от самых неясных для стола), а не все письма в одну. Присваивает он потом только часть (речь).
+                var picked = new List<string>();
+                var others = view.Board.SelectMany(r => r.Cards).ToList();
+                foreach (var r in Enumerable.Range(0, view.Board.Count).OrderBy(r => Certainty(r) + Noise()))
+                {
+                    if (picked.Count >= count) break;
+                    var aim = Card(r, known[r]);
+                    var rest = others.Where(c => c != aim).ToList();
+                    var letter = me.Hand.Where(h => !picked.Contains(h))
+                        .OrderByDescending(h => Sim(h, aim) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, rest) + Noise())
+                        .FirstOrDefault();
+                    if (letter is not null) picked.Add(letter);
+                }
+                return picked;
+            }
             else
             {
                 // Проверяем самый неясный ряд: его лучшую (или случайную) карту.
