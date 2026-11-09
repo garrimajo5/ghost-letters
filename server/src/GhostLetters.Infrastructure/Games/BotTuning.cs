@@ -66,6 +66,9 @@ public sealed record BotTuning
     /// <summary>Боты 3.0, этап 4: Эксперт целит каждым письмом в свою истинную карту (раньше — все письма в одну).</summary>
     public bool ExpertAllLetters { get; init; } = true;
 
+    /// <summary>Боты 3.0, этап 5: тема реплики — неясный ряд со своей уликой, а не самый ясный (меньше эха).</summary>
+    public bool TopicUnclear { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -225,6 +228,7 @@ public sealed record BotTuning
                 nameof(AccompliceSpoilBase) => t with { AccompliceSpoilBase = D() },
                 nameof(HuntTells) => t with { HuntTells = B() },
                 nameof(ExpertAllLetters) => t with { ExpertAllLetters = B() },
+                nameof(TopicUnclear) => t with { TopicUnclear = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
