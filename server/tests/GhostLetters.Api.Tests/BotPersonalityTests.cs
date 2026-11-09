@@ -222,7 +222,7 @@ public sealed class BotPersonalityTests
     public void RoleModel_NamesTheLiar_WithTheReason_AndVotesForHim()
     {
         // Боб назвал своим моё письмо — врёт наверняка. За столом один чёрный: подозрение к Ане падает.
-        using var _ = BotTuning.Use(BotTuning.Default with { RoleModel = true });
+        using var _ = BotTuning.Use(BotTuning.Default with { RoleModel = true, RoleModelSpeech = true });
         var mind = Mind(new BotPersonality { Risk = .5, Memory = 0 }) with { Claims = [new(Bob, "sword", 1)] };
         var talk = View(Phase.Discussion, [], Role.Detective, letters: [new MyLetterView(1, "sword", false)]);
         var lines = Enumerable.Range(0, 20).Select(seed => BotPlayer.Say(talk, new Random(seed), Tags, mind)?.Text ?? "").ToList();

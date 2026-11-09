@@ -58,6 +58,20 @@ public static partial class BotPlayer
             return _black = result;
         }
 
+        /// <summary>
+        /// Насколько игрок похож именно на Убийцу, а не на Сообщника. Сообщник вредит громко — врёт о проверках,
+        /// отсекает истину, присваивает чужие письма; Убийца маскируется. Поэтому «громкие» улики при нескольких
+        /// чёрных говорят скорее о Сообщнике, и в голосе за Убийцу их вес снижаем.
+        /// </summary>
+        private double Killer(Guid id)
+        {
+            if (view.Players.FirstOrDefault(p => p.Id == id)?.KnownRole is { } known) return known == Role.Killer ? 1 : 0;
+            var black = Black(id);
+            if (BlackCount() <= 1) return black;
+            var loud = BotTuning.Current.LieDetect * LiedChecks(id) + ClaimConflict(id);
+            return black * Math.Exp(-BotTuning.Current.AccompliceLoud * loud);
+        }
+
         private static double Logistic(double x) => 1 / (1 + Math.Exp(-x));
 
         /// <summary>Улики против игрока одним числом (0 — ничего против него нет).</summary>

@@ -37,7 +37,19 @@ public sealed record BotTuning
     public double LetterClarity { get; init; }
 
     /// <summary>Боты 3.0, этап 2: модель игроков — подозрения как вероятности с учётом числа чёрных и «малой пользы».</summary>
-    public bool RoleModel { get; init; }
+    public bool RoleModel { get; init; } = true;
+
+    /// <summary>Модель игроков: насколько «громкие» улики (ложь о проверках, чужие письма) при нескольких чёрных уводят подозрение с Убийцы на Сообщника.</summary>
+    public double AccompliceLoud { get; init; } = .7;
+
+    /// <summary>Призрак на модели: ряд, где стол уверен в истине не меньше этого, больше не уточняем (1 — уточняем всё).</summary>
+    public double GhostModelSettled { get; init; } = 1.01;
+
+    /// <summary>Модель игроков в подозрениях вслух. Выключено: боты с ней обвиняли реже, и стол терял (8 игроков: 44 → 35 %).</summary>
+    public bool RoleModelSpeech { get; init; }
+
+    /// <summary>Для A/B: модель игроков в голосе за Убийцу.</summary>
+    public bool RoleModelVote { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
@@ -189,6 +201,10 @@ public sealed record BotTuning
                 nameof(LetterModel) => t with { LetterModel = B() },
                 nameof(LetterClarity) => t with { LetterClarity = D() },
                 nameof(RoleModel) => t with { RoleModel = B() },
+                nameof(AccompliceLoud) => t with { AccompliceLoud = D() },
+                nameof(GhostModelSettled) => t with { GhostModelSettled = D() },
+                nameof(RoleModelSpeech) => t with { RoleModelSpeech = B() },
+                nameof(RoleModelVote) => t with { RoleModelVote = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
