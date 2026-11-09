@@ -128,7 +128,24 @@ public static class BotDiscussion
         }
         string[] openers = ["Собрал версию по всем открытым уликам за партию:", "Если сложить все улики, у меня выходит так:",
             "Вот как я вижу дело целиком:", "Моя версия по всей партии:"];
-        if (own.Count == 0) return Line(Summary(openers[me.Id.ToByteArray()[2] % openers.Length]));
+        if (own.Count == 0)
+        {
+            // Боты 3.0, этап 5: финал на замысле. Полную сводку дают первые двое; остальные — только расхождения
+            // с последней сводкой («согласен с версией Ани, кроме места: я за место 3»), а не ещё один монолог.
+            var summaries = messages.Where(m => m.Author != me.Id && m.Cards.Count >= view.Board.Count && m.Text.Contains("\n• ", StringComparison.Ordinal)).ToList();
+            if (BotTuning.Current.FinalShort && summaries.Count >= 2 && summaries[^1] is var last)
+            {
+                var differ = Enumerable.Range(0, view.Board.Count)
+                    .Where(r => last.Cards.FirstOrDefault(view.Board[r].Cards.Contains) is { } theirs && theirs != view.Board[r].Cards[plan[r]]).ToList();
+                if (differ.Count == 0)
+                    return ($"Согласен с версией {Call(last.Author)} целиком.{suspicion}", cards, cards.Select(_ => "думаю, эта").ToList());
+                var where = string.Join(", ", differ.Select(r => $"{Revision(r)}{Where(r, plan[r])} — {Argument(r)}"));
+                var text = $"С версией {Call(last.Author)} согласен, кроме: {where}.{suspicion}";
+                if (text.Length > ChatService.MaxTextLength) text = $"С версией {Call(last.Author)} согласен, кроме: {string.Join(", ", differ.Select(r => Where(r, plan[r])))}.";
+                return Line(text, differ[0]);
+            }
+            return Line(Summary(openers[me.Id.ToByteArray()[2] % openers.Length]));
+        }
 
         var fresh = messages.Where(m => m.Author != me.Id && m.At > own[^1].At).ToList();
         bool Addresses(DiscussionLine m, Guid target) => m.Text.StartsWith(Name(target) + ",", StringComparison.OrdinalIgnoreCase) ||
