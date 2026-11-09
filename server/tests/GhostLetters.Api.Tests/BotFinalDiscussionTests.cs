@@ -35,6 +35,22 @@ public sealed class BotFinalDiscussionTests
         [new(Ghost, 0, true, Role.Ghost, false, 0), new(Me, 1, false, Role.Detective, false, 0), new(Ann, 2, false, null, false, 0)],
         new(Me, Role.Detective, [], []), null, 0, null, null, null, null, [], [nameof(ReadyNextRound)], null);
 
+    [Theory]
+    [InlineData("cat", "согласен, кроме: место 1")]
+    [InlineData("boat", "Согласен с версией Аня целиком")]
+    public void FinalShort_AfterTwoSummaries_SpeaksOnlyAboutDifferences(string annPlace, string expected)
+    {
+        using var _ = BotTuning.Use(BotTuning.Default with { FinalShort = true });
+        var bob = Guid.NewGuid();
+        var mind = Mind with { Names = new Dictionary<Guid, string>(Mind.Names) { [bob] = "Боб" } };
+        var now = DateTimeOffset.UtcNow;
+        var result = BotDiscussion.Compose(View, Tags, mind,
+            [new(bob, "Моя версия:\n• мотив 1\n• место 1", ["knife", "boat"], now),
+             new(Ann, "Вот как я вижу:\n• мотив 1\n• место", ["knife", annPlace], now.AddSeconds(1))], new Random(1));
+        result!.Value.Text.Should().Contain(expected);
+        result.Value.Text.Should().NotContain("\n• ");
+    }
+
     [Fact]
     public void CoalitionOffersSharedCardsOnce_AndAnswersAgreement()
     {
