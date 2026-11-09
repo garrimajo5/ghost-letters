@@ -400,12 +400,21 @@ class GameScreenState extends ConsumerState<GameScreen> {
   /// раньше ответ сервера иногда шёл ~20 с, и повторные нажатия снимали выбор карты.
   String? sending;
 
+  /// Когда закончился прошлый ход и какой. Плейтест 08.11: «Оставить руку» шло долго, второе нажатие
+  /// попадало уже в новую кнопку «Готов» — игрок оказывался готов, не собираясь.
+  DateTime? _sentAt;
+  String? _sentType;
+
   Future<void> send(String type, [Json payload = const {}]) async {
     if (sending != null) return;
+    final last = _sentAt;
+    if (last != null && type != _sentType && DateTime.now().difference(last) < const Duration(milliseconds: 900)) return;
     setState(() => sending = type);
     try {
       await _send(type, payload);
     } finally {
+      _sentAt = DateTime.now();
+      _sentType = type;
       if (mounted) setState(() => sending = null);
     }
   }
