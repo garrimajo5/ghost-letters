@@ -111,8 +111,11 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             text = await writer.RephraseAsync(text, names.Distinct().ToList(), speaker, ct)
                ?? Speech.SpokenStyle.Rephrase(text, Random.Shared, manner, speaker.Male, learned, Speech.PhraseBook.EmotionsFor(manner, risk));
         var spokenRole = Speech.SpeechProsody.RoleFor(voice, role, mood is { } m ? Speech.SpeechProsody.MoodOf(m) : Speech.SpeechProsody.MoodOf(text));
-        text = Speech.SpeechProsody.Mark(text, names);
-        if (await speech.SynthesizeAsync(text, voice, spokenRole, ct, Speech.SpeechProsody.SpeedOf(manner)) is not { } audio) return null;
+        // Плейтест 08.11: голос по 28–33 с держал стол. Голос — до ~15 с: длинное читаем быстрее,
+        // а лишние предложения оставляем только в чате (там текст целиком).
+        var (spoken, speed) = Speech.SpeechProsody.Fit(text, Speech.SpeechProsody.SpeedOf(manner));
+        text = Speech.SpeechProsody.Mark(spoken, names);
+        if (await speech.SynthesizeAsync(text, voice, spokenRole, ct, speed) is not { } audio) return null;
         try { return await chat.SaveBotVoiceAsync(botId, audio, ct); }
         catch (AppException e)
         {

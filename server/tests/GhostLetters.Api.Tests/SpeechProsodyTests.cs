@@ -27,4 +27,19 @@ public sealed class SpeechProsodyTests
         SpeechProsody.MoodOf(SpeechMood.Excited).Should().Be(SpeechProsody.Mood.Warm);
         SpeechProsody.MoodOf(SpeechMood.Frustrated).Should().Be(SpeechProsody.Mood.Calm);
     }
+
+    [Fact]
+    public void Fit_KeepsBotVoiceUnderFifteenSeconds()
+    {
+        var shortLine = "Думаю, мотив — клетка.";
+        SpeechProsody.Fit(shortLine, 1).Should().Be((shortLine, 1.0));
+
+        var sentence = "Думаю, мотив — птичья клетка, потому что подсказка про перья и про небо. ";
+        var longLine = string.Concat(Enumerable.Repeat(sentence, 6)).Trim();
+        var (text, speed) = SpeechProsody.Fit(longLine, 1);
+        speed.Should().BeInRange(1, 1.25);
+        (text.Length / (SpeechProsody.CharsPerSecond * speed)).Should().BeLessThanOrEqualTo(SpeechProsody.MaxSeconds);
+        text.Should().StartWith("Думаю, мотив");
+        text.Should().EndWith(".");
+    }
 }
