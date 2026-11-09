@@ -106,6 +106,21 @@ public static partial class BotPlayer
                 return target is not null && NameOf(target.Id) is { } framed ? Accused($" Подозреваю, что {framed} из чёрных.", framed, .6) : "";
             }
 
+            if (BotTuning.Current.RoleModel)
+            {
+                // Модель игроков: говорю, когда уверен, что игрок чёрный, и называю главную причину.
+                var (id, black) = others.Where(p => p.KnownRole is not { } r || r.IsKillerTeam())
+                    .Select(p => (p.Id, Black(p.Id))).OrderByDescending(x => x.Item2).FirstOrDefault();
+                // Порог — относительно «чёрного по умолчанию» (число чёрных / число неизвестных): за маленьким столом
+                // вероятность выше и без улик, поэтому требуем заметного перевеса над ней.
+                var prior = Math.Min(1, BlackCount() / (double)Math.Max(1, others.Count(p => p.KnownRole is null)));
+                if (id == Guid.Empty || NameOf(id) is not { } suspect || black < Math.Max(.8 - .35 * P.Risk, prior + .35)) return "";
+                var why = RoleReason(id);
+                return black > .9 && BlackCount() == 1
+                    ? Accused($" Думаю, Убийца — {suspect}: {why}.", suspect, 1, why)
+                    : Accused($" Подозреваю, что {suspect} из чёрных: {why}.", suspect, .6, why);
+            }
+
             // Белые: говорят о подозрениях, если они достаточно сильные; смелый — раньше, осторожный — только при уверенности.
             var top = others.Where(p => p.KnownRole is not { } r || r.IsKillerTeam())
                 .Select(p => (p.Id, s: Suspicion(p.Id))).OrderByDescending(x => x.s).FirstOrDefault();
