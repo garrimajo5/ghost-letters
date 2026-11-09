@@ -31,4 +31,5 @@ jobs:
           note "state" "$(run "df -h / | tail -1; docker compose -f docker-compose.prod.yml ps --format '{{.Service}} {{.Status}}'; ls -laS /var/lib/docker/containers/*/*-json.log | head -3 | awk '{print \$5}'")"
           note "health" "$(run "docker compose -f docker-compose.prod.yml exec -T caddy wget -qO- http://api:8080/health 2>&1 | head -c 200")"
           note "postgres" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --tail 8 postgres")"
+          note "slow-moves" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 48h api | grep -E 'Медленный ход|Slow' | tail -20")"
           note "api-errors" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 30m api | grep -iE -A3 'fail|exception' | grep -viE 'password|token|api-key|secret' | tail -30")"
