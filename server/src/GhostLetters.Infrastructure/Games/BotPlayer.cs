@@ -868,21 +868,26 @@ public static partial class BotPlayer
             {
                 return [probe, .. me.Hand.Where(h => h != probe).OrderByDescending(h => ProbeValue(h) + Noise()).Take(count - 1)];
             }
-            else if (!Classic && BotTuning.Current.ExpertAllLetters && ExpertAims() && Truth is { } known && me.Hand.Count > 1)
+            else if (!Classic && BotTuning.Current.ExpertAllLetters && ExpertAims() && Truth is { } known)
             {
-                // Боты 3.0, этап 4: Эксперт знает истину — каждое письмо целит в истинную карту своего ряда
-                // (от самых неясных для стола), а не все письма в одну. Присваивает он потом только часть (речь).
+                // Боты 3.0, этап 4: Эксперт знает истину, но рука ограничена. Он берёт пары «письмо → истинная карта»
+                // с самым ясным указанием (похоже на истину и ни на что больше), а не подгоняет письмо под один ряд:
+                // так письмо действительно попадает в истину. Неясные для стола ряды — с небольшим приоритетом.
                 var picked = new List<string>();
-                var others = view.Board.SelectMany(r => r.Cards).ToList();
-                foreach (var r in Enumerable.Range(0, view.Board.Count).OrderBy(r => Certainty(r) + Noise()))
+                var usedRows = new HashSet<int>();
+                var all = view.Board.SelectMany(r => r.Cards).ToList();
+                var strict = BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness;
+                while (picked.Count < count)
                 {
-                    if (picked.Count >= count) break;
-                    var aim = Card(r, known[r]);
-                    var rest = others.Where(c => c != aim).ToList();
-                    var letter = me.Hand.Where(h => !picked.Contains(h))
-                        .OrderByDescending(h => Sim(h, aim) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, rest) + Noise())
-                        .FirstOrDefault();
-                    if (letter is not null) picked.Add(letter);
+                    var best = (from r in Enumerable.Range(0, view.Board.Count).Where(r => !usedRows.Contains(r))
+                                let aim = Card(r, known[r])
+                                let unclear = .1 * (1 - Math.Clamp(Certainty(r), 0, 1))
+                                from h in me.Hand.Where(h => !picked.Contains(h))
+                                select (Row: r, Letter: h, Score: Sim(h, aim) - strict * Best(h, all.Where(c => c != aim)) + unclear + Noise()))
+                        .OrderByDescending(x => x.Score).FirstOrDefault();
+                    if (best.Letter is null) break;
+                    picked.Add(best.Letter);
+                    usedRows.Add(best.Row);
                 }
                 return picked;
             }
