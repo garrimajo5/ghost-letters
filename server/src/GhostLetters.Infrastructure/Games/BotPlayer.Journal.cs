@@ -1,5 +1,6 @@
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
+using GhostLetters.Infrastructure.Bots;
 
 namespace GhostLetters.Infrastructure.Games;
 
