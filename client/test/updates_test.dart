@@ -33,7 +33,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(UpdatesScreen), findsOneWidget);
       expect(find.text('Версия ${AppVersion.current.version}'), findsOneWidget);
-      await tester.scrollUntilVisible(find.text('Версия 0.1.0'), 200,
+      await tester.scrollUntilVisible(find.text('Версия 0.1.0'), 200, maxScrolls: 200,
           scrollable: find
               .descendant(
                   of: find.byType(UpdatesScreen),
