@@ -72,6 +72,9 @@ public sealed record BotTuning
     /// <summary>Боты 3.0, этап 5: бот молчит, если его реплика — эхо (за карту в раунде уже сказали двое).</summary>
     public bool SkipEcho { get; init; }
 
+    /// <summary>Боты 3.0, этап 4: Эксперт присваивает себе только часть открытых писем.</summary>
+    public bool ExpertModestClaims { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -233,6 +236,7 @@ public sealed record BotTuning
                 nameof(ExpertAllLetters) => t with { ExpertAllLetters = B() },
                 nameof(TopicUnclear) => t with { TopicUnclear = B() },
                 nameof(SkipEcho) => t with { SkipEcho = B() },
+                nameof(ExpertModestClaims) => t with { ExpertModestClaims = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

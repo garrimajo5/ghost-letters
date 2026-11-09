@@ -1171,6 +1171,14 @@ public static partial class BotPlayer
                 return ("", null);
             }
 
+            // Боты 3.0, этап 4: Эксперт присваивает себе только часть точных писем — иначе он «слишком полезен»
+            // и чёрные находят его на охоте. Осторожный молчит о письме чаще, рисковый — реже.
+            if (!Classic && me.Role == Role.Expert && letter.Revealed == true && BotTuning.Current.ExpertModestClaims
+                && rng.NextDouble() < .7 - .4 * P.Risk)
+            {
+                return ("", null);
+            }
+
             return letter.Revealed switch
             {
                 true => ("Моё письмо — вот это, оно открылось.", letter.CardId),
