@@ -193,6 +193,17 @@ public static partial class BotPlayer
             return evidence - .5 * Certainty(row) - (agreed >= 2 ? 1 : 0);
         }
 
+        /// <summary>Реплика — эхо: одна карта, только «думаю», без обвинений, и за эту карту в раунде уже двое.</summary>
+        public bool Echo((string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) line)
+        {
+            if (Classic || mind is null || line.Cards.Count != 1) return false;
+            if (!line.Notes.All(n => n.StartsWith("думаю", StringComparison.Ordinal))) return false;
+            if (line.Text.Contains("Убийц", StringComparison.Ordinal) || line.Text.Contains("чёрн", StringComparison.Ordinal)) return false;
+            var card = line.Cards[0];
+            return mind.Opinions.Where(o => o.Public && !o.IsCheck && o.Strength > 0 && o.Author != me.Id && o.CardId == card
+                && (o.Round is null || o.Round == view.Round)).Select(o => o.Author).Distinct().Count() >= 2;
+        }
+
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
         {
             static string Name(Category c) => c switch
