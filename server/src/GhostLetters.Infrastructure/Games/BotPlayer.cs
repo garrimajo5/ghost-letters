@@ -127,6 +127,9 @@ public static partial class BotPlayer
         if (view.Me is not { } me || me.Role == Role.Ghost || view.Board.Count == 0) return null;
         var brain = new Brain(view, me, rng, tags, mind);
         var line = brain.Say();
+        // Боты 3.0, этап 5: «думаю, эта» без своих улик о карте, за которую в этом раунде уже сказали двое, —
+        // эхо. Человек в такой момент промолчит; стол и так видит согласие.
+        if (BotTuning.Current.SkipEcho && brain.Echo(line)) return null;
         return (line, brain.Intent);
     }
 
