@@ -61,7 +61,7 @@ public sealed record BotTuning
     public double AccompliceSpoilBase { get; init; } = .8;
 
     /// <summary>Боты 3.0, этап 3: на охоте чёрные ищут Свидетеля по приметам (первым и в одиночку назвал Убийцу).</summary>
-    public bool HuntTells { get; init; }
+    public bool HuntTells { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
