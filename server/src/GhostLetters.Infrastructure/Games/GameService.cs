@@ -243,7 +243,26 @@ public sealed class GameService(
     private async Task<T> WithGameAsync<T>(Guid gameId, CancellationToken ct, Func<Game, GameState, Task<(T Result, Applied? Change)>> action)
     {
         var gate = Locks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
+        // Плейтест 08.11: ход игрока доходил ~20 с. Медленные ходы пишем в лог (Warning виден в проде),
+        // отдельно — сколько ждали замок партии и сколько шла сама запись.
+        var started = System.Diagnostics.Stopwatch.StartNew();
         await gate.WaitAsync(ct);
+        var waited = started.Elapsed;
+        try
+        {
+            return await WithGameLockedAsync(gameId, ct, action);
+        }
+        finally
+        {
+            gate.Release();
+            if (started.Elapsed.TotalSeconds > 2)
+                logger.LogWarning("Медленный ход в партии {Game}: всего {Total:F1} с, ждали замок {Wait:F1} с",
+                    gameId, started.Elapsed.TotalSeconds, waited.TotalSeconds);
+        }
+    }
+
+    private async Task<T> WithGameLockedAsync<T>(Guid gameId, CancellationToken ct, Func<Game, GameState, Task<(T Result, Applied? Change)>> action)
+    {
         try
         {
             var game = await db.Games.FirstOrDefaultAsync(g => g.Id == gameId, ct)
@@ -308,10 +327,6 @@ public sealed class GameService(
         catch (GameRuleException e)
         {
             throw new AppException(e.Code, e.Message, RuleStatus(e.Code));
-        }
-        finally
-        {
-            gate.Release();
         }
     }
 
