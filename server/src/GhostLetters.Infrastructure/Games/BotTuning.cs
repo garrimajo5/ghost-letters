@@ -39,6 +39,9 @@ public sealed record BotTuning
     /// <summary>Боты 3.0, этап 2: модель игроков — подозрения как вероятности с учётом числа чёрных и «малой пользы».</summary>
     public bool RoleModel { get; init; }
 
+    /// <summary>Модель игроков: насколько «громкие» улики (ложь о проверках, чужие письма) при нескольких чёрных уводят подозрение с Убийцы на Сообщника.</summary>
+    public double AccompliceLoud { get; init; } = .7;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -189,6 +192,7 @@ public sealed record BotTuning
                 nameof(LetterModel) => t with { LetterModel = B() },
                 nameof(LetterClarity) => t with { LetterClarity = D() },
                 nameof(RoleModel) => t with { RoleModel = B() },
+                nameof(AccompliceLoud) => t with { AccompliceLoud = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
