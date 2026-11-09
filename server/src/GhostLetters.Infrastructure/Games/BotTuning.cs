@@ -37,7 +37,7 @@ public sealed record BotTuning
     public double LetterClarity { get; init; }
 
     /// <summary>Боты 3.0, этап 2: модель игроков — подозрения как вероятности с учётом числа чёрных и «малой пользы».</summary>
-    public bool RoleModel { get; init; }
+    public bool RoleModel { get; init; } = true;
 
     /// <summary>Модель игроков: насколько «громкие» улики (ложь о проверках, чужие письма) при нескольких чёрных уводят подозрение с Убийцы на Сообщника.</summary>
     public double AccompliceLoud { get; init; } = .7;
@@ -45,8 +45,8 @@ public sealed record BotTuning
     /// <summary>Призрак на модели: ряд, где стол уверен в истине не меньше этого, больше не уточняем (1 — уточняем всё).</summary>
     public double GhostModelSettled { get; init; } = 1.01;
 
-    /// <summary>Для A/B: модель игроков в подозрениях вслух.</summary>
-    public bool RoleModelSpeech { get; init; } = true;
+    /// <summary>Модель игроков в подозрениях вслух. Выключено: боты с ней обвиняли реже, и стол терял (8 игроков: 44 → 35 %).</summary>
+    public bool RoleModelSpeech { get; init; }
 
     /// <summary>Для A/B: модель игроков в голосе за Убийцу.</summary>
     public bool RoleModelVote { get; init; } = true;
