@@ -114,11 +114,15 @@ public static partial class BotPlayer
                 // Порог — относительно «чёрного по умолчанию» (число чёрных / число неизвестных): за маленьким столом
                 // вероятность выше и без улик, поэтому требуем заметного перевеса над ней.
                 var prior = Math.Min(1, BlackCount() / (double)Math.Max(1, others.Count(p => p.KnownRole is null)));
-                if (id == Guid.Empty || NameOf(id) is not { } suspect || black < Math.Max(.8 - .35 * P.Risk, prior + .35)) return "";
-                var why = RoleReason(id);
-                return black > .9 && BlackCount() == 1
-                    ? Accused($" Думаю, Убийца — {suspect}: {why}.", suspect, 1, why)
-                    : Accused($" Подозреваю, что {suspect} из чёрных: {why}.", suspect, .6, why);
+                // Уверен — говорю с причиной из модели. Не уверен — как раньше (иначе стол слышит меньше обвинений
+                // и голосует хуже: серия 3 в BOTS_3_RESULTS).
+                if (id != Guid.Empty && NameOf(id) is { } suspect && black >= Math.Max(.8 - .35 * P.Risk, prior + .35))
+                {
+                    var why = RoleReason(id);
+                    return black > .9 && BlackCount() == 1
+                        ? Accused($" Думаю, Убийца — {suspect}: {why}.", suspect, 1, why)
+                        : Accused($" Подозреваю, что {suspect} из чёрных: {why}.", suspect, .6, why);
+                }
             }
 
             // Белые: говорят о подозрениях, если они достаточно сильные; смелый — раньше, осторожный — только при уверенности.
