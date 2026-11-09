@@ -146,9 +146,14 @@ public static class GhostCluePolicy
             return t > 0 && t >= f * tuning.GhostModelHonest;
         }
 
+        // «Минимум нужного»: прирост считаем только по рядам, где стол ещё не уверен в истине
+        // (вероятность истины ниже GhostModelSettled). Уточнять ясный ряд — лишнее открытие.
+        double Gain(TableModel from, TableModel to) => Enumerable.Range(0, truth.Count)
+            .Where(r => from.P(r, truth[r]) < tuning.GhostModelSettled)
+            .Sum(r => Math.Log(Math.Max(1e-9, to.P(r, truth[r]))) - Math.Log(Math.Max(1e-9, from.P(r, truth[r]))));
+
         var chosen = new List<string>();
         var current = After(chosen);
-        var score = current.TruthScore(truth);
         var right = current.RowsRight(truth);
         while (true)
         {
@@ -156,14 +161,13 @@ public static class GhostCluePolicy
             {
                 var next = After([.. chosen, c]);
                 var misleads = Enumerable.Range(0, truth.Count).Any(r => current.Best(r) == truth[r] && next.Best(r) != truth[r]);
-                return (Card: c, Next: next, Gain: next.TruthScore(truth) - score, Right: next.RowsRight(truth), Misleads: misleads);
+                return (Card: c, Next: next, Gain: Gain(current, next), Right: next.RowsRight(truth), Misleads: misleads);
             })
                 .Where(x => x.Gain > cost && (!x.Misleads || x.Right > right))
                 .OrderByDescending(x => x.Gain).FirstOrDefault();
             if (best.Card is null) break;
             chosen.Add(best.Card);
             current = best.Next;
-            score += best.Gain;
             right = best.Right;
         }
 
