@@ -166,6 +166,24 @@ public static partial class BotPlayer
         private double FakeChance => Classic ? 1 : Spoiler ? Math.Max(.85, Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1))
             : Math.Clamp((0.25 + 0.75 * P.Risk) * SizeBoldness, 0, 1);
 
+        /// <summary>
+        /// Боты 3.0, этап 3: как часто чёрный вредит письмом и словами (голос — отдельно, <see cref="FakeChance"/>).
+        /// Сообщник по ситуации: Убийцу уже подозревают — играет как мирный (вред выдаст и его, и пользы мало);
+        /// подозревают его самого — осторожнее; никого не подозревают — вредит примерно через раз, чтобы потом
+        /// было неясно, где он врал; в последнем раунде — смелее.
+        /// </summary>
+        private double SpoilChance
+        {
+            get
+            {
+                if (!Spoiler || !BotTuning.Current.AccompliceSituational) return FakeChance;
+                var killer = view.Players.FirstOrDefault(p => p.KnownRole == Role.Killer);
+                if (killer is not null && Accused(killer.Id) >= .5) return .15;
+                if (Accused(me.Id) >= .5) return .35;
+                return view.Round >= view.TotalRounds ? .85 : .5;
+            }
+        }
+
         /// <summary>Сообщник-вредитель: ему не страшно попасться, главное — увести стол от истинных карт.</summary>
         private bool Spoiler => !Classic && BotTuning.Current.AccompliceSpoiler && me.Role == Role.Accomplice;
 
@@ -829,7 +847,7 @@ public static partial class BotPlayer
             }
 
             string target;
-            if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
+            if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < SpoilChance))
             {
                 // Письмо под ложную улику — Призрак его не откроет, но остальным покажется, что её проверяли.
                 // Боты 3.0: ряд, где стол и так уверен, — исчезновение ничего не даст мирным, а ход выглядит работой.
