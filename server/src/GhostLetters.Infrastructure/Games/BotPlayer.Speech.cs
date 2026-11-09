@@ -208,7 +208,7 @@ public static partial class BotPlayer
                 column = BestColumn(target, null);
                 exclude = true;
             }
-            else if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
+            else if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < SpoilChance))
             {
                 // Ложь, повторённая слово в слово второй раунд подряд, выдаёт: улики меняются, а он твердит одно.
                 var repeated = Repeated();
@@ -352,7 +352,7 @@ public static partial class BotPlayer
             // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
             // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
             if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)
-                && rng.NextDouble() < (Spoiler ? Math.Max(BotTuning.Current.SpoilerVanish, FakeVanishChance) : FakeVanishChance) * FakeChance)
+                && rng.NextDouble() < (Spoiler ? Math.Max(BotTuning.Current.SpoilerVanish, FakeVanishChance) : FakeVanishChance) * SpoilChance)
             {
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
                 var real = Card(row, lieTruth[row]);
