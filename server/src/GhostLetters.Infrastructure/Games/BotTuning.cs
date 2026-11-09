@@ -55,10 +55,10 @@ public sealed record BotTuning
     public bool KillerClearRows { get; init; }
 
     /// <summary>Боты 3.0, этап 3: Сообщник вредит по ситуации (подозревают ли Убийцу или его самого, последний раунд).</summary>
-    public bool AccompliceSituational { get; init; }
+    public bool AccompliceSituational { get; init; } = true;
 
     /// <summary>Сообщник по ситуации: доля вредных ходов, пока никого не подозревают.</summary>
-    public double AccompliceSpoilBase { get; init; } = .5;
+    public double AccompliceSpoilBase { get; init; } = .8;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
