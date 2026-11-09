@@ -1031,8 +1031,27 @@ public static partial class BotPlayer
             return candidates
                 .OrderByDescending(c => votes.Count(v => v.Voter == c && v.Suspect is { } s && team.Contains(s)) * 2
                                         + RowAccuracy(c) + 2 * PastInformed(c) + 3 * AccusedTeam(c, team)
-                                        + (ClaimedHuntRole(c) is null ? 0 : 4) + Noise())
+                                        + (ClaimedHuntRole(c) is null ? 0 : 4) + WitnessTells(c, team) + Noise())
                 .First();
+        }
+
+        /// <summary>
+        /// Боты 3.0, этап 3: приметы Свидетеля. Он знает Убийцу — значит, обвиняет именно Убийцу (не Сообщника),
+        /// часто первым и в одиночку, когда у стола ещё нет повода.
+        /// </summary>
+        private double WitnessTells(Guid player, HashSet<Guid> team)
+        {
+            if (Classic || !BotTuning.Current.HuntTells) return 0;
+            Guid? known = me.Role == Role.Killer ? me.Id : view.Players.FirstOrDefault(p => p.KnownRole == Role.Killer)?.Id;
+            if (known is not { } killerId) return 0;
+            var onKiller = mind!.AccusationList.Where(a => a.Target == killerId).ToList();
+            if (onKiller.Count == 0) return 0;
+            double score = 0;
+            if (onKiller[0].Author == player) score += 2;                                   // первым назвал Убийцу
+            if (onKiller.All(a => a.Author == player)) score += 1.5;                        // и никто его не поддержал
+            var onAccomplices = mind.AccusationList.Count(a => a.Author == player && a.Target != killerId && team.Contains(a.Target));
+            if (onKiller.Any(a => a.Author == player) && onAccomplices == 0) score += 1;   // знает именно Убийцу
+            return score;
         }
 
         /// <summary>Сколько игрок обвинял в чате команду Убийцы — меткий обвинитель похож на Свидетеля.</summary>
