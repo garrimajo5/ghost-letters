@@ -51,6 +51,9 @@ public sealed record BotTuning
     /// <summary>Для A/B: модель игроков в голосе за Убийцу.</summary>
     public bool RoleModelVote { get; init; } = true;
 
+    /// <summary>Боты 3.0, этап 3: Убийца шлёт ложное письмо в ряд, где стол уже уверен (мало пользы мирным).</summary>
+    public bool KillerClearRows { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -205,6 +208,7 @@ public sealed record BotTuning
                 nameof(GhostModelSettled) => t with { GhostModelSettled = D() },
                 nameof(RoleModelSpeech) => t with { RoleModelSpeech = B() },
                 nameof(RoleModelVote) => t with { RoleModelVote = B() },
+                nameof(KillerClearRows) => t with { KillerClearRows = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

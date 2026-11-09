@@ -832,7 +832,10 @@ public static partial class BotPlayer
             if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < FakeChance))
             {
                 // Письмо под ложную улику — Призрак его не откроет, но остальным покажется, что её проверяли.
-                var row = rng.Next(view.Board.Count);
+                // Боты 3.0: ряд, где стол и так уверен, — исчезновение ничего не даст мирным, а ход выглядит работой.
+                var row = !Classic && BotTuning.Current.KillerClearRows
+                    ? Enumerable.Range(0, view.Board.Count).OrderByDescending(r => Certainty(r) + Noise()).First()
+                    : rng.Next(view.Board.Count);
                 var fakes = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
                 target = Card(row, fakes[rng.Next(fakes.Count)]);
             }
