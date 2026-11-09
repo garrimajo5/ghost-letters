@@ -179,6 +179,20 @@ public static partial class BotPlayer
             return new TableSituation(view.Round, view.TotalRounds, view.Hints.Sum(h => h.Cards.Count), agreeing, disagreeing);
         }
 
+        /// <summary>
+        /// Боты 3.0, этап 5: о чём говорить. Не о самом ясном ряду (там все и так согласны — получается эхо),
+        /// а о неясном, где у бота есть своя улика. Ряд, о котором в этом раунде уже сошлись двое и больше, — в конец.
+        /// </summary>
+        private double TopicValue(int row)
+        {
+            var best = Card(row, BestColumn(row, null));
+            var evidence = Evidence(best) > .05 ? 1 : 0;
+            var agreed = mind?.Opinions.Where(o => o.Public && !o.IsCheck && o.Strength > 0 && o.Author != me.Id
+                && (o.Round is null || o.Round == view.Round) && view.Board[row].Cards.Contains(o.CardId))
+                .GroupBy(o => o.CardId).Select(g => g.Select(o => o.Author).Distinct().Count()).DefaultIfEmpty(0).Max() ?? 0;
+            return evidence - .5 * Certainty(row) - (agreed >= 2 ? 1 : 0);
+        }
+
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Say()
         {
             static string Name(Category c) => c switch
@@ -233,7 +247,7 @@ public static partial class BotPlayer
                 var said = KillerTeam ? Repeated() : [];
                 target = Enumerable.Range(0, view.Board.Count)
                     .OrderBy(r => said.Contains(Card(r, BestColumn(r, null))) ? 1 : 0)
-                    .ThenByDescending(r => Certainty(r) + Noise()).First();
+                    .ThenByDescending(r => (!Classic && BotTuning.Current.TopicUnclear ? TopicValue(r) : Certainty(r)) + Noise()).First();
                 // Эксперт знает истину: осторожный редко её выдаёт (его ищут на охоте), рисковый — почти всегда.
                 column = Truth is { } t && me.Role == Role.Expert && (Classic ? rng.Next(3) > 0 : rng.NextDouble() < 0.2 + 0.7 * P.Risk)
                     ? t[target]
