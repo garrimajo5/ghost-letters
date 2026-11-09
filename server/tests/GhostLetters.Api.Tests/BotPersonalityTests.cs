@@ -219,6 +219,26 @@ public sealed class BotPersonalityTests
     }
 
     [Fact]
+    public void Journal_ExplainsEvidenceAndSuspicion_ClueByClue()
+    {
+        // Боты 4.0, шаг 1: журнал улик даёт ровно то же, что прежние Evidence и счёт подозрения, — и с причинами.
+        var mind = Mind(new BotPersonality { Risk = .5, Memory = 0 }) with { Claims = [new(Bob, "sword", 1)] };
+        var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])],
+            letters: [new MyLetterView(1, "sword", false)]);
+        var journal = BotPlayer.Journal(view, Tags, mind)!;
+
+        foreach (var (card, evidence) in journal.Evidence)
+            journal.CardSupport(card).Should().BeApproximately(evidence, 1e-9, $"улики о «{card}» складываются в Evidence");
+        foreach (var (player, score) in journal.Suspicion)
+            journal.RoleSupport(player).Should().BeApproximately(score, 1e-9, "улики об игроке складываются в счёт подозрения");
+
+        journal.Clues.Should().Contain(c => c.Kind == ClueKind.Hint && c.Round == 1);
+        journal.Clues.Should().Contain(c => c.Kind == ClueKind.MyVanished && c.Reason.Contains("моё письмо исчезло"));
+        journal.Clues.Should().Contain(c => c.Kind == ClueKind.ClaimConflict && c.Source == Bob && c.Salience == 1);
+        journal.Clues.Should().OnlyContain(c => c.Reason.Length > 0);
+    }
+
+    [Fact]
     public void RoleModel_NamesTheLiar_WithTheReason_AndVotesForHim()
     {
         // Боб назвал своим моё письмо — врёт наверняка. За столом один чёрный: подозрение к Ане падает.
