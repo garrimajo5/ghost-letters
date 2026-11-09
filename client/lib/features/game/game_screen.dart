@@ -396,7 +396,21 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
   /// Отправить команду. Новое состояние придёт по SignalR; если нет — перечитаем снимок.
   /// Если партия успела измениться (VERSION_CONFLICT), перечитываем её и, если ход ещё нужен, повторяем.
+  /// Какой ход сейчас отправляется (null — никакой). Пока он в пути, рука и главная кнопка заблокированы:
+  /// раньше ответ сервера иногда шёл ~20 с, и повторные нажатия снимали выбор карты.
+  String? sending;
+
   Future<void> send(String type, [Json payload = const {}]) async {
+    if (sending != null) return;
+    setState(() => sending = type);
+    try {
+      await _send(type, payload);
+    } finally {
+      if (mounted) setState(() => sending = null);
+    }
+  }
+
+  Future<void> _send(String type, Json payload) async {
     final v = view;
     if (v == null) return;
     final api = ref.read(apiProvider);
@@ -1986,6 +2000,7 @@ class _ChatButton extends StatelessWidget {
 
 /// Выбор карты руки: письмо (1 карта, вдвоём — 2), сброс, первая зацепка.
 void _toggleHand(GameScreenState screen, String c, int limit) {
+  if (screen.sending != null) return;
   HapticFeedback.selectionClick();
   if (screen.selectedHand.contains(c)) {
     screen.selectedHand.remove(c);

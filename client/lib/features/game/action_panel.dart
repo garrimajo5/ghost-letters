@@ -9,6 +9,14 @@ import 'game_screen.dart';
 import 'game_state.dart';
 
 /// Главная кнопка хода в нижней панели экрана.
+/// Что показывает главная кнопка, пока ход отправляется.
+String sendingLabel(String type) => switch (type) {
+      'SendLetter' => 'Письмо отправлено…',
+      'Discard' => 'Карта сброшена…',
+      'CastVote' => 'Голос отдан…',
+      _ => 'Отправляем…',
+    };
+
 class Cta {
   const Cta(this.label, this.onPressed, {this.icon, this.danger = false});
 
@@ -59,6 +67,8 @@ class ActionPanel extends StatelessWidget {
   /// Главное действие фазы для нижней кнопки; null — действие в панели (или ждать нечего нажимать).
   static Cta? cta(GameScreenState screen) {
     final v = screen.view!;
+    // Ход уже ушёл на сервер — показываем это сразу, а не ждём ответа (повторное нажатие ничего не меняет).
+    if (screen.sending != null) return Cta(sendingLabel(screen.sending!), null, icon: Icons.hourglass_top);
     final rows = v.board.length;
     if (v.can('AckRole')) return Cta('Понятно', () => screen.send('AckRole'), icon: Icons.check);
     if (v.can('ChooseTruth')) {
