@@ -103,8 +103,9 @@ public sealed class BotPersonalityTests
 
         var votesForBob = Enumerable.Range(0, 40)
             .Count(seed => ((CastVote)BotPlayer.Decide(view, new Random(seed), Tags, Mind(new BotPersonality { Memory = 1 }, history: history))!).Suspect == Bob);
+        // Мягкий выбор согласован в пределах партии и раунда, поэтому «чистый лист» проверяем по разным партиям.
         var blank = Enumerable.Range(0, 40)
-            .Count(seed => ((CastVote)BotPlayer.Decide(view, new Random(seed), Tags, Mind(new BotPersonality { Memory = 0 }, history: history))!).Suspect == Bob);
+            .Count(seed => ((CastVote)BotPlayer.Decide(view with { GameId = Guid.NewGuid() }, new Random(seed), Tags, Mind(new BotPersonality { Memory = 0 }, history: history))!).Suspect == Bob);
 
         votesForBob.Should().Be(40, "был Убийцей в 5 из 6 партий — значит, возможно, и сейчас");
         blank.Should().BeInRange(5, 35, "с чистого листа — без предубеждений");
