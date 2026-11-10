@@ -118,7 +118,7 @@ public sealed record BotTuning
     public bool ExplainChange { get; init; } = true;
 
     /// <summary>Боты 4.0, шаг 6: встревоженный (стол подозревает) бот сначала оправдывается с доводом.</summary>
-    public bool AnxiousDefense { get; init; }
+    public bool AnxiousDefense { get; init; } = true;
 
     /// <summary>С какой тревоги бот оправдывается.</summary>
     public double DefenseAnxiety { get; init; } = .5;
