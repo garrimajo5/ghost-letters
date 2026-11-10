@@ -133,6 +133,9 @@ public static partial class BotPlayer
         // Боты 3.0, этап 5: «думаю, эта» без своих улик о карте, за которую в этом раунде уже сказали двое, —
         // эхо. Человек в такой момент промолчит; стол и так видит согласие.
         if (BotTuning.Current.SkipEcho && brain.Echo(line)) return null;
+        if (brain.Defense() is { } defense)
+            // Встревоженный сначала оправдывается — даже если про карты сказать нечего.
+            return ((defense.Text + line.Text, line.Cards, line.Notes), brain.Intent?.With(new Speech.Thought(Speech.ThoughtKind.Defense, Who: defense.Who)));
         // Боты 4.0, шаг 6: говорить по поводу. Нет нового (те же карты, что я уже называл, без проверок и обвинений) —
         // скорее промолчу; общительный и встревоженный (меня подозревают) говорят и без повода.
         if (BotTuning.Current.SpeakOnChange && !brain.HasNews(line) && rng.NextDouble() < brain.SilenceChance()) return null;
