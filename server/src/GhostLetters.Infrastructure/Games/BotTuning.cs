@@ -91,7 +91,7 @@ public sealed record BotTuning
     public double SoftLetters { get; init; } = 1;
 
     /// <summary>Боты 4.0, шаг 3: голос за Убийцу по полезности (модель + стол) с мягким выбором.</summary>
-    public bool VoteUtility { get; init; } = true;
+    public bool VoteUtility { get; init; }
 
     /// <summary>Температура голоса за Убийцу.</summary>
     public double VoteTemp { get; init; } = .1;
