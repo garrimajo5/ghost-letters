@@ -133,6 +133,10 @@ public static partial class BotPlayer
         // Боты 3.0, этап 5: «думаю, эта» без своих улик о карте, за которую в этом раунде уже сказали двое, —
         // эхо. Человек в такой момент промолчит; стол и так видит согласие.
         if (BotTuning.Current.SkipEcho && brain.Echo(line)) return null;
+        // Логика заявлений: свежий вывод («проверили трое — хоть один честен») — вслух, чаще у строгих.
+        if (brain.FreshDeduction() is { } deduction && rng.NextDouble() < .3 + .5 * brain.Strictness)
+            return ((deduction.Text + " " + line.Text, line.Cards, line.Notes),
+                brain.Intent?.With(new Speech.Thought(Speech.ThoughtKind.Deduce, Who: deduction.Who is { } w ? brain.Name(w) : null, Why: deduction.Text)));
         // Боты 4.0, шаг 6: говорить по поводу. Нет нового (те же карты, что я уже называл, без проверок и обвинений) —
         // скорее промолчу; общительный и встревоженный (меня подозревают) говорят и без повода.
         if (BotTuning.Current.SpeakOnChange && !brain.HasNews(line) && rng.NextDouble() < brain.SilenceChance()) return null;
@@ -657,11 +661,20 @@ public static partial class BotPlayer
         public double Evidence(string card)
         {
             if (_evidence.TryGetValue(card, out var score)) return score;
+            // Логика заявлений: чужие «проверял — исчезло» — через то, кто из говоривших мог быть честным.
+            if (LogicOn && !_computingBlack && !_inLogic && Logic() is { } logic)
+            {
+                var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
+                return _evidence[card] = BaseEvidence(card) + BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
+            }
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
                 : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus)) * OutshoneFactor(l.CardId, l.Round, card));
-            return _evidence[card] = hints - NegativeWeight * (vanished + OthersVanished(card));
+            var value = hints - NegativeWeight * (vanished + OthersVanished(card));
+            // Пока считается модель игроков, логика ещё не готова — не запоминаем промежуточное.
+            if (LogicOn && (_computingBlack || _inLogic)) return value;
+            return _evidence[card] = value;
         }
 
         /// <summary>

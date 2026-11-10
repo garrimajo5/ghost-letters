@@ -145,6 +145,21 @@ public sealed record BotTuning
     /// </summary>
     public double Outshone { get; init; } = .2;
 
+    /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
+    public bool ClaimLogic { get; init; }
+
+    /// <summary>Как часто Призрак не открывает письмо, хотя оно указывало на истину (ошибка или лучшее письмо).</summary>
+    public double GhostError { get; init; } = .2;
+
+    /// <summary>Насколько охотнее лжец «проверяет» именно истину (отсекает её): .5 — в полтора раза при ясном письме.</summary>
+    public double LiarCut { get; init; } = .5;
+
+    /// <summary>Вес логики заявлений в уликах о картах (1 — убеждение о ряде совпадает с выводом логики).</summary>
+    public double ClaimLogicWeight { get; init; } = 1;
+
+    /// <summary>Говорить выводы логики вслух.</summary>
+    public bool DeduceSpeech { get; init; } = true;
+
     /// <summary>Вес чужих исчезнувших писем (по их публичным «кидал эту — проверял…») относительно своих.</summary>
     public double OthersVanished { get; init; } = .5;
 
@@ -308,6 +323,11 @@ public sealed record BotTuning
                 nameof(KillerBlendChance) => t with { KillerBlendChance = D() },
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
+                nameof(ClaimLogic) => t with { ClaimLogic = B() },
+                nameof(GhostError) => t with { GhostError = D() },
+                nameof(LiarCut) => t with { LiarCut = D() },
+                nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },
+                nameof(DeduceSpeech) => t with { DeduceSpeech = B() },
                 nameof(Outshone) => t with { Outshone = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },

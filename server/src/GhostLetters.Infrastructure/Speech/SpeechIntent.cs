@@ -64,6 +64,9 @@ public enum ThoughtKind
 
     /// <summary>Передумал о ряде: раньше был за <c>Card</c>, теперь нет — <c>Why</c>.</summary>
     Changed,
+
+    /// <summary>Логический вывод из заявлений стола, готовой фразой в <c>Why</c>.</summary>
+    Deduce,
 }
 
 /// <summary>

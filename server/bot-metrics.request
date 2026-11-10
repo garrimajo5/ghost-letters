@@ -1,0 +1,2 @@
+150
+variants: логика: ClaimLogic=true | логика без речи: ClaimLogic=true, DeduceSpeech=false | логика, лжец сильнее: ClaimLogic=true, LiarCut=1

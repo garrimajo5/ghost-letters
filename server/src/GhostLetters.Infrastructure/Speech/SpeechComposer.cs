@@ -106,7 +106,7 @@ public static partial class SpeechComposer
         var rng = voice.Rng;
         var card = t.Card;
         var list = t.Cards is { Count: > 0 } cards ? Acc(cards.Count == 1 ? cards[0] : string.Join(", ", cards.Take(cards.Count - 1)) + " и " + cards[^1]) : null;
-        var why = t.Why is null ? null : t.Kind == ThoughtKind.Accuse ? Behaviour(t.Why) : Reason(t.Why, rng);
+        var why = t.Why is null ? null : t.Kind == ThoughtKind.Deduce ? t.Why : t.Kind == ThoughtKind.Accuse ? Behaviour(t.Why) : Reason(t.Why, rng);
         var whole = t.Kind == ThoughtKind.Whole && t.Cards is { Count: > 0 } w ? string.Join(", ", w) : null;
         var vars = new Dictionary<string, string?>
         {
@@ -271,6 +271,7 @@ public static partial class SpeechComposer
             ThoughtKind.Tentative => ["Я бы проверил {card_acc}.", "А что если {card}?", "Есть мысль про {card_acc}, но пока сыро."],
             ThoughtKind.Exclude => ["{card} — мимо, по-моему.", "Не верю в {card_acc}.", "{card} отпадает: улики притянуты.", "Исключаю {card_acc}."],
             ThoughtKind.Weak => ["Но это так, догадка.", "Пока больше чутьё.", "Улик под это мало, конечно."],
+            ThoughtKind.Deduce => ["{why}"],
             ThoughtKind.Changed => ["Передумал: раньше был за {card_acc}, но {why}.", "Раньше думал на {card_acc}, теперь нет — {why}.", "Беру назад {card_acc}: {why}."],
             ThoughtKind.Link => ["{hint} намекает на {to}: {why}.", "{hint} и {to} — {why}.", "Смотрите: {hint} — {why}, как и {to}."],
             ThoughtKind.Whole => ["В целом у меня так: {whole}.", "Целиком: {whole}."],
