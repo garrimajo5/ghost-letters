@@ -117,6 +117,12 @@ public sealed record BotTuning
     /// <summary>Боты 4.0, шаг 6: передумав о ряде, бот говорит, что раньше был за другую карту, и почему.</summary>
     public bool ExplainChange { get; init; } = true;
 
+    /// <summary>Боты 4.0, шаг 6: встревоженный (стол подозревает) бот сначала оправдывается с доводом.</summary>
+    public bool AnxiousDefense { get; init; }
+
+    /// <summary>С какой тревоги бот оправдывается.</summary>
+    public double DefenseAnxiety { get; init; } = .5;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -293,6 +299,8 @@ public sealed record BotTuning
                 nameof(SpeakOnChange) => t with { SpeakOnChange = B() },
                 nameof(SilenceBase) => t with { SilenceBase = D() },
                 nameof(ExplainChange) => t with { ExplainChange = B() },
+                nameof(AnxiousDefense) => t with { AnxiousDefense = B() },
+                nameof(DefenseAnxiety) => t with { DefenseAnxiety = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
