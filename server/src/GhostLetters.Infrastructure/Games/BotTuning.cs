@@ -82,10 +82,10 @@ public sealed record BotTuning
     public bool UnifiedTrust { get; init; } = true;
 
     /// <summary>Боты 4.0, шаг 3: температура мягкого выбора (0 — всегда лучший ход).</summary>
-    public double SoftTemp { get; init; }
+    public double SoftTemp { get; init; } = .1;
 
     /// <summary>Множитель мягкого выбора для карт в рядах (мнения и голоса).</summary>
-    public double SoftCards { get; init; } = 1;
+    public double SoftCards { get; init; }
 
     /// <summary>Множитель мягкого выбора для писем.</summary>
     public double SoftLetters { get; init; } = 1;
