@@ -84,6 +84,12 @@ public sealed record BotTuning
     /// <summary>Боты 4.0, шаг 3: температура мягкого выбора (0 — всегда лучший ход).</summary>
     public double SoftTemp { get; init; }
 
+    /// <summary>Множитель мягкого выбора для карт в рядах (мнения и голоса).</summary>
+    public double SoftCards { get; init; } = 1;
+
+    /// <summary>Множитель мягкого выбора для писем.</summary>
+    public double SoftLetters { get; init; } = 1;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -249,6 +255,8 @@ public sealed record BotTuning
                 nameof(FinalShort) => t with { FinalShort = B() },
                 nameof(UnifiedTrust) => t with { UnifiedTrust = B() },
                 nameof(SoftTemp) => t with { SoftTemp = D() },
+                nameof(SoftCards) => t with { SoftCards = D() },
+                nameof(SoftLetters) => t with { SoftLetters = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

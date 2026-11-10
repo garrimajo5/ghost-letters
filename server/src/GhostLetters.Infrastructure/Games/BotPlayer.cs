@@ -672,7 +672,7 @@ public static partial class BotPlayer
         public int BestColumn(int row, IReadOnlyList<int>? candidates)
         {
             var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
-            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Soft("card:" + Card(row, c), 1))
+            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Soft("card:" + Card(row, c), BotTuning.Current.SoftCards))
                 .ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
         }
 
@@ -922,7 +922,7 @@ public static partial class BotPlayer
             // Письмо должно ясно проверять одну карту: похожее на цель и ни на что больше на поле —
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
-            return me.Hand.OrderByDescending(h => Pick(h) + Soft("letter:" + h, .5) + Noise()).Take(count).ToList();
+            return me.Hand.OrderByDescending(h => Pick(h) + Soft("letter:" + h, .5 * BotTuning.Current.SoftLetters) + Noise()).Take(count).ToList();
         }
 
         private Bots.TableModel? _model;
