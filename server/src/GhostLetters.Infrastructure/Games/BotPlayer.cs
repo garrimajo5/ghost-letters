@@ -602,7 +602,9 @@ public static partial class BotPlayer
         private double VoteUtility(Guid candidate)
         {
             var accusations = mind?.AccusationList.Where(a => a.Author != me.Id).ToList() ?? [];
-            var share = accusations.Count == 0 ? 0 : accusations.Where(a => a.Target == candidate).Sum(a => a.Strength) / accusations.Sum(a => a.Strength);
+            // Голос стола — с доверием к каждому, кто обвиняет: слова ненадёжного не тянут.
+            var total = accusations.Sum(a => a.Strength * Trust(a.Author));
+            var share = total <= 0 ? 0 : accusations.Where(a => a.Target == candidate).Sum(a => a.Strength * Trust(a.Author)) / Math.Max(1, total);
             return Killer(candidate) + BotTuning.Current.VoteConformity * P.Compromise * share;
         }
 
