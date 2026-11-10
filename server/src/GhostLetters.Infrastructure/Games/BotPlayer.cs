@@ -592,6 +592,18 @@ public static partial class BotPlayer
         private double Noise() => rng.NextDouble() * 1e-6;
 
         /// <summary>
+        /// Боты 4.0, шаг 3: полезность голоса за Убийцу. Цель роли — P(Убийца) по модели игроков; социальное —
+        /// сговорчивый тянется к тому, кого называет стол (так голоса сходятся, как у людей). Выбор — мягкий
+        /// (<see cref="Soft"/>): близкие кандидаты делят голоса по характеру, а не по броску монеты.
+        /// </summary>
+        private double VoteUtility(Guid candidate)
+        {
+            var accusations = mind?.AccusationList.Where(a => a.Author != me.Id).ToList() ?? [];
+            var share = accusations.Count == 0 ? 0 : accusations.Where(a => a.Target == candidate).Sum(a => a.Strength) / accusations.Sum(a => a.Strength);
+            return Killer(candidate) + BotTuning.Current.VoteConformity * P.Compromise * share;
+        }
+
+        /// <summary>
         /// Боты 4.0, шаг 3: мягкий выбор. argmax(полезность + T·Гумбель) — это выбор по softmax(полезность / T):
         /// ясный лучший ход берётся почти всегда, а из близких — то один, то другой. Шум детерминирован по
         /// (партия, бот, раунд, что выбираем): в одном раунде бот не передумывает между репликой и голосом,
@@ -804,6 +816,8 @@ public static partial class BotPlayer
                 // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
                 // Память добавляет подозрение тем, кто часто бывал Убийцей в прошлых партиях с ботом.
                 // Подозрения: память о прошлых партиях, обвинения стола и странные советы в чате.
+                if (BotTuning.Current is { RoleModel: true, RoleModelVote: true, VoteUtility: true })
+                    return candidates.OrderByDescending(c => VoteUtility(c) + Soft("vote:" + c, BotTuning.Current.VoteTemp / Math.Max(.01, BotTuning.Current.SoftTemp))).First();
                 return BotTuning.Current is { RoleModel: true, RoleModelVote: true }
                     ? candidates.OrderByDescending(c => rng.NextDouble() * 0.3 + Killer(c)).First()
                     : candidates.OrderByDescending(c => rng.NextDouble() * 0.5 + Suspicion(c)).First();
