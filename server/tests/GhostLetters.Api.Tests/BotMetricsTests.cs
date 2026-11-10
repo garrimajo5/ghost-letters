@@ -42,7 +42,7 @@ public sealed class BotMetricsTests
         public int GhostRounds, GhostReveals, GhostEmptyRounds, RevealTruth, RevealFalse, WithheldTruth;
         public readonly Dictionary<string, (int Letters, int AimTruth, double Breadth, double Clarity, int CutTruth, int Checks)> Letters = new();
         public int KillerAccusedGames, KillerAccusedRoundSum, Accusations, AccusationsBlack;
-        public int Messages, Echo, EchoCard, DiscussionRounds;
+        public int Messages, Echo, EchoCard, DiscussionRounds, Novel, MindChanges, Speakers, RowRounds, RowVersions;
 
         public void Add(SandboxReport report, GameState state, CardTags tags)
         {
@@ -126,6 +126,33 @@ public sealed class BotMetricsTests
             Echo += discussion.Count(Echoes);
             // Отдельно — поддакивание картой («думаю, эта»); остальное эхо — реплики без карт («Аня, согласен»).
             EchoCard += discussion.Count(m => m.Cards.Count == 1 && Echoes(m));
+
+            // Человечность (#288): говорит ли бот новое, меняет ли мнение, насколько разнятся версии за столом.
+            var rowOf = board.ToDictionary(b => b.Card, b => b.Row);
+            foreach (var author in discussion.GroupBy(m => m.Author))
+            {
+                Speakers++;
+                var said = new HashSet<string>();
+                var version = new Dictionary<int, string>();
+                foreach (var m in author)
+                {
+                    if (m.Cards.Any(c => !said.Contains(c))) Novel++;
+                    said.UnionWith(m.Cards);
+                    foreach (var (card, i) in m.Cards.Select((c, i) => (c, i)))
+                    {
+                        if (i >= m.Notes.Count || !m.Notes[i].StartsWith("думаю", StringComparison.Ordinal) || !rowOf.TryGetValue(card, out var row)) continue;
+                        if (version.TryGetValue(row, out var before) && before != card) MindChanges++;
+                        version[row] = card;
+                    }
+                }
+            }
+            foreach (var round in discussion.GroupBy(m => m.Round))
+                foreach (var row in round.SelectMany(m => m.Cards.Select((c, i) => (c, i, m))).Where(x => x.i < x.m.Notes.Count && x.m.Notes[x.i].StartsWith("думаю", StringComparison.Ordinal) && rowOf.ContainsKey(x.c))
+                             .GroupBy(x => rowOf[x.c]))
+                {
+                    RowRounds++;
+                    RowVersions += row.Select(x => x.c).Distinct().Count();
+                }
         }
 
         private static string Group(Role r) => r switch
@@ -183,6 +210,7 @@ public sealed class BotMetricsTests
             md.AppendLine("| Вариант | Детективы | Ряды | Призрак: открыто / раунд | пустых | к истине / к ложной | придержал истину | Убийцу обвинили (раунд) | точность | эхо | реплик / раунд |");
             md.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|");
             var letterLines = new List<string>();
+            var humanLines = new List<string>();
             foreach (var (name, tuning) in variants)
             {
                 var m = new Metrics();
@@ -199,9 +227,12 @@ public sealed class BotMetricsTests
                     $"{Pct(m.RevealTruth, revealed)} / {Pct(m.RevealFalse, revealed)} | {Num(m.WithheldTruth, m.Games)} | " +
                     $"{Pct(m.KillerAccusedGames, m.Games)} ({Num(m.KillerAccusedRoundSum, m.KillerAccusedGames)}) | {Pct(m.AccusationsBlack, m.Accusations)} | " +
                     $"{Pct(m.Echo, m.Messages)} (картой {Pct(m.EchoCard, m.Messages)}) | {Num(m.Messages, m.DiscussionRounds)} |");
+                humanLines.Add($"| {name} | {Pct(m.Novel, m.Messages)} | {Num(m.MindChanges, m.Speakers)} | {Num(m.RowVersions, m.RowRounds)} |");
                 foreach (var (group, x) in m.Letters.OrderBy(g => g.Key))
                     letterLines.Add($"| {name} | {group} | {x.Letters} | {Pct(x.AimTruth, x.Letters)} | {Num(x.Breadth, x.Letters)} | {Num(x.Clarity, x.Letters, "0.00")} | {Pct(x.CutTruth, x.Checks)} из {x.Checks} |");
             }
+            md.AppendLine().AppendLine("| Вариант | новое в реплике | смен мнения на игрока | разных версий на ряд за раунд |").AppendLine("|---|---|---|---|");
+            foreach (var line in humanLines) md.AppendLine(line);
             md.AppendLine().AppendLine("| Вариант | Роль | Писем | в истину | ширина | ясность | отсёк истину |").AppendLine("|---|---|---|---|---|---|---|");
             foreach (var line in letterLines) md.AppendLine(line);
             md.AppendLine();
