@@ -853,7 +853,7 @@ class _RoleScreen extends StatelessWidget {
       builder: (context, box) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
         child: Column(children: [
-          Text(open ? 'ВАША РОЛЬ' : 'РАЗДАЧА РОЛЕЙ', style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 2)),
+          Text(open ? 'ВАША РОЛЬ' : 'РАЗДАЧА РОЛЕЙ', style: const TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 2)),
           const SizedBox(height: 16),
           RoleReveal(
             role: me.role,

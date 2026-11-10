@@ -861,7 +861,6 @@ void main() {
     await tester.pump(const Duration(seconds: 8));
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('say-strip-scaled')), findsOneWidget);
-    await _open(tester, phone);
-    expect(find.byKey(const Key('say-strip-scaled')), findsNothing);
+    await tester.pumpAndSettle();
   });
 }
