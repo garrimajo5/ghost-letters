@@ -1,0 +1,59 @@
+# Запуск APK с сервера на эмуляторе: ставится ли и стартует ли, что пишет logcat при падении.
+# Только чтение: скачивает /download/ghost-letters.apk, на сервер ничего не пишет.
+name: APK smoke
+
+on:
+  push:
+    branches: ['diag/apk']
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [34, 30]
+    steps:
+      - name: KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Download APK
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          url="https://${HOST//./-}.sslip.io/download/ghost-letters.apk"
+          curl -fsSL -o app.apk "$url"
+          ls -la app.apk; sha256sum app.apk
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            adb install -r app.apk 2>&1 | tee install.txt
+            adb logcat -c
+            adb shell monkey -p com.ghostletters.ghost_letters -c android.intent.category.LAUNCHER 1
+            sleep 30
+            adb shell pidof com.ghostletters.ghost_letters > pid.txt || echo "нет процесса" > pid.txt
+            adb exec-out screencap -p > screen.png
+            adb logcat -d > logcat.txt
+            grep -E "AndroidRuntime|FATAL|flutter|E/|DEBUG|libc" logcat.txt | grep -iE "ghost|flutter|fatal|AndroidRuntime|crash|exception|error" | head -60 > crash.txt || true
+      - name: Report
+        if: always()
+        run: |
+          echo "::notice title=install api${{ matrix.api }}::$(cat install.txt 2>/dev/null | tr '\n' ' ' | head -c 500)"
+          echo "::notice title=pid api${{ matrix.api }}::$(cat pid.txt 2>/dev/null)"
+          echo "::notice title=crash api${{ matrix.api }}::$(head -c 3500 crash.txt 2>/dev/null | sed ':a;N;$!ba;s/\n/%0A/g')"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-api${{ matrix.api }}
+          path: |
+            screen.png
+            logcat.txt
+            crash.txt
