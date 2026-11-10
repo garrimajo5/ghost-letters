@@ -90,6 +90,15 @@ public sealed record BotTuning
     /// <summary>Множитель мягкого выбора для писем.</summary>
     public double SoftLetters { get; init; } = 1;
 
+    /// <summary>Боты 4.0, шаг 3: голос за Убийцу по полезности (модель + стол) с мягким выбором.</summary>
+    public bool VoteUtility { get; init; }
+
+    /// <summary>Температура голоса за Убийцу.</summary>
+    public double VoteTemp { get; init; } = .1;
+
+    /// <summary>Вес мнения стола в голосе за Убийцу (умножается на сговорчивость).</summary>
+    public double VoteConformity { get; init; } = .3;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -257,6 +266,9 @@ public sealed record BotTuning
                 nameof(SoftTemp) => t with { SoftTemp = D() },
                 nameof(SoftCards) => t with { SoftCards = D() },
                 nameof(SoftLetters) => t with { SoftLetters = D() },
+                nameof(VoteUtility) => t with { VoteUtility = B() },
+                nameof(VoteTemp) => t with { VoteTemp = D() },
+                nameof(VoteConformity) => t with { VoteConformity = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

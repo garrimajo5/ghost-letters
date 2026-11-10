@@ -591,6 +591,23 @@ public static partial class BotPlayer
 
         private double Noise() => rng.NextDouble() * 1e-6;
 
+        /// <summary>Шум Гумбеля с температурой t: argmax(u + шум) — выбор по softmax(u / t). Для разовых решений (голос).</summary>
+        private double Gumbel(double t) => t <= 0 ? 0 : -t * Math.Log(-Math.Log(Math.Clamp(rng.NextDouble(), 1e-12, 1 - 1e-12)));
+
+        /// <summary>
+        /// Боты 4.0, шаг 3: полезность голоса за Убийцу. Цель роли — P(Убийца) по модели игроков; социальное —
+        /// сговорчивый тянется к тому, кого называет стол (так голоса сходятся, как у людей). Выбор — мягкий
+        /// (<see cref="Soft"/>): близкие кандидаты делят голоса по характеру, а не по броску монеты.
+        /// </summary>
+        private double VoteUtility(Guid candidate)
+        {
+            var accusations = mind?.AccusationList.Where(a => a.Author != me.Id).ToList() ?? [];
+            // Голос стола — с доверием к каждому, кто обвиняет: слова ненадёжного не тянут.
+            var total = accusations.Sum(a => a.Strength * Trust(a.Author));
+            var share = total <= 0 ? 0 : accusations.Where(a => a.Target == candidate).Sum(a => a.Strength * Trust(a.Author)) / Math.Max(1, total);
+            return Killer(candidate) + BotTuning.Current.VoteConformity * P.Compromise * share;
+        }
+
         /// <summary>
         /// Боты 4.0, шаг 3: мягкий выбор. argmax(полезность + T·Гумбель) — это выбор по softmax(полезность / T):
         /// ясный лучший ход берётся почти всегда, а из близких — то один, то другой. Шум детерминирован по
@@ -804,6 +821,8 @@ public static partial class BotPlayer
                 // Подозреваем того, кто чаще других голосовал против карт, на которые указывают подсказки.
                 // Память добавляет подозрение тем, кто часто бывал Убийцей в прошлых партиях с ботом.
                 // Подозрения: память о прошлых партиях, обвинения стола и странные советы в чате.
+                if (BotTuning.Current is { RoleModel: true, RoleModelVote: true, VoteUtility: true })
+                    return candidates.OrderByDescending(c => VoteUtility(c) + Gumbel(BotTuning.Current.VoteTemp * (.4 + P.Variability))).First();
                 return BotTuning.Current is { RoleModel: true, RoleModelVote: true }
                     ? candidates.OrderByDescending(c => rng.NextDouble() * 0.3 + Killer(c)).First()
                     : candidates.OrderByDescending(c => rng.NextDouble() * 0.5 + Suspicion(c)).First();
