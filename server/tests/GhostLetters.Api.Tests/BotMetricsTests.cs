@@ -42,7 +42,7 @@ public sealed class BotMetricsTests
         public int GhostRounds, GhostReveals, GhostEmptyRounds, RevealTruth, RevealFalse, WithheldTruth;
         public readonly Dictionary<string, (int Letters, int AimTruth, double Breadth, double Clarity, int CutTruth, int Checks)> Letters = new();
         public int KillerAccusedGames, KillerAccusedRoundSum, Accusations, AccusationsBlack;
-        public int Messages, Echo, EchoCard, DiscussionRounds, Novel, MindChanges, Speakers, RowRounds, RowVersions, Deductions;
+        public int Messages, Echo, EchoCard, DiscussionRounds, Novel, MindChanges, Speakers, RowRounds, RowVersions, Deductions, Defenses;
 
         public void Add(SandboxReport report, GameState state, CardTags tags)
         {
@@ -131,6 +131,7 @@ public sealed class BotMetricsTests
             var rowOf = board.ToDictionary(b => b.Card, b => b.Row);
             Deductions += discussion.Count(m => m.Text.Contains("хоть один из них честный", StringComparison.Ordinal)
                 || m.Text.Contains("вряд ли все они чёрные", StringComparison.Ordinal) || m.Text.Contains("так не бывает", StringComparison.Ordinal));
+            Defenses += discussion.Count(m => m.Text.Contains("ошибаешься", StringComparison.Ordinal));
             foreach (var author in discussion.GroupBy(m => m.Author))
             {
                 Speakers++;
@@ -229,11 +230,11 @@ public sealed class BotMetricsTests
                     $"{Pct(m.RevealTruth, revealed)} / {Pct(m.RevealFalse, revealed)} | {Num(m.WithheldTruth, m.Games)} | " +
                     $"{Pct(m.KillerAccusedGames, m.Games)} ({Num(m.KillerAccusedRoundSum, m.KillerAccusedGames)}) | {Pct(m.AccusationsBlack, m.Accusations)} | " +
                     $"{Pct(m.Echo, m.Messages)} (картой {Pct(m.EchoCard, m.Messages)}) | {Num(m.Messages, m.DiscussionRounds)} |");
-                humanLines.Add($"| {name} | {Pct(m.Novel, m.Messages)} | {Num(m.MindChanges, m.Speakers)} | {Num(m.RowVersions, m.RowRounds)} | {Num(m.Deductions, m.Games)} |");
+                humanLines.Add($"| {name} | {Pct(m.Novel, m.Messages)} | {Num(m.MindChanges, m.Speakers)} | {Num(m.RowVersions, m.RowRounds)} | {Num(m.Deductions, m.Games)} | {Num(m.Defenses, m.Games)} |");
                 foreach (var (group, x) in m.Letters.OrderBy(g => g.Key))
                     letterLines.Add($"| {name} | {group} | {x.Letters} | {Pct(x.AimTruth, x.Letters)} | {Num(x.Breadth, x.Letters)} | {Num(x.Clarity, x.Letters, "0.00")} | {Pct(x.CutTruth, x.Checks)} из {x.Checks} |");
             }
-            md.AppendLine().AppendLine("| Вариант | новое в реплике | смен мнения на игрока | разных версий на ряд за раунд | рассуждений на партию |").AppendLine("|---|---|---|---|---|");
+            md.AppendLine().AppendLine("| Вариант | новое в реплике | смен мнения на игрока | разных версий на ряд за раунд | рассуждений на партию | оправданий на партию |").AppendLine("|---|---|---|---|---|---|");
             foreach (var line in humanLines) md.AppendLine(line);
             md.AppendLine().AppendLine("| Вариант | Роль | Писем | в истину | ширина | ясность | отсёк истину |").AppendLine("|---|---|---|---|---|---|---|");
             foreach (var line in letterLines) md.AppendLine(line);

@@ -110,10 +110,18 @@ public static partial class BotPlayer
                 for (var i = 0; i < cards.Count; i++) prior[cards[i]] = w[i] / sum;
             }
 
+            // Никто ничего не проверял — логике нечего добавить.
+            if (claims.Count == 0)
+                return new ClaimLogicResult(prior, prior, unknown.ToDictionary(id => id, id => basis.GetValueOrDefault(id)), []);
+
             var odds = unknown.ToDictionary(id => id, id => Math.Clamp(basis.GetValueOrDefault(id, k / (double)Math.Max(1, unknown.Count)), .02, .98));
             var truth = prior.Keys.ToDictionary(c => c, _ => 0.0);
             var black = unknown.ToDictionary(id => id, _ => 0.0);
             var subsets = Subsets(unknown, k).ToList();
+            // Заранее: по каждой карте — её заявления с логарифмами правдоподобия честного и лжеца.
+            var byCard = claims.GroupBy(c => c.Card).ToDictionary(g => g.Key, g => g.Select(c =>
+                (c.Author, Honest: Math.Log(1 - c.S * (1 - t.GhostError)), Liar: Math.Log(1 + t.LiarCut * c.S))).ToArray());
+            var logPrior = prior.ToDictionary(x => x.Key, x => Math.Log(Math.Max(1e-9, x.Value)));
             var logZ = new double[subsets.Count];
             var rowPost = new List<Dictionary<string, double>>(subsets.Count);
             for (var b = 0; b < subsets.Count; b++)
@@ -124,9 +132,13 @@ public static partial class BotPlayer
                 for (var r = 0; r < view.Board.Count; r++)
                 {
                     var cards = view.Board[r].Cards;
-                    var inRow = claims.Where(c => c.Row == r).ToList();
-                    var a = cards.Select(card => Math.Log(Math.Max(1e-9, prior[card])) + inRow.Where(c => c.Card == card)
-                        .Sum(c => Math.Log(liars.Contains(c.Author) ? 1 + t.LiarCut * c.S : 1 - c.S * (1 - t.GhostError)))).ToList();
+                    var a = new double[cards.Count];
+                    for (var i = 0; i < cards.Count; i++)
+                    {
+                        a[i] = logPrior[cards[i]];
+                        if (byCard.TryGetValue(cards[i], out var said))
+                            foreach (var c in said) a[i] += liars.Contains(c.Author) ? c.Liar : c.Honest;
+                    }
                     var max = a.Max();
                     var lse = max + Math.Log(a.Sum(x => Math.Exp(x - max)));
                     z += lse;

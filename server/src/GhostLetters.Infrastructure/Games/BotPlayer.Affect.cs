@@ -43,6 +43,22 @@ public static partial class BotPlayer
             return mine.Count == 0 ? line.Cards.Count == 0 : mine.Any(c => !said.Contains(c));
         }
 
+        /// <summary>
+        /// Тревога как повод речи: стол всерьёз подозревает меня — сначала отвечаю тому, кто подозревает больше всех,
+        /// и с доводом (моё письмо открыли — значит, я целился в истину). Чёрный оправдывается так же — ему это тоже выгодно.
+        /// </summary>
+        public (string Text, string Who)? Defense()
+        {
+            if (Classic || mind is null || !BotTuning.Current.AnxiousDefense || Affect().Anxiety < BotTuning.Current.DefenseAnxiety) return null;
+            var accuser = mind.AccusationList.Where(a => a.Target == me.Id && a.Author != me.Id).OrderByDescending(a => a.Strength).FirstOrDefault();
+            if (accuser is null || NameOf(accuser.Author) is not { } who) return null;
+            var opened = me.Letters.LastOrDefault(l => l.Revealed == true);
+            var argument = opened is not null
+                ? $"моё письмо Призрак открыл — я целился в истину"
+                : "посмотри, что я проверял, — я работаю на стол";
+            return ($"{who}, ты ошибаешься на мой счёт: {argument}. ", who);
+        }
+
         /// <summary>Шанс промолчать без повода: дотошный (детали) и встревоженный говорят чаще.</summary>
         public double SilenceChance() => Math.Clamp(BotTuning.Current.SilenceBase - .5 * P.Details - .3 * Affect().Anxiety, 0, 1);
 
