@@ -1,0 +1,2 @@
+150
+variants: по поводу .8: SpeakOnChange=true | по поводу .5: SpeakOnChange=true, SilenceBase=.5

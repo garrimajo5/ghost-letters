@@ -36,8 +36,11 @@ public static partial class BotPlayer
             if (Classic || mind is null) return true;
             if (line.Text.Contains("Убийц", StringComparison.Ordinal) || line.Text.Contains("чёрн", StringComparison.Ordinal)) return true;
             if (line.Notes.Any(n => n.StartsWith("кидал", StringComparison.Ordinal) || n.StartsWith("проверял", StringComparison.Ordinal))) return true;
+            // Только карты стола: подсказки в реплике — ссылки на улики, а не новое мнение.
             var said = mind.OwnSaid.Select(o => o.CardId).ToHashSet();
-            return line.Cards.Count == 0 || line.Cards.Any(c => !said.Contains(c));
+            var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
+            var mine = line.Cards.Where(board.Contains).ToList();
+            return mine.Count == 0 ? line.Cards.Count == 0 : mine.Any(c => !said.Contains(c));
         }
 
         /// <summary>Шанс промолчать без повода: дотошный (детали) и встревоженный говорят чаще.</summary>
