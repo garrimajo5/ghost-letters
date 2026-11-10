@@ -336,7 +336,7 @@ public static partial class BotPlayer
                 trust *= Trust(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 var argument = o.SourceCard is null ? 1 : .5 + .5 * Sim(o.SourceCard, card);
-                sum += o.Strength * trust * mind.TrustMultiplier(o.Author) * argument;
+                sum += o.Strength * trust * mind.TrustMultiplier(o.Author) * argument * Recall(o.Round, .3);
             }
 
             return sum;
@@ -591,6 +591,18 @@ public static partial class BotPlayer
 
         private double Noise() => rng.NextDouble() * 1e-6;
 
+        /// <summary>
+        /// Боты 4.0, шаг 4: забывание сказанного в чате. Подсказки лежат на столе и не забываются, а слова
+        /// прошлых раундов уплывают: вес = e^(−возраст / срок), срок = (1 + 3·память) × (1 + 2·заметность) раундов.
+        /// Яркое (чужое исчезнувшее письмо — .6) помнится дольше рутины («думаю, эта» — .3).
+        /// </summary>
+        private double Recall(int? round, double salience)
+        {
+            if (!BotTuning.Current.Forgetting || Classic || round is not { } r) return 1;
+            var age = Math.Max(0, view.Round - r);
+            return Math.Exp(-age / ((1 + 3 * P.Memory) * (1 + 2 * salience)));
+        }
+
         /// <summary>Шум Гумбеля с температурой t: argmax(u + шум) — выбор по softmax(u / t). Для разовых решений (голос).</summary>
         private double Gumbel(double t) => t <= 0 ? 0 : -t * Math.Log(-Math.Log(Math.Clamp(rng.NextDouble(), 1e-12, 1 - 1e-12)));
 
@@ -661,7 +673,7 @@ public static partial class BotPlayer
                 {
                     var o = g.First();
                     var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : Trust(o.Author);
-                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus) * OutshoneFactor(g.Key, o.Round, card);
+                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus) * OutshoneFactor(g.Key, o.Round, card) * Recall(o.Round, .6);
                 });
         }
 

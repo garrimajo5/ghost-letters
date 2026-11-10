@@ -99,6 +99,9 @@ public sealed record BotTuning
     /// <summary>Вес мнения стола в голосе за Убийцу (умножается на сговорчивость).</summary>
     public double VoteConformity { get; init; } = .3;
 
+    /// <summary>Боты 4.0, шаг 4: слова прошлых раундов забываются по памяти характера и заметности.</summary>
+    public bool Forgetting { get; init; }
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -269,6 +272,7 @@ public sealed record BotTuning
                 nameof(VoteUtility) => t with { VoteUtility = B() },
                 nameof(VoteTemp) => t with { VoteTemp = D() },
                 nameof(VoteConformity) => t with { VoteConformity = D() },
+                nameof(Forgetting) => t with { Forgetting = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },
