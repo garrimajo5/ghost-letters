@@ -79,7 +79,7 @@ public sealed record BotTuning
     public bool FinalShort { get; init; } = true;
 
     /// <summary>Боты 4.0, шаг 2: доверие к словам игрока — из модели игроков (той же, что подозрения и голос).</summary>
-    public bool UnifiedTrust { get; init; }
+    public bool UnifiedTrust { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
