@@ -100,7 +100,10 @@ public sealed record BotTuning
     public double VoteConformity { get; init; } = .3;
 
     /// <summary>Боты 4.0, шаг 4: слова прошлых раундов забываются по памяти характера и заметности.</summary>
-    public bool Forgetting { get; init; }
+    public bool Forgetting { get; init; } = true;
+
+    /// <summary>Пол забывания: доля веса, которая остаётся у старых слов (0 — стираются совсем).</summary>
+    public double RecallFloor { get; init; } = .7;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
@@ -273,6 +276,7 @@ public sealed record BotTuning
                 nameof(VoteTemp) => t with { VoteTemp = D() },
                 nameof(VoteConformity) => t with { VoteConformity = D() },
                 nameof(Forgetting) => t with { Forgetting = B() },
+                nameof(RecallFloor) => t with { RecallFloor = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

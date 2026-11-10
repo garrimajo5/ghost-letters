@@ -600,7 +600,9 @@ public static partial class BotPlayer
         {
             if (!BotTuning.Current.Forgetting || Classic || round is not { } r) return 1;
             var age = Math.Max(0, view.Round - r);
-            return Math.Exp(-age / ((1 + 3 * P.Memory) * (1 + 2 * salience)));
+            // Пол: старое не исчезает совсем — свежее лишь весит больше (ближе к людям, чем стирание).
+            var floor = BotTuning.Current.RecallFloor;
+            return floor + (1 - floor) * Math.Exp(-age / ((1 + 3 * P.Memory) * (1 + 2 * salience)));
         }
 
         /// <summary>Шум Гумбеля с температурой t: argmax(u + шум) — выбор по softmax(u / t). Для разовых решений (голос).</summary>
