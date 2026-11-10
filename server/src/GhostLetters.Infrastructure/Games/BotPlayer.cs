@@ -591,6 +591,21 @@ public static partial class BotPlayer
 
         private double Noise() => rng.NextDouble() * 1e-6;
 
+        /// <summary>
+        /// Боты 4.0, шаг 3: мягкий выбор. argmax(полезность + T·Гумбель) — это выбор по softmax(полезность / T):
+        /// ясный лучший ход берётся почти всегда, а из близких — то один, то другой. Шум детерминирован по
+        /// (партия, бот, раунд, что выбираем): в одном раунде бот не передумывает между репликой и голосом,
+        /// но в разных раундах и у разных ботов выбор разный. T — из характера (вариативность).
+        /// </summary>
+        private double Soft(string what, double scale)
+        {
+            var t = BotTuning.Current.SoftTemp * scale * (.4 + P.Variability);
+            if (t <= 0 || Classic) return 0;
+            var key = $"soft-v1:{view.GameId:N}:{me.Id:N}:{view.Round}:{what}";
+            var u = (BinaryPrimitives.ReadUInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(key))) >> 11) * (1.0 / (1UL << 53));
+            return -t * Math.Log(-Math.Log(Math.Clamp(u, 1e-12, 1 - 1e-12)));
+        }
+
         // Resolve exact ties consistently across discussion, voting and process restarts.
         // Only public game/card identity and this bot's identity enter the preference.
         private ulong CardPreference(int row, int column)
@@ -657,7 +672,8 @@ public static partial class BotPlayer
         public int BestColumn(int row, IReadOnlyList<int>? candidates)
         {
             var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
-            return columns.OrderByDescending(c => Evidence(Card(row, c))).ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
+            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Soft("card:" + Card(row, c), 1))
+                .ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
         }
 
         public int? RowVote(VoteStageView stage)
@@ -906,7 +922,7 @@ public static partial class BotPlayer
             // Письмо должно ясно проверять одну карту: похожее на цель и ни на что больше на поле —
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
-            return me.Hand.OrderByDescending(h => Pick(h) + Noise()).Take(count).ToList();
+            return me.Hand.OrderByDescending(h => Pick(h) + Soft("letter:" + h, .5) + Noise()).Take(count).ToList();
         }
 
         private Bots.TableModel? _model;
