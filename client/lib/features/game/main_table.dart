@@ -2306,13 +2306,25 @@ class _SuspectBoard extends StatelessWidget {
       attempts[(vote.voter, row)] = vote.attempt;
       (picks[vote.voter] ??= {})[row] = vote.column!;
     }
+    // Голоса этого этапа (последняя попытка): кто за кого — портретами под столбцом подозреваемого.
+    final latest = <String, VoteRecord>{};
+    for (final vote in finale.votes) {
+      if (vote.stage != stage.index || vote.suspect == null) continue;
+      if ((latest[vote.voter]?.attempt ?? -1) <= vote.attempt) latest[vote.voter] = vote;
+    }
     final order = _Board.tableOrder(v);
     return LayoutBuilder(builder: (context, box) {
-      final card = ((box.maxHeight - 100) / (order.isEmpty ? 1 : order.length) - 4).clamp(22.0, 56.0).floorToDouble();
+      // На большом экране столбцы крупнее: по высоте и ширине окна, вместе с полем.
+      final k = _SayStrip.scaleFor(MediaQuery.sizeOf(context));
+      final rows = order.isEmpty ? 1 : order.length;
+      final byHeight = (box.maxHeight - 150 * k) / rows - 4;
+      final byWidth = (box.maxWidth - 16) / (players.isEmpty ? 1 : players.length) - 32;
+      final card = [byHeight, byWidth].reduce((a, b) => a < b ? a : b).clamp(22.0, 56.0 * k).floorToDouble();
+      final s = (card / 56).clamp(1.0, 1.8).toDouble();
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-          child: Text('КТО УБИЙЦА?', style: heading(16, spacing: 1)),
+          child: Text('КТО УБИЙЦА?', style: heading(16 * s, spacing: 1)),
         ),
         Expanded(
           child: ListView(
@@ -2321,7 +2333,8 @@ class _SuspectBoard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             children: [
               for (final p in players)
-                _suspect(context, v, stage, p, picks[p.id] ?? const {}, order, card),
+                _suspect(context, v, stage, p, picks[p.id] ?? const {}, order, card, s,
+                    [for (final r in latest.values) if (r.suspect == p.id) r.voter]),
             ],
           ),
         ),
@@ -2329,7 +2342,8 @@ class _SuspectBoard extends StatelessWidget {
     });
   }
 
-  Widget _suspect(BuildContext context, GameView v, VoteStage stage, PlayerInfo p, Map<int, int> picks, List<int> order, double card) {
+  Widget _suspect(BuildContext context, GameView v, VoteStage stage, PlayerInfo p, Map<int, int> picks, List<int> order, double card,
+      double s, List<String> voters) {
     final candidate = stage.candidateSuspects.isEmpty || stage.candidateSuspects.contains(p.id);
     final selected = screen.target == p.id;
     final ghost = p.isGhost || p.knownRole == 'Ghost';
@@ -2349,14 +2363,26 @@ class _SuspectBoard extends StatelessWidget {
             border: Border.all(color: selected ? AppColors.amber : AppColors.border),
           ),
           child: Column(children: [
-            Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 30,
+            Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 30 * s,
                 ring: selected ? AppColors.amber : (ghost ? AppColors.ice : null)),
             const SizedBox(height: 2),
             Text(p.id == v.me?.id ? 'Вы' : screen.nick(p.id), maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.text)),
+                style: TextStyle(fontSize: 10 * s, color: selected ? AppColors.amber : AppColors.text)),
             const SizedBox(height: 4),
             for (final r in order)
               Padding(padding: const EdgeInsets.only(bottom: 4), child: _vote(context, v, p, r, picks[r], card)),
+            // Кто голосует за этого игрока — портреты голосовавших.
+            if (voters.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Icon(Icons.how_to_vote, size: 14 * s, color: AppColors.amber),
+              Wrap(key: Key('suspect-voters-${p.id}'), alignment: WrapAlignment.center, spacing: 2, runSpacing: 2, children: [
+                for (final id in voters)
+                  Tooltip(
+                    message: screen.nick(id),
+                    child: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: 18 * s),
+                  ),
+              ]),
+            ],
           ]),
         ),
       ),

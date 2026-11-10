@@ -863,4 +863,19 @@ void main() {
     expect(find.byKey(const Key('say-strip-scaled')), findsOneWidget);
     await tester.pumpAndSettle();
   });
+
+  testWidgets('«Кто Убийца?»: под подозреваемым — портреты голосующих за него', (tester) async {
+    await _open(tester, phone, phase: 'Voting', allowed: const ['CastVote'], edit: (view) {
+      final finale = Map<String, dynamic>.from((snapshotJson()['view'] as Json)['finale'] as Map);
+      finale['currentStage'] = {
+        'index': 1, 'kind': 'Killer', 'row': -1, 'attempt': 1, 'candidateColumns': <int>[], 'candidateSuspects': ['u3'],
+      };
+      finale['votes'] = [
+        {'stage': 1, 'attempt': 1, 'voter': 'u2', 'column': null, 'suspect': 'u3'},
+      ];
+      view['finale'] = finale;
+    });
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('suspect-voters-u3')), findsOneWidget);
+  });
 }
