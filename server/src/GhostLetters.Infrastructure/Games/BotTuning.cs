@@ -109,10 +109,10 @@ public sealed record BotTuning
     public bool Affect { get; init; } = true;
 
     /// <summary>Боты 4.0, шаг 6: без нового в реплике бот скорее молчит.</summary>
-    public bool SpeakOnChange { get; init; }
+    public bool SpeakOnChange { get; init; } = true;
 
     /// <summary>Базовый шанс промолчать без повода.</summary>
-    public double SilenceBase { get; init; } = .8;
+    public double SilenceBase { get; init; } = .5;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
