@@ -51,7 +51,9 @@ public static partial class BotPlayer
                 if (row < 0) continue;
                 var s = Math.Clamp(GhostCluePolicy.Read(Sim(o.SourceCard!, o.CardId), HintTop(o.SourceCard!), Focus)
                     * OutshoneFactor(o.SourceCard!, o.Round, o.CardId) * Recall(o.Round, .6), 0, 1);
-                if (s >= .05) claims.Add(new CheckClaim(o.Author, o.CardId, row, s, o.Round));
+                // Автор сам говорит, что целился в эту карту: даже при размытом сходстве это весомо (Призрак понимает
+                // намерение чаще, чем видно по одним меткам).
+                if (s >= .05) claims.Add(new CheckClaim(o.Author, o.CardId, row, .4 + .6 * s, o.Round));
             }
             return claims;
         }
