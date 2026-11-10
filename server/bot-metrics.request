@@ -1,0 +1,2 @@
+150
+variants: мягкое забывание: Forgetting=true, RecallFloor=.7 | Убийца в ясные ряды: KillerClearRows=true | без эха: SkipEcho=true | тема — неясный ряд: TopicUnclear=true | письма по модели, ясность: LetterModel=true, LetterClarity=.6
