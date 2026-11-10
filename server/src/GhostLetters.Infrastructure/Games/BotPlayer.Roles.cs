@@ -67,7 +67,7 @@ public static partial class BotPlayer
             {
                 _baseBlack = new Dictionary<Guid, double>(result);
                 _blackAmongUnknown = black;
-                if (Logic() is { } logic)
+                if (Logic() is { } logic && BotTuning.Current.ClaimLogicBlack)
                     foreach (var id in unknown) result[id] = logic.Black.GetValueOrDefault(id, result[id]);
                 _evidence.Clear();
             }

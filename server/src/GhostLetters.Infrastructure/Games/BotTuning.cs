@@ -163,6 +163,9 @@ public sealed record BotTuning
     /// <summary>Вес логики заявлений в уликах о картах (1 — убеждение о ряде совпадает с выводом логики).</summary>
     public double ClaimLogicWeight { get; init; } = 1;
 
+    /// <summary>Логика уточняет модель игроков (подозрения и доверие); иначе — только карты и речь.</summary>
+    public bool ClaimLogicBlack { get; init; } = true;
+
     /// <summary>Говорить выводы логики вслух.</summary>
     public bool DeduceSpeech { get; init; } = true;
 
@@ -336,6 +339,7 @@ public sealed record BotTuning
                 nameof(LiarCut) => t with { LiarCut = D() },
                 nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },
                 nameof(DeduceSpeech) => t with { DeduceSpeech = B() },
+                nameof(ClaimLogicBlack) => t with { ClaimLogicBlack = B() },
                 nameof(Outshone) => t with { Outshone = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },
