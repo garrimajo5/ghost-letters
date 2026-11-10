@@ -205,23 +205,9 @@ public static class BotSandboxRunner
 
     private static BotMind Mind(SandboxSeat seat, PlayerView view, IReadOnlyDictionary<Guid, string> names, IReadOnlyList<SandboxMessage> messages, IReadOnlyList<Accusation> parsedAccusations)
     {
+        // Та же сборка ума, что в живой партии (BotService.BuildMind, #298); в песочнице все реплики вслух.
         var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
-        var others = messages.Where(m => m.Author != seat.Id).ToList();
-        // Как в живой партии (BotService.MindAsync): у мнений — раунд, свои слова и «кидал эту» других — отдельно.
-        // Раньше песочница их не передавала, и всё, что от них зависит (забывание, чужие письма, ложь о письме), в сериях молчало.
-        var perMessage = others.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.Author, m.Cards, m.Notes, board)
-            .Select(o => o with { Round = m.Round }).ToList()).ToList();
-        var own = messages.Where(m => m.Author == seat.Id)
-            .SelectMany(m => TableReasoning.Read(seat.Id, m.Cards, m.Notes, board).Select(o => o with { Round = m.Round })).ToList();
-        var claims = others.SelectMany(m => m.Cards.Select((c, i) => (Card: c, Note: i < m.Notes.Count ? m.Notes[i] : ""))
-            .Where(x => x.Note.StartsWith("кидал", StringComparison.Ordinal)).Select(x => new ClaimedLetter(m.Author, x.Card, m.Round))).ToList();
-        var opinions = perMessage.SelectMany(o => o)
-            .GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
-        var accusations = parsedAccusations.Where(a => a.Author != seat.Id)
-            .GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
-        return new(seat.Personality, new Dictionary<Guid, PlayerHistory>(), opinions, names, accusations,
-            BotService.Breadth(others.Select(m => (m.Author, m.Notes))),
-            RoleClaims: PublicRoleClaims.Read(others.Select(m => (m.Author, m.Text))), LatestVersions: BotMind.Latest(perMessage),
-            Own: own, Claims: claims);
+        return BotService.BuildMind(seat.Id, seat.Personality, new Dictionary<Guid, PlayerHistory>(),
+            messages.Select(m => new BotService.MindMessage(m.Author, m.Round, m.Text, m.Cards, m.Notes, true)).ToList(), board, names);
     }
 }
