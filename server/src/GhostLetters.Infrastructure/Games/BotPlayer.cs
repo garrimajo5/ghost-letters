@@ -333,7 +333,7 @@ public static partial class BotPlayer
             foreach (var o in mind!.Opinions.Where(o => o.CardId == card && o.Author != me.Id && !o.IsCheck))
             {
                 var trust = Known(o.Author) is { } r && r.IsKillerTeam() && !KillerTeam ? P.Compromise * 0.5 : 1;
-                trust *= HistoryTrust(o.Author) * DistrustFactor(o.Author);
+                trust *= Trust(o.Author);
                 trust /= 1 + ChatContrarian(o.Author) * (1 - P.Compromise * 0.5);
                 var argument = o.SourceCard is null ? 1 : .5 + .5 * Sim(o.SourceCard, card);
                 sum += o.Strength * trust * mind.TrustMultiplier(o.Author) * argument;
@@ -628,7 +628,7 @@ public static partial class BotPlayer
                 .GroupBy(o => o.SourceCard!).Sum(g =>
                 {
                     var o = g.First();
-                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : HistoryTrust(o.Author) * DistrustFactor(o.Author);
+                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : Trust(o.Author);
                     return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus) * OutshoneFactor(g.Key, o.Round, card);
                 });
         }
@@ -925,7 +925,7 @@ public static partial class BotPlayer
             foreach (var l in me.Letters.Where(l => l.Revealed == false)) model = model.With(l.CardId, false);
             if (mind is not null)
                 foreach (var c in mind.ClaimList.Where(c => c.Author != me.Id && c.Round < view.Round && !shown.Contains(c.Card)))
-                    model = model.With(c.Card, false, BotTuning.Current.OthersVanished * DistrustFactor(c.Author));
+                    model = model.With(c.Card, false, BotTuning.Current.OthersVanished * (BotTuning.Current.UnifiedTrust ? Trust(c.Author) : DistrustFactor(c.Author)));
             return _model = model;
         }
 
