@@ -1,2 +1,0 @@
-150
-variants: логика .5: ClaimLogic=true, ClaimLogicWeight=.5 | логика .5 без подозрений: ClaimLogic=true, ClaimLogicWeight=.5, ClaimLogicBlack=false | логика 1 без подозрений: ClaimLogic=true, ClaimLogicBlack=false
