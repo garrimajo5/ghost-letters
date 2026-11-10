@@ -1,0 +1,2 @@
+150
+variants: письма по модели: LetterModel=true | речь по модели: RoleModelSpeech=true | Призрак на модели: GhostModel=true | голос по полезности: VoteUtility=true | скромный Эксперт: ExpertModestClaims=true
