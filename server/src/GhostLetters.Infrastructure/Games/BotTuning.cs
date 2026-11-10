@@ -46,7 +46,7 @@ public sealed record BotTuning
     public double GhostModelSettled { get; init; } = 1.01;
 
     /// <summary>Модель игроков в подозрениях вслух. Выключено: боты с ней обвиняли реже, и стол терял (8 игроков: 44 → 35 %).</summary>
-    public bool RoleModelSpeech { get; init; }
+    public bool RoleModelSpeech { get; init; } = true;
 
     /// <summary>Для A/B: модель игроков в голосе за Убийцу.</summary>
     public bool RoleModelVote { get; init; } = true;
@@ -73,7 +73,7 @@ public sealed record BotTuning
     public bool SkipEcho { get; init; }
 
     /// <summary>Боты 3.0, этап 4: Эксперт присваивает себе только часть открытых писем.</summary>
-    public bool ExpertModestClaims { get; init; }
+    public bool ExpertModestClaims { get; init; } = true;
 
     /// <summary>Боты 3.0, этап 5: в финале полную сводку дают двое, остальные — только расхождения.</summary>
     public bool FinalShort { get; init; } = true;
