@@ -117,7 +117,10 @@ public static partial class BotPlayer
     {
         if (view.Me is not { Role: not Role.Ghost } me) return null;
         var brain = new Brain(view, me, rng, tags, mind);
-        return brain.Reply() is { } line ? (line, brain.Intent) : null;
+        if (brain.Reply() is not { } line) return null;
+        // Шаг 6: ответ, который лишь повторяет мои же карты, — скорее промолчу (ответы без карт — на вопрос или обвинение — остаются).
+        if (BotTuning.Current.SpeakOnChange && !brain.HasNews(line) && rng.NextDouble() < brain.SilenceChance()) return null;
+        return (line, brain.Intent);
     }
 
     /// <summary>Как <see cref="Say"/>, плюс то же самое мыслями (<see cref="SpeechIntent"/>) — для живых фраз.</summary>
