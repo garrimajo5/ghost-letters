@@ -166,6 +166,9 @@ public sealed record BotTuning
     /// <summary>Логика уточняет модель игроков (подозрения и доверие); иначе — только карты и речь.</summary>
     public bool ClaimLogicBlack { get; init; } = true;
 
+    /// <summary>Нижняя граница веса заявления «целился в эту» (0 — только по сходству письма с картой).</summary>
+    public double ClaimFloor { get; init; } = .4;
+
     /// <summary>Говорить выводы логики вслух.</summary>
     public bool DeduceSpeech { get; init; } = true;
 
@@ -340,6 +343,7 @@ public sealed record BotTuning
                 nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },
                 nameof(DeduceSpeech) => t with { DeduceSpeech = B() },
                 nameof(ClaimLogicBlack) => t with { ClaimLogicBlack = B() },
+                nameof(ClaimFloor) => t with { ClaimFloor = D() },
                 nameof(Outshone) => t with { Outshone = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },

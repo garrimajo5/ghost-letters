@@ -53,7 +53,7 @@ public static partial class BotPlayer
                     * OutshoneFactor(o.SourceCard!, o.Round, o.CardId) * Recall(o.Round, .6), 0, 1);
                 // Автор сам говорит, что целился в эту карту: даже при размытом сходстве это весомо (Призрак понимает
                 // намерение чаще, чем видно по одним меткам).
-                if (s >= .05) claims.Add(new CheckClaim(o.Author, o.CardId, row, .4 + .6 * s, o.Round));
+                if (s >= .05) claims.Add(new CheckClaim(o.Author, o.CardId, row, BotTuning.Current.ClaimFloor + (1 - BotTuning.Current.ClaimFloor) * s, o.Round));
             }
             return claims;
         }

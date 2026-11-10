@@ -1,0 +1,2 @@
+150
+variants: только речь: ClaimLogic=true, ClaimLogicWeight=0, ClaimLogicBlack=false | без пола .5: ClaimLogic=true, ClaimFloor=0, ClaimLogicWeight=.5, ClaimLogicBlack=false | без пола 1: ClaimLogic=true, ClaimFloor=0
