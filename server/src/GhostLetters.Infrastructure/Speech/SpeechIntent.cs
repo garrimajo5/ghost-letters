@@ -61,6 +61,9 @@ public enum ThoughtKind
 
     /// <summary>Зову голосовать против подозреваемого.</summary>
     VoteAgainst,
+
+    /// <summary>Передумал о ряде: раньше был за <c>Card</c>, теперь нет — <c>Why</c>.</summary>
+    Changed,
 }
 
 /// <summary>

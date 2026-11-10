@@ -114,6 +114,9 @@ public sealed record BotTuning
     /// <summary>Базовый шанс промолчать без повода.</summary>
     public double SilenceBase { get; init; } = .5;
 
+    /// <summary>Боты 4.0, шаг 6: передумав о ряде, бот говорит, что раньше был за другую карту, и почему.</summary>
+    public bool ExplainChange { get; init; } = true;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -289,6 +292,7 @@ public sealed record BotTuning
                 nameof(Affect) => t with { Affect = B() },
                 nameof(SpeakOnChange) => t with { SpeakOnChange = B() },
                 nameof(SilenceBase) => t with { SilenceBase = D() },
+                nameof(ExplainChange) => t with { ExplainChange = B() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

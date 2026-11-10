@@ -309,6 +309,17 @@ public static partial class BotPlayer
                 opinion += " Связь с открытыми уликами слабая — это только предположение.";
                 thoughts.Add(new Thought(ThoughtKind.Weak));
             }
+            // Боты 4.0, шаг 6: смена мнения — с объяснением. Человеку неловко передумать молча («раньше думал X,
+            // но подсказка указывает на Y»), а столу так понятнее, что изменилось.
+            if (!exclude && !Classic && BotTuning.Current.ExplainChange && mind?.OwnSaid
+                    .LastOrDefault(o => !o.IsCheck && o.Strength > 0 && view.Board[target].Cards.Contains(o.CardId)) is { } before
+                && before.CardId != card)
+            {
+                var why = linked.Count > 0 ? $"{BotDiscussion.HintRef(linked[0].Round, linked[0].Number)} указывает сюда" : "улики сдвинулись";
+                var old = Where(target, view.Board[target].Cards.ToList().IndexOf(before.CardId));
+                opinion += $"\nПередумал: раньше был за {old}, но {why}.";
+                thoughts.Add(new Thought(ThoughtKind.Changed, old, Why: why));
+            }
             // Карты «целиком думаю так» прикладываются к реплике — их подсвечивает стол.
             var versionCards = new List<string>();
             if (!Classic && view.Board.Count > 1)
