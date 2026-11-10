@@ -72,6 +72,9 @@ public sealed record BotJournal(
     /// <summary>Насколько бот верит словам игрока (1 — как случайному, 0 — не верит).</summary>
     public IReadOnlyDictionary<Guid, double> Trust { get; init; } = new Dictionary<Guid, double>();
 
+    /// <summary>Состояние бота внутри партии.</summary>
+    public BotAffect? Affect { get; init; }
+
     /// <summary>Поддержка карты по журналу: сумма улик.</summary>
     public double CardSupport(string card) => Clues.Sum(c => c.Cards.GetValueOrDefault(card));
 
@@ -98,6 +101,7 @@ public static partial class BotPlayer
             Truth = view.Board.SelectMany((_, r) => brain.RowBelief(r)).ToDictionary(x => x.Key, x => x.Value),
             Black = others.ToDictionary(id => id, brain.BlackOf),
             Trust = others.ToDictionary(id => id, brain.TrustOf),
+            Affect = brain.Affect(),
         };
     }
 

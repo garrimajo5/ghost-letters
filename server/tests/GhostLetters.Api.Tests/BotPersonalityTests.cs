@@ -242,6 +242,8 @@ public sealed class BotPersonalityTests
             row.Cards.Sum(c => journal.Truth[c]).Should().BeApproximately(1, 1e-9);
         journal.Black.MaxBy(x => x.Value).Key.Should().Be(Bob);
         journal.Trust[Bob].Should().BeLessThan(journal.Trust[Ann]);
+        journal.Affect!.Confidence.Should().BeInRange(0, 1);
+        journal.Affect.Excitement.Should().BeInRange(0, 1);
     }
 
     [Fact]

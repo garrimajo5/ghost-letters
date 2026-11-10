@@ -630,7 +630,7 @@ public static partial class BotPlayer
         /// </summary>
         private double Soft(string what, double scale)
         {
-            var t = BotTuning.Current.SoftTemp * scale * (.4 + P.Variability);
+            var t = BotTuning.Current.SoftTemp * scale * (.4 + P.Variability) * AffectTemperature();
             if (t <= 0 || Classic) return 0;
             var key = $"soft-v1:{view.GameId:N}:{me.Id:N}:{view.Round}:{what}";
             var u = (BinaryPrimitives.ReadUInt64LittleEndian(SHA256.HashData(Encoding.UTF8.GetBytes(key))) >> 11) * (1.0 / (1UL << 53));
