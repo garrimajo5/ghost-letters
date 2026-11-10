@@ -106,7 +106,7 @@ public sealed record BotTuning
     public double RecallFloor { get; init; } = .7;
 
     /// <summary>Боты 4.0, шаг 5: состояние внутри партии (уверенность, тревога, азарт, обида) влияет на решения.</summary>
-    public bool Affect { get; init; }
+    public bool Affect { get; init; } = true;
 
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
