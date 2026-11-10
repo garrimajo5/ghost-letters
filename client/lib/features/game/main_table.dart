@@ -553,7 +553,9 @@ class _TableArea extends StatelessWidget {
       final voting = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
       // Вертикально под полем много места: там идёт разговор — пузырями, как в мессенджере.
       final dialog = !landscape && staircase && const {'Discussion', 'Voting', 'VoteTie'}.contains(v.phase);
-      final stripHeight = voting || say.active || (!dialog && _current != null) || _canSay(v) ? _SayStrip.height : 0.0;
+      // На большом экране строка разговора (реплики, показ на столе, голосование) крупнее — вместе с полем.
+      final k = _SayStrip.scaleFor(MediaQuery.sizeOf(context));
+      final stripHeight = voting || say.active || (!dialog && _current != null) || _canSay(v) ? _SayStrip.height * k : 0.0;
       // Все ряды — в высоту без прокрутки и вертикально тоже: на сеансе под кругом места мало, и четвёртый ряд уходил вниз.
       // С разговором поле берёт две трети высоты под строкой, разговор — треть (см. flex ниже).
       // Боком веер лежит поверх нижнего края стола: поле считаем без этой полосы (кроме сеанса — там веер отдельно).
@@ -566,7 +568,7 @@ class _TableArea extends StatelessWidget {
       final hint = (card * (below ? 0.75 : 0.8)).clamp(0.0, 120.0).floorToDouble();
       final hintsWidth = staircase && !below ? hintCards * (hint + 3) + 6 + labels : 0.0;
       final order = _Board.tableOrder(v);
-      final statement = _current;
+      final statement = voting ? null : _current;
       // Меня спросили — строка с ответами; вопрос про ряд — ряд подсвечен, нажатие на карту в нём — ответ.
       // Переспрос бота про название карты ждёт ответа и тогда, когда слово уже перешло.
       final asked = !voting && !say.active ? _askedMe(screen, say) : null;
@@ -591,6 +593,7 @@ class _TableArea extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4, right: 4),
                   child: Text('исчезло ×${v.vanishedCount}', key: const Key('main-vanished'), style: const TextStyle(fontSize: 10, color: AppColors.dim)),
                 ),
+              if (burnedClaims(screen).isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: _BurnedButton(screen: screen)),
             ]),
           );
       final Widget field = SizedBox(
@@ -603,7 +606,8 @@ class _TableArea extends StatelessWidget {
               focusRow: voting ? stage.row : ask?.row,
               reveal: v.truth != null && const {'AwardNomination', 'AwardVoting', 'Finished'}.contains(v.phase),
               decorate: (id, child) {
-                final color = _mark(id, statement);
+                // Итоговое голосование — без рамок версий: голос свой, а не за чьё-то заявление.
+                final color = voting ? null : _mark(id, statement);
                 // На сеансе исключённая карта — тёмно-красная вуаль с крестом, как в прототипе.
                 Widget out = color == null
                     ? child
@@ -713,6 +717,7 @@ class _TableArea extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 4, bottom: 2),
                     child: Text('исчезло ×${v.vanishedCount}', key: const Key('main-vanished'), style: const TextStyle(fontSize: 10, color: AppColors.dim)),
                   ),
+                if (burnedClaims(screen).isNotEmpty) Padding(padding: const EdgeInsets.only(left: 6), child: _BurnedButton(screen: screen)),
               ]),
             ),
           ),
@@ -721,14 +726,14 @@ class _TableArea extends StatelessWidget {
       if (dialog) {
         return Column(children: [
           if (strip)
-            if (voting) _VoteStrip(screen: screen, stage: stage) else if (ask != null) _AskStrip(screen: screen, say: say, ask: ask) else _SayStrip(screen: screen, say: say, statement: null, typing: typing),
+            _SayStrip.scaled(k, voting ? _VoteStrip(screen: screen, stage: stage) : ask != null ? _AskStrip(screen: screen, say: say, ask: ask) : _SayStrip(screen: screen, say: say, statement: null, typing: typing)),
           Flexible(flex: 2, child: board),
           Expanded(child: _Dialog(screen: screen, typing: typing)),
         ]);
       }
       if (!strip) return board;
       return Column(children: [
-        if (voting) _VoteStrip(screen: screen, stage: stage) else if (ask != null) _AskStrip(screen: screen, say: say, ask: ask) else _SayStrip(screen: screen, say: say, statement: statement, typing: typing),
+        _SayStrip.scaled(k, voting ? _VoteStrip(screen: screen, stage: stage) : ask != null ? _AskStrip(screen: screen, say: say, ask: ask) : _SayStrip(screen: screen, say: say, statement: statement, typing: typing)),
         Expanded(child: board),
       ]);
     });
@@ -1575,6 +1580,25 @@ class _SayStrip extends StatelessWidget {
 
   static const height = 46.0;
 
+  /// Во сколько раз крупнее строка на большом экране (телефон — 1).
+  static double scaleFor(Size size) => [size.width / 900, size.height / 560].reduce((a, b) => a < b ? a : b).clamp(1.0, 1.8).toDouble();
+
+  /// Строка целиком, крупнее в [k] раз: разметка та же, что на телефоне, — только увеличена.
+  static Widget scaled(double k, Widget child) {
+    if (k <= 1) return child;
+    return LayoutBuilder(
+      builder: (context, box) => SizedBox(
+        key: const Key('say-strip-scaled'),
+        width: box.maxWidth,
+        height: (height + 2) * k,
+        child: FittedBox(
+          alignment: Alignment.topCenter,
+          child: SizedBox(width: box.maxWidth / k, height: height + 2, child: child),
+        ),
+      ),
+    );
+  }
+
   final GameScreenState screen;
   final _Say say;
   final ChatMessage? statement;
@@ -1645,11 +1669,11 @@ class _SayStrip extends StatelessWidget {
               ]),
             ),
           ),
-        // Чёрным — явно: можно назвать своим письмом другую карту.
-        if (say.sources.isEmpty && letter != null && _black(v))
+        // Назвать своим письмом другую карту может каждый; чёрным — красным, детективу — неприметно.
+        if (say.sources.isEmpty && letter != null)
           TextButton.icon(
             key: const Key('say-lie'),
-            style: TextButton.styleFrom(foregroundColor: AppColors.redBright, padding: const EdgeInsets.symmetric(horizontal: 6)),
+            style: TextButton.styleFrom(foregroundColor: _black(v) ? AppColors.redBright : AppColors.muted, padding: const EdgeInsets.symmetric(horizontal: 6)),
             onPressed: change,
             icon: const Icon(Icons.theater_comedy_outlined, size: 18),
             label: Text(thrown != letter.cardId ? 'Другая ложь' : 'Соврать'),
@@ -1751,13 +1775,14 @@ class _SayStrip extends StatelessWidget {
       }
       // Чёрным — отдельная кнопка: назвать своим письмом другую карту (стол не узнает, пока Призрак его не откроет).
       final letter = v.me?.letters.where((l) => l.round == v.round).lastOrNull;
-      if (_canSay(v) && letter != null && _black(v))
-        children.add(m != null
+      // Соврать о письме может каждый: чёрным — заметной кнопкой, детективу — только значком (обычно незачем).
+      if (_canSay(v) && letter != null)
+        children.add(m != null || !_black(v)
             ? IconButton(
                 key: const Key('say-lie-start'),
                 tooltip: 'Соврать: назвать своим письмом другую карту',
                 onPressed: () => _lie(context, letter),
-                icon: const Icon(Icons.theater_comedy_outlined, color: AppColors.redBright),
+                icon: Icon(Icons.theater_comedy_outlined, color: _black(v) ? AppColors.redBright : AppColors.dim),
               )
             : TextButton.icon(
                 key: const Key('say-lie-start'),
@@ -2281,13 +2306,25 @@ class _SuspectBoard extends StatelessWidget {
       attempts[(vote.voter, row)] = vote.attempt;
       (picks[vote.voter] ??= {})[row] = vote.column!;
     }
+    // Голоса этого этапа (последняя попытка): кто за кого — портретами под столбцом подозреваемого.
+    final latest = <String, VoteRecord>{};
+    for (final vote in finale.votes) {
+      if (vote.stage != stage.index || vote.suspect == null) continue;
+      if ((latest[vote.voter]?.attempt ?? -1) <= vote.attempt) latest[vote.voter] = vote;
+    }
     final order = _Board.tableOrder(v);
     return LayoutBuilder(builder: (context, box) {
-      final card = ((box.maxHeight - 100) / (order.isEmpty ? 1 : order.length) - 4).clamp(22.0, 56.0).floorToDouble();
+      // На большом экране столбцы крупнее: по высоте и ширине окна, вместе с полем.
+      final k = _SayStrip.scaleFor(MediaQuery.sizeOf(context));
+      final rows = order.isEmpty ? 1 : order.length;
+      final byHeight = (box.maxHeight - 150 * k) / rows - 4;
+      final byWidth = (box.maxWidth - 16) / (players.isEmpty ? 1 : players.length) - 32;
+      final card = [byHeight, byWidth].reduce((a, b) => a < b ? a : b).clamp(22.0, 56.0 * k).floorToDouble();
+      final s = (card / 56).clamp(1.0, 1.8).toDouble();
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-          child: Text('КТО УБИЙЦА?', style: heading(16, spacing: 1)),
+          child: Text('КТО УБИЙЦА?', style: heading(16 * s, spacing: 1)),
         ),
         Expanded(
           child: ListView(
@@ -2296,7 +2333,8 @@ class _SuspectBoard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8),
             children: [
               for (final p in players)
-                _suspect(context, v, stage, p, picks[p.id] ?? const {}, order, card),
+                _suspect(context, v, stage, p, picks[p.id] ?? const {}, order, card, s,
+                    [for (final r in latest.values) if (r.suspect == p.id) r.voter]),
             ],
           ),
         ),
@@ -2304,7 +2342,8 @@ class _SuspectBoard extends StatelessWidget {
     });
   }
 
-  Widget _suspect(BuildContext context, GameView v, VoteStage stage, PlayerInfo p, Map<int, int> picks, List<int> order, double card) {
+  Widget _suspect(BuildContext context, GameView v, VoteStage stage, PlayerInfo p, Map<int, int> picks, List<int> order, double card,
+      double s, List<String> voters) {
     final candidate = stage.candidateSuspects.isEmpty || stage.candidateSuspects.contains(p.id);
     final selected = screen.target == p.id;
     final ghost = p.isGhost || p.knownRole == 'Ghost';
@@ -2324,14 +2363,26 @@ class _SuspectBoard extends StatelessWidget {
             border: Border.all(color: selected ? AppColors.amber : AppColors.border),
           ),
           child: Column(children: [
-            Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 30,
+            Avatar(nickname: screen.nick(p.id), color: screen.colorOf(p.id), photoId: screen.photoOf(p.id), size: 30 * s,
                 ring: selected ? AppColors.amber : (ghost ? AppColors.ice : null)),
             const SizedBox(height: 2),
             Text(p.id == v.me?.id ? 'Вы' : screen.nick(p.id), maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 10, color: selected ? AppColors.amber : AppColors.text)),
+                style: TextStyle(fontSize: 10 * s, color: selected ? AppColors.amber : AppColors.text)),
             const SizedBox(height: 4),
             for (final r in order)
               Padding(padding: const EdgeInsets.only(bottom: 4), child: _vote(context, v, p, r, picks[r], card)),
+            // Кто голосует за этого игрока — портреты голосовавших.
+            if (voters.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Icon(Icons.how_to_vote, size: 14 * s, color: AppColors.amber),
+              Wrap(key: Key('suspect-voters-${p.id}'), alignment: WrapAlignment.center, spacing: 2, runSpacing: 2, children: [
+                for (final id in voters)
+                  Tooltip(
+                    message: screen.nick(id),
+                    child: Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: 18 * s),
+                  ),
+              ]),
+            ],
           ]),
         ),
       ),
@@ -2623,3 +2674,110 @@ class _PinchBoardState extends State<_PinchBoard> {
         child: widget.child,
       );
 }
+
+
+/// «Сожжённое» со слов игроков: какие карты каждый назвал своим письмом («кидал эту»). Это заявления, а не
+/// настоящие письма — их видит только Призрак; карты Призрака (зацепка, подсказки) сюда не попадают.
+List<({String author, String card, int round})> burnedClaims(GameScreenState screen) {
+  final v = screen.view;
+  if (v == null) return const [];
+  final ghosts = {for (final p in v.players) if (p.isGhost || p.knownRole == 'Ghost') p.id};
+  final hints = {for (final h in v.hints) ...h.cards};
+  final seen = <String>{};
+  final out = <({String author, String card, int round})>[];
+  for (final m in screen.chat) {
+    final a = m.authorId;
+    if (m.channel != 'public' || a == null || ghosts.contains(a)) continue;
+    for (var i = 0; i < m.cardIds.length && i < m.cardNotes.length; i++) {
+      final card = m.cardIds[i];
+      if (!m.cardNotes[i].startsWith('кидал') || hints.contains(card)) continue;
+      // Одно заявление на игрока и раунд: если передумал — последнее.
+      final key = '$a/${m.round}';
+      if (seen.contains(key)) out.removeWhere((x) => x.author == a && x.round == m.round);
+      seen.add(key);
+      out.add((author: a, card: card, round: m.round));
+    }
+  }
+  out.sort((x, y) => x.round.compareTo(y.round));
+  return out;
+}
+
+/// Кнопка у лесенки подсказок: что игроки называли своими письмами.
+class _BurnedButton extends StatelessWidget {
+  const _BurnedButton({required this.screen});
+
+  final GameScreenState screen;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = burnedClaims(screen).length;
+    return Tooltip(
+      message: 'Что игроки называли своими письмами',
+      child: InkWell(
+        key: const Key('burned-button'),
+        borderRadius: BorderRadius.circular(99),
+        onTap: () => showBurned(context, screen),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99), border: Border.all(color: AppColors.border)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.local_fire_department_outlined, size: 14, color: AppColors.amber),
+            Text(' $n', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Окно «сожжённых» карт: по раундам — кто какую карту назвал своим письмом.
+Future<void> showBurned(BuildContext context, GameScreenState screen) => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        final claims = burnedClaims(screen);
+        final rounds = {for (final c in claims) c.round}.toList()..sort();
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .75),
+            child: SingleChildScrollView(
+              key: const Key('burned-sheet'),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('СОЖЖЁННЫЕ — СО СЛОВ ИГРОКОВ', style: heading(14, color: AppColors.ice, spacing: 1.5)),
+                const SizedBox(height: 4),
+                const Text('Какие карты игроки называли своими письмами. Это заявления: настоящие письма видит только Призрак.',
+                    style: TextStyle(fontSize: 12, color: AppColors.muted)),
+                for (final r in rounds) ...[
+                  const SizedBox(height: 12),
+                  Text('Раунд $r', style: const TextStyle(fontSize: 12, color: AppColors.dim)),
+                  const SizedBox(height: 6),
+                  Wrap(spacing: 10, runSpacing: 10, children: [
+                    for (final c in claims.where((c) => c.round == r))
+                      GestureDetector(
+                        key: Key('burned-${c.author}-${c.round}'),
+                        onTap: () => showCardZoom(context, c.card, caption: '${screen.nick(c.author)}: «кидал эту»'),
+                        child: SizedBox(
+                          width: 76,
+                          child: Column(children: [
+                            Stack(clipBehavior: Clip.none, children: [
+                              CardImage(cardId: c.card, size: 76, radius: 8),
+                              Positioned(
+                                left: -4,
+                                bottom: -4,
+                                child: Avatar(nickname: screen.nick(c.author), color: screen.colorOf(c.author), photoId: screen.photoOf(c.author), size: 24),
+                              ),
+                            ]),
+                            const SizedBox(height: 6),
+                            Text(screen.nick(c.author), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+                          ]),
+                        ),
+                      ),
+                  ]),
+                ],
+              ]),
+            ),
+          ),
+        );
+      },
+    );

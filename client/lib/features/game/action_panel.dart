@@ -649,6 +649,45 @@ class ActionPanel extends StatelessWidget {
     ];
   }
 
+  /// Кто за кого голосовал в «Кто Убийца?»: подозреваемый — и портреты голосовавших за него (последняя попытка).
+  List<Widget> _suspectVotes(Finale? finale) {
+    if (finale == null) return const [];
+    final last = <(int, String), VoteRecord>{};
+    for (final vote in finale.votes) {
+      if (vote.suspect == null) continue;
+      final prev = last[(vote.stage, vote.voter)];
+      if (prev == null || prev.attempt <= vote.attempt) last[(vote.stage, vote.voter)] = vote;
+    }
+    if (last.isEmpty) return const [];
+    final stages = {for (final k in last.keys) k.$1}.toList()..sort();
+    Widget face(String id, double size) => Avatar(nickname: screen.nick(id), color: screen.colorOf(id), photoId: screen.photoOf(id), size: size);
+    return [
+      const SizedBox(height: 12),
+      Text('КТО ЗА КОГО ГОЛОСОВАЛ', key: const Key('suspect-votes'), style: sectionLabel()),
+      for (final st in stages) ...[
+        if (stages.length > 1) Padding(padding: const EdgeInsets.only(top: 6), child: Text('Голосование ${stages.indexOf(st) + 1}', style: const TextStyle(fontSize: 12, color: AppColors.dim))),
+        for (final suspect in {for (final r in last.values) if (r.stage == st) r.suspect!})
+          Padding(
+            key: Key('suspect-votes-$st-$suspect'),
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              face(suspect, 30),
+              const SizedBox(width: 8),
+              SizedBox(width: 110, child: Text(screen.nick(suspect), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const Icon(Icons.arrow_back, size: 14, color: AppColors.dim),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Wrap(spacing: 4, runSpacing: 4, children: [
+                  for (final r in last.values.where((r) => r.stage == st && r.suspect == suspect))
+                    Tooltip(message: screen.nick(r.voter), child: face(r.voter, 24)),
+                ]),
+              ),
+            ]),
+          ),
+      ],
+    ];
+  }
+
   List<Widget> _results(BuildContext context) {
     final finale = v.finale;
     final result = finale?.result;
@@ -706,6 +745,7 @@ class ActionPanel extends StatelessWidget {
           const SizedBox(height: 6),
           _TruthRow(screen: screen),
         ],
+        ..._suspectVotes(finale),
         const SizedBox(height: 12),
         Text('ИГРОКИ', style: sectionLabel()),
         for (final p in [...v.players]..sort((a, b) => a.seat.compareTo(b.seat)))
@@ -1078,7 +1118,7 @@ class _Illustration extends StatelessWidget {
 
 /// Знакомство с ролью: карта рубашкой вверх, по нажатию переворачивается.
 class RoleReveal extends StatefulWidget {
-  const RoleReveal({super.key, required this.role, this.width = 170, this.footer, this.horizontal = false});
+  const RoleReveal({super.key, required this.role, this.width = 170, this.footer, this.horizontal = false, this.open = false});
 
   final String role;
   final double width;
@@ -1089,12 +1129,15 @@ class RoleReveal extends StatefulWidget {
   /// Что показать под открытой картой: кто Призрак, кто в команде.
   final Widget? footer;
 
+  /// Открыть карту сразу.
+  final bool open;
+
   @override
   State<RoleReveal> createState() => _RoleRevealState();
 }
 
 class _RoleRevealState extends State<RoleReveal> {
-  bool _open = false;
+  late bool _open = widget.open;
 
   @override
   Widget build(BuildContext context) {
