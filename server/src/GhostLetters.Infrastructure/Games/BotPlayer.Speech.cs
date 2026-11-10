@@ -116,7 +116,7 @@ public static partial class BotPlayer
                 var prior = Math.Min(1, BlackCount() / (double)Math.Max(1, others.Count(p => p.KnownRole is null)));
                 // Уверен — говорю с причиной из модели. Не уверен — как раньше (иначе стол слышит меньше обвинений
                 // и голосует хуже: серия 3 в BOTS_3_RESULTS).
-                if (id != Guid.Empty && NameOf(id) is { } suspect && black >= Math.Max(.8 - .35 * P.Risk, prior + .35))
+                if (id != Guid.Empty && NameOf(id) is { } suspect && black >= Math.Max(.8 - .35 * P.Risk, prior + .35) + AffectThreshold(id))
                 {
                     var why = RoleReason(id);
                     return black > .9 && BlackCount() == 1
