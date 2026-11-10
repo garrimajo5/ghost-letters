@@ -108,6 +108,12 @@ public sealed record BotTuning
     /// <summary>Боты 4.0, шаг 5: состояние внутри партии (уверенность, тревога, азарт, обида) влияет на решения.</summary>
     public bool Affect { get; init; } = true;
 
+    /// <summary>Боты 4.0, шаг 6: без нового в реплике бот скорее молчит.</summary>
+    public bool SpeakOnChange { get; init; } = true;
+
+    /// <summary>Базовый шанс промолчать без повода.</summary>
+    public double SilenceBase { get; init; } = .5;
+
     /// <summary>Открывать письмо, только если на истину оно указывает не слабее этой доли от лучшей ложной (1 — «50/50»).</summary>
     public double GhostModelHonest { get; init; } = 1;
 
@@ -281,6 +287,8 @@ public sealed record BotTuning
                 nameof(Forgetting) => t with { Forgetting = B() },
                 nameof(RecallFloor) => t with { RecallFloor = D() },
                 nameof(Affect) => t with { Affect = B() },
+                nameof(SpeakOnChange) => t with { SpeakOnChange = B() },
+                nameof(SilenceBase) => t with { SilenceBase = D() },
                 nameof(GhostTolerance) => t with { GhostTolerance = D() },
                 nameof(GhostBreadth) => t with { GhostBreadth = B() },
                 nameof(GhostTableDefault) => t with { GhostTableDefault = B() },

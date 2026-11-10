@@ -27,6 +27,25 @@ public static partial class BotPlayer
             return _affect = new BotAffect(confidence, anxiety, excitement);
         }
 
+        /// <summary>
+        /// Есть ли в реплике новое: карта, которую я ещё не называл, проверка своего письма («кидал / проверял»),
+        /// обвинение. Иначе это повтор — люди в таком случае обычно молчат.
+        /// </summary>
+        public bool HasNews((string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) line)
+        {
+            if (Classic || mind is null) return true;
+            if (line.Text.Contains("Убийц", StringComparison.Ordinal) || line.Text.Contains("чёрн", StringComparison.Ordinal)) return true;
+            if (line.Notes.Any(n => n.StartsWith("кидал", StringComparison.Ordinal) || n.StartsWith("проверял", StringComparison.Ordinal))) return true;
+            // Только карты стола: подсказки в реплике — ссылки на улики, а не новое мнение.
+            var said = mind.OwnSaid.Select(o => o.CardId).ToHashSet();
+            var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
+            var mine = line.Cards.Where(board.Contains).ToList();
+            return mine.Count == 0 ? line.Cards.Count == 0 : mine.Any(c => !said.Contains(c));
+        }
+
+        /// <summary>Шанс промолчать без повода: дотошный (детали) и встревоженный говорят чаще.</summary>
+        public double SilenceChance() => Math.Clamp(BotTuning.Current.SilenceBase - .5 * P.Details - .3 * Affect().Anxiety, 0, 1);
+
         /// <summary>Обида на игрока: он назвал своим моё письмо или отверг карту, на которую потом указала подсказка.</summary>
         private double Grudge(Guid id) => KillerTeam ? 0 : Math.Clamp(.5 * ClaimConflict(id) + .3 * LiedChecks(id), 0, 1);
 
