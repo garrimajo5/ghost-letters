@@ -1078,7 +1078,7 @@ class _Illustration extends StatelessWidget {
 
 /// Знакомство с ролью: карта рубашкой вверх, по нажатию переворачивается.
 class RoleReveal extends StatefulWidget {
-  const RoleReveal({super.key, required this.role, this.width = 170, this.footer, this.horizontal = false});
+  const RoleReveal({super.key, required this.role, this.width = 170, this.footer, this.horizontal = false, this.open = false});
 
   final String role;
   final double width;
@@ -1089,12 +1089,15 @@ class RoleReveal extends StatefulWidget {
   /// Что показать под открытой картой: кто Призрак, кто в команде.
   final Widget? footer;
 
+  /// Открыть карту сразу.
+  final bool open;
+
   @override
   State<RoleReveal> createState() => _RoleRevealState();
 }
 
 class _RoleRevealState extends State<RoleReveal> {
-  bool _open = false;
+  late bool _open = widget.open;
 
   @override
   Widget build(BuildContext context) {

@@ -695,9 +695,26 @@ class GameScreenState extends ConsumerState<GameScreen> {
     final v = view!;
     if (pickingPlayer) {
       setState(() => target = target == id ? null : id);
-    } else if (v.me != null && id != v.me!.id) {
+    } else if (v.me != null && id == v.me!.id) {
+      showRole();
+    } else if (v.me != null) {
       NoteSheet.show(context, this, id);
     }
+  }
+
+  /// Своя роль — в любой момент партии нажатием на свой портрет: карта уже открыта, ниже — кто в команде.
+  void showRole() {
+    if (view?.me == null) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bg,
+      builder: (context) => SizedBox(
+        key: const Key('my-role-sheet'),
+        height: MediaQuery.sizeOf(context).height * .72,
+        child: _RoleScreen(screen: this, open: true),
+      ),
+    );
   }
 
   @override
@@ -810,9 +827,12 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
 /// Раздача ролей: большая карта рубашкой вверх, по нажатию — роль, подсказка и кто Призрак.
 class _RoleScreen extends StatelessWidget {
-  const _RoleScreen({required this.screen});
+  const _RoleScreen({required this.screen, this.open = false});
 
   final GameScreenState screen;
+
+  /// Карта сразу лицом вверх (показ своей роли посреди партии).
+  final bool open;
 
   @override
   Widget build(BuildContext context) {
@@ -833,10 +853,11 @@ class _RoleScreen extends StatelessWidget {
       builder: (context, box) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
         child: Column(children: [
-          const Text('РАЗДАЧА РОЛЕЙ', style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 2)),
+          Text(open ? 'ВАША РОЛЬ' : 'РАЗДАЧА РОЛЕЙ', style: TextStyle(fontSize: 13, color: AppColors.muted, letterSpacing: 2)),
           const SizedBox(height: 16),
           RoleReveal(
             role: me.role,
+            open: open,
             // Боком (телефон) текст роли — справа от карты, а не под ней за краем экрана.
             horizontal: box.maxWidth > box.maxHeight * 1.4,
             width: (box.maxHeight * (box.maxWidth > box.maxHeight * 1.4 ? 0.62 : 0.5) / 1.42).clamp(110.0, 260.0),
@@ -1158,6 +1179,9 @@ class _Board extends StatelessWidget {
     final killerNight = v.phase == 'Night' && (v.can('ChooseTruth') || v.can('TeamSuggest'));
     // Сообщник ночью не выделяет карты рамкой — ставит «большой палец»; Убийца видит пальцы на картах.
     final suggesting = v.phase == 'Night' && v.can('TeamSuggest');
+    // Итоговое голосование: на картах — никаких рамок версий и заметок, только белая рамка истины у чёрных,
+    // Эксперта и Призрака (и свой голос).
+    final plain = stage != null && stage.isRow && const {'Voting', 'VoteTie'}.contains(v.phase);
     final me = v.me?.id;
     List<String> thumbs(int r, int c) => [
           if (v.phase == 'Night')
@@ -1257,7 +1281,8 @@ class _Board extends StatelessWidget {
                       chosenColor: killerNight ? AppColors.redBright : AppColors.amber,
                       voted: outcomes.any((o) => o.kind == 'Row' && o.row == r && o.column == c),
                       dimmed: stage != null && stage.isRow && stage.row == r && !stage.candidateColumns.contains(c),
-                      active: stage != null && stage.isRow && stage.row == r && stage.candidateColumns.contains(c),
+                      active: !plain && stage != null && stage.isRow && stage.row == r && stage.candidateColumns.contains(c),
+                      plain: plain,
                     ))),
                   ),
                 ),
@@ -1306,7 +1331,11 @@ class BoardCard extends StatelessWidget {
     this.active = false,
     this.thumbs = const [],
     this.reveal = false,
+    this.plain = false,
   });
+
+  /// Итоговое голосование: без рамки «считаю истинной» — остаются только истина и свой голос.
+  final bool plain;
 
   /// Итоги партии: истина — золотой рамкой с подписью, своя версия («считаю истинной») — значком.
   final bool reveal;
@@ -1327,7 +1356,7 @@ class BoardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = mark;
-    final believed = m?.believed == true;
+    final believed = m?.believed == true && !plain;
     final (Color borderColor, double borderWidth) = reveal
         ? (isTruth ? (AppColors.amberLight, 4) : (AppColors.border, 1))
         : chosen
@@ -1339,7 +1368,7 @@ class BoardCard extends StatelessWidget {
                 : active
                     ? (AppColors.amber.withValues(alpha: 0.6), 1.5)
                     : (AppColors.border, 1);
-    final crossedOut = (m?.crosses ?? 0) >= 3 && !believed;
+    final crossedOut = (m?.crosses ?? 0) >= 3 && !believed && !plain;
     final radius = (size * 0.16).clamp(4.0, 12.0);
     final badge = size >= 44 ? 10.0 : 8.0;
 

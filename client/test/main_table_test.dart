@@ -719,7 +719,7 @@ void main() {
     expect(app.api.named('sendChat').last.$2[4], ['кидал', 'исключаю:0']);
   });
 
-  testWidgets('чёрному явно предлагают соврать о своём письме; детективу — нет', (tester) async {
+  testWidgets('чёрному явно предлагают соврать о своём письме; детективу — неприметным значком', (tester) async {
     Future<void> openAs(String role) => _open(tester, phone, allowed: const ['EndTurn'], edit: (view) {
           view['currentSpeaker'] = 'u2';
           (view['me'] as Json)['role'] = role;
@@ -728,7 +728,9 @@ void main() {
           ];
         });
     await openAs('Detective');
-    expect(find.byKey(const Key('say-lie-start')), findsNothing);
+    // Мирные тоже могут соврать, хоть и редко: только значок, без подписи «Соврать о письме».
+    expect(find.byKey(const Key('say-lie-start')), findsOneWidget);
+    expect(find.text('Соврать о письме'), findsNothing);
 
     await openAs('Accomplice');
     await tester.tap(find.byKey(const Key('say-lie-start')));
@@ -813,5 +815,53 @@ void main() {
     final sent = app.api.named('sendChat').last.$2;
     expect(sent[1], startsWith('Марпл, в ряду «Место» голосую за'));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('нажатие на свой портрет — своя карта роли, уже открытая', (tester) async {
+    await _open(tester, phone);
+    await tester.tap(find.byKey(const Key('player-u2')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('my-role-sheet')), findsOneWidget);
+    expect(find.text('ВАША РОЛЬ'), findsWidgets);
+  });
+
+  testWidgets('«сожжённые» — что игроки называли своими письмами, с автором; без карт Призрака', (tester) async {
+    final app = await _open(tester, phone);
+    expect(find.byKey(const Key('burned-button')), findsNothing);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'b1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Кидал эту.',
+        cardIds: const ['orig_0200', 'orig_0001'], cardNotes: const ['кидал эту', 'думаю, эта'],
+        createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    await tester.tap(find.byKey(const Key('burned-button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('burned-sheet')), findsOneWidget);
+    expect(find.byKey(const Key('burned-u3-4')), findsOneWidget);
+  });
+
+  testWidgets('итоговое голосование: на картах нет рамок версий и заметок', (tester) async {
+    final app = await _open(tester, phone, phase: 'Voting', allowed: const ['CastVote'],
+        edit: (view) => view['finale'] = (snapshotJson()['view'] as Json)['finale']);
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 'v1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Мотив 4.',
+        cardIds: const ['orig_0004'], cardNotes: const ['думаю, эта'], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    expect(find.byKey(const Key('say-mark-orig_0004')), findsNothing);
+    expect(tester.widgetList<BoardCard>(find.byType(BoardCard)).every((c) => c.plain), isTrue);
+  });
+
+  testWidgets('на большом экране строка разговора крупнее', (tester) async {
+    final app = await _open(tester, const Size(1600, 1000));
+    app.realtime.chatCtl.add(ChatMessage(
+        id: 's1', channel: 'public', authorId: 'u3', kind: 'text', text: 'Думаю, мотив 1.',
+        cardIds: const ['orig_0001'], cardNotes: const ['думаю, эта'], createdAt: DateTime.now(), round: 4));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 8));
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('say-strip-scaled')), findsOneWidget);
+    await _open(tester, phone);
+    expect(find.byKey(const Key('say-strip-scaled')), findsNothing);
   });
 }
