@@ -92,7 +92,8 @@ public static partial class BotPlayer
             if (Known(id) is { } known) return known.IsKillerTeam() ? 0 : 1;
             var unknown = view.Players.Count(p => !p.IsGhost && p.Id != me.Id && p.KnownRole is null);
             var prior = Math.Min(.9, Math.Max(0, BlackCount() - (me.Role.IsKillerTeam() ? 1 : 0)) / (double)Math.Max(1, unknown));
-            return Math.Clamp((1 - Black(id)) / (1 - prior), 0, 1);
+            // Память о прошлых партиях — предел сверху: «он всегда был Убийцей» не перевешивается тем, что за столом трое.
+            return Math.Min(HistoryTrust(id), Math.Clamp((1 - Black(id)) / (1 - prior), 0, 1));
         }
 
         private static double Logistic(double x) => 1 / (1 + Math.Exp(-x));
