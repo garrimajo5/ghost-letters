@@ -236,6 +236,12 @@ public sealed class BotPersonalityTests
         journal.Clues.Should().Contain(c => c.Kind == ClueKind.MyVanished && c.Reason.Contains("моё письмо исчезло"));
         journal.Clues.Should().Contain(c => c.Kind == ClueKind.ClaimConflict && c.Source == Bob && c.Salience == 1);
         journal.Clues.Should().OnlyContain(c => c.Reason.Length > 0);
+
+        // Убеждения: в каждом ряду вероятности в сумме 1; лжец — самый вероятный чёрный, и ему верят меньше всех.
+        foreach (var row in view.Board)
+            row.Cards.Sum(c => journal.Truth[c]).Should().BeApproximately(1, 1e-9);
+        journal.Black.MaxBy(x => x.Value).Key.Should().Be(Bob);
+        journal.Trust[Bob].Should().BeLessThan(journal.Trust[Ann]);
     }
 
     [Fact]

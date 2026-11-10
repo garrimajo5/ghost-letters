@@ -63,6 +63,15 @@ public sealed record BotJournal(
     IReadOnlyDictionary<string, double> Evidence,
     IReadOnlyDictionary<Guid, double> Suspicion)
 {
+    /// <summary>Убеждения о рядах: вероятность, что карта истинна (в каждом ряду сумма — 1).</summary>
+    public IReadOnlyDictionary<string, double> Truth { get; init; } = new Dictionary<string, double>();
+
+    /// <summary>Убеждения об игроках: вероятность, что игрок из команды Убийцы.</summary>
+    public IReadOnlyDictionary<Guid, double> Black { get; init; } = new Dictionary<Guid, double>();
+
+    /// <summary>Насколько бот верит словам игрока (1 — как случайному, 0 — не верит).</summary>
+    public IReadOnlyDictionary<Guid, double> Trust { get; init; } = new Dictionary<Guid, double>();
+
     /// <summary>Поддержка карты по журналу: сумма улик.</summary>
     public double CardSupport(string card) => Clues.Sum(c => c.Cards.GetValueOrDefault(card));
 
@@ -83,11 +92,35 @@ public static partial class BotPlayer
         var clues = brain.Clues();
         var cards = view.Board.SelectMany(r => r.Cards).ToDictionary(c => c, brain.Evidence);
         var players = view.Players.Where(p => !p.IsGhost && p.Id != me.Id).ToDictionary(p => p.Id, p => brain.RoleScore(p.Id));
-        return new BotJournal(clues, cards, players);
+        var others = view.Players.Where(p => !p.IsGhost && p.Id != me.Id).Select(p => p.Id).ToList();
+        return new BotJournal(clues, cards, players)
+        {
+            Truth = view.Board.SelectMany((_, r) => brain.RowBelief(r)).ToDictionary(x => x.Key, x => x.Value),
+            Black = others.ToDictionary(id => id, brain.BlackOf),
+            Trust = others.ToDictionary(id => id, brain.TrustOf),
+        };
     }
 
     private sealed partial class Brain
     {
+        /// <summary>
+        /// Боты 4.0, шаг 2: убеждение о ряде — вероятность истины каждой карты (softmax по уликам; строгий
+        /// сосредоточен на лидере, мягкий держит в уме и соседей).
+        /// </summary>
+        public IReadOnlyDictionary<string, double> RowBelief(int row)
+        {
+            var focus = 2 + 4 * P.Strictness;
+            var cards = view.Board[row].Cards;
+            var top = cards.Max(Evidence);
+            var weights = cards.Select(c => Math.Exp(focus * (Evidence(c) - top))).ToList();
+            var sum = weights.Sum();
+            return cards.Select((c, i) => (c, weights[i] / sum)).ToDictionary(x => x.c, x => x.Item2);
+        }
+
+        public double BlackOf(Guid id) => Black(id);
+
+        public double TrustOf(Guid id) => Trust(id);
+
         /// <summary>Счёт подозрения, как его видит модель игроков (для журнала и тестов).</summary>
         public double RoleScore(Guid id) => RoleEvidence(id);
 
