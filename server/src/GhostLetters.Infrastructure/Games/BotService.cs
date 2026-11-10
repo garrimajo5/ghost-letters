@@ -846,46 +846,61 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             .Select(m => new { m.AuthorId, m.CardIds, m.CardNotes, m.Text, m.Round, m.Channel })
             .ToListAsync(ct);
         var board = state.Board.SelectMany(r => r.Cards).ToHashSet();
-        var own = messages.Where(m => m.AuthorId == botId && m.Channel == ChatChannels.Public)
-            .SelectMany(m => TableReasoning.Read(botId, m.CardIds, m.CardNotes, board).Select(o => o with { Round = m.Round })).ToList();
-        messages = messages.Where(m => m.AuthorId != botId).ToList();
         var playerIds = state.Players.Select(p => p.Id).ToList();
         var botPlayers = (await db.Users.AsNoTracking().Where(u => playerIds.Contains(u.Id) && u.IsBot).Select(u => u.Id).ToListAsync(ct)).ToHashSet();
-        var perMessage = messages.Select(m =>
+        var read = messages.Select(m =>
         {
             IReadOnlyList<string> cards = m.CardIds;
             IReadOnlyList<string> notes = m.CardNotes;
             // Человек написал словами, без карт («мотив пять — оно», «точно не клетка») — боты понимают так же, как речь.
-            if (cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
+            if (m.AuthorId != botId && cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
             {
                 var ownLetters = state.Letters.Where(l => l.From == m.AuthorId).Select(l => l.CardId).ToList();
                 // Вопрос («Пуаро, почему ты за способ пять?») — не своё мнение о карте.
                 var statements = string.Join(" ", System.Text.RegularExpressions.Regex.Split(m.Text, @"(?<=[.!?…])\s+").Where(x => !x.TrimEnd().EndsWith('?')));
-                var read = Speech.SpokenCards.Read(statements, state.Board, state.Hints, ownLetters, tags);
-                (cards, notes) = (read.Cards, read.Notes);
+                var spoken = Speech.SpokenCards.Read(statements, state.Board, state.Hints, ownLetters, tags);
+                (cards, notes) = (spoken.Cards, spoken.Notes);
             }
 
-            var spoken = m.Channel == ChatChannels.Public;
-            return (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.AuthorId!.Value, cards, notes, board)
-                .Select(o => o with { Round = m.Round, Public = spoken }).ToList();
+            return new MindMessage(m.AuthorId!.Value, m.Round, m.Text, cards, notes, m.Channel == ChatChannels.Public);
         }).ToList();
-        var opinions = perMessage.SelectMany(o => o).ToList();
 
         var everyone = state.Players.Select(p => p.Id).ToList();
         var names = await db.Users.AsNoTracking().Where(u => everyone.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Nickname, ct);
+        var affinities = await db.BotRelationships.AsNoTracking().Where(r => r.BotId == botId && others.Contains(r.PlayerId))
+            .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
+        return BuildMind(botId, personality, history, read, board, names, affinities);
+    }
+
+    /// <summary>Реплика чата для ума бота: карты уже прочитаны (у человека — и из слов).</summary>
+    public sealed record MindMessage(Guid Author, int Round, string? Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes, bool Public);
+
+    /// <summary>
+    /// Ум бота из чата — одна сборка для живой партии и песочницы (#298): мнения с раундом, свои слова,
+    /// «кидал эту» других, обвинения, ширина чтения писем, заявления о ролях, последние версии.
+    /// </summary>
+    public static BotMind BuildMind(Guid botId, BotPersonality personality, IReadOnlyDictionary<Guid, PlayerHistory> history,
+        IReadOnlyList<MindMessage> messages, IReadOnlySet<string> board, IReadOnlyDictionary<Guid, string> names,
+        IReadOnlyDictionary<Guid, int>? affinities = null)
+    {
+        var own = messages.Where(m => m.Author == botId && m.Public)
+            .SelectMany(m => TableReasoning.Read(botId, m.Cards, m.Notes, board).Select(o => o with { Round = m.Round })).ToList();
+        var others = messages.Where(m => m.Author != botId).ToList();
+        var perMessage = others.Select(m => (IReadOnlyList<ChatOpinion>)TableReasoning.Read(m.Author, m.Cards, m.Notes, board)
+            .Select(o => o with { Round = m.Round, Public = m.Public }).ToList()).ToList();
+        var opinions = perMessage.SelectMany(o => o).ToList();
         // Обвинения из чата (боты и люди): «Убийца — Олег», «Подозреваю, что Маша из чёрных».
-        var accusations = messages.SelectMany(m => AccusationReader.Read(m.AuthorId!.Value, m.Text, names)).ToList();
+        var accusations = others.SelectMany(m => AccusationReader.Read(m.Author, m.Text ?? "", names)).ToList();
         // Повторение одной версии не делает её весомее. Последнее мнение заменяет прежнее.
         var latestOpinions = opinions.GroupBy(o => (o.Author, o.CardId, o.IsCheck)).Select(g => g.Last()).ToList();
         var latestAccusations = accusations.GroupBy(a => (a.Author, a.Target)).Select(g => g.Last()).ToList();
-        var affinities = await db.BotRelationships.AsNoTracking().Where(r => r.BotId == botId && others.Contains(r.PlayerId))
-            .ToDictionaryAsync(r => r.PlayerId, r => r.Score, ct);
-        var claims = PublicRoleClaims.Read(messages.Select(m => (m.AuthorId!.Value, m.Text ?? "")));
-        return new BotMind(personality, history, latestOpinions, names, latestAccusations, Breadth(messages.Select(m => (m.AuthorId!.Value, (IReadOnlyList<string>)m.CardNotes))), affinities, claims,
+        var claims = PublicRoleClaims.Read(others.Select(m => (m.Author, m.Text ?? "")));
+        return new BotMind(personality, history, latestOpinions, names, latestAccusations,
+            Breadth(others.Select(m => (m.Author, m.Notes))), affinities ?? new Dictionary<Guid, int>(), claims,
             BotMind.Latest(perMessage.Where(o => o.Count > 0 && o[0].Public)), own,
-            messages.Where(m => m.Channel == ChatChannels.Public)
-                .SelectMany(m => m.CardIds.Select((c, i) => (Card: c, Note: i < m.CardNotes.Count ? m.CardNotes[i] : "")).Where(x => x.Note.StartsWith("кидал", StringComparison.Ordinal))
-                    .Select(x => new ClaimedLetter(m.AuthorId!.Value, x.Card, m.Round))).ToList());
+            others.Where(m => m.Public)
+                .SelectMany(m => m.Cards.Select((c, i) => (Card: c, Note: i < m.Notes.Count ? m.Notes[i] : "")).Where(x => x.Note.StartsWith("кидал", StringComparison.Ordinal))
+                    .Select(x => new ClaimedLetter(m.Author, x.Card, m.Round))).ToList());
     }
 
     /// <summary>
