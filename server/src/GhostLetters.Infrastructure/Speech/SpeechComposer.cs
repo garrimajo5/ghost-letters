@@ -271,6 +271,7 @@ public static partial class SpeechComposer
             ThoughtKind.Tentative => ["Я бы проверил {card_acc}.", "А что если {card}?", "Есть мысль про {card_acc}, но пока сыро."],
             ThoughtKind.Exclude => ["{card} — мимо, по-моему.", "Не верю в {card_acc}.", "{card} отпадает: улики притянуты.", "Исключаю {card_acc}."],
             ThoughtKind.Weak => ["Но это так, догадка.", "Пока больше чутьё.", "Улик под это мало, конечно."],
+            ThoughtKind.Changed => ["Передумал: раньше был за {card_acc}, но {why}.", "Раньше думал на {card_acc}, теперь нет — {why}.", "Беру назад {card_acc}: {why}."],
             ThoughtKind.Link => ["{hint} намекает на {to}: {why}.", "{hint} и {to} — {why}.", "Смотрите: {hint} — {why}, как и {to}."],
             ThoughtKind.Whole => ["В целом у меня так: {whole}.", "Целиком: {whole}."],
             ThoughtKind.Accuse => mood == SpeechMood.Suspicious

@@ -114,6 +114,7 @@ public sealed record SpeechPassport(
             ThoughtKind.Tentative => $"осторожная догадка: {t.Card}, улик под неё нет",
             ThoughtKind.Exclude => $"исключает {t.Card}",
             ThoughtKind.Weak => "связь с уликами слабая, это догадка",
+            ThoughtKind.Changed => $"передумал: раньше был за {t.Card}" + (t.Why is { Length: > 0 } c ? $" — {c}" : ""),
             ThoughtKind.Link => $"{t.Hint} указывает на {t.Card}" + (t.Why is { Length: > 0 } l ? $" — связь: {l}" : ""),
             ThoughtKind.Whole => $"целиком версия: {Cards()}",
             ThoughtKind.Accuse => $"обвинить {t.Who}: " + (t.Strength >= 1 ? "он Убийца" : t.Strength >= .6 ? "он из чёрных" : "к нему стоит присмотреться")
