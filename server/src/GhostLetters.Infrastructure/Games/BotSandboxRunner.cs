@@ -13,7 +13,8 @@ namespace GhostLetters.Infrastructure.Games;
 /// <param name="Ai">Боты 2.0: как это написала ИИ-модель (или «не принято: …»); null — не запрашивали.</param>
 /// <param name="Intent">Замысел реплики — для ИИ-прохода после прогона; в отчёт не сохраняется.</param>
 public sealed record SandboxMessage(Guid Author, int Round, string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes, DateTimeOffset At,
-    string? Spoken = null, string? Ai = null, [property: System.Text.Json.Serialization.JsonIgnore] Speech.SpeechIntent? Intent = null);
+    string? Spoken = null, string? Ai = null, [property: System.Text.Json.Serialization.JsonIgnore] Speech.SpeechIntent? Intent = null,
+    string? Source = null);
 public sealed record SandboxFrame(string Action, Guid? Actor, JsonElement? Command, GameState State, PlayerView? Observation, int MessageCount);
 public sealed record SandboxSeat(Guid Id, string Name, BotPersonality Personality);
 public sealed record SandboxReport(int Format, string EngineVersion, string Scenario, int Seed, string Status, string? Error,
@@ -86,9 +87,9 @@ public static class BotSandboxRunner
             action, actor, command is null ? null : JsonSerializer.SerializeToElement(command, command.GetType(), GameJson.Options),
             GameJson.Deserialize<GameState>(GameJson.Serialize(state)), observation, messages.Count);
         void Say(Guid actor, string text, IReadOnlyList<string> cards, IReadOnlyList<string> notes, string? spoken = null,
-            Speech.SpeechIntent? intent = null)
+            Speech.SpeechIntent? intent = null, string? source = null)
         {
-            messages.Add(new(actor, state.Round, text, cards, notes, clock, spoken, Intent: intent));
+            messages.Add(new(actor, state.Round, text, cards, notes, clock, spoken, Intent: intent, Source: source));
             parsedAccusations.AddRange(AccusationReader.Read(actor, text, names));
         }
 
@@ -153,11 +154,13 @@ public static class BotSandboxRunner
                     var tactic = own.Count < BotDiscussion.MaxMessages ? BotLetterTactics.Compose(view, mind, discussion, rng, now) : null;
                     Speech.SpeechIntent? intent = null;
                     (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? line;
-                    if (tactic is not null) line = tactic;
+                    // Откуда реплика — для метрик речи: первая, ответ, тактика писем, финальное обсуждение.
+                    string? source = null;
+                    if (tactic is not null) (line, source) = (tactic, "tactic");
                     else if (BotLetterTactics.Pending(seat.Id, discussion)) line = null;
-                    else if (state.IsFinalTalk) line = BotDiscussion.Compose(view, tags, mind, discussion, rng);
-                    else if (own.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned) (line, intent) = (planned.Line, planned.Intent);
-                    else if (own.Count > 0 && mayReply && BotPlayer.ReplyPlanned(view, rng, tags, mind) is { } replied) (line, intent) = (replied.Line, replied.Intent);
+                    else if (state.IsFinalTalk) (line, source) = (BotDiscussion.Compose(view, tags, mind, discussion, rng), "final");
+                    else if (own.Count == 0 && BotPlayer.SayPlanned(view, rng, tags, mind) is { } planned) (line, intent, source) = (planned.Line, planned.Intent, "first");
+                    else if (own.Count > 0 && mayReply && BotPlayer.ReplyPlanned(view, rng, tags, mind) is { } replied) (line, intent, source) = (replied.Line, replied.Intent, "reply");
                     else line = null;
                     if (line is { } said)
                     {
@@ -167,7 +170,7 @@ public static class BotSandboxRunner
                             Speech.PersonaLines.IsFemale(seat.Name) != true, Speech.PersonaLines.KeyOf(seat.Name),
                             Genders: names.Values.Where(n => Speech.PersonaLines.IsFemale(n) is not null)
                                 .ToDictionary(n => BotNames.Bare(n), n => Speech.PersonaLines.IsFemale(n)!.Value)));
-                        Say(seat.Id, said.Text, said.Cards, said.Notes, spoken, intent);
+                        Say(seat.Id, said.Text, said.Cards, said.Notes, spoken, intent, source);
                         Capture("Сообщение", seat.Id, observation: view); moved = true; break;
                     }
                     if (BotLetterTactics.Pending(seat.Id, discussion)) { waiting = true; continue; }
