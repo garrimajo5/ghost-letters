@@ -152,10 +152,13 @@ public sealed record BotTuning
     public double Outshone { get; init; } = .2;
 
     /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
-    public bool ReplyAddsOwn { get; init; }
+    public bool ReplyAddsOwn { get; init; } = true;
 
-    /// <summary>Чёрные тоже добавляют своё (ложную карту) — иначе только мирные.</summary>
-    public bool ReplyAddsOwnBlack { get; init; } = true;
+    /// <summary>
+    /// Чёрные тоже добавляют своё (ложную карту) — иначе только мирные. Серии (Озон, 150): все — 36/42/41/31 %,
+    /// только мирные — 37/42/43/33 %, без добавки — 42/41/37/36 % побед детективов.
+    /// </summary>
+    public bool ReplyAddsOwnBlack { get; init; }
 
     /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
     public bool ClaimLogic { get; init; } = true;
