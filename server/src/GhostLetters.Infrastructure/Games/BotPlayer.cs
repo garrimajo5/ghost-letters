@@ -133,6 +133,10 @@ public static partial class BotPlayer
         // Боты 3.0, этап 5: «думаю, эта» без своих улик о карте, за которую в этом раунде уже сказали двое, —
         // эхо. Человек в такой момент промолчит; стол и так видит согласие.
         if (BotTuning.Current.SkipEcho && brain.Echo(line)) return null;
+        // Логика заявлений: свежий вывод («проверили трое — хоть один честен») — вслух, чаще у строгих.
+        if (brain.FreshDeduction() is { } deduction && rng.NextDouble() < .3 + .5 * brain.Strictness)
+            return ((deduction.Text + " " + line.Text, line.Cards, line.Notes),
+                brain.Intent?.With(new Speech.Thought(Speech.ThoughtKind.Deduce, Who: deduction.Who is { } w ? brain.Name(w) : null, Why: deduction.Text)));
         if (brain.Defense() is { } defense)
             // Встревоженный сначала оправдывается — даже если про карты сказать нечего.
             return ((defense.Text + line.Text, line.Cards, line.Notes), brain.Intent?.With(new Speech.Thought(Speech.ThoughtKind.Defense, Who: defense.Who)));
@@ -664,7 +668,17 @@ public static partial class BotPlayer
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
                 : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus)) * OutshoneFactor(l.CardId, l.Round, card));
-            return _evidence[card] = hints - NegativeWeight * (vanished + OthersVanished(card));
+            var value = hints - NegativeWeight * (vanished + OthersVanished(card));
+            // Пока считается модель игроков, логика ещё не готова — не запоминаем промежуточное.
+            if (LogicOn && (_computingBlack || _inLogic)) return value;
+            // Логика заявлений — поправкой к прежнему учёту чужих писем: кто из говоривших мог быть честным.
+            // (Как замена прежнему учёту она проигрывала в сериях: 41→35 % побед за 6 игроков.)
+            if (LogicOn && BotTuning.Current.ClaimLogicWeight > 0 && Logic() is { } logic)
+            {
+                var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
+                value += BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
+            }
+            return _evidence[card] = value;
         }
 
         /// <summary>

@@ -61,7 +61,17 @@ public static partial class BotPlayer
                 if (unknown.Sum(id => Logistic(1.3 * score[id] + mid)) > target) hi = mid; else lo = mid;
             }
             foreach (var id in unknown) result[id] = Logistic(1.3 * score[id] + lo);
-            return _black = result;
+            _black = result;
+            // Логика заявлений уточняет модель игроков: кто мог сказать правду, а кто — нет (см. BotPlayer.Logic).
+            if (LogicOn)
+            {
+                _baseBlack = new Dictionary<Guid, double>(result);
+                _blackAmongUnknown = black;
+                if (Logic() is { } logic && BotTuning.Current.ClaimLogicBlack)
+                    foreach (var id in unknown) result[id] = logic.Black.GetValueOrDefault(id, result[id]);
+                _evidence.Clear();
+            }
+            return result;
         }
 
         /// <summary>
