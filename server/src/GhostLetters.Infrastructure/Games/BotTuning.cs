@@ -151,6 +151,9 @@ public sealed record BotTuning
     /// </summary>
     public double Outshone { get; init; } = .2;
 
+    /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
+    public bool ReplyAddsOwn { get; init; }
+
     /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
     public bool ClaimLogic { get; init; } = true;
 
@@ -341,6 +344,7 @@ public sealed record BotTuning
                 nameof(KillerClearMargin) => t with { KillerClearMargin = D() },
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(ClaimLogic) => t with { ClaimLogic = B() },
+                nameof(ReplyAddsOwn) => t with { ReplyAddsOwn = B() },
                 nameof(GhostError) => t with { GhostError = D() },
                 nameof(LiarCut) => t with { LiarCut = D() },
                 nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },

@@ -508,7 +508,33 @@ public static partial class BotPlayer
             }
             var (row, column) = Position(card);
             Intent = new SpeechIntent(Mood(), thoughts, row < 0 ? new TableSituation(view.Round, view.TotalRounds, 0, 0, 0) : Situation(row, column));
+            // #309: живой ответ добавляет своё — карту другого ряда, которую я ещё не называл, с доводом из подсказок.
+            if (BotTuning.Current.ReplyAddsOwn && OwnAddition(row) is { } extra)
+            {
+                text = text.TrimEnd() + " " + extra.Text;
+                thoughts.Add(new Thought(ThoughtKind.Version, CardName(extra.Card)));
+                return (text, new[] { card, extra.Card }, new[] { "думаю, эта", "думаю, эта" });
+            }
             return (text, new[] { card }, new[] { "думаю, эта" });
+        }
+
+        /// <summary>
+        /// Своя добавка к ответу: в ряду, о котором я ещё не говорил, — лучшая для меня карта (чёрный — не истина),
+        /// если её поддерживает подсказка. Ряд выбирается мягко по уверенности.
+        /// </summary>
+        private (string Text, string Card)? OwnAddition(int skipRow)
+        {
+            var said = (mind?.OwnSaid ?? []).Select(o => o.CardId).ToHashSet();
+            var rows = Enumerable.Range(0, view.Board.Count)
+                .Where(r => r != skipRow && view.Board[r].Cards.All(c => !said.Contains(c))).ToList();
+            if (rows.Count == 0) return null;
+            var row = rows.OrderByDescending(r => Certainty(r) + Gumbel(.15)).First();
+            var options = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => !KillerTeam || Truth is null || Truth[row] != c).ToList();
+            var card = Card(row, BestColumn(row, options));
+            var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
+                .OrderByDescending(h => HintWeight(h.Id, card)).FirstOrDefault();
+            if (hint.Id is null || HintWeight(hint.Id, card) <= .01) return null;
+            return ($"И от себя: {CardName(card)} — {BotDiscussion.HintRef(hint.Round, hint.Number)}: {Connection(hint.Id, card)}.", card);
         }
 
         public (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Answer(string who, string question, IReadOnlyList<string> asked)
