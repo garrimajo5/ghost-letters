@@ -23,7 +23,7 @@ public sealed class BotClaimLogicTests
         ["purse"] = ["money", "leather", "bag"], ["ship"] = ["boat", "water", "sail"], ["stone"] = ["stone"],
     });
 
-    private static readonly BotTuning On = BotTuning.Default with { ClaimLogic = true };
+    private static readonly BotTuning On = BotTuning.Default with { ClaimLogic = true, ClaimLogicWeight = 1, ClaimLogicBlack = true };
 
     private static BotMind Mind(IReadOnlyList<ChatOpinion> opinions) =>
         new(BotPersonality.Default, new Dictionary<Guid, PlayerHistory>(), opinions,
@@ -84,10 +84,17 @@ public sealed class BotClaimLogicTests
     }
 
     [Fact]
-    public void Off_ByDefault_EvidenceUnchanged()
+    public void ByDefault_OnlySpeech_EvidenceUnchanged()
     {
         var mind = Mind([Check(Ann, "ring", "crown")]);
-        BotPlayer.Logic(View(), Tags, mind).Should().BeNull();
+        BotPlayer.Logic(View(), Tags, mind).Should().NotBeNull("по умолчанию логика рассуждает вслух");
+        using (BotTuning.Use(BotTuning.Default with { ClaimLogic = false }))
+            BotPlayer.Logic(View(), Tags, mind).Should().BeNull();
+        // Решения — как без логики: вес 0.
+        var plain = BotTuning.Default with { ClaimLogic = false };
+        double off;
+        using (BotTuning.Use(plain)) off = BotPlayer.Evidence(View(), Tags, mind, "ring");
+        BotPlayer.Evidence(View(), Tags, mind, "ring").Should().BeApproximately(off, 1e-9);
         using (BotTuning.Use(BotTuning.Default with { ClaimLogic = true, ClaimLogicWeight = 0 }))
             BotPlayer.Evidence(View(), Tags, mind, "wallet").Should().BeApproximately(BotPlayer.Evidence(View(), Tags, Mind([]), "wallet"), 1e-9);
     }

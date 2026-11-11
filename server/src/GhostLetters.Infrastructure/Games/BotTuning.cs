@@ -152,7 +152,7 @@ public sealed record BotTuning
     public double Outshone { get; init; } = .2;
 
     /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
-    public bool ClaimLogic { get; init; }
+    public bool ClaimLogic { get; init; } = true;
 
     /// <summary>Как часто Призрак не открывает письмо, хотя оно указывало на истину (ошибка или лучшее письмо).</summary>
     public double GhostError { get; init; } = .2;
@@ -160,11 +160,14 @@ public sealed record BotTuning
     /// <summary>Насколько охотнее лжец «проверяет» именно истину (отсекает её): .5 — в полтора раза при ясном письме.</summary>
     public double LiarCut { get; init; } = .5;
 
-    /// <summary>Вес логики заявлений в уликах о картах (1 — убеждение о ряде совпадает с выводом логики).</summary>
-    public double ClaimLogicWeight { get; init; } = 1;
+    /// <summary>
+    /// Вес логики заявлений в уликах о картах (1 — убеждение о ряде совпадает с выводом логики). По умолчанию 0:
+    /// в сериях на правилах Озона поправка не дала побед, логика пока только для речи (рассуждения вслух).
+    /// </summary>
+    public double ClaimLogicWeight { get; init; }
 
     /// <summary>Логика уточняет модель игроков (подозрения и доверие); иначе — только карты и речь.</summary>
-    public bool ClaimLogicBlack { get; init; } = true;
+    public bool ClaimLogicBlack { get; init; }
 
     /// <summary>Нижняя граница веса заявления «целился в эту» (0 — только по сходству письма с картой).</summary>
     public double ClaimFloor { get; init; } = .4;
