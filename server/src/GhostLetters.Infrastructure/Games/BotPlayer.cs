@@ -664,12 +664,6 @@ public static partial class BotPlayer
         public double Evidence(string card)
         {
             if (_evidence.TryGetValue(card, out var score)) return score;
-            // Логика заявлений: чужие «проверял — исчезло» — через то, кто из говоривших мог быть честным.
-            if (LogicOn && !_computingBlack && !_inLogic && Logic() is { } logic)
-            {
-                var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
-                return _evidence[card] = BaseEvidence(card) + BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
-            }
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
             // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
             var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
@@ -677,6 +671,13 @@ public static partial class BotPlayer
             var value = hints - NegativeWeight * (vanished + OthersVanished(card));
             // Пока считается модель игроков, логика ещё не готова — не запоминаем промежуточное.
             if (LogicOn && (_computingBlack || _inLogic)) return value;
+            // Логика заявлений — поправкой к прежнему учёту чужих писем: кто из говоривших мог быть честным.
+            // (Как замена прежнему учёту она проигрывала в сериях: 41→35 % побед за 6 игроков.)
+            if (LogicOn && BotTuning.Current.ClaimLogicWeight > 0 && Logic() is { } logic)
+            {
+                var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
+                value += BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
+            }
             return _evidence[card] = value;
         }
 
