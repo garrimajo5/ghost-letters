@@ -1,2 +1,0 @@
-150
-variants: только речь: ClaimLogic=true, ClaimLogicWeight=0, ClaimLogicBlack=false | поправка .3: ClaimLogic=true, ClaimLogicWeight=.3, ClaimLogicBlack=false | поправка .3 и подозрения: ClaimLogic=true, ClaimLogicWeight=.3
