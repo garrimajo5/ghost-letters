@@ -154,6 +154,9 @@ public sealed record BotTuning
     /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
     public bool ReplyAddsOwn { get; init; }
 
+    /// <summary>Чёрные тоже добавляют своё (ложную карту) — иначе только мирные.</summary>
+    public bool ReplyAddsOwnBlack { get; init; } = true;
+
     /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
     public bool ClaimLogic { get; init; } = true;
 
@@ -345,6 +348,7 @@ public sealed record BotTuning
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(ClaimLogic) => t with { ClaimLogic = B() },
                 nameof(ReplyAddsOwn) => t with { ReplyAddsOwn = B() },
+                nameof(ReplyAddsOwnBlack) => t with { ReplyAddsOwnBlack = B() },
                 nameof(GhostError) => t with { GhostError = D() },
                 nameof(LiarCut) => t with { LiarCut = D() },
                 nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },

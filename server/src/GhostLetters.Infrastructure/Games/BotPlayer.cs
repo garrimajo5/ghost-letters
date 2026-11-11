@@ -509,7 +509,7 @@ public static partial class BotPlayer
             var (row, column) = Position(card);
             Intent = new SpeechIntent(Mood(), thoughts, row < 0 ? new TableSituation(view.Round, view.TotalRounds, 0, 0, 0) : Situation(row, column));
             // #309: живой ответ добавляет своё — карту другого ряда, которую я ещё не называл, с доводом из подсказок.
-            if (BotTuning.Current.ReplyAddsOwn && OwnAddition(row) is { } extra)
+            if (BotTuning.Current.ReplyAddsOwn && (!KillerTeam || BotTuning.Current.ReplyAddsOwnBlack) && OwnAddition(row) is { } extra)
             {
                 text = text.TrimEnd() + " " + extra.Text;
                 thoughts.Add(new Thought(ThoughtKind.Version, CardName(extra.Card)));
