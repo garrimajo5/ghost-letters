@@ -894,4 +894,11 @@ void main() {
     expect(tester.getRect(find.byKey(const Key('hint-orig_0105'))).top,
         greaterThan(tester.getRect(find.byKey(const Key('hint-orig_0103'))).top));
   });
+
+  testWidgets('зритель видит новый стол: поле с лесенкой подсказок, без руки', (tester) async {
+    await _open(tester, phone, allowed: const [], edit: (view) => view['me'] = null);
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('main-board')), findsOneWidget);
+    expect(find.byKey(const Key('hint-strip-0')), findsOneWidget);
+  });
 }
