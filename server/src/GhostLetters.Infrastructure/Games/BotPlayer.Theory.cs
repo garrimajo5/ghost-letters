@@ -22,6 +22,8 @@ public static partial class BotPlayer
     public static HintTheory? Theory(PlayerView view, CardTags tags, BotMind? mind) =>
         view.Me is { Role: not Role.Ghost } me && view.Board.Count > 0 ? new Brain(view, me, new Random(0), tags, mind).Theory() : null;
 
+    private static readonly Dictionary<object, HintTheory> TheoryCache = new();
+
     private sealed partial class Brain
     {
         private HintTheory? _theory;
@@ -45,9 +47,20 @@ public static partial class BotPlayer
         {
             if (_theory is not null) return _theory;
             if (!TheoryOn || _inTheory) return null;
+            // Теория меняется только с новой подсказкой, письмом или репликой: решения одного хода её не пересчитывают.
+            var key = (view.GameId, me.Id, view.Round, view.Hints.Sum(h => h.Cards.Count), me.Letters.Count,
+                mind?.Opinions.Count ?? 0, mind?.ClaimList.Count ?? 0, BotTuning.Current, P);
+            lock (TheoryCache)
+                if (TheoryCache.TryGetValue(key, out var cached)) return _theory = cached;
             _inTheory = true;
-            try { return _theory = ComputeTheory(); }
+            try { _theory = ComputeTheory(); }
             finally { _inTheory = false; }
+            lock (TheoryCache)
+            {
+                if (TheoryCache.Count > 4000) TheoryCache.Clear();
+                TheoryCache[key] = _theory;
+            }
+            return _theory;
         }
 
         private HintTheory ComputeTheory()
