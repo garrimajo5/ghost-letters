@@ -743,8 +743,9 @@ class GameScreenState extends ConsumerState<GameScreen> {
 
     final v = snap.view;
     if (zoomed) return _ZoomedTable(screen: this);
-    // Игрокам — новый стол: основной или сеанс по выбору в меню; экран стола (зрители, ТВ) остаётся прежним.
-    if (v.me != null && v.phase != 'RoleReveal' && !classicTable) {
+    // Новый стол: основной или сеанс по выбору в меню.
+    // Зрителю (и экрану стола) — тот же новый стол, что игрокам: только без руки и своих действий.
+    if ((v.me == null || v.phase != 'RoleReveal') && !classicTable) {
       chatDocked = false;
       return _MainTable(screen: this, seance: seance || AppConfig.dossierDesign);
     }

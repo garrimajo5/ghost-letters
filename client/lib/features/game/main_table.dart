@@ -356,6 +356,11 @@ class _TopBar extends StatelessWidget {
           icon: const Icon(Icons.menu, color: AppColors.muted),
           onSelected: (value) async {
             switch (value) {
+              case 'leave-viewing':
+                await runAction(context, () async {
+                  await screen.ref.read(apiProvider).leaveLobby(screen.lobbyId!);
+                  if (context.mounted) context.go('/');
+                });
               case 'home':
                 context.go('/');
               case 'audio':
@@ -381,6 +386,8 @@ class _TopBar extends StatelessWidget {
             }
           },
           itemBuilder: (_) => [
+            if (v.me == null && screen.lobbyId != null)
+              const PopupMenuItem(value: 'leave-viewing', key: Key('menu-leave-viewing'), child: Text('Завершить просмотр')),
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             if (v.board.isNotEmpty) const PopupMenuItem(value: 'zoom', child: Text('Стол крупно')),
@@ -414,7 +421,9 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              mine ? 'Ваш ход · ${myTurnPhase(v)}' : (v.phase == 'Night' ? nightWaiting : T.shortPhase(v.phase)),
+              v.me == null
+                  ? 'Режим зрителя'
+                  : mine ? 'Ваш ход · ${myTurnPhase(v)}' : (v.phase == 'Night' ? nightWaiting : T.shortPhase(v.phase)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: mine && !killerNight ? AppColors.onAmber : AppColors.text),
@@ -585,7 +594,7 @@ class _TableArea extends StatelessWidget {
               // Подсказки раунда относятся ко всему столу, а не к ряду: столбик вплотную, без сетки поля.
               for (final group in v.hints)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
+                  padding: const EdgeInsets.only(bottom: 7),
                   child: SizedBox(
                     height: _HintStep.lines(group, hintCards) * (hint + 3) - 3,
                     child: _HintStep(screen: screen, say: say, hint: group, size: hint, perRow: hintCards, links: (id) => _linksOf(id, statement)),
@@ -767,13 +776,40 @@ class _HintStep extends StatelessWidget {
   final ({List<Color> colors, List<int> numbers}) Function(String id)? links;
 
   /// Ширина полосы с подписью раунда слева от карт.
-  static const labelWidth = 11.0;
+  static const labelWidth = 16.0;
 
   @override
   Widget build(BuildContext context) {
     final label = hint.round == 0 ? 'зацепка' : 'р. ${hint.round}';
     final n = lines(hint, perRow);
     final height = n * size + (n - 1) * 3;
+    // Раунд — полоской слева во всю высоту ступеньки (и при переносе на несколько строк) и подписью вдоль неё.
+    Widget roundLabel() => SizedBox(
+          key: Key('hint-strip-${hint.round}'),
+          width: labelWidth,
+          height: height,
+          child: Row(children: [
+            Container(
+              width: 3,
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              decoration: BoxDecoration(
+                color: (hint.round.isEven ? AppColors.ice : AppColors.amber).withValues(alpha: .75),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: RotatedBox(
+                quarterTurns: 3,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1,
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: hint.round.isEven ? AppColors.ice : AppColors.amber)),
+                ),
+              ),
+            ),
+          ]),
+        );
+
     Widget tile(String c) =>
                     Padding(
                       padding: const EdgeInsets.only(right: 3),
@@ -813,17 +849,7 @@ class _HintStep extends StatelessWidget {
     if (n > 1) {
       final cards = hint.cards;
       return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
-        SizedBox(
-          width: labelWidth,
-          height: height,
-          child: RotatedBox(
-            quarterTurns: 3,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
-            ),
-          ),
-        ),
+        roundLabel(),
         Column(key: Key('hint-wrap-${hint.round}'), crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
           for (var i = 0; i < n; i++)
             Padding(
@@ -839,17 +865,7 @@ class _HintStep extends StatelessWidget {
       ]);
     }
     return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
-      SizedBox(
-        width: labelWidth,
-        height: height,
-        child: RotatedBox(
-          quarterTurns: 3,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
-          ),
-        ),
-      ),
+      roundLabel(),
       Flexible(child: SizedBox(
         height: size,
         child: hint.cards.isEmpty
