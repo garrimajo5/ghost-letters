@@ -586,7 +586,10 @@ class _TableArea extends StatelessWidget {
               for (final group in v.hints)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 3),
-                  child: SizedBox(height: hint, child: _HintStep(screen: screen, say: say, hint: group, size: hint, links: (id) => _linksOf(id, statement))),
+                  child: SizedBox(
+                    height: _HintStep.lines(group, hintCards) * (hint + 3) - 3,
+                    child: _HintStep(screen: screen, say: say, hint: group, size: hint, perRow: hintCards, links: (id) => _linksOf(id, statement)),
+                  ),
                 ),
               if (v.vanishedCount > 0)
                 Padding(
@@ -692,7 +695,12 @@ class _TableArea extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 2, 8, 8),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (staircase && !below) hintsColumn,
+          // Подсказок больше, чем влезает рядом с полем, — своя вертикальная прокрутка, поле стоит на месте.
+          if (staircase && !below)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: rows * (fieldCard + gap) + 8),
+              child: SingleChildScrollView(key: const Key('hints-scroll'), child: hintsColumn),
+            ),
           // Поле ровно по своим картам — по центру свободного места, лесенка вплотную слева.
           Flexible(child: field),
         ]),
@@ -742,7 +750,14 @@ class _TableArea extends StatelessWidget {
 
 /// Ступенька лесенки: подпись раунда и его подсказки; лишние карты листаются свайпом.
 class _HintStep extends StatelessWidget {
-  const _HintStep({required this.screen, required this.say, required this.hint, required this.size, this.links});
+  const _HintStep({required this.screen, required this.say, required this.hint, required this.size, this.links, this.perRow});
+
+  /// Сколько карт в строке: больше — переносятся на следующую строку (на большом экране карты не уезжают вбок).
+  final int? perRow;
+
+  /// Сколько строк займёт ступенька.
+  static int lines(HintGroup hint, int? perRow) =>
+      perRow == null || perRow <= 0 || hint.cards.length <= perRow ? 1 : (hint.cards.length + perRow - 1) ~/ perRow;
 
   final GameScreenState screen;
   final _Say say;
@@ -757,35 +772,9 @@ class _HintStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = hint.round == 0 ? 'зацепка' : 'р. ${hint.round}';
-    // Подпись раунда — узкой полосой слева от карт, а не поверх них: картинку ничто не заслоняет.
-    return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
-      SizedBox(
-        width: labelWidth,
-        height: size,
-        child: RotatedBox(
-          quarterTurns: 3,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
-          ),
-        ),
-      ),
-      Flexible(child: SizedBox(
-        height: size,
-        child: hint.cards.isEmpty
-            ? Container(
-                width: size,
-                margin: const EdgeInsets.only(right: 4),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
-                alignment: Alignment.center,
-                child: const Text('—', style: TextStyle(fontSize: 11, color: AppColors.dim)),
-              )
-            : ListView(
-                scrollDirection: Axis.horizontal,
-                reverse: true,
-                shrinkWrap: true,
-                children: [
-                  for (final c in hint.cards.reversed)
+    final n = lines(hint, perRow);
+    final height = n * size + (n - 1) * 3;
+    Widget tile(String c) =>
                     Padding(
                       padding: const EdgeInsets.only(right: 3),
                       child: GestureDetector(
@@ -818,7 +807,65 @@ class _HintStep extends StatelessWidget {
                             ),
                         ]),
                       ),
-                    ),
+                    );
+
+    // Подпись раунда — узкой полосой слева от карт, а не поверх них: картинку ничто не заслоняет.
+    if (n > 1) {
+      final cards = hint.cards;
+      return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
+        SizedBox(
+          width: labelWidth,
+          height: height,
+          child: RotatedBox(
+            quarterTurns: 3,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
+            ),
+          ),
+        ),
+        Column(key: Key('hint-wrap-${hint.round}'), crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < n; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i < n - 1 ? 3 : 0),
+              child: SizedBox(
+                height: size,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  for (final c in cards.skip(i * perRow!).take(perRow!)) tile(c),
+                ]),
+              ),
+            ),
+        ]),
+      ]);
+    }
+    return Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: [
+      SizedBox(
+        width: labelWidth,
+        height: height,
+        child: RotatedBox(
+          quarterTurns: 3,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label, key: Key('hint-label-${hint.round}'), maxLines: 1, style: const TextStyle(fontSize: 9, color: AppColors.ice)),
+          ),
+        ),
+      ),
+      Flexible(child: SizedBox(
+        height: size,
+        child: hint.cards.isEmpty
+            ? Container(
+                width: size,
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: AppColors.border)),
+                alignment: Alignment.center,
+                child: const Text('—', style: TextStyle(fontSize: 11, color: AppColors.dim)),
+              )
+            : ListView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                shrinkWrap: true,
+                children: [
+                  for (final c in hint.cards.reversed) tile(c),
                 ],
               ),
       )),
@@ -2715,14 +2762,20 @@ class _BurnedButton extends StatelessWidget {
       message: 'Что игроки называли своими письмами',
       child: InkWell(
         key: const Key('burned-button'),
-        borderRadius: BorderRadius.circular(99),
+        borderRadius: BorderRadius.circular(12),
         onTap: () => showBurned(context, screen),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(99), border: Border.all(color: AppColors.border)),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.local_fire_department_outlined, size: 14, color: AppColors.amber),
-            Text(' $n', style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+          constraints: const BoxConstraints(minHeight: 40, minWidth: 64),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.amber.withValues(alpha: .6)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.local_fire_department_outlined, size: 22, color: AppColors.amber),
+            const SizedBox(width: 4),
+            Text('$n', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text)),
           ]),
         ),
       ),

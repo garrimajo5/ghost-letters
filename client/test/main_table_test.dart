@@ -878,4 +878,20 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('suspect-voters-u3')), findsOneWidget);
   });
+
+  testWidgets('большой экран: четыре подсказки раунда переносятся на вторую строку, а не уезжают вбок', (tester) async {
+    await _open(tester, const Size(1600, 1000), edit: (view) => view['hints'] = [
+          {'round': 0, 'cards': ['orig_0100']},
+          {'round': 1, 'cards': ['orig_0101', 'orig_0102']},
+          {'round': 4, 'cards': ['orig_0103', 'orig_0104', 'orig_0105', 'orig_0106']},
+        ]);
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('hint-wrap-4')), findsOneWidget);
+    for (final c in ['orig_0103', 'orig_0104', 'orig_0105', 'orig_0106']) {
+      final r = tester.getRect(find.byKey(Key('hint-$c')));
+      expect(r.left, greaterThanOrEqualTo(0));
+    }
+    expect(tester.getRect(find.byKey(const Key('hint-orig_0105'))).top,
+        greaterThan(tester.getRect(find.byKey(const Key('hint-orig_0103'))).top));
+  });
 }
