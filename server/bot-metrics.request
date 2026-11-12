@@ -1,2 +1,2 @@
 150
-variants: теория: HintTheory=true | теория .5: HintTheory=true, TheoryWeight=.5 | теория резче: HintTheory=true, TheoryFocus=14
+variants: теория: HintTheory=true | теория .5: HintTheory=true, TheoryWeight=.5 | Убийца прячет: KillerHides=true | прячет и теория: KillerHides=true, HintTheory=true

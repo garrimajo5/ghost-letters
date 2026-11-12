@@ -1122,8 +1122,28 @@ public static partial class BotPlayer
                     .Select(o => (r.Cards.ToList().IndexOf(o.CardId), .5 * mind.TrustMultiplier(o.Author))));
             return offered.Count > 0
                 ? offered.GroupBy(c => c.Column).OrderByDescending(g => g.Sum(c => c.Weight)).ThenBy(_ => rng.Next()).First().Key
-                : rng.Next(r.Cards.Count);
+                : HiddenColumn(i);
         }).ToList();
+        }
+
+        /// <summary>
+        /// Какую карту ряда загадать. Опытный Убийца прячет истину там, где её трудно выделить: у карты есть близкий
+        /// двойник в том же ряду (фламинго и уточка), а письма, похожие на неё, уводят и в другие ряды. Свитер, который
+        /// закрывается любой одеждой, — плохой выбор. Выбор мягкий: софтмакс по «спрятанности», хитрее — с риском.
+        /// </summary>
+        private int HiddenColumn(int row)
+        {
+            var cards = view.Board[row].Cards;
+            if (Classic || !BotTuning.Current.KillerHides) return rng.Next(cards.Count);
+            var others = view.Board.Where((_, r) => r != row).SelectMany(b => b.Cards).ToList();
+            var scores = cards.Select(c =>
+            {
+                var twin = cards.Where(o => o != c).Select(o => Sim(c, o)).DefaultIfEmpty(0).Max();
+                var decoy = others.Select(o => Sim(c, o)).DefaultIfEmpty(0).Max();
+                return twin + .5 * decoy;
+            }).ToList();
+            var t = Math.Max(.03, BotTuning.Current.KillerHideTemp * (1.3 - P.Risk));
+            return scores.Select((x, i) => (i, Key: x / t + Gumbel(1))).MaxBy(x => x.Key).i;
         }
 
         /// <summary>Игрок, на которого чаще указывали Сообщники.</summary>
@@ -1147,7 +1167,7 @@ public static partial class BotPlayer
 
             return view.Phase switch
             {
-                Phase.Night => new TeamSuggest(Columns: view.Board.Select(r => rng.Next(r.Cards.Count)).ToList()),
+                Phase.Night => new TeamSuggest(Columns: view.Board.Select((r, i) => HiddenColumn(i)).ToList()),
                 Phase.Hunt => HuntTarget() is { } t ? new TeamSuggest(Target: t, Guess: HuntGuess(t)) : null,
                 Phase.BlackmailerHunt => RandomOther() is { } b ? new TeamSuggest(Target: b) : null,
                 _ => null,

@@ -151,6 +151,12 @@ public sealed record BotTuning
     /// </summary>
     public double Outshone { get; init; } = .2;
 
+    /// <summary>Убийца загадывает «спрятанные» карты: с двойником в ряду и похожими в других рядах.</summary>
+    public bool KillerHides { get; init; }
+
+    /// <summary>Температура выбора спрятанной карты (меньше — строже к самой спрятанной).</summary>
+    public double KillerHideTemp { get; init; } = .15;
+
     /// <summary>Общая теория: все подсказки вместе, каждая объясняется истиной хоть одного ряда (BotPlayer.Theory).</summary>
     public bool HintTheory { get; init; }
 
@@ -364,6 +370,8 @@ public sealed record BotTuning
                 nameof(ClaimLogic) => t with { ClaimLogic = B() },
                 nameof(ReplyAddsOwn) => t with { ReplyAddsOwn = B() },
                 nameof(HintTheory) => t with { HintTheory = B() },
+                nameof(KillerHides) => t with { KillerHides = B() },
+                nameof(KillerHideTemp) => t with { KillerHideTemp = D() },
                 nameof(TheoryWeight) => t with { TheoryWeight = D() },
                 nameof(TheoryFocus) => t with { TheoryFocus = D() },
                 nameof(TheoryNoise) => t with { TheoryNoise = D() },
