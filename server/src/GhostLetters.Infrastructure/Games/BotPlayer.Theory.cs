@@ -74,7 +74,8 @@ public static partial class BotPlayer
             // d[h][r][i]: насколько подсказка h выделяет карту i в ряду r.
             var d = hintCards.Select(h => Enumerable.Range(0, rows).Select(r =>
             {
-                var sims = view.Board[r].Cards.Select(c => t.TheoryFocus * Sim(h, c)).ToArray();
+                // То же тонкое чтение подсказки, что и без теории (HintWeight: фокус на лучшем совпадении, характер).
+                var sims = view.Board[r].Cards.Select(c => t.TheoryFocus * HintWeight(h, c)).ToArray();
                 Normalize(sims, 1, out var w);
                 return w;
             }).ToArray()).ToArray();
