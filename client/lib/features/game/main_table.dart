@@ -2765,18 +2765,22 @@ class _BurnedButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: () => showBurned(context, screen),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 40, minWidth: 64),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          constraints: const BoxConstraints(minHeight: 40),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.amber.withValues(alpha: .6)),
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.local_fire_department_outlined, size: 22, color: AppColors.amber),
-            const SizedBox(width: 4),
-            Text('$n', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text)),
-          ]),
+          // В узкой лесенке (телефон) кнопка ужимается целиком, а не вылезает за край.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
+              const Icon(Icons.local_fire_department_outlined, size: 22, color: AppColors.amber),
+              const SizedBox(width: 4),
+              Text('$n', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.text)),
+            ]),
+          ),
         ),
       ),
     );
