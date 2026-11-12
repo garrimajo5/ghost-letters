@@ -30,7 +30,7 @@ jobs:
           run() { timeout 90 ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
           q() { run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At'" <<< "$1"; }
           mkdir -p out
-          GAME=$(run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select id from games where status = '\''Finished'\'' order by finished_at desc nulls last limit 1\"'")
+          GAME=$(run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select id from games where status = '\''finished'\'' order by finished_at desc nulls last limit 1\"'")
           echo "game=$GAME"
           run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select row_to_json(g) from games g where id = '\''$GAME'\''\"'" > out/game.json
           run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select json_agg(m order by m.created_at) from chat_messages m where game_id = '\''$GAME'\''\"'" > out/chat.json
