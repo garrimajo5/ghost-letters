@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diag:
@@ -28,6 +28,15 @@ jobs:
           ssh-keyscan -T 15 -H "$HOST" >> ~/.ssh/known_hosts
           note() { tail -c 3800 <<< "$2" | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g' | sed "s/^/::warning title=$1::/"; }
           run() { timeout 90 ssh -i ~/.ssh/deploy "$SSH_USER@$HOST" "cd $APP_DIR && $1" 2>&1 || true; }
+          q() { run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At'" <<< "$1"; }
+          mkdir -p out
+          GAME=$(run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select id from games where status = '\''Finished'\'' order by finished_at desc nulls last limit 1\"'")
+          echo "game=$GAME"
+          run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select row_to_json(g) from games g where id = '\''$GAME'\''\"'" > out/game.json
+          run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select json_agg(m order by m.created_at) from chat_messages m where game_id = '\''$GAME'\''\"'" > out/chat.json
+          run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select json_agg(json_build_object('\''seq'\'',seq,'\''type'\'',type,'\''payload'\'',payload,'\''at'\'',created_at) order by seq) from game_events where game_id = '\''$GAME'\''\"'" > out/events.json
+          run "docker compose -f docker-compose.prod.yml exec -T postgres sh -c 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" -At -c \"select id, status, started_at, finished_at from games order by started_at desc limit 5\"'" > out/recent.txt
+          wc -c out/*
           note "state" "$(run "df -h / | tail -1; docker compose -f docker-compose.prod.yml ps --format '{{.Service}} {{.Status}}'; ls -laS /var/lib/docker/containers/*/*-json.log | head -3 | awk '{print \$5}'")"
           note "health" "$(run "docker compose -f docker-compose.prod.yml exec -T caddy wget -qO- http://api:8080/health 2>&1 | head -c 200")"
           note "postgres" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --tail 8 postgres")"
@@ -36,3 +45,10 @@ jobs:
           note "apk-caddy" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 72h caddy 2>&1 | grep -i 'ghost-letters.apk' | tail -10")"
           note "slow-moves" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 48h api | grep -E 'Медленный ход|Slow' | tail -20")"
           note "api-errors" "$(run "docker compose -f docker-compose.prod.yml logs --no-color --since 30m api | grep -iE -A3 'fail|exception' | grep -viE 'password|token|api-key|secret' | tail -30")"
+
+      - name: Push dump
+        run: |
+          cd out
+          git init -q && git checkout -q -b diag-out/game
+          git -c user.name=diag -c user.email=diag@localhost add . && git -c user.name=diag -c user.email=diag@localhost commit -qm "Партия для бенчмарка"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" diag-out/game
