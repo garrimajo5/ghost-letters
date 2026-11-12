@@ -392,7 +392,11 @@ public static partial class BotPlayer
             {
                 var row = Enumerable.Range(0, view.Board.Count).OrderBy(r => TruthMargin(r) + Noise()).First();
                 var real = Card(row, lieTruth[row]);
-                var cover = me.Hand.Where(h => !view.Board.Any(b => b.Cards.Contains(h))).OrderByDescending(h => Sim(h, real)).FirstOrDefault();
+                // Карту, которую уже кто-то (и я сам) называл своим письмом, второй раз не называю: одно письмо дважды не кидают —
+                // повтор сразу выдаёт ложь.
+                var claimed = (mind?.ClaimList ?? []).Select(c => c.Card).ToHashSet();
+                var cover = me.Hand.Where(h => !view.Board.Any(b => b.Cards.Contains(h)) && !claimed.Contains(h))
+                    .OrderByDescending(h => Sim(h, real)).FirstOrDefault();
                 if (cover is not null && Sim(cover, real) > .1)
                 {
                     claimCard = cover;

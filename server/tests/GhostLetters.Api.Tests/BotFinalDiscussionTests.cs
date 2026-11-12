@@ -310,6 +310,8 @@ public sealed class BotFinalDiscussionTests
     [InlineData("Какие улики связываешь с МЕСТОМ и МОТИВОМ?")]
     public void ExplicitMultipleRowsGetOneAnswerWithReasonsAndOnlyRelevantCards(string text)
     {
+        // Проверяет чтение подсказок по отдельности — без общей теории.
+        using var noTheory = BotTuning.Use(BotTuning.Default with { HintTheory = false });
         var view = View with { Board = [.. View.Board, new(Category.Secret, ["dog", "tulip"])] };
         var now = DateTimeOffset.UtcNow;
         List<DiscussionLine> messages = [new(Me, "Версия", [], now),

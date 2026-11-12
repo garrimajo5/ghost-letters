@@ -100,6 +100,8 @@ public sealed class BotStrictnessTests
     [Fact]
     public void ReadingHints_StrictLooksOnlyAtTheClosestCard()
     {
+        // Проверяет чтение подсказок по отдельности — без общей теории.
+        using var noTheory = BotTuning.Use(BotTuning.Default with { HintTheory = false });
         // Открыта монета. Строгий считает, что она про кольцо, а кошелёк почти не при чём; широкий не исключает кошелёк.
         var hints = new[] { new HintGroupView(1, ["coin"]) };
         var finale = new FinaleView(new VoteStageView(0, VoteStageKind.Row, 0, 1, [0, 1], []), 3, null, [], [], [], null, null, null, [], []);
@@ -190,6 +192,8 @@ public sealed class BotStrictnessTests
     [Fact]
     public void EqualSimilarity_StrictReaderAndGhostAgreeOnTheOneCheckedCard()
     {
+        // Проверяет чтение подсказок по отдельности — без общей теории.
+        using var noTheory = BotTuning.Use(BotTuning.Default with { HintTheory = false });
         var tags = new CardTags(new Dictionary<string, HashSet<string>>
         {
             ["coin"] = ["coin", "money", "silver"],

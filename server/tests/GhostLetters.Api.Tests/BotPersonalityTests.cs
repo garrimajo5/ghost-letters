@@ -221,6 +221,8 @@ public sealed class BotPersonalityTests
     [Fact]
     public void Journal_ExplainsEvidenceAndSuspicion_ClueByClue()
     {
+        // Проверяет чтение подсказок по отдельности — без общей теории.
+        using var noTheory = BotTuning.Use(BotTuning.Default with { HintTheory = false });
         // Боты 4.0, шаг 1: журнал улик даёт ровно то же, что прежние Evidence и счёт подозрения, — и с причинами.
         var mind = Mind(new BotPersonality { Risk = .5, Memory = 0 }) with { Claims = [new(Bob, "sword", 1)] };
         var view = View(Phase.Discussion, [], Role.Detective, hints: [new HintGroupView(1, ["sword"])],

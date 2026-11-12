@@ -454,11 +454,16 @@ public static partial class BotPlayer
         /// Два игрока назвали своим одно письмо — один из них точно врёт: подозрение обоим. Если назвали моё письмо —
         /// врёт он наверняка.
         /// </summary>
+        private bool RepeatedClaim(Guid id) => !Classic && mind is not null && mind.ClaimList.Where(c => c.Author == id)
+            .GroupBy(c => c.Card).Any(g => g.Select(c => c.Round).Distinct().Count() > 1);
+
         private double ClaimConflict(Guid id)
         {
             if (Classic || mind is null) return 0;
             var theirs = mind.ClaimList.Where(c => c.Author == id).ToList();
             if (theirs.Any(c => me.Letters.Any(l => l.CardId == c.Card && l.Round == c.Round))) return 3;
+            // Одну и ту же карту назвал своим письмом в разных раундах — так не бывает: брошенное письмо в руку не возвращается.
+            if (RepeatedClaim(id)) return 3;
             return theirs.Any(c => mind.ClaimList.Any(o => o.Card == c.Card && o.Author != id)) ? 1.2 : 0;
         }
 
@@ -703,6 +708,14 @@ public static partial class BotPlayer
             {
                 var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
                 value += BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
+            }
+            // Пока строится общая теория, нужны улики без неё — не запоминаем.
+            if (_inTheory) return value;
+            // Общая теория: все подсказки вместе, каждая должна объясняться истиной хоть одного ряда (BotPlayer.Theory).
+            if (TheoryOn && Theory() is { } theory)
+            {
+                var shift = Math.Log(Math.Max(1e-4, theory.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, theory.Before.GetValueOrDefault(card, 1)));
+                value += BotTuning.Current.TheoryWeight * Math.Clamp(shift, -6, 4) / Beta;
             }
             return _evidence[card] = value;
         }
@@ -1109,8 +1122,28 @@ public static partial class BotPlayer
                     .Select(o => (r.Cards.ToList().IndexOf(o.CardId), .5 * mind.TrustMultiplier(o.Author))));
             return offered.Count > 0
                 ? offered.GroupBy(c => c.Column).OrderByDescending(g => g.Sum(c => c.Weight)).ThenBy(_ => rng.Next()).First().Key
-                : rng.Next(r.Cards.Count);
+                : HiddenColumn(i);
         }).ToList();
+        }
+
+        /// <summary>
+        /// Какую карту ряда загадать. Опытный Убийца прячет истину там, где её трудно выделить: у карты есть близкий
+        /// двойник в том же ряду (фламинго и уточка), а письма, похожие на неё, уводят и в другие ряды. Свитер, который
+        /// закрывается любой одеждой, — плохой выбор. Выбор мягкий: софтмакс по «спрятанности», хитрее — с риском.
+        /// </summary>
+        private int HiddenColumn(int row)
+        {
+            var cards = view.Board[row].Cards;
+            if (Classic || !BotTuning.Current.KillerHides) return rng.Next(cards.Count);
+            var others = view.Board.Where((_, r) => r != row).SelectMany(b => b.Cards).ToList();
+            var scores = cards.Select(c =>
+            {
+                var twin = cards.Where(o => o != c).Select(o => Sim(c, o)).DefaultIfEmpty(0).Max();
+                var decoy = others.Select(o => Sim(c, o)).DefaultIfEmpty(0).Max();
+                return twin + .5 * decoy;
+            }).ToList();
+            var t = Math.Max(.03, BotTuning.Current.KillerHideTemp * (1.3 - P.Risk));
+            return scores.Select((x, i) => (i, Key: x / t + Gumbel(1))).MaxBy(x => x.Key).i;
         }
 
         /// <summary>Игрок, на которого чаще указывали Сообщники.</summary>
@@ -1134,7 +1167,7 @@ public static partial class BotPlayer
 
             return view.Phase switch
             {
-                Phase.Night => new TeamSuggest(Columns: view.Board.Select(r => rng.Next(r.Cards.Count)).ToList()),
+                Phase.Night => new TeamSuggest(Columns: view.Board.Select((r, i) => HiddenColumn(i)).ToList()),
                 Phase.Hunt => HuntTarget() is { } t ? new TeamSuggest(Target: t, Guess: HuntGuess(t)) : null,
                 Phase.BlackmailerHunt => RandomOther() is { } b ? new TeamSuggest(Target: b) : null,
                 _ => null,
