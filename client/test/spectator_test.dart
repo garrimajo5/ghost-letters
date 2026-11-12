@@ -77,8 +77,7 @@ void main() {
       await tester.tap(find.text('Весь разговор'));
       await tester.pumpAndSettle();
     } else {
-      // Зритель видит тот же новый стол, что игроки.
-      expect(find.byKey(const Key('main-board')), findsOneWidget);
+      expect(find.byKey(const Key('chat-docked')), findsOneWidget);
     }
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Команда Убийцы'), findsNothing);
