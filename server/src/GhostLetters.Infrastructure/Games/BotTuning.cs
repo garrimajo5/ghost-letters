@@ -158,7 +158,7 @@ public sealed record BotTuning
     public double KillerHideTemp { get; init; } = .15;
 
     /// <summary>Общая теория: все подсказки вместе, каждая объясняется истиной хоть одного ряда (BotPlayer.Theory).</summary>
-    public bool HintTheory { get; init; }
+    public bool HintTheory { get; init; } = true;
 
     /// <summary>Вес общей теории в уликах о картах (1 — убеждение о ряде совпадает с теорией).</summary>
     public double TheoryWeight { get; init; } = 1;
