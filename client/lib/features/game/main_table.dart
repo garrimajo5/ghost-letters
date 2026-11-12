@@ -356,6 +356,11 @@ class _TopBar extends StatelessWidget {
           icon: const Icon(Icons.menu, color: AppColors.muted),
           onSelected: (value) async {
             switch (value) {
+              case 'leave-viewing':
+                await runAction(context, () async {
+                  await screen.ref.read(apiProvider).leaveLobby(screen.lobbyId!);
+                  if (context.mounted) context.go('/');
+                });
               case 'home':
                 context.go('/');
               case 'audio':
@@ -381,6 +386,8 @@ class _TopBar extends StatelessWidget {
             }
           },
           itemBuilder: (_) => [
+            if (v.me == null && screen.lobbyId != null)
+              const PopupMenuItem(value: 'leave-viewing', key: Key('menu-leave-viewing'), child: Text('Завершить просмотр')),
             const PopupMenuItem(value: 'audio', child: Text('Звук и музыка')),
             if (screen.isHost) const PopupMenuItem(value: 'settings', child: Text('Раунды, темп и таймеры')),
             if (v.board.isNotEmpty) const PopupMenuItem(value: 'zoom', child: Text('Стол крупно')),
@@ -414,7 +421,9 @@ class _TopBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(99),
             ),
             child: Text(
-              mine ? 'Ваш ход · ${myTurnPhase(v)}' : (v.phase == 'Night' ? nightWaiting : T.shortPhase(v.phase)),
+              v.me == null
+                  ? 'Режим зрителя'
+                  : mine ? 'Ваш ход · ${myTurnPhase(v)}' : (v.phase == 'Night' ? nightWaiting : T.shortPhase(v.phase)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 12, color: mine && !killerNight ? AppColors.onAmber : AppColors.text),
