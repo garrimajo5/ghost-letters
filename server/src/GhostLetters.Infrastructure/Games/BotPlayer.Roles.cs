@@ -139,6 +139,7 @@ public static partial class BotPlayer
             var reasons = new List<(double Weight, string Text)>
             {
                 (BotTuning.Current.LieDetect * LiedChecks(id), "отверг карту, на которую потом указала подсказка"),
+                (RepeatedClaim(id) ? 3.1 : 0, "дважды назвал своим одно и то же письмо — брошенное письмо в руку не возвращается"),
                 (ClaimConflict(id), "назвал своим письмо, которое было не его"),
                 (.6 * Useless(id), "проверяет уже ясные ряды — пользы от него мало"),
                 ((0.5 + P.Strictness) * ChatContrarian(id), "его версия хуже объясняет открытые подсказки, чем соседние карты"),

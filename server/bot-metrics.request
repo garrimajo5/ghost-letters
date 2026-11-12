@@ -1,0 +1,2 @@
+150
+variants: теория: HintTheory=true | теория .5: HintTheory=true, TheoryWeight=.5 | теория резче: HintTheory=true, TheoryFocus=14

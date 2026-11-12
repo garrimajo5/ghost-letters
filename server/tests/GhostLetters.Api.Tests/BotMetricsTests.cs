@@ -246,6 +246,19 @@ public sealed class BotMetricsTests
             md.AppendLine();
         }
 
+        // Бенчмарк по живой партии с человеком-Призраком: сколько рядов мирные боты читают верно в конце каждого раунда.
+        md.AppendLine("## Живая партия 12.11 (человек — Призрак)").AppendLine();
+        md.AppendLine("Мирные боты той партии с её чатом; угадано рядов (сумма по ботам) после раунда 1…4.").AppendLine();
+        md.AppendLine("| Вариант | р.1 | р.2 | р.3 | р.4 | что считают истиной в конце |").AppendLine("|---|---|---|---|---|---|");
+        foreach (var (name, tuning) in variants)
+        {
+            using var _ = BotTuning.Use(tuning);
+            var fx = LiveGameBenchmarkTests.Load("game-2026-11-12.json");
+            var cells = Enumerable.Range(1, 4).Select(r => LiveGameBenchmarkTests.Score(fx, tags, r)).ToList();
+            md.AppendLine($"| {name} | {string.Join(" | ", cells.Select(c => $"{c.Correct}/{c.Total}"))} | {string.Join("; ", cells[^1].Lines)} |");
+        }
+        md.AppendLine();
+
         md.AppendLine($"Погрешность долей ±{Math.Round(100 / Math.Sqrt(games))} п.п. на долю 50 % (на партию); варианты сравниваются на тех же seed.");
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output))!);
         File.WriteAllText(output, md.ToString());

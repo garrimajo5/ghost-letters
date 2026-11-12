@@ -454,11 +454,16 @@ public static partial class BotPlayer
         /// Два игрока назвали своим одно письмо — один из них точно врёт: подозрение обоим. Если назвали моё письмо —
         /// врёт он наверняка.
         /// </summary>
+        private bool RepeatedClaim(Guid id) => !Classic && mind is not null && mind.ClaimList.Where(c => c.Author == id)
+            .GroupBy(c => c.Card).Any(g => g.Select(c => c.Round).Distinct().Count() > 1);
+
         private double ClaimConflict(Guid id)
         {
             if (Classic || mind is null) return 0;
             var theirs = mind.ClaimList.Where(c => c.Author == id).ToList();
             if (theirs.Any(c => me.Letters.Any(l => l.CardId == c.Card && l.Round == c.Round))) return 3;
+            // Одну и ту же карту назвал своим письмом в разных раундах — так не бывает: брошенное письмо в руку не возвращается.
+            if (RepeatedClaim(id)) return 3;
             return theirs.Any(c => mind.ClaimList.Any(o => o.Card == c.Card && o.Author != id)) ? 1.2 : 0;
         }
 
@@ -703,6 +708,14 @@ public static partial class BotPlayer
             {
                 var shift = Math.Log(Math.Max(1e-4, logic.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, logic.Prior.GetValueOrDefault(card, 1)));
                 value += BotTuning.Current.ClaimLogicWeight * Math.Clamp(shift, -6, 3) / Beta;
+            }
+            // Пока строится общая теория, нужны улики без неё — не запоминаем.
+            if (_inTheory) return value;
+            // Общая теория: все подсказки вместе, каждая должна объясняться истиной хоть одного ряда (BotPlayer.Theory).
+            if (TheoryOn && Theory() is { } theory)
+            {
+                var shift = Math.Log(Math.Max(1e-4, theory.Truth.GetValueOrDefault(card)) / Math.Max(1e-4, theory.Before.GetValueOrDefault(card, 1)));
+                value += BotTuning.Current.TheoryWeight * Math.Clamp(shift, -6, 4) / Beta;
             }
             return _evidence[card] = value;
         }

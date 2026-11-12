@@ -151,6 +151,18 @@ public sealed record BotTuning
     /// </summary>
     public double Outshone { get; init; } = .2;
 
+    /// <summary>Общая теория: все подсказки вместе, каждая объясняется истиной хоть одного ряда (BotPlayer.Theory).</summary>
+    public bool HintTheory { get; init; }
+
+    /// <summary>Вес общей теории в уликах о картах (1 — убеждение о ряде совпадает с теорией).</summary>
+    public double TheoryWeight { get; init; } = 1;
+
+    /// <summary>Насколько резко подсказка выделяет похожую карту ряда в теории.</summary>
+    public double TheoryFocus { get; init; } = 8;
+
+    /// <summary>Доля подсказок, которые Призрак открыл «ни к чему» (ошибка, лучше не нашлось).</summary>
+    public double TheoryNoise { get; init; } = .02;
+
     /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
     public bool ReplyAddsOwn { get; init; } = true;
 
@@ -351,6 +363,10 @@ public sealed record BotTuning
                 nameof(OthersVanished) => t with { OthersVanished = D() },
                 nameof(ClaimLogic) => t with { ClaimLogic = B() },
                 nameof(ReplyAddsOwn) => t with { ReplyAddsOwn = B() },
+                nameof(HintTheory) => t with { HintTheory = B() },
+                nameof(TheoryWeight) => t with { TheoryWeight = D() },
+                nameof(TheoryFocus) => t with { TheoryFocus = D() },
+                nameof(TheoryNoise) => t with { TheoryNoise = D() },
                 nameof(ReplyAddsOwnBlack) => t with { ReplyAddsOwnBlack = B() },
                 nameof(GhostError) => t with { GhostError = D() },
                 nameof(LiarCut) => t with { LiarCut = D() },
