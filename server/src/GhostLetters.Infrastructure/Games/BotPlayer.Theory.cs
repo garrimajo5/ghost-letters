@@ -29,8 +29,8 @@ public static partial class BotPlayer
         private HintTheory? _theory;
         private bool _inTheory;
 
-        // Чёрным теория ни к чему: истину они знают.
-        private bool TheoryOn => BotTuning.Current.HintTheory && !Classic && !KillerTeam && view.Hints.Any(h => h.Cards.Count > 0);
+        // Чёрные тоже читают стол теорией: так они вернее видят, во что верят мирные (и куда их уводить).
+        private bool TheoryOn => BotTuning.Current.HintTheory && !Classic && view.Hints.Any(h => h.Cards.Count > 0);
 
         /// <summary>
         /// Боты 4.0: общая теория. Человек не читает подсказку для каждого ряда отдельно: он ищет такую раскладку
@@ -49,9 +49,9 @@ public static partial class BotPlayer
             if (_theory is not null) return _theory;
             if (!TheoryOn || _inTheory) return null;
             // Теория меняется только с новой подсказкой, письмом или репликой: решения одного хода её не пересчитывают.
-            // Ключ — то, от чего теория зависит: подсказки, мои письма и чужие проверки (не каждая реплика).
+            // Ключ — то, от чего теория зависит: подсказки, мои письма, мнения и заявления стола.
             var key = (view.GameId, me.Id, view.Round, view.Hints.Sum(h => h.Cards.Count), me.Letters.Count(l => l.Revealed is not null),
-                mind?.Opinions.Count(o => o.IsCheck) ?? 0, BotTuning.Current.GetHashCode() ^ P.GetHashCode());
+                mind?.Opinions.Count ?? 0, (mind?.ClaimList.Count ?? 0) * 31 + (BotTuning.Current.GetHashCode() ^ P.GetHashCode()));
             lock (TheoryCache)
                 if (TheoryCache.TryGetValue(key, out var cached)) return _theory = cached;
             _inTheory = true;
