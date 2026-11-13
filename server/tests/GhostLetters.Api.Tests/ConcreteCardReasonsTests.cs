@@ -9,6 +9,10 @@ public sealed class ConcreteCardReasonsTests
     [InlineData("sound", "звук")]
     [InlineData("dominant-red", "красный")]
     [InlineData("shape-round", "круглая")]
+    [InlineData("swing", "махать")]
+    [InlineData("liquid", "жидкость")]
+    [InlineData("shape-container", "ёмкость")]
+    [InlineData("hold-in-hand", "руке")]
     public void NamesTheActualSharedFeature(string tag, string expected)
     {
         var tags = new CardTags(new Dictionary<string, HashSet<string>>
