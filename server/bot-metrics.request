@@ -1,0 +1,2 @@
+150
+variants: прячет: KillerHides=true | своё у чёрных: ReplyAddsOwnBlack=true | прячет и своё: KillerHides=true, ReplyAddsOwnBlack=true
