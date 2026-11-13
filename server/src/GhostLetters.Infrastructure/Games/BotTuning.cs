@@ -151,8 +151,10 @@ public sealed record BotTuning
     /// </summary>
     public double Outshone { get; init; } = .2;
 
-    /// <summary>Убийца загадывает «спрятанные» карты: с двойником в ряду и похожими в других рядах.</summary>
-    public bool KillerHides { get; init; }
+    /// <summary>Убийца загадывает «спрятанные» карты: с двойником в ряду и похожими в других рядах.
+    /// Серия на новых тегах (Озон, 150; 5/6/8/10): выкл. — 47/57/53/53 %, вкл. — 40/52/41/51 %, вкл. вместе
+    /// с <see cref="ReplyAddsOwnBlack"/> — 44/53/47/52 % побед детективов (включено вместе).</summary>
+    public bool KillerHides { get; init; } = true;
 
     /// <summary>Температура выбора спрятанной карты (меньше — строже к самой спрятанной).</summary>
     public double KillerHideTemp { get; init; } = .15;
@@ -175,8 +177,9 @@ public sealed record BotTuning
     /// <summary>
     /// Чёрные тоже добавляют своё (ложную карту) — иначе только мирные. Серии (Озон, 150): все — 36/42/41/31 %,
     /// только мирные — 37/42/43/33 %, без добавки — 42/41/37/36 % побед детективов.
+    /// На новых тегах (с общей теорией): только мирные — 47/57/53/53 %, все — 49/55/48/55 %, все и Убийца прячет — 44/53/47/52 %.
     /// </summary>
-    public bool ReplyAddsOwnBlack { get; init; }
+    public bool ReplyAddsOwnBlack { get; init; } = true;
 
     /// <summary>Логика заявлений: перебор «кто чёрный» и вывод о картах и игроках из «проверял — исчезло».</summary>
     public bool ClaimLogic { get; init; } = true;
