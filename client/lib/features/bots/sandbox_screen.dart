@@ -4,6 +4,7 @@ import '../../core/api.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../../widgets/common.dart';
+import 'bot_lab_screen.dart';
 
 const sandboxScenarios = {
   'full-game': 'Полная партия',
@@ -151,6 +152,11 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(title: const Text('ПЕСОЧНИЦА БОТОВ'), actions: [
+        IconButton(
+            key: const Key('sandbox-lab'),
+            tooltip: 'Лаборатория мыслей: свои подсказки — что думают боты',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const BotLabScreen())),
+            icon: const Icon(Icons.psychology_outlined)),
         IconButton(
             tooltip: 'Обновить прогоны',
             onPressed: _busy ? null : _reload,

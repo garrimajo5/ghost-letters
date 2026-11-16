@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<GameRecorder>();
         services.AddScoped<BotService>();
         services.AddScoped<BotSandboxService>();
+        services.AddScoped<BotLabService>();
         services.AddSingleton<SandboxGate>();
         services.AddScoped<Bots.BotAdminService>();
         services.AddScoped<Bots.BotRelationshipService>();
