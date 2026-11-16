@@ -63,10 +63,17 @@ public static partial class BotPlayer
             // Ключ — то, от чего теория зависит: подсказки, мои письма, мнения и заявления стола.
             var key = (view.GameId, me.Id, view.Round, view.Hints.Sum(h => h.Cards.Count), me.Letters.Count(l => l.Revealed is not null),
                 mind?.Opinions.Count ?? 0, (mind?.ClaimList.Count ?? 0) * 31 + (BotTuning.Current.GetHashCode() ^ P.GetHashCode()));
-            lock (TheoryCache)
-                if (TheoryCache.TryGetValue(key, out var cached)) return _theory = cached;
             _inTheory = true;
-            try { _theory = ComputeTheory(); }
+            try
+            {
+                // Логика заявлений и модель игроков считаются внутри теории (без неё). Готовим их до кэша — иначе при
+                // попадании в кэш они посчитались бы позже, уже с теорией, и одна и та же партия шла бы по-разному.
+                if (BotTuning.Current.UnifiedTrust && !Classic && !KillerTeam) BlackOdds();
+                Logic();
+                lock (TheoryCache)
+                    if (TheoryCache.TryGetValue(key, out var cached)) return _theory = cached;
+                _theory = ComputeTheory();
+            }
             finally { _inTheory = false; }
             lock (TheoryCache)
             {
