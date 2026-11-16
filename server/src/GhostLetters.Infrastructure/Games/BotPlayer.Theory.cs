@@ -119,7 +119,7 @@ public static partial class BotPlayer
             {
                 var top = h.Select(row => row.Length == 0 ? 0 : Math.Max(0, row.Max())).ToArray();
                 var all = top.DefaultIfEmpty(0).Max();
-                return top.Select(x => all <= 0 ? 1 : x / all).ToArray();
+                return top.Select(x => all <= 0 ? 1 : t.TheoryRowFloor + (1 - t.TheoryRowFloor) * x / all).ToArray();
             }).ToArray();
             if (t.TheoryVersions && t.TheoryIntent > 0 && mind is not null)
                 for (var j = 0; j < hintCards.Count; j++)

@@ -189,6 +189,12 @@ public sealed record BotTuning
     /// </summary>
     public double TheoryIntent { get; init; } = .4;
 
+    /// <summary>
+    /// Версии: сколько объясняет подсказку ряд, где она ни на что не похожа (0 — не объясняет вовсе, 1 — как равный выбор).
+    /// Ноль делает версии слишком уверенными: точность обвинений падала с 81 % до 66 % (серия 16.11).
+    /// </summary>
+    public double TheoryRowFloor { get; init; } = .5;
+
     /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
     public bool ReplyAddsOwn { get; init; } = true;
 
@@ -400,6 +406,7 @@ public sealed record BotTuning
                 nameof(TheoryMulti) => t with { TheoryMulti = D() },
                 nameof(TheoryCombo) => t with { TheoryCombo = D() },
                 nameof(TheoryIntent) => t with { TheoryIntent = D() },
+                nameof(TheoryRowFloor) => t with { TheoryRowFloor = D() },
                 nameof(ReplyAddsOwnBlack) => t with { ReplyAddsOwnBlack = B() },
                 nameof(GhostError) => t with { GhostError = D() },
                 nameof(LiarCut) => t with { LiarCut = D() },
