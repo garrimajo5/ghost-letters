@@ -118,8 +118,9 @@ void main() {
       await tester.scrollUntilVisible(find.byKey(const Key('lab-bot-Пуаро')), 300, scrollable: find.byType(Scrollable).first);
       await tester.tap(find.byKey(const Key('lab-bot-Пуаро')));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('80 %'));
-      await tester.tap(find.text('80 %'));
+      await tester.ensureVisible(find.byKey(const Key('lab-why-Motive-0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('lab-why-Motive-0')));
       await tester.pumpAndSettle();
       expect(find.text('по смыслу: золото'), findsOneWidget);
       expect(tester.takeException(), isNull);

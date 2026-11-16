@@ -367,6 +367,7 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
               child: Wrap(spacing: 8, runSpacing: 8, children: [
             for (var i = 0; i < cards.length; i++)
               InkWell(
+                  key: Key('lab-why-${row['category']}-$i'),
                   onTap: () => _why(cards[i]),
                   child: SizedBox(
                       width: 64,
@@ -471,13 +472,13 @@ class _CardPickerState extends State<_CardPicker> {
               Expanded(
                   child: cards.isEmpty
                       ? const Center(child: Text('Ничего не нашлось.'))
-                      : GridView.extent(maxCrossAxisExtent: 84, mainAxisSpacing: 6, crossAxisSpacing: 6, childAspectRatio: .78, children: [
+                      : GridView.extent(maxCrossAxisExtent: 84, mainAxisSpacing: 6, crossAxisSpacing: 6, childAspectRatio: .7, children: [
                           for (final c in cards)
                             InkWell(
                                 key: Key('lab-pick-$c'),
                                 onTap: () => Navigator.pop(context, c),
                                 child: Column(children: [
-                                  CardImage(cardId: c, size: 64),
+                                  CardImage(cardId: c, size: 56),
                                   Text(widget.name(c), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10)),
                                 ])),
                         ])),
