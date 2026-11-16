@@ -123,7 +123,7 @@ public static partial class BotPlayer
                     foreach (var (card, trust) in claims)
                     {
                         var r = Enumerable.Range(0, rows).First(x => view.Board[x].Cards.Contains(card));
-                        var i = view.Board[r].Cards.IndexOf(card);
+                        var i = view.Board[r].Cards.ToList().IndexOf(card);
                         var w = Math.Clamp(t.TheoryIntent * trust / claims.Count, 0, .9);
                         if (w <= 0) continue;
                         for (var k = 0; k < sizes[r]; k++) d[j][r][k] = (1 - w) * d[j][r][k] + (k == i ? w : 0);
