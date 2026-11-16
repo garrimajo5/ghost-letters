@@ -51,6 +51,22 @@ public sealed class TableModel
     public static TableModel Uniform(IReadOnlyList<IReadOnlyList<string>> rows, Func<string, string, double> sim, double focus = 8) =>
         new(rows, rows.Select(r => Enumerable.Repeat(1.0 / Math.Max(1, r.Count), r.Count).ToArray()).ToArray(), sim, focus);
 
+    /// <summary>
+    /// Стол сказал своё: <paramref name="votes"/>[ряд][столбец] — доля мирных голосов за карту (0…1). Модель
+    /// сдвигается к тому, во что стол уже верит: p ∝ p · e^(strength · голоса).
+    /// </summary>
+    public TableModel WithVoices(double[][] votes, double strength)
+    {
+        if (strength <= 0) return this;
+        var p = _p.Select((row, r) =>
+        {
+            var w = row.Select((x, c) => x * Math.Exp(strength * (r < votes.Length && c < votes[r].Length ? votes[r][c] : 0))).ToArray();
+            var sum = w.Sum();
+            return sum <= 0 ? row.ToArray() : w.Select(x => x / sum).ToArray();
+        }).ToArray();
+        return new(_rows, p, _sim, _focus, _clarity);
+    }
+
     public IReadOnlyList<IReadOnlyList<string>> Rows => _rows;
 
     /// <summary>Вероятность, что карта (ряд, столбец) истинна.</summary>
