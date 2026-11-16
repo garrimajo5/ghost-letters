@@ -114,12 +114,20 @@ public static partial class BotPlayer
             // Замысел: «кидал корсет на свитер», и корсет открыли — Призрак, вероятно, подтвердил свитер.
             // Доля «ради неё» — по доверию к автору: чёрному о замысле верят мало.
             var intent = new string?[hintCards.Count];
+            // Отношение подсказки к ряду: ряд, где она ни на что не похожа, её не объясняет (не «равный выбор», а ноль).
+            var rel = hw.Select(h =>
+            {
+                var top = h.Select(row => row.Length == 0 ? 0 : Math.Max(0, row.Max())).ToArray();
+                var all = top.DefaultIfEmpty(0).Max();
+                return top.Select(x => all <= 0 ? 1 : x / all).ToArray();
+            }).ToArray();
             if (t.TheoryVersions && t.TheoryIntent > 0 && mind is not null)
                 for (var j = 0; j < hintCards.Count; j++)
                 {
                     var claims = mind.Opinions.Where(o => o.IsCheck && o.SourceCard == hintCards[j] && onBoard.Contains(o.CardId))
                         .GroupBy(o => o.CardId)
-                        .Select(g => (Card: g.Key, Trust: g.Max(o => o.Author == me.Id ? 1 : Trust(o.Author)))).ToList();
+                        // Доверие без теории (история, обвинения, отвергнутые истины): Trust внутри теории зависел бы от порядка кэша.
+                        .Select(g => (Card: g.Key, Trust: g.Max(o => o.Author == me.Id ? 1 : HistoryTrust(o.Author) * DistrustFactor(o.Author)))).ToList();
                     foreach (var (card, trust) in claims)
                     {
                         var r = Enumerable.Range(0, rows).First(x => view.Board[x].Cards.Contains(card));
@@ -127,12 +135,13 @@ public static partial class BotPlayer
                         var w = Math.Clamp(t.TheoryIntent * trust / claims.Count, 0, .9);
                         if (w <= 0) continue;
                         for (var k = 0; k < sizes[r]; k++) d[j][r][k] = (1 - w) * d[j][r][k] + (k == i ? w : 0);
+                        rel[j][r] = Math.Max(rel[j][r], w);
                         intent[j] = card;
                     }
                 }
 
             // «Подъём»: во сколько раз подсказка выделяет карту против равного выбора (1 — ничего не говорит о ряде).
-            var lift = d.Select(h => h.Select((row, r) => row.Select(x => x * sizes[r]).ToArray()).ToArray()).ToArray();
+            var lift = d.Select((h, j) => h.Select((row, r) => row.Select(x => x * sizes[r] * rel[j][r]).ToArray()).ToArray()).ToArray();
 
             // Пары подсказок одного раунда: обе понемногу указывают на одну карту (сапоги + телевизор — беговая дорожка).
             var combo = new double[hintCards.Count][][];
