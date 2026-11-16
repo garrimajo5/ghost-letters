@@ -102,8 +102,11 @@ public sealed class BotWinrateTests
         BotPlayer.Evidence(view, Tags, Mind(opinions: [claim]), "wallet").Should().Be(BotPlayer.Evidence(view, Tags, Mind(), "wallet"));
 
         // Если корону открыли, это не исчезнувшее письмо.
+        // (Замысел «кидал на кольцо» при открытой короне кольцо, наоборот, поднимает — это отдельная механика.)
         var shown = view with { Hints = [new HintGroupView(1, ["crown"])] };
-        BotPlayer.Evidence(shown, Tags, Mind(opinions: [claim]), "ring").Should().Be(BotPlayer.Evidence(shown, Tags, Mind(), "ring"));
+        using (BotTuning.Use(BotTuning.Default with { TheoryIntent = 0 }))
+            BotPlayer.Evidence(shown, Tags, Mind(opinions: [claim]), "ring").Should().Be(BotPlayer.Evidence(shown, Tags, Mind(), "ring"));
+        BotPlayer.Evidence(shown, Tags, Mind(opinions: [claim]), "ring").Should().BeGreaterThanOrEqualTo(BotPlayer.Evidence(shown, Tags, Mind(), "ring"));
         using (BotTuning.Use(BotTuning.Default with { OthersVanished = 0 }))
             BotPlayer.Evidence(view, Tags, Mind(opinions: [claim]), "ring").Should().Be(plain);
     }
