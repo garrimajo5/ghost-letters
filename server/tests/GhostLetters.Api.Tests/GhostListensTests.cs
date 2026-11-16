@@ -44,7 +44,7 @@ public sealed class GhostListensTests
         var votes = GhostCluePolicy.Voices(View(), mind);
         votes[0].Should().Equal(0, 1);
         votes[1].Should().Equal(.5, .5);
-        GhostCluePolicy.Voices(View(Role.Killer), mind)[1].Should().Equal(0, 1, "Убийцу Призрак знает и не слушает");
+        GhostCluePolicy.Voices(View(Role.Killer), mind)[1].Should().Equal(0, 1); // Убийцу Призрак знает и не слушает
     }
 
     [Fact]
