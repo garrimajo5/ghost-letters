@@ -29,7 +29,11 @@ public sealed record LabLink(string Hint, double Similarity, string Why);
 public sealed record LabCard(string Card, double Belief, double Rowwise, double? Theory, double Evidence, IReadOnlyList<LabLink> Links);
 public sealed record LabRowThought(string Category, int Vote, bool? Correct, IReadOnlyList<LabCard> Cards);
 public sealed record LabThought(string Bot, string Color, string About, IReadOnlyList<LabRowThought> Rows,
-    IReadOnlyList<string> TheoryBest, IReadOnlyList<string> Unexplained, int? Correct);
+    IReadOnlyList<string> TheoryBest, IReadOnlyList<string> Unexplained, int? Correct)
+{
+    /// <summary>Как лучшая версия бота читает каждую подсказку (на какую истину, прямо, повтором, парой…).</summary>
+    public IReadOnlyList<HintExplanation> Explanations { get; init; } = [];
+}
 public sealed record LabResult(IReadOnlyList<LabThought> Bots, IReadOnlyDictionary<string, string> Names);
 
 /// <param name="Candidates">Письма, из которых выбирает Призрак (например, кандидаты раунда); пусто — любые карты пула.</param>
@@ -147,7 +151,7 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
                 return new LabRowThought(r.Category.ToString(), votes[i], ok, cards);
             }).ToList();
             thoughts.Add(new LabThought(preset.Name, preset.Color, preset.About, rows, theory?.Best ?? [], theory?.Unexplained ?? [],
-                request.Truth is null ? null : rows.Count(r => r.Correct == true)));
+                request.Truth is null ? null : rows.Count(r => r.Correct == true)) { Explanations = theory?.Explanations ?? [] });
         }
         var names = boardSet.Concat(hintCards).ToDictionary(c => c, c => tags.NameOf(c) ?? c);
         return new LabResult(thoughts, names);

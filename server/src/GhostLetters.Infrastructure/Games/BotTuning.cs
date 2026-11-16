@@ -171,6 +171,24 @@ public sealed record BotTuning
     /// <summary>Доля подсказок, которые Призрак открыл «ни к чему» (ошибка, лучше не нашлось).</summary>
     public double TheoryNoise { get; init; } = .02;
 
+    /// <summary>
+    /// Версии вместо суммы: подсказку объясняет одна истина (лучший ряд), а не все похожие сразу. Две одежды подряд —
+    /// закрепление одной карты, а не «загаданы две одежды». Выкл. — прежнее среднее по рядам.
+    /// </summary>
+    public bool TheoryVersions { get; init; } = true;
+
+    /// <summary>Сколько добавляет подсказке то, что она указывает ещё и на другие истины (редко Призрак кладёт карту «на всё сразу»).</summary>
+    public double TheoryMulti { get; init; } = .15;
+
+    /// <summary>Вес объяснения парой подсказок одного раунда (сапоги + телевизор — беговая дорожка): доля от прямого указания.</summary>
+    public double TheoryCombo { get; init; } = .5;
+
+    /// <summary>
+    /// Замысел письма: игрок сказал, какую карту проверял, и Призрак открыл письмо — вероятно, подтвердил её.
+    /// Доля «открыл ради неё»; умножается на доверие к автору (чёрный может врать о замысле).
+    /// </summary>
+    public double TheoryIntent { get; init; } = .4;
+
     /// <summary>#309: ответ добавляет своё — карту ряда, о котором бот ещё молчал, с доводом из подсказок.</summary>
     public bool ReplyAddsOwn { get; init; } = true;
 
@@ -378,6 +396,10 @@ public sealed record BotTuning
                 nameof(TheoryWeight) => t with { TheoryWeight = D() },
                 nameof(TheoryFocus) => t with { TheoryFocus = D() },
                 nameof(TheoryNoise) => t with { TheoryNoise = D() },
+                nameof(TheoryVersions) => t with { TheoryVersions = B() },
+                nameof(TheoryMulti) => t with { TheoryMulti = D() },
+                nameof(TheoryCombo) => t with { TheoryCombo = D() },
+                nameof(TheoryIntent) => t with { TheoryIntent = D() },
                 nameof(ReplyAddsOwnBlack) => t with { ReplyAddsOwnBlack = B() },
                 nameof(GhostError) => t with { GhostError = D() },
                 nameof(LiarCut) => t with { LiarCut = D() },

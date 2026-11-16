@@ -348,12 +348,49 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
         subtitle: Text(b['about'] as String? ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
         children: [
           for (final row in (b['rows'] as List).cast<Map>()) _thoughtRow(row),
+          if (((b['explanations'] as List?) ?? const []).isNotEmpty) _version(b),
           if (unexplained.isNotEmpty)
             Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text('Не объяснил ни один ряд: ${unexplained.map(_name).join(', ')}',
                     style: const TextStyle(fontSize: 12, color: AppColors.muted))),
         ]);
+  }
+
+  static const _kinds = {
+    'direct': 'указывает на',
+    'confirm': 'повтор — закрепляет',
+    'combo': 'вместе с другой — на',
+    'intent': 'как и говорил отправитель — на',
+    'none': 'ничего не объясняет (ошибка Призрака?)',
+  };
+
+  /// Лучшая версия бота: на какую истину читается каждая подсказка.
+  Widget _version(Map b) {
+    final list = ((b['explanations'] as List?) ?? const []).cast<Map>();
+    return Padding(
+        key: Key('lab-version-${b['bot']}'),
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('ВЕРСИЯ: КАК ЧИТАЕТ ПОДСКАЗКИ', style: TextStyle(fontSize: 11, color: AppColors.muted, letterSpacing: .5)),
+          const SizedBox(height: 4),
+          for (final e in list)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(children: [
+                  SizedBox(width: 22, child: Text('${e['round']}', style: const TextStyle(fontSize: 11, color: AppColors.muted))),
+                  CardImage(cardId: e['hint'] as String, size: 32),
+                  const SizedBox(width: 6),
+                  Expanded(
+                      child: Text(
+                          '${_name(e['hint'] as String)} — ${_kinds[e['kind']] ?? e['kind']}'
+                          '${e['card'] == null ? '' : ' «${_name(e['card'] as String)}»'}'
+                          '${e['with'] == null ? '' : ' (с «${_name(e['with'] as String)}»)'}'
+                          '${e['card'] == null ? '' : ' ×${((e['lift'] as num?) ?? 1).toStringAsFixed(1)}'}',
+                          style: const TextStyle(fontSize: 12))),
+                  if (e['card'] != null) CardImage(cardId: e['card'] as String, size: 32),
+                ])),
+        ]));
   }
 
   Widget _thoughtRow(Map row) {
