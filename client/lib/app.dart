@@ -10,6 +10,7 @@ import 'features/auth/login_screen.dart';
 import 'features/bots/bots_admin_screen.dart';
 import 'features/bots/learned_phrases.dart';
 import 'features/cards/cards_admin_screen.dart';
+import 'features/bots/bot_lab_screen.dart';
 import 'features/bots/sandbox_screen.dart';
 import 'features/game/game_screen.dart';
 import 'features/history/history_screen.dart';
@@ -44,6 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/updates', builder: (_, __) => const UpdatesScreen()),
       GoRoute(path: '/leaderboard', builder: (_, __) => const LeaderboardScreen()),
       GoRoute(path: '/admin/sandbox', builder: (_, __) => const SandboxScreen()),
+      GoRoute(path: '/admin/lab', builder: (_, __) => const BotLabScreen()),
       GoRoute(path: '/admin/bots', builder: (_, __) => const BotsAdminScreen()),
       GoRoute(path: '/admin/phrases', builder: (_, __) => const LearnedPhrasesScreen()),
       GoRoute(path: '/admin/cards', builder: (_, __) => const CardsAdminScreen()),

@@ -268,6 +268,13 @@ class Api {
       await get('/admin/sandbox/$id/steps/$step', query: {if (viewer != null) 'viewer': viewer, 'reveal': reveal}) as Json;
   Future<void> deleteSandbox(String id) async => _call(() => _dio.delete<dynamic>('/admin/sandbox/$id'));
 
+  /// Лаборатория мыслей ботов: имена карт, раздача, мысли характеров, совет Призрака-бота.
+  Future<Map<String, String>> labNames() async => ((await get('/admin/sandbox/lab/names')) as Map).cast<String, String>();
+  Future<Json> labDeal(int players, {int? seed}) async =>
+      await post('/admin/sandbox/lab/deal', {'players': players, if (seed != null) 'seed': seed}) as Json;
+  Future<Json> labThink(Json request) async => await post('/admin/sandbox/lab/think', request) as Json;
+  Future<List<Json>> labSuggest(Json request) async => ((await post('/admin/sandbox/lab/suggest', request)) as List).cast<Json>();
+
   Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
 
   Future<AdminCardPage> adminCards({String query = '', String setCode = '', bool? active, int page = 0}) async =>

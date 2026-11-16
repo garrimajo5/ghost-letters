@@ -39,6 +39,18 @@ class FakeApi extends Api {
   Future<Json> sandboxStep(String id, int step, {String? viewer, bool reveal = false}) async => _record('sandboxStep', [id, step, viewer, reveal], () => sandboxStepResult);
   @override
   Future<void> deleteSandbox(String id) async { _record('deleteSandbox', [id], () => true); }
+  Map<String, String> labNamesResult = {};
+  Json labDealResult = {};
+  Json labThinkResult = {'bots': [], 'names': {}};
+  List<Json> labSuggestResult = [];
+  @override
+  Future<Map<String, String>> labNames() async => _record('labNames', [], () => labNamesResult);
+  @override
+  Future<Json> labDeal(int players, {int? seed}) async => _record('labDeal', [players, seed], () => labDealResult);
+  @override
+  Future<Json> labThink(Json request) async => _record('labThink', [request], () => labThinkResult);
+  @override
+  Future<List<Json>> labSuggest(Json request) async => _record('labSuggest', [request], () => labSuggestResult);
 
   final calls = <Call>[];
   List<AdminCard> cards = [];

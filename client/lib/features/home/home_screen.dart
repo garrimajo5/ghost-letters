@@ -124,6 +124,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       context.push('/history');
                     } else if (v == 'sandbox') {
                       context.push('/admin/sandbox');
+                    } else if (v == 'lab') {
+                      context.push('/admin/lab');
                     } else if (v == 'bots') {
                       context.push('/admin/bots');
                     } else if (v == 'phrases') {
@@ -155,6 +157,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   itemBuilder: (_) => [
                     const PopupMenuItem(value: 'presets', child: Text('Мои пресеты настроек')),
                     if (isAdmin) const PopupMenuItem(value: 'sandbox', child: Text('Песочница ботов')),
+                    if (isAdmin) const PopupMenuItem(value: 'lab', child: Text('Лаборатория мыслей')),
                     if (isAdmin) const PopupMenuItem(value: 'bots', child: Text('Боты (кабинет)')),
                     if (isAdmin) const PopupMenuItem(value: 'phrases', child: Text('Фразы ботов (кабинет)')),
                     if (isAdmin) const PopupMenuItem(value: 'cards', child: Text('Карточки (кабинет)')),
