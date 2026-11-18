@@ -2,6 +2,8 @@ using GhostLetters.Application;
 using GhostLetters.Domain.Game;
 using GhostLetters.Domain.Roles;
 using GhostLetters.Infrastructure.Bots;
+using GhostLetters.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace GhostLetters.Infrastructure.Games;
 
@@ -41,11 +43,15 @@ public sealed record LabSuggestRequest(IReadOnlyList<LabRow> Board, IReadOnlyLis
     IReadOnlyList<string> Candidates, int Round = 1, int Rounds = 4);
 public sealed record LabSuggestion(string Card, bool Pick, double TrueMatch, double FalseMatch, string Reason);
 
+/// <summary>Завершённая партия, перенесённая в лабораторию: поле, истина, подсказки и пул писем как были за столом.</summary>
+public sealed record LabGame(Guid GameId, DateTimeOffset? FinishedAt, int Players, int Rounds, IReadOnlyList<LabRow> Board,
+    IReadOnlyList<int> Truth, IReadOnlyList<LabHint> Hints, IReadOnlyList<string> Pool, IReadOnlyDictionary<string, string> Names);
+
 /// <summary>
 /// Лаборатория мыслей ботов: своя раскладка (вручную или раздачей), подсказки — и что о каждом ряде думает каждый
 /// характер, без партии, речи и озвучки. Решения — те же функции, что за столом (журнал, общая теория, голос).
 /// </summary>
-public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, CardTagStore tagStore)
+public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, CardTagStore tagStore, GhostLettersDbContext db)
 {
     private static readonly Guid Ghost = new("00000000-0000-0000-0000-00000000000a");
     private static readonly Guid Me = new("00000000-0000-0000-0000-00000000000b");
@@ -74,7 +80,7 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
             {
                 Rounds = s.Rounds, Discussion = DiscussionMode.FreeChat, Ranked = false, Columns = s.Columns,
                 UseSecretRow = s.UseSecretRow, Roles = s.Roles,
-            }, deck.Order(StringComparer.Ordinal).ToList(), seed);
+            }, CardCatalog.WithoutDuplicateNames(deck, tags, seed).Order(StringComparer.Ordinal).ToList(), seed);
         }
         catch (GameRuleException e) { throw AppException.Validation(e.Message); }
         var rng = new Random(seed);
@@ -83,6 +89,27 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
         var pool = state.Players.Where(p => p.Role != Role.Ghost).SelectMany(p => p.Hand).Distinct().ToList();
         var names = board.SelectMany(r => r.Cards).Concat(pool).Distinct().ToDictionary(c => c, c => tags.NameOf(c) ?? c);
         return new LabDeal(seed, request.Players, state.TotalRounds, board, truth, pool, names);
+    }
+
+    /// <summary>Перенос завершённой партии в лабораторию: поле, истина, подсказки по раундам и пул писем игроков.</summary>
+    public async Task<LabGame> GameAsync(Guid admin, Guid gameId, CancellationToken ct)
+    {
+        admins.RequireAdmin(admin);
+        var game = await db.Games.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gameId, ct)
+            ?? throw AppException.NotFound("Партия не найдена.");
+        var state = GameStore.Read(game);
+        if (state.Truth is not { } truth || state.Board.Count == 0)
+            throw AppException.Validation("В этой партии нет разгадки — перенести в лабораторию нельзя.");
+        var tags = await tagStore.LoadAsync(ct);
+        var board = state.Board.Select(r => new LabRow(r.Category.ToString(), r.Cards.ToList())).ToList();
+        // Подсказки с реальными номерами раундов (0 — зацепка Призрака до первого раунда).
+        var hints = state.Hints.Where(h => h.Cards.Count > 0).Select(h => new LabHint(h.Round, h.Cards.ToList())).ToList();
+        var pool = state.Letters.Select(l => l.CardId)
+            .Concat(state.Players.Where(p => p.Role != Role.Ghost).SelectMany(p => p.Hand))
+            .Where(c => !state.Board.Any(r => r.Cards.Contains(c))).Distinct().ToList();
+        var names = board.SelectMany(r => r.Cards).Concat(pool).Concat(hints.SelectMany(h => h.Cards)).Distinct()
+            .ToDictionary(c => c, c => tags.NameOf(c) ?? c);
+        return new LabGame(game.Id, game.FinishedAt, state.Players.Count, state.TotalRounds, board, truth.ToList(), hints, pool, names);
     }
 
     public async Task<LabResult> ThinkAsync(Guid admin, LabThinkRequest request, CancellationToken ct)

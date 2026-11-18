@@ -274,6 +274,8 @@ class Api {
       await post('/admin/sandbox/lab/deal', {'players': players, if (seed != null) 'seed': seed}) as Json;
   Future<Json> labThink(Json request) async => await post('/admin/sandbox/lab/think', request) as Json;
   Future<List<Json>> labSuggest(Json request) async => ((await post('/admin/sandbox/lab/suggest', request)) as List).cast<Json>();
+  /// Перенос завершённой партии в лабораторию: поле, истина и подсказки, как были за столом.
+  Future<Json> labGame(String id) async => await get('/admin/sandbox/lab/game/$id') as Json;
 
   Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
 
