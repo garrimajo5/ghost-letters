@@ -74,6 +74,25 @@ public sealed class CardAdminTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SearchFindsCardsByTagMeaningAndDetailLabels()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = admin.Id.ToString();
+        var card = new Card { Id = Guid.NewGuid(), ImageKey = "admin-" + Guid.NewGuid().ToString("N"), SetId = CatalogSeed.OriginalSetId };
+        await _factory.WithDbAsync(async db => { db.Cards.Add(card); return await db.SaveChangesAsync(); });
+        try
+        {
+            await admin.PutAsync($"/api/v1/admin/cards/{card.Id}", new SaveCardRequest("Роза", "mirror", false, 0, Annotation()));
+            // Ни название, ни номер карты не содержат запрос — находим по разметке: тегу, подписи смысла и детали.
+            (await admin.GetAsync("/api/v1/admin/cards?query=memory&setCode=mirror&active=false")).GetProperty("total").GetInt32().Should().Be(1);
+            (await admin.GetAsync($"/api/v1/admin/cards?query={Uri.EscapeDataString("Воспоминание")}&setCode=mirror&active=false")).GetProperty("total").GetInt32().Should().Be(1);
+            (await admin.GetAsync($"/api/v1/admin/cards?query={Uri.EscapeDataString("Лента")}&setCode=mirror&active=false")).GetProperty("total").GetInt32().Should().Be(1);
+            (await admin.GetAsync("/api/v1/admin/cards?query=несуществующее&setCode=mirror&active=false")).GetProperty("total").GetInt32().Should().Be(0);
+        }
+        finally { await _factory.WithDbAsync(db => db.Cards.Where(c => c.Id == card.Id).ExecuteDeleteAsync()); }
+    }
+
+    [Fact]
     public async Task InvalidWeightsKeysAndSetsAreRejectedBeforeUpdating()
     {
         var admin = await TestPlayer.LoginAsync(_factory, "Админ");
