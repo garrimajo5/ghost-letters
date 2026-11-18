@@ -60,7 +60,9 @@ public sealed class BotBalanceTests
         var options = new SandboxOptions(players, null, players == 8 ? new RoleOptions(UseBlackmailer: true) : null, false);
         for (var seed = 1; seed <= 2; seed++)
         {
-            var (report, state) = BotSandboxRunner.Simulate("full-game", seed, Deck, tags, CancellationToken.None, options);
+            // Лимит страхует от зависшей симуляции; 2 минуты — чтобы нагруженная CI-машина не роняла тест.
+            var (report, state) = BotSandboxRunner.Simulate("full-game", seed, Deck, tags, CancellationToken.None, options,
+                TimeSpan.FromMinutes(2));
             report.Status.Should().Be("completed", $"{players} игроков, seed {seed}: {report.Error}");
             state.Result.Should().NotBeNull();
             report.Frames.Should().BeEmpty("серия баланса не хранит снимки шагов");
