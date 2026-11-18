@@ -48,6 +48,24 @@ public sealed class CardTags
     /// <summary>Карты, у которых есть названия для речи.</summary>
     public IReadOnlyList<string> NamedCards => _names.Keys.ToList();
 
+    /// <summary>
+    /// Поиск карт по разметке (кабинет карточек): подстрока в ключе метки, подписи смысла или детали,
+    /// словарной подписи признака (FeatureLabels) или названии карты. Без учёта регистра.
+    /// </summary>
+    public IReadOnlyList<string> SearchByTag(string term)
+    {
+        var t = term.Trim().ToLowerInvariant();
+        if (t.Length == 0) return [];
+        bool Has(string? s) => s?.Contains(t, StringComparison.OrdinalIgnoreCase) == true;
+        bool TagHit(string tag) => tag.Contains(t, StringComparison.Ordinal) || Has(FeatureLabel(tag));
+        return _tags.Keys.Where(card =>
+                Of(card).Any(TagHit)
+                || (_meanings.GetValueOrDefault(card) ?? []).Any(m => TagHit(m.Tag) || Has(m.Label))
+                || (_details.GetValueOrDefault(card) ?? []).Any(d => TagHit(d.Tag) || Has(d.Label))
+                || NamesOf(card).Any(Has))
+            .Order(StringComparer.Ordinal).ToList();
+    }
+
     /// <summary>Основное название карты для речи; нет — null.</summary>
     public string? NameOf(string cardId) => NamesOf(cardId).FirstOrDefault();
 
@@ -165,8 +183,11 @@ public sealed class CardTags
         if (x.Count == 0 || y.Count == 0) return whole;
         var union = x.Keys.Union(y.Keys).Sum(t => Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t)));
         var shared = x.Keys.Intersect(y.Keys).Sum(t => Math.Min(x[t], y[t]));
+        // Слабая деталь — слабая связь: нормировка shared/union стирает масштаб весов, поэтому возвращаем его
+        // через самую заметную общую деталь. Иначе едва видная розочка (вес .05) связывает карты как главный предмет.
+        var strongest = x.Keys.Intersect(y.Keys).Select(t => Math.Min(x[t], y[t])).DefaultIfEmpty(0).Max();
         var focus = Math.Clamp(details, 0, 1);
-        return (1 - focus) * whole + focus * shared / union;
+        return (1 - focus) * whole + focus * (shared / union) * strongest;
     }
 
     /// <summary>Причины из тех же признаков, по которым бот действительно сравнил карты.</summary>
@@ -186,9 +207,9 @@ public sealed class CardTags
             (1, weights.Shape, "по форме: похожий силуэт"),
             (2, weights.Color, "по цвету: выраженный цветовой акцент") })
         {
-            if (common.Any(t => Group(t) == group) && weight > 0 && details < 1)
+            if (common.Any(t => Group(t) == group && !IsMaterial(t)) && weight > 0 && details < 1)
             {
-                var selected = common.Where(t => Group(t) == group)
+                var selected = common.Where(t => Group(t) == group && !IsMaterial(t))
                     .OrderByDescending(t => FeatureLabel(t) is not null ||
                         _meanings.GetValueOrDefault(a)?.Any(m => m.Tag == t && m.Label != t) == true ||
                         _meanings.GetValueOrDefault(b)?.Any(m => m.Tag == t && m.Label != t) == true)
@@ -207,6 +228,16 @@ public sealed class CardTags
                 reasons.Add((weight * (1 - details) * Math.Min(Salience(a, selected, secondaryMeanings), Salience(b, selected, secondaryMeanings)), text));
             }
         }
+        // Материал — отдельная слабая причина: «оба металлические», а не «по смыслу».
+        var sharedMaterial = common.Where(IsMaterial).ToList();
+        if (sharedMaterial.Count > 0 && weights.Material > 0 && details < 1)
+        {
+            var selected = sharedMaterial
+                .OrderByDescending(t => Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings)))
+                .ThenBy(t => t, StringComparer.Ordinal).First();
+            reasons.Add((weights.Material * (1 - details) * Math.Min(Salience(a, selected, secondaryMeanings), Salience(b, selected, secondaryMeanings)),
+                "по материалу: " + (FeatureLabel(selected) ?? selected)));
+        }
         var other = DetailsOf(b);
         foreach (var d in da)
             if (details > 0 && (other.ContainsKey(d.Tag) || vb.Contains(d.Tag)))
@@ -214,9 +245,9 @@ public sealed class CardTags
         foreach (var d in db)
             if (details > 0 && va.Contains(d.Tag))
                 reasons.Add((details * d.Weight, "по деталям: " + d.Label));
-        // Форма — слабая подсказка: человек вспомнит её, только если общего смысла или детали не нашлось.
-        if (reasons.Any(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal)))
-            reasons.RemoveAll(r => r.Text.StartsWith("по форме", StringComparison.Ordinal));
+        // Форма и материал — слабые подсказки: человек вспомнит их, только если общего смысла, цвета или детали не нашлось.
+        if (reasons.Any(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal) && !r.Text.StartsWith("по материалу", StringComparison.Ordinal)))
+            reasons.RemoveAll(r => r.Text.StartsWith("по форме", StringComparison.Ordinal) || r.Text.StartsWith("по материалу", StringComparison.Ordinal));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Score).Take(2).Select(r => r.Text));
     }
@@ -416,6 +447,16 @@ public sealed class CardTags
     private static readonly HashSet<string> Colors =
         ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white", "gray"];
 
+    /// <summary>
+    /// Материал предмета (категория «материал» в vocabulary.md) — слабый признак: размечается по картинке и может
+    /// быть ошибочным. В сходстве считается отдельно от смысла и с малым весом (<see cref="BotTuning.MaterialWeight"/>):
+    /// «оба металлические» не связывает карты так, как общий предмет или тема.
+    /// </summary>
+    private static readonly HashSet<string> Materials =
+        ["bone", "ceramic", "clay", "fabric", "fur", "glass", "leather", "metal", "paper", "plastic", "rubber", "stone", "straw", "wax", "wood", "wool"];
+
+    public static bool IsMaterial(string tag) => Materials.Contains(tag);
+
     public static double Weight(string tag) => tag.StartsWith("shape-", StringComparison.Ordinal) || Colors.Contains(tag) ? 0.5 : 1;
 
     /// <summary>
@@ -431,38 +472,43 @@ public sealed class CardTags
     public string? ReasonChip(string a, string b, (double Meaning, double Shape, double Color) attention, double secondary = .35)
     {
         var w = Contributions(a, b, attention, secondary);
-        var max = Math.Max(w.Meaning, Math.Max(w.Shape, w.Color));
+        var max = Math.Max(Math.Max(w.Meaning, w.Shape), Math.Max(w.Color, w.Material));
         if (max <= .01) return null;
-        return max == w.Meaning ? "предмет" : max == w.Shape ? "форма" : "цвет";
+        return max == w.Meaning ? "предмет" : max == w.Shape ? "форма" : max == w.Color ? "цвет" : "материал";
     }
 
-    private (double Meaning, double Shape, double Color) Contributions(string a, string b,
+    private (double Meaning, double Shape, double Color, double Material) Contributions(string a, string b,
         (double Meaning, double Shape, double Color) attention, double secondary)
     {
-        double Match(int group)
+        double Overlap(IReadOnlyCollection<string> x, IReadOnlyCollection<string> y)
         {
-            var x = Of(a).Where(t => Group(t) == group && (group != 2 || t.StartsWith("dominant-"))).ToHashSet();
-            var y = Of(b).Where(t => Group(t) == group && (group != 2 || t.StartsWith("dominant-"))).ToHashSet();
             var union = x.Union(y).Sum(t => Math.Max(x.Contains(t) ? Salience(a, t, secondary) : 0, y.Contains(t) ? Salience(b, t, secondary) : 0));
             var confidence = Math.Min(x.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
                 y.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
             return union <= 0 ? 0 : confidence * x.Intersect(y).Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))) / union;
         }
+
+        double Match(int group) => Overlap(
+            Of(a).Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"))).ToHashSet(),
+            Of(b).Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"))).ToHashSet());
+
         var meaning = Match(0);
+        var material = Overlap(Of(a).Where(IsMaterial).ToHashSet(), Of(b).Where(IsMaterial).ToHashSet());
         var sum = Math.Max(0, attention.Meaning) + Math.Max(0, attention.Shape) + Math.Max(0, attention.Color);
         var m = sum <= 0 ? .8 : Math.Max(.7, attention.Meaning / sum);
         // A strong semantic match does not need a visual tie-breaker. Unlabelled
         // background colours are never evidence; dominant-* is an explicit annotation.
         var fallback = meaning >= .25 ? .05 : 1 - meaning;
         return (m * meaning, Math.Min(.2, Math.Max(0, attention.Shape)) * fallback * Match(1),
-            Math.Min(.08, Math.Max(0, attention.Color)) * fallback * Match(2));
+            Math.Min(.08, Math.Max(0, attention.Color)) * fallback * Match(2),
+            Math.Max(0, BotTuning.Current.MaterialWeight) * fallback * material);
     }
 
     private double MainSimilarity(string a, string b, (double Meaning, double Shape, double Color) attention, double secondary)
     {
         if (a == b) return 1;
         var score = Contributions(a, b, attention, secondary);
-        return score.Meaning + score.Shape + score.Color;
+        return score.Meaning + score.Shape + score.Color + score.Material;
     }
 
     /// <summary>0 — смысл, 1 — форма (shape-*), 2 — цвет.</summary>

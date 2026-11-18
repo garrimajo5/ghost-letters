@@ -305,6 +305,21 @@ public sealed record BotTuning
     /// <summary>Множитель веса ассоциаций по смыслу (вторичных смыслов карт); 0 — не учитывать.</summary>
     public double AssociationScale { get; init; } = .5;
 
+    /// <summary>
+    /// Вес материала (металл, дерево, стекло…) в сходстве карт: признак слабый и авторазметка может ошибаться.
+    /// Как цвет и форма, материал лишь чуть усиливает смысловую связь и почти не работает сам по себе. 1 — как предмет (старое поведение).
+    /// </summary>
+    public double MaterialWeight { get; init; } = .15;
+
+    /// <summary>
+    /// Исчезнувшее письмо ослабляет все карты, ради которых Призрак открыл бы его (<see cref="GhostCluePolicy.WouldReveal"/>),
+    /// а не только самую похожую: несколько животных на поле вычёркиваются все. false — прежнее «объяснение лучшим совпадением».
+    /// </summary>
+    public bool VanishWide { get; init; } = true;
+
+    /// <summary>С какого сходства считаем, что ради карты Призрак открыл бы письмо (для вычёркивания по исчезнувшему).</summary>
+    public double VanishBar { get; init; } = .15;
+
     /// <summary>Доля подозрения по последней версии игрока (0 — все его мнения за партию одинаково).</summary>
     public double LatestVersionWeight { get; init; } = .8;
 
@@ -425,6 +440,9 @@ public sealed record BotTuning
                 nameof(SpoilerVanish) => t with { SpoilerVanish = D() },
                 nameof(BlackmailerSpoil) => t with { BlackmailerSpoil = D() },
                 nameof(AssociationScale) => t with { AssociationScale = D() },
+                nameof(MaterialWeight) => t with { MaterialWeight = D() },
+                nameof(VanishWide) => t with { VanishWide = B() },
+                nameof(VanishBar) => t with { VanishBar = D() },
                 nameof(KillerFollowWrong) => t with { KillerFollowWrong = B() },
                 nameof(GhostFallback) => t with { GhostFallback = D() },
                 nameof(FirstClueAlways) => t with { FirstClueAlways = B() },

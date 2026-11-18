@@ -71,7 +71,7 @@ public static class BotSandboxRunner
             Columns = custom && options.Columns is { } columns ? columns : GameDefaults.DefaultColumns,
             UseSecretRow = !custom || options.SecretRow,
             Roles = custom ? options.Roles ?? new RoleOptions() : new RoleOptions(KillerEnabled: scenario != "clear-hints")
-        }, deck.Order(StringComparer.Ordinal).ToList(), seed);
+        }, CardCatalog.WithoutDuplicateNames(deck, tags, seed).Order(StringComparer.Ordinal).ToList(), seed);
         var messages = new List<SandboxMessage>();
         var frames = new List<SandboxFrame>();
         var parsedAccusations = new List<Accusation>();

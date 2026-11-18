@@ -61,7 +61,7 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                         controller: _search,
                         maxLength: 80,
                         decoration: InputDecoration(
-                            labelText: 'Название или номер карты',
+                            labelText: 'Название, номер или метка карты',
                             counterText: '',
                             suffixIcon: IconButton(
                                 icon: const Icon(Icons.search),

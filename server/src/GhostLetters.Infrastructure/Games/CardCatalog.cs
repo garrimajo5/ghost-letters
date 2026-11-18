@@ -30,6 +30,19 @@ public sealed class CardCatalog(GhostLettersDbContext db, IConfiguration configu
             .OrderBy(c => c.ImageKey).Select(c => c.ImageKey).ToListAsync(ct);
     }
 
+    /// <summary>
+    /// Колода без повторов основных названий: два «ворона» в одной партии путают стол — в разговоре и заявлениях
+    /// («кидал ворона» — которого?) их не различить. Какая из одноимённых карт играет, решает жребий по сиду,
+    /// так что раздача по тому же сиду воспроизводится. Карты без названия не конфликтуют и остаются все.
+    /// </summary>
+    public static List<string> WithoutDuplicateNames(IReadOnlyList<string> deck, CardTags tags, int seed)
+    {
+        var rng = new Random(seed);
+        var shuffled = deck.OrderBy(_ => rng.Next()).ToList();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        return shuffled.Where(c => tags.NameOf(c)?.Trim() is not { Length: > 0 } name || seen.Add(name)).ToList();
+    }
+
     /// <summary>Заполнить карты при старте сервера. Существующие карты не трогает.</summary>
     public async Task EnsureSeededAsync(CancellationToken ct)
     {

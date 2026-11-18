@@ -110,9 +110,9 @@ public static partial class BotPlayer
                 for (var i = 0; i < cards.Count; i++) prior[cards[i]] = w[i] / sum;
             }
 
-            // Никто ничего не проверял — логике нечего добавить.
+            // Никто ничего не проверял — логике нечего добавить (но повторные «письма» сказать стоит).
             if (claims.Count == 0)
-                return new ClaimLogicResult(prior, prior, unknown.ToDictionary(id => id, id => basis.GetValueOrDefault(id)), []);
+                return new ClaimLogicResult(prior, prior, unknown.ToDictionary(id => id, id => basis.GetValueOrDefault(id)), ClaimDeductions(knownBlack));
 
             var odds = unknown.ToDictionary(id => id, id => Math.Clamp(basis.GetValueOrDefault(id, k / (double)Math.Max(1, unknown.Count)), .02, .98));
             var truth = prior.Keys.ToDictionary(c => c, _ => 0.0);
@@ -159,7 +159,8 @@ public static partial class BotPlayer
             }
             if (subsets.Count == 0) foreach (var card in prior.Keys) truth[card] = prior[card];
 
-            return new ClaimLogicResult(prior, truth, black, Deductions(claims, prior, truth, black, knownBlack, k + knownBlack.Count));
+            return new ClaimLogicResult(prior, truth, black,
+                [.. Deductions(claims, prior, truth, black, knownBlack, k + knownBlack.Count), .. ClaimDeductions(knownBlack)]);
         }
 
         /// <summary>Все наборы из <paramref name="k"/> игроков.</summary>
@@ -214,6 +215,40 @@ public static partial class BotPlayer
                 var text = $"Все карты {RowWord(r)} уже кто-то проверил, а истина среди них есть — так не бывает: либо Призрак ошибся, либо кто-то врёт. " +
                     (who is not null ? $"Скорее врёт {who}." : "Скорее Призрак не понял чьё-то письмо.");
                 result.Add(new Deduction("contradiction", r, null, who is not null ? suspect.Id : null, inRow.Max(c => c.Round), 1, text));
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Выводы из заявлений «кидал эту»: одну и ту же карту игрок назвал своим письмом в разных раундах —
+        /// точно врёт (брошенное письмо в руку не возвращается); одну карту назвали своим письмом двое —
+        /// кто-то из них врёт. Подозрение это уже даёт (<see cref="ClaimConflict"/>), а тут — реплика вслух.
+        /// </summary>
+        private List<Deduction> ClaimDeductions(HashSet<Guid> knownBlack)
+        {
+            var result = new List<Deduction>();
+            if (mind is null) return result;
+            var claims = mind.ClaimList.Where(c => c.Author != me.Id).ToList();
+            string CardLabel(string card) => tags.NameOf(card) ?? CardName(card);
+            foreach (var g in claims.GroupBy(c => (c.Author, c.Card)))
+            {
+                var rounds = g.Select(c => c.Round).Distinct().OrderBy(r => r).ToList();
+                if (rounds.Count < 2 || knownBlack.Contains(g.Key.Author)) continue;
+                var name = CardLabel(g.Key.Card);
+                var who = NameOf(g.Key.Author);
+                var text = who is null
+                    ? $"«{Cap(name)}» кто-то назвал своим письмом дважды — в раундах {rounds[0]} и {rounds[^1]}. Одно письмо дважды не отправишь: врут."
+                    : $"{who}, «{name}» ты уже называл своим письмом в раунде {rounds[0]} — одно письмо дважды не отправишь. Значит, врёшь.";
+                result.Add(new Deduction("repeat", Position(g.Key.Card).Row, g.Key.Card, g.Key.Author, rounds[^1], 3, text));
+            }
+            foreach (var g in claims.GroupBy(c => c.Card))
+            {
+                var authors = g.Select(c => c.Author).Distinct().ToList();
+                if (authors.Count < 2 || authors.All(knownBlack.Contains)) continue;
+                var names = authors.Select(a => NameOf(a) ?? "кто-то ещё").ToList();
+                var both = names.Count == 2 ? $"{names[0]} и {names[1]}" : string.Join(", ", names);
+                var text = $"«{Cap(CardLabel(g.Key))}» назвали своим письмом и {both} — кто-то из них врёт.";
+                result.Add(new Deduction("conflict", Position(g.Key).Row, g.Key, null, g.Max(c => c.Round), 1.2, text));
             }
             return result;
         }

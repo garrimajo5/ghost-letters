@@ -45,7 +45,7 @@ public sealed class CardTagStore(GhostLettersDbContext db, CardTags baseline)
     }
 }
 
-public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService admins, CardTags baseline)
+public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService admins, CardTags baseline, CardTagStore tagStore)
 {
     public async Task<IReadOnlyList<CardSetDto>> PublicSetsAsync(CancellationToken ct)
     {
@@ -63,7 +63,9 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
         if (!string.IsNullOrWhiteSpace(query))
         {
             var term = query.Trim().ToLowerInvariant();
-            rows = rows.Where(x => x.c.ImageKey.ToLower().Contains(term) || (x.c.Title != null && x.c.Title.ToLower().Contains(term)));
+            // Поиск и по разметке: ключ или подпись метки, смысла, детали, название карты (эффективные теги с учётом базы).
+            var byTag = (await tagStore.LoadAsync(ct)).SearchByTag(term).ToHashSet();
+            rows = rows.Where(x => x.c.ImageKey.ToLower().Contains(term) || (x.c.Title != null && x.c.Title.ToLower().Contains(term)) || byTag.Contains(x.c.ImageKey));
         }
         if (!string.IsNullOrEmpty(setCode)) rows = rows.Where(x => x.Code == setCode);
         if (active is not null) rows = rows.Where(x => x.c.IsActive == active);
