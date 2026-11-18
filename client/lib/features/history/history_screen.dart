@@ -91,7 +91,7 @@ class _HistoryCard extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Id партии скопирован — по нему партию можно открыть в лаборатории')));
                   },
-                  child: Text('#${g.gameId.substring(0, 8)}',
+                  child: Text('#${g.gameId.length <= 8 ? g.gameId : g.gameId.substring(0, 8)}',
                       style: const TextStyle(fontSize: 12, color: AppColors.muted, decoration: TextDecoration.underline,
                           decorationStyle: TextDecorationStyle.dotted)),
                 ),
