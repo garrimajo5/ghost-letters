@@ -1318,7 +1318,9 @@ public static partial class BotPlayer
         /// </summary>
         private (string Text, string? Card) LetterClaim()
         {
-            var letter = me.Letters.LastOrDefault(l => l.Round == view.Round) ?? me.Letters.LastOrDefault();
+            // Только письмо этого раунда: старое второй раз своим не называют — повтор сразу выдаёт ложь
+            // (и бесит стол: «ты это уже называл»). Не кидал письмо в этом раунде — о письме молчим.
+            var letter = me.Letters.LastOrDefault(l => l.Round == view.Round);
             if (letter is null)
             {
                 return ("", null);
