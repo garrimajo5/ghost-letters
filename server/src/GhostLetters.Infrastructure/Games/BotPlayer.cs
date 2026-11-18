@@ -287,6 +287,24 @@ public static partial class BotPlayer
 
         private readonly Dictionary<string, double> _hintTops = new();
 
+        /// <summary>
+        /// Штраф карте за исчезнувшее письмо. Обычное чтение «объясняет» письмо лучшим совпадением — но для
+        /// исчезновения верно другое: Призрак открыл бы письмо ради любой карты, с которой оно связано ясно
+        /// (<see cref="GhostCluePolicy.WouldReveal"/>). Кинули животное, на поле несколько животных — под сомнением все.
+        /// </summary>
+        private double VanishWeight(string letter, string card)
+        {
+            var sim = Sim(letter, card);
+            if (Classic || !BotTuning.Current.VanishedFocus) return sim;
+            var read = GhostCluePolicy.Read(sim, HintTop(letter), Focus);
+            if (!BotTuning.Current.VanishWide || sim <= read) return read;
+            return GhostCluePolicy.WouldReveal(sim, TopOtherThan(letter, card)) ? sim : read;
+        }
+
+        /// <summary>Наибольшее сходство письма с картами поля, кроме самой карты (она в этой проверке — гипотетическая истина).</summary>
+        private double TopOtherThan(string letter, string card) =>
+            view.Board.SelectMany(r => r.Cards).Where(c => c != letter && c != card).Select(c => Sim(letter, c)).DefaultIfEmpty(0).Max();
+
         private double Focus => BotTuning.Current.FocusBase + BotTuning.Current.FocusStrict * P.Strictness;
 
         private double HintTop(string hint)
@@ -696,9 +714,9 @@ public static partial class BotPlayer
         {
             if (_evidence.TryGetValue(card, out var score)) return score;
             var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
-            // Исчезнувшее письмо тоже «объясняется» лучшим совпадением: под подозрением прежде всего самая похожая карта.
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
-                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus)) * OutshoneFactor(l.CardId, l.Round, card));
+            // Исчезнувшее письмо «объясняется» лучшим совпадением — но Призрак открыл бы его ради любой карты,
+            // с которой оно связано ясно: вычёркиваем все такие, а не только самую похожую (VanishWeight).
+            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => VanishWeight(l.CardId, card) * OutshoneFactor(l.CardId, l.Round, card));
             var value = hints - NegativeWeight * (vanished + OthersVanished(card));
             // Пока считается модель игроков, логика ещё не готова — не запоминаем промежуточное.
             if (LogicOn && (_computingBlack || _inLogic)) return value;
@@ -737,7 +755,7 @@ public static partial class BotPlayer
                 {
                     var o = g.First();
                     var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : Trust(o.Author);
-                    return trust * GhostCluePolicy.Read(Sim(g.Key, card), HintTop(g.Key), Focus) * OutshoneFactor(g.Key, o.Round, card) * Recall(o.Round, .6);
+                    return trust * VanishWeight(g.Key, card) * OutshoneFactor(g.Key, o.Round, card) * Recall(o.Round, .6);
                 });
         }
 
@@ -1272,8 +1290,10 @@ public static partial class BotPlayer
         /// <summary>
         /// Карты поля, на которые похоже письмо: столько самых похожих, какова ширина бота
         /// (строгий — одна, широкий — до четырёх; без характера — три; без тегов — ни одной).
+        /// Для исчезнувшего письма (<paramref name="wide"/>) — шире: все карты, ради которых Призрак открыл бы
+        /// письмо, даже сверх ширины бота. «Кинули животное — вычёркиваем всех животных, а не самое похожее».
         /// </summary>
-        private List<(int Row, int Column)> Checked(string letter)
+        private List<(int Row, int Column)> Checked(string letter, bool wide = false)
         {
             var scored = Enumerable.Range(0, view.Board.Count)
                 .SelectMany(r => Enumerable.Range(0, view.Board[r].Cards.Count).Select(c => (Row: r, Column: c)))
@@ -1284,8 +1304,10 @@ public static partial class BotPlayer
             // Слабая побочная связь — не проверка: Призрак открыл бы письмо ради сильной, её и вычёркиваем.
             // Строгий отсекает всё, что заметно слабее лучшей связи; широкий — только совсем слабое.
             var cut = Classic ? 0 : scored[0].s * BotTuning.Current.CheckRelative * (.5 + .5 * P.Strictness);
-            return scored.Where(x => x.s >= cut)
-                .Take(Math.Min(MyBreadth, ChatService.MaxCards - 1))
+            var wideEnough = wide && !Classic && BotTuning.Current.VanishWide;
+            return scored.Where(x => x.s >= cut ||
+                    (wideEnough && GhostCluePolicy.WouldReveal(x.s, scored.Where(y => y.x != x.x).Select(y => y.s).DefaultIfEmpty(0).Max())))
+                .Take(Math.Min(wideEnough ? ChatService.MaxCards - 1 : MyBreadth, ChatService.MaxCards - 1))
                 .Select(x => x.x)
                 .ToList();
         }

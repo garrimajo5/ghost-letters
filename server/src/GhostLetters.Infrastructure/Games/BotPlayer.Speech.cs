@@ -327,7 +327,7 @@ public static partial class BotPlayer
                 var version = new List<string>();
                 // Карты, проверенные исчезнувшим письмом, бот покажет красными — в «целиком думаю так» их не зовут.
                 HashSet<(int Row, int Column)> gone = claimCard is not null && claimText.Contains("исчезла", StringComparison.Ordinal)
-                    ? Checked(claimCard).Where(x => OutshoneBy(claimCard, RoundOf(claimCard), Card(x.Row, x.Column)) is null).ToHashSet()
+                    ? Checked(claimCard, wide: true).Where(x => OutshoneBy(claimCard, RoundOf(claimCard), Card(x.Row, x.Column)) is null).ToHashSet()
                     : [];
                 for (var r = 0; r < view.Board.Count; r++)
                 {
@@ -383,8 +383,9 @@ public static partial class BotPlayer
                 return (opinion, only, onlyNotes);
             }
 
-            // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже.
-            var checkedCards = Checked(claimCard);
+            // Письмом проверяют сразу несколько карт поля — те, на которые оно похоже. Исчезнувшее письмо
+            // вычёркивает шире: все карты, ради которых Призрак открыл бы его (несколько животных — все).
+            var checkedCards = Checked(claimCard, wide: claimText.Contains("исчезла", StringComparison.Ordinal));
             // Чёрный, чьё письмо исчезло, может выдать за него другую карту руки — похожую на истину, —
             // чтобы стол счёл истину проверенной и отвергнутой. Проверить это никто, кроме Призрака, не может.
             if (!Classic && KillerTeam && Truth is { } lieTruth && claimText.Contains("исчезла", StringComparison.Ordinal)

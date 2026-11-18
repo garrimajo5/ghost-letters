@@ -225,4 +225,15 @@ public static class GhostCluePolicy
     /// </summary>
     public static double Read(double similarity, double top, double focus = 8) =>
         similarity <= 0 ? 0 : similarity * Math.Exp(-focus * Math.Max(0, top - similarity));
+
+    /// <summary>
+    /// Открыл бы Призрак это письмо, будь карта истиной: связь заметная (не ниже планки) и не сильно уступает
+    /// лучшей альтернативе — иначе письмо увело бы стол к ней, а не к истине. Так читается исчезнувшее письмо:
+    /// раз не открыли — под сомнением все такие карты (несколько животных на поле — все, а не самое похожее).
+    /// </summary>
+    public static bool WouldReveal(double similarity, double topAmongOthers)
+    {
+        var t = BotTuning.Current;
+        return similarity >= t.VanishBar && similarity >= t.GhostClear * topAmongOthers;
+    }
 }
