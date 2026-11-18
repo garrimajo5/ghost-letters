@@ -309,7 +309,9 @@ public sealed class BotPersonalityTests
     [Fact]
     public void DetailAlreadyPresentInOldTags_IsNotDoubleCountedAsMainSubject()
     {
-        var tags = CardTags.Parse("""{"cage":["cage","flower"],"bloom":["flower","plant"],"prison":["cage","metal"]}""")
+        // Материал (metal) — слабый признак и в смысле не участвует, поэтому у «тюрьмы» есть и другие
+        // смысловые теги: иначе общий предмет «клетка» дал бы полное совпадение и затмил бы слабую деталь.
+        var tags = CardTags.Parse("""{"cage":["cage","flower"],"bloom":["flower","plant"],"prison":["cage","metal","bars","lock"]}""")
             .WithDetails("""{"cage":[{"tag":"flower","weight":0.4,"label":"розы у основания"}]}""");
         var attention = (Meaning: 1.0, Shape: 0.0, Color: 0.0);
         tags.Similarity("cage", "bloom", attention, 0).Should().Be(0);

@@ -120,12 +120,14 @@ public sealed class BotStrictnessTests
     public void Letters_StrictPicksALetterThatPointsOnlyAtTheTarget()
     {
         // Цель — кошелёк. Бумажник похож на кошелёк сильнее, но так же и на кольцо; сумочка — только на кошелёк.
+        // Кожа и металл — материалы (слабый признак), поэтому связь бумажника с кошельком держится на смысловых
+        // «деньгах» и «карманном» предмете, а на кольцо — на золоте и блеске.
         var tags = new CardTags(new Dictionary<string, HashSet<string>>
         {
-            ["billfold"] = ["money", "leather", "metal", "gold"],
+            ["billfold"] = ["money", "leather", "metal", "gold", "pocket", "shiny"],
             ["purse"] = ["purse", "money", "bag"],
-            ["ring"] = ["ring", "gold", "metal"],
-            ["wallet"] = ["wallet", "money", "leather"],
+            ["ring"] = ["ring", "gold", "metal", "shiny"],
+            ["wallet"] = ["wallet", "money", "leather", "pocket"],
         });
         var view = View(Phase.Mailbox, [nameof(SendLetter)], Role.Expert, truth: [1]) with
         {

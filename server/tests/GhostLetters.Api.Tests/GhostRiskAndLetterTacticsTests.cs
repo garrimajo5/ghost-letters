@@ -10,8 +10,8 @@ public sealed class GhostRiskAndLetterTacticsTests
     private static readonly Guid Me = Guid.NewGuid(), Other = Guid.NewGuid(), Ghost = Guid.NewGuid();
     private static readonly DateTimeOffset Now = DateTimeOffset.UnixEpoch;
     private static readonly CardTags Tags = new(new Dictionary<string, HashSet<string>> {
-        ["truth"] = ["weapon", "metal"], ["false"] = ["flower", "plant"],
-        ["clear"] = ["weapon", "metal"], ["ambiguous"] = ["weapon", "metal", "flower", "plant"],
+        ["truth"] = ["weapon", "sharp"], ["false"] = ["flower", "plant"],
+        ["clear"] = ["weapon", "sharp"], ["ambiguous"] = ["weapon", "sharp", "flower", "plant"],
         ["empty"] = ["water"], ["misleading"] = ["weapon", "flower", "plant"] });
     private static BotMind Mind(double risk) => BotMind.Neutral with {
         Personality = new BotPersonality { Meaning = 1, Shape = 0, Color = 0, Risk = risk, Memory = 1, Compromise = 1, Variability = 0 },
