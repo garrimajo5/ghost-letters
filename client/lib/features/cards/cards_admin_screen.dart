@@ -72,7 +72,14 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
   }
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('КАРТОЧКИ')),
+        appBar: AppBar(title: const Text('КАРТОЧКИ'), actions: [
+          TextButton.icon(
+              key: const Key('cards-set-create'),
+              onPressed: _busy ? null : _createSet,
+              icon: const Icon(Icons.create_new_folder_outlined),
+              label: const Text('Новый набор')),
+          const SizedBox(width: 8),
+        ]),
         body: FutureBuilder<AdminCardPage>(
             future: _data,
             builder: (context, snapshot) {
@@ -139,11 +146,6 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                 _active = v ?? 'all';
                                 _reload(reset: true);
                               })),
-                      IconButton(
-                          key: const Key('cards-set-create'),
-                          tooltip: 'Новый набор',
-                          onPressed: _busy ? null : _createSet,
-                          icon: const Icon(Icons.create_new_folder_outlined)),
                     ]),
                     if (_selected.isNotEmpty)
                       Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
