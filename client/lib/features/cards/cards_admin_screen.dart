@@ -14,7 +14,9 @@ class CardsAdminScreen extends ConsumerStatefulWidget {
 
 class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
   final _search = TextEditingController();
-  String _set = '', _active = 'all';
+  String _set = '', _active = 'all', _moveSet = '';
+  final Set<String> _selected = {};
+  bool _busy = false;
   int _page = 0;
   late Future<AdminCardPage> _data;
   @override
@@ -38,6 +40,68 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
         if (reset) _page = 0;
         _data = _fetch();
       });
+
+  Future<void> _move(String setCode) async {
+    setState(() => _busy = true);
+    final moved = await runAction(context,
+        () => ref.read(apiProvider).moveCards(_selected.toList(), setCode));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (moved != null) _selected.clear();
+    });
+    if (moved != null) {
+      ref.invalidate(cardCatalogProvider);
+      _reload();
+    }
+  }
+
+  Future<void> _createSet() async {
+    final code = TextEditingController();
+    final title = TextEditingController();
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: const Text('Новый набор'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                      key: const Key('set-code'),
+                      controller: code,
+                      maxLength: 32,
+                      decoration: const InputDecoration(
+                          labelText: 'Код латиницей', hintText: 'winter',
+                          helperText: 'Буквы, цифры и дефис, начиная с буквы')),
+                  TextField(
+                      key: const Key('set-title'),
+                      controller: title,
+                      maxLength: 64,
+                      decoration: const InputDecoration(
+                          labelText: 'Название', hintText: 'Зимние каникулы')),
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Отмена')),
+                  FilledButton(
+                      key: const Key('set-create-apply'),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Создать')),
+                ]));
+    if (!mounted) return;
+    if (ok == true) {
+      setState(() => _busy = true);
+      final created = await runAction(context,
+          () => ref.read(apiProvider).createCardSet(code.text, title.text));
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (created != null) {
+        ref.invalidate(cardCatalogProvider);
+        _reload();
+      }
+    }
+    code.dispose();
+    title.dispose();
+  }
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('КАРТОЧКИ')),
@@ -107,7 +171,43 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                 _active = v ?? 'all';
                                 _reload(reset: true);
                               })),
+                      IconButton(
+                          key: const Key('cards-set-create'),
+                          tooltip: 'Новый набор',
+                          onPressed: _busy ? null : _createSet,
+                          icon: const Icon(Icons.create_new_folder_outlined)),
                     ]),
+                    if (_selected.isNotEmpty)
+                      Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        Text('Выбрано: ${_selected.length}'),
+                        SizedBox(
+                            width: 210,
+                            child: DropdownButton<String>(
+                                key: const Key('cards-move-set'),
+                                isExpanded: true,
+                                value: _moveSet.isEmpty && data.sets.isNotEmpty
+                                    ? data.sets.first.code
+                                    : _moveSet,
+                                items: data.sets
+                                    .map((s) => DropdownMenuItem(
+                                        value: s.code,
+                                        child: Text(s.title,
+                                            overflow: TextOverflow.ellipsis)))
+                                    .toList(),
+                                onChanged: _busy
+                                    ? null
+                                    : (v) => setState(() => _moveSet = v ?? _moveSet))),
+                        FilledButton(
+                            key: const Key('cards-move-apply'),
+                            onPressed: _busy || data.sets.isEmpty
+                                ? null
+                                : () => _move(_moveSet.isEmpty ? data.sets.first.code : _moveSet),
+                            child: Text(_busy ? 'Переношу…' : 'Перенести')),
+                        TextButton(
+                            key: const Key('cards-selection-clear'),
+                            onPressed: _busy ? null : () => setState(_selected.clear),
+                            child: const Text('Снять выбор')),
+                      ]),
                     Text('Найдено: ${data.total}',
                         style: const TextStyle(color: AppColors.muted)),
                     const SizedBox(height: 8),
@@ -124,9 +224,16 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                 itemCount: data.cards.length,
                                 itemBuilder: (context, i) {
                                   final card = data.cards[i];
+                                  final selected = _selected.contains(card.id);
                                   return InkWell(
                                       key: Key('admin-card-${card.id}'),
                                       onTap: () async {
+                                        if (_selected.isNotEmpty) {
+                                          setState(() => selected
+                                              ? _selected.remove(card.id)
+                                              : _selected.add(card.id));
+                                          return;
+                                        }
                                         final saved =
                                             await Navigator.of(context)
                                                 .push<bool>(MaterialPageRoute(
@@ -139,7 +246,8 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                           _reload();
                                         }
                                       },
-                                      child: Panel(
+                                      child: Stack(children: [
+                                        Panel(
                                           padding: const EdgeInsets.all(8),
                                           child: Column(children: [
                                             LayoutBuilder(
@@ -171,7 +279,20 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                                 '${card.names.isEmpty ? '' : '${card.names.first} · '}${card.meanings.length} смыслов · ${card.details.length} деталей',
                                                 style: const TextStyle(
                                                     fontSize: 11)),
-                                          ])));
+                                          ])),
+                                        Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: Checkbox(
+                                                key: Key('card-select-${card.id}'),
+                                                value: selected,
+                                                onChanged: _busy
+                                                    ? null
+                                                    : (v) => setState(() =>
+                                                        v == true
+                                                            ? _selected.add(card.id)
+                                                            : _selected.remove(card.id)))),
+                                      ]));
                                 })),
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       IconButton(

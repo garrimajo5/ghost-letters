@@ -284,6 +284,18 @@ class Api {
 
   Future<AdminCard> saveCard(AdminCard card) async => AdminCard.fromJson(await put('/admin/cards/${card.id}', card.toJson()) as Json);
 
+  /// Массовый перенос выбранных карт в другой набор.
+  Future<List<AdminCard>> moveCards(List<String> ids, String setCode) async =>
+      ((await post('/admin/cards/move', {'ids': ids, 'setCode': setCode})) as List)
+          .map((e) => AdminCard.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+  /// Новый набор карт: код латиницей с дефисами («winter»), название — как в фильтре («Зимние каникулы»).
+  Future<AdminCardSet> createCardSet(String code, String title) async {
+    final j = await post('/admin/cards/sets', {'code': code, 'title': title}) as Json;
+    return AdminCardSet(j['code'] as String, j['title'] as String);
+  }
+
   Future<List<BotInfo>> adminBots() async =>
       ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();
 
