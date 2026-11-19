@@ -13,6 +13,8 @@ public sealed record AdminCardDto(Guid Id, string ImageKey, string? Title, strin
 public sealed record CardSetDto(string Code, string Title, IReadOnlyList<string> Cards);
 public sealed record AdminCardPage(IReadOnlyList<AdminCardDto> Cards, int Total, IReadOnlyList<CardSetDto> Sets);
 public sealed record SaveCardRequest(string? Title, string SetCode, bool IsActive, int Version, CardAnnotation Annotation);
+public sealed record MoveCardsRequest(IReadOnlyList<Guid> Ids, string SetCode);
+public sealed record CreateSetRequest(string Code, string Title);
 
 /// <summary>
 /// Разметка из базы поверх базовой. Такт ботов идёт раз в 1,5 с, а разметка меняется только в админке:
@@ -94,6 +96,43 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateConcurrencyException) { throw Conflict(); }
         return Dto(card, set.Code);
+    }
+
+    /// <summary>Массовый перенос карт в другой набор: только набор и пометка «вручную», разметка не трогается.</summary>
+    public async Task<IReadOnlyList<AdminCardDto>> MoveAsync(Guid admin, MoveCardsRequest request, CancellationToken ct)
+    {
+        admins.RequireAdmin(admin);
+        var ids = request.Ids.Distinct().ToList();
+        if (ids.Count is < 1 or > 500) throw AppException.Validation("Выберите от 1 до 500 карт.");
+        var set = await db.CardSets.AsNoTracking().FirstOrDefaultAsync(s => s.Code == request.SetCode, ct)
+            ?? throw AppException.Validation("Набор не найден.");
+        var cards = await db.Cards.Where(c => ids.Contains(c.Id)).ToListAsync(ct);
+        if (cards.Count != ids.Count) throw AppException.NotFound("Часть карт не найдена — обновите список.");
+        foreach (var card in cards)
+        {
+            if (card.SetId != set.Id) card.SetManuallyAssigned = true;
+            card.SetId = set.Id;
+            card.MetadataVersion++;
+        }
+        await db.SaveChangesAsync(ct);
+        return cards.OrderBy(c => c.ImageKey).Select(c => Dto(c, set.Code)).ToList();
+    }
+
+    /// <summary>Свой набор карт: код — как у встроенных (original, mirror), латиницей с дефисами.</summary>
+    public async Task<CardSetDto> CreateSetAsync(Guid admin, CreateSetRequest request, CancellationToken ct)
+    {
+        admins.RequireAdmin(admin);
+        var code = request.Code.Trim().ToLowerInvariant();
+        if (code.Length is < 1 or > 32 || !System.Text.RegularExpressions.Regex.IsMatch(code, @"^[a-z][a-z0-9-]*$"))
+            throw AppException.Validation("Код набора — латиница, цифры и дефис, начиная с буквы (до 32 символов).");
+        var title = request.Title.Trim();
+        if (title.Length is < 1 or > 64) throw AppException.Validation("Название набора — от 1 до 64 символов.");
+        if (await db.CardSets.AnyAsync(s => s.Code == code, ct))
+            throw AppException.Conflict("SET_EXISTS", "Набор с таким кодом уже есть.");
+        var set = new CardSet { Id = Guid.NewGuid(), Code = code, Title = title, OwnerId = admin };
+        db.CardSets.Add(set);
+        await db.SaveChangesAsync(ct);
+        return new CardSetDto(set.Code, set.Title, []);
     }
 
     private static AppException Conflict() => AppException.Conflict("CARD_CHANGED", "Карту уже изменили. Обновите список и откройте её заново.");
