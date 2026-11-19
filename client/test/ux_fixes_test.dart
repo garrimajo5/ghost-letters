@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ghost_letters/core/card_catalog.dart';
 import 'package:ghost_letters/core/theme.dart';
 import 'package:ghost_letters/features/lobby/settings_sheet.dart';
 import 'package:ghost_letters/models/models.dart';
@@ -207,14 +209,17 @@ void main() {
       tester.view.devicePixelRatio = 1.5;
       addTearDown(tester.view.reset);
       LobbySettings? result;
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.build(),
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: TextButton(
-                onPressed: () async => result = await SettingsSheet.show(context, initial, inGame: true, players: 5),
-                child: const Text('open'),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [cardCatalogProvider.overrideWith((ref) async => TestApp.testCatalog)],
+        child: MaterialApp(
+          theme: AppTheme.build(),
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: TextButton(
+                  onPressed: () async => result = await SettingsSheet.show(context, initial, inGame: true, players: 5),
+                  child: const Text('open'),
+                ),
               ),
             ),
           ),

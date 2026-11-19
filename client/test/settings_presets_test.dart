@@ -146,7 +146,10 @@ void main() {
   });
 
   testWidgets('во время партии применять пресеты нельзя', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SettingsSheet(initial: LobbySettings(), inGame: true))));
+    await tester.pumpWidget(ProviderScope(
+      overrides: [cardCatalogProvider.overrideWith((ref) async => TestApp.testCatalog)],
+      child: const MaterialApp(home: Scaffold(body: SettingsSheet(initial: LobbySettings(), inGame: true))),
+    ));
     expect(find.byKey(const Key('settings-presets')), findsNothing);
   });
 }

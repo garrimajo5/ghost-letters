@@ -582,7 +582,9 @@ class _SettingsSummary extends ConsumerWidget {
         for (final m in members) (m.nickname, (s) => s.copyWith(ghostUserId: m.userId)),
       ]),
       _chip(context, 'sets',
-          catalog.isNotEmpty && settings.cardSets.length >= catalog.length ? 'все наборы карт' : 'наборы: ${settings.cardSets.map(setName).join(', ')}',
+          catalog.isNotEmpty && catalog.every((set) => settings.cardSets.contains(set.code))
+              ? 'все наборы карт'
+              : 'наборы: ${settings.cardSets.map(setName).join(', ')}',
           rules: true, opensSheet: true),
     ];
     return Wrap(spacing: 6, runSpacing: 6, children: chips);
