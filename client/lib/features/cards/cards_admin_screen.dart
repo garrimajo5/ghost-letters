@@ -57,50 +57,18 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
   }
 
   Future<void> _createSet() async {
-    final code = TextEditingController();
-    final title = TextEditingController();
-    final ok = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-                title: const Text('Новый набор'),
-                content: Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(
-                      key: const Key('set-code'),
-                      controller: code,
-                      maxLength: 32,
-                      decoration: const InputDecoration(
-                          labelText: 'Код латиницей', hintText: 'winter',
-                          helperText: 'Буквы, цифры и дефис, начиная с буквы')),
-                  TextField(
-                      key: const Key('set-title'),
-                      controller: title,
-                      maxLength: 64,
-                      decoration: const InputDecoration(
-                          labelText: 'Название', hintText: 'Зимние каникулы')),
-                ]),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Отмена')),
-                  FilledButton(
-                      key: const Key('set-create-apply'),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Создать')),
-                ]));
+    final draft = await showDialog<({String code, String title})>(
+        context: context, builder: (_) => const _NewSetDialog());
+    if (draft == null || !mounted) return;
+    setState(() => _busy = true);
+    final created = await runAction(context,
+        () => ref.read(apiProvider).createCardSet(draft.code, draft.title));
     if (!mounted) return;
-    if (ok == true) {
-      setState(() => _busy = true);
-      final created = await runAction(context,
-          () => ref.read(apiProvider).createCardSet(code.text, title.text));
-      if (!mounted) return;
-      setState(() => _busy = false);
-      if (created != null) {
-        ref.invalidate(cardCatalogProvider);
-        _reload();
-      }
+    setState(() => _busy = false);
+    if (created != null) {
+      ref.invalidate(cardCatalogProvider);
+      _reload();
     }
-    code.dispose();
-    title.dispose();
   }
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -319,6 +287,53 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                   ]));
             }),
       );
+}
+
+/// Диалог нового набора: контроллеры живут в State и освобождаются после анимации закрытия.
+class _NewSetDialog extends StatefulWidget {
+  const _NewSetDialog();
+  @override
+  State<_NewSetDialog> createState() => _NewSetDialogState();
+}
+
+class _NewSetDialogState extends State<_NewSetDialog> {
+  final _code = TextEditingController();
+  final _title = TextEditingController();
+  @override
+  void dispose() {
+    _code.dispose();
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: const Text('Новый набор'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                key: const Key('set-code'),
+                controller: _code,
+                maxLength: 32,
+                decoration: const InputDecoration(
+                    labelText: 'Код латиницей', hintText: 'winter',
+                    helperText: 'Буквы, цифры и дефис, начиная с буквы')),
+            TextField(
+                key: const Key('set-title'),
+                controller: _title,
+                maxLength: 64,
+                decoration: const InputDecoration(
+                    labelText: 'Название', hintText: 'Зимние каникулы')),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Отмена')),
+            FilledButton(
+                key: const Key('set-create-apply'),
+                onPressed: () => Navigator.pop(
+                    context, (code: _code.text.trim(), title: _title.text.trim())),
+                child: const Text('Создать')),
+          ]);
 }
 
 class _FeatureDraft {
