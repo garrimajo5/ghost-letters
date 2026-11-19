@@ -105,4 +105,50 @@ public sealed class CardAdminTests(PostgresFixture postgres) : IAsyncLifetime
             new CardAnnotation(["red"], [new("flower", 1, "Цветок")], [new("flower", .3, "Цветок")])), HttpStatusCode.BadRequest);
         await admin.GetAsync("/api/v1/admin/cards?page=-1", HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task CreateSet_AndMoveCards_WorkInBulk()
+    {
+        var admin = await TestPlayer.LoginAsync(_factory, "Админ");
+        _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = admin.Id.ToString();
+        var player = await TestPlayer.LoginAsync(_factory, "Игрок");
+        await player.PostAsync("/api/v1/admin/cards/sets", new CreateSetRequest("winter", "Зимние каникулы"), HttpStatusCode.Forbidden);
+        await player.PostAsync("/api/v1/admin/cards/move", new MoveCardsRequest([Guid.NewGuid()], "original"), HttpStatusCode.Forbidden);
+
+        var created = await admin.PostAsync("/api/v1/admin/cards/sets", new CreateSetRequest("Winter", "Зимние каникулы"));
+        created.Str("code").Should().Be("winter");
+        created.Str("title").Should().Be("Зимние каникулы");
+        var cards = Enumerable.Range(0, 2).Select(i => new Card
+        {
+            Id = Guid.NewGuid(), ImageKey = $"move-{Guid.NewGuid():N}", SetId = CatalogSeed.OriginalSetId,
+        }).ToList();
+        await _factory.WithDbAsync(async db => { db.Cards.AddRange(cards); return await db.SaveChangesAsync(); });
+        try
+        {
+            (await admin.PostAsync("/api/v1/admin/cards/sets", new CreateSetRequest("winter", "Дубль"), HttpStatusCode.Conflict))
+                .Code().Should().Be("SET_EXISTS");
+            await admin.PostAsync("/api/v1/admin/cards/sets", new CreateSetRequest("плохой!", "Нет"), HttpStatusCode.BadRequest);
+            await admin.PostAsync("/api/v1/admin/cards/move", new MoveCardsRequest(cards.Select(c => c.Id).ToList(), "unknown"), HttpStatusCode.BadRequest);
+            await admin.PostAsync("/api/v1/admin/cards/move", new MoveCardsRequest([cards[0].Id, Guid.NewGuid()], "winter"), HttpStatusCode.NotFound);
+
+            var moved = await admin.PostAsync("/api/v1/admin/cards/move", new MoveCardsRequest(cards.Select(c => c.Id).ToList(), "winter"));
+            moved.EnumerateArray().Should().HaveCount(2).And.OnlyContain(c => c.Str("setCode") == "winter");
+            foreach (var card in await _factory.WithDbAsync(db => db.Cards.AsNoTracking().Where(c => cards.Select(x => x.Id).Contains(c.Id)).ToListAsync()))
+            {
+                card.SetManuallyAssigned.Should().BeTrue();
+                card.Annotations.Should().BeNull("перенос не должен трогать разметку");
+            }
+            var list = await admin.GetAsync("/api/v1/admin/cards?setCode=winter");
+            list.GetProperty("total").GetInt32().Should().Be(2);
+            list.GetProperty("sets").EnumerateArray().Should().Contain(s => s.Str("code") == "winter" && s.Str("title") == "Зимние каникулы");
+        }
+        finally
+        {
+            await _factory.WithDbAsync(async db =>
+            {
+                await db.Cards.Where(c => c.ImageKey.StartsWith("move-")).ExecuteDeleteAsync();
+                return await db.CardSets.Where(s => s.Code == "winter").ExecuteDeleteAsync();
+            });
+        }
+    }
 }

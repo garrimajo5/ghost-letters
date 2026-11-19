@@ -13,5 +13,9 @@ public static class CardEndpoints
             cards.ListAsync(http.User.UserId(), query, setCode, active, page ?? 0, ct));
         admin.MapPut("/{id:guid}", (Guid id, SaveCardRequest request, HttpContext http, CardAdminService cards, CancellationToken ct) =>
             cards.SaveAsync(http.User.UserId(), id, request, ct));
+        admin.MapPost("/move", (MoveCardsRequest request, HttpContext http, CardAdminService cards, CancellationToken ct) =>
+            cards.MoveAsync(http.User.UserId(), request, ct));
+        admin.MapPost("/sets", (CreateSetRequest request, HttpContext http, CardAdminService cards, CancellationToken ct) =>
+            cards.CreateSetAsync(http.User.UserId(), request, ct));
     }
 }
