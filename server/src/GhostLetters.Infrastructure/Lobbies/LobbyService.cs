@@ -15,6 +15,7 @@ namespace GhostLetters.Infrastructure.Lobbies;
 public sealed class LobbyService(
     GhostLettersDbContext db,
     CardCatalog cards,
+    CardTagStore cardTags,
     IRealtimeNotifier notifier,
     TimeProvider time,
     IServiceProvider services)
@@ -358,13 +359,15 @@ public sealed class LobbyService(
         // Состав мог измениться после выбора пресета: окончательные правила фиксируются при старте.
         var settings = GameJson.Deserialize<LobbySettings>(lobby.Settings).ResolveForPlayers(players.Count);
         lobby.Settings = GameJson.Serialize(settings);
-        var deck = await cards.DeckAsync(settings.CardSets, ct);
+        var seed = RandomNumberGenerator.GetInt32(int.MaxValue);
+        // Две карты с одним названием («ворон» и «ворон») в одной партии путают стол — играет только одна из них.
+        var deck = CardCatalog.WithoutDuplicateNames(await cards.DeckAsync(settings.CardSets, ct), await cardTags.LoadAsync(ct), seed);
         var gameId = Guid.NewGuid();
         GameState state;
         try
         {
             state = GameEngine.Create(gameId, players.Select(p => p.UserId).ToList(), settings.ToGameSettings(), deck,
-                RandomNumberGenerator.GetInt32(int.MaxValue));
+                seed);
         }
         catch (Exception e) when (e is GameRuleException or ArgumentException)
         {

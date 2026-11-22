@@ -14,6 +14,8 @@ public static class SandboxEndpoints
         group.MapPost("/lab/deal", (LabDealRequest request, HttpContext h, BotLabService s, CancellationToken ct) => s.DealAsync(h.User.UserId(), request, ct));
         group.MapPost("/lab/think", (LabThinkRequest request, HttpContext h, BotLabService s, CancellationToken ct) => s.ThinkAsync(h.User.UserId(), request, ct));
         group.MapPost("/lab/suggest", (LabSuggestRequest request, HttpContext h, BotLabService s, CancellationToken ct) => s.SuggestAsync(h.User.UserId(), request, ct));
+        // Перенос завершённой партии в лабораторию: поле, истина и подсказки, как были за столом.
+        group.MapGet("/lab/game/{id:guid}", (Guid id, HttpContext h, BotLabService s, CancellationToken ct) => s.GameAsync(h.User.UserId(), id, ct));
         group.MapGet("/{id:guid}", (Guid id, HttpContext h, BotSandboxService s, CancellationToken ct) => s.ReplayAsync(h.User.UserId(), id, ct));
         group.MapGet("/{id:guid}/steps/{index:int}", (Guid id, int index, Guid? viewer, bool? reveal, HttpContext h, BotSandboxService s, CancellationToken ct) =>
             s.StepAsync(h.User.UserId(), id, index, viewer, reveal ?? false, ct));

@@ -15,6 +15,10 @@ from retag_cards import ACTIONS, PROPERTIES
 ROOT = Path(__file__).resolve().parents[2] / 'client/assets/cards'
 COLORS = set('red orange yellow green blue purple pink brown black white gray'.split())
 UNTRUSTED = {'shape-diagonal', 'shape-compact', 'shape-spiky'}
+# Материал предмета — слабый признак, как в CardTags.Materials / BotTuning.MaterialWeight:
+# считается отдельно от смысла и с малым весом, разметка по картинке может быть ошибочной.
+MATERIALS = set('bone ceramic clay fabric fur glass leather metal paper plastic rubber stone straw wax wood wool'.split())
+MATERIAL_WEIGHT = .15
 
 
 def group(t):
@@ -38,15 +42,18 @@ def features(tags, details, associations, secondary=.35, scale=.5):
 
 
 def similarity(x, y):
-    def match(g):
-        a = {t:v for t,v in x.items() if group(t)==g and (g!=2 or t.startswith('dominant-'))}
-        b = {t:v for t,v in y.items() if group(t)==g and (g!=2 or t.startswith('dominant-'))}
+    def overlap(a, b):
         union = sum(max(a.get(t,0),b.get(t,0)) for t in a.keys()|b.keys())
         confidence = min(max(a.values(),default=0), max(b.values(),default=0))
         return confidence * sum(min(a[t],b[t]) for t in a.keys()&b.keys()) / union if union else 0
+    def match(g):
+        a = {t:v for t,v in x.items() if group(t)==g and t not in MATERIALS and (g!=2 or t.startswith('dominant-'))}
+        b = {t:v for t,v in y.items() if group(t)==g and t not in MATERIALS and (g!=2 or t.startswith('dominant-'))}
+        return overlap(a, b)
     meaning = match(0)
+    material = overlap({t:v for t,v in x.items() if t in MATERIALS}, {t:v for t,v in y.items() if t in MATERIALS})
     fallback = .05 if meaning >= .25 else 1-meaning
-    return .8*meaning + .15*fallback*match(1) + .05*fallback*match(2)
+    return .8*meaning + .15*fallback*match(1) + .05*fallback*match(2) + MATERIAL_WEIGHT*fallback*material
 
 
 def control_report(data, names):

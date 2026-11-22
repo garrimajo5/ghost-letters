@@ -14,7 +14,9 @@ class CardsAdminScreen extends ConsumerStatefulWidget {
 
 class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
   final _search = TextEditingController();
-  String _set = '', _active = 'all';
+  String _set = '', _active = 'all', _moveSet = '';
+  final Set<String> _selected = {};
+  bool _busy = false;
   int _page = 0;
   late Future<AdminCardPage> _data;
   @override
@@ -38,9 +40,46 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
         if (reset) _page = 0;
         _data = _fetch();
       });
+
+  Future<void> _move(String setCode) async {
+    setState(() => _busy = true);
+    final moved = await runAction(context,
+        () => ref.read(apiProvider).moveCards(_selected.toList(), setCode));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (moved != null) _selected.clear();
+    });
+    if (moved != null) {
+      ref.invalidate(cardCatalogProvider);
+      _reload();
+    }
+  }
+
+  Future<void> _createSet() async {
+    final draft = await showDialog<({String code, String title})>(
+        context: context, builder: (_) => const _NewSetDialog());
+    if (draft == null || !mounted) return;
+    setState(() => _busy = true);
+    final created = await runAction(context,
+        () => ref.read(apiProvider).createCardSet(draft.code, draft.title));
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (created != null) {
+      ref.invalidate(cardCatalogProvider);
+      _reload();
+    }
+  }
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('КАРТОЧКИ')),
+        appBar: AppBar(title: const Text('КАРТОЧКИ'), actions: [
+          TextButton.icon(
+              key: const Key('cards-set-create'),
+              onPressed: _busy ? null : _createSet,
+              icon: const Icon(Icons.create_new_folder_outlined),
+              label: const Text('Новый набор')),
+          const SizedBox(width: 8),
+        ]),
         body: FutureBuilder<AdminCardPage>(
             future: _data,
             builder: (context, snapshot) {
@@ -61,7 +100,7 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                         controller: _search,
                         maxLength: 80,
                         decoration: InputDecoration(
-                            labelText: 'Название или номер карты',
+                            labelText: 'Название, номер или метка карты',
                             counterText: '',
                             suffixIcon: IconButton(
                                 icon: const Icon(Icons.search),
@@ -108,6 +147,37 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                 _reload(reset: true);
                               })),
                     ]),
+                    if (_selected.isNotEmpty)
+                      Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                        Text('Выбрано: ${_selected.length}'),
+                        SizedBox(
+                            width: 210,
+                            child: DropdownButton<String>(
+                                key: const Key('cards-move-set'),
+                                isExpanded: true,
+                                value: _moveSet.isEmpty && data.sets.isNotEmpty
+                                    ? data.sets.first.code
+                                    : _moveSet,
+                                items: data.sets
+                                    .map((s) => DropdownMenuItem(
+                                        value: s.code,
+                                        child: Text(s.title,
+                                            overflow: TextOverflow.ellipsis)))
+                                    .toList(),
+                                onChanged: _busy
+                                    ? null
+                                    : (v) => setState(() => _moveSet = v ?? _moveSet))),
+                        FilledButton(
+                            key: const Key('cards-move-apply'),
+                            onPressed: _busy || data.sets.isEmpty
+                                ? null
+                                : () => _move(_moveSet.isEmpty ? data.sets.first.code : _moveSet),
+                            child: Text(_busy ? 'Переношу…' : 'Перенести')),
+                        TextButton(
+                            key: const Key('cards-selection-clear'),
+                            onPressed: _busy ? null : () => setState(_selected.clear),
+                            child: const Text('Снять выбор')),
+                      ]),
                     Text('Найдено: ${data.total}',
                         style: const TextStyle(color: AppColors.muted)),
                     const SizedBox(height: 8),
@@ -124,9 +194,16 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                 itemCount: data.cards.length,
                                 itemBuilder: (context, i) {
                                   final card = data.cards[i];
+                                  final selected = _selected.contains(card.id);
                                   return InkWell(
                                       key: Key('admin-card-${card.id}'),
                                       onTap: () async {
+                                        if (_selected.isNotEmpty) {
+                                          setState(() => selected
+                                              ? _selected.remove(card.id)
+                                              : _selected.add(card.id));
+                                          return;
+                                        }
                                         final saved =
                                             await Navigator.of(context)
                                                 .push<bool>(MaterialPageRoute(
@@ -139,7 +216,8 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                           _reload();
                                         }
                                       },
-                                      child: Panel(
+                                      child: Stack(children: [
+                                        Panel(
                                           padding: const EdgeInsets.all(8),
                                           child: Column(children: [
                                             LayoutBuilder(
@@ -171,7 +249,20 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                                                 '${card.names.isEmpty ? '' : '${card.names.first} · '}${card.meanings.length} смыслов · ${card.details.length} деталей',
                                                 style: const TextStyle(
                                                     fontSize: 11)),
-                                          ])));
+                                          ])),
+                                        Positioned(
+                                            top: 0,
+                                            right: 0,
+                                            child: Checkbox(
+                                                key: Key('card-select-${card.id}'),
+                                                value: selected,
+                                                onChanged: _busy
+                                                    ? null
+                                                    : (v) => setState(() =>
+                                                        v == true
+                                                            ? _selected.add(card.id)
+                                                            : _selected.remove(card.id)))),
+                                      ]));
                                 })),
                     Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       IconButton(
@@ -198,6 +289,53 @@ class _CardsAdminScreenState extends ConsumerState<CardsAdminScreen> {
                   ]));
             }),
       );
+}
+
+/// Диалог нового набора: контроллеры живут в State и освобождаются после анимации закрытия.
+class _NewSetDialog extends StatefulWidget {
+  const _NewSetDialog();
+  @override
+  State<_NewSetDialog> createState() => _NewSetDialogState();
+}
+
+class _NewSetDialogState extends State<_NewSetDialog> {
+  final _code = TextEditingController();
+  final _title = TextEditingController();
+  @override
+  void dispose() {
+    _code.dispose();
+    _title.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+          title: const Text('Новый набор'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                key: const Key('set-code'),
+                controller: _code,
+                maxLength: 32,
+                decoration: const InputDecoration(
+                    labelText: 'Код латиницей', hintText: 'winter',
+                    helperText: 'Буквы, цифры и дефис, начиная с буквы')),
+            TextField(
+                key: const Key('set-title'),
+                controller: _title,
+                maxLength: 64,
+                decoration: const InputDecoration(
+                    labelText: 'Название', hintText: 'Зимние каникулы')),
+          ]),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Отмена')),
+            FilledButton(
+                key: const Key('set-create-apply'),
+                onPressed: () => Navigator.pop(
+                    context, (code: _code.text.trim(), title: _title.text.trim())),
+                child: const Text('Создать')),
+          ]);
 }
 
 class _FeatureDraft {

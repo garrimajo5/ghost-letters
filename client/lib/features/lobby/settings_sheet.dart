@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/card_catalog.dart';
 import '../../core/theme.dart';
 import '../../models/models.dart';
 import '../game/game_state.dart';
 import 'presets_sheet.dart';
 
 /// Редактор настроек лобби. Во время партии меняются только раунды, режим обсуждения, темп и таймеры.
-class SettingsSheet extends StatefulWidget {
+class SettingsSheet extends ConsumerStatefulWidget {
   const SettingsSheet({super.key, required this.initial, required this.inGame, this.players, this.personal = false, this.admin = false});
 
   /// Администратор видит переключатель «Боты 2.0» (реплики ботов пишет ИИ).
@@ -29,13 +31,14 @@ class SettingsSheet extends StatefulWidget {
       );
 
   @override
-  State<SettingsSheet> createState() => _SettingsSheetState();
+  ConsumerState<SettingsSheet> createState() => _SettingsSheetState();
 }
 
-class _SettingsSheetState extends State<SettingsSheet> {
+class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   late LobbySettings s = widget.initial;
 
-  static const _sets = {'original': 'Оригинальный', 'mailbox': 'Почтовый ящик', 'ritual': 'Тайный ритуал', 'mirror': 'Зеркало истины'};
+  /// Названия встроенных наборов — запасной вариант, пока каталог грузится, и для наборов, удалённых с сервера.
+  static const _fallbackTitles = {'original': 'Оригинальный', 'mailbox': 'Почтовый ящик', 'ritual': 'Тайный ритуал', 'mirror': 'Зеркало истины'};
 
   /// Как отличить набор: символ в правом верхнем углу карты.
   static const _setHints = {
@@ -49,9 +52,30 @@ class _SettingsSheetState extends State<SettingsSheet> {
 
   void _timer(String key, int value) => setState(() => s = s.copyWith(timers: {...s.timers, key: value}));
 
+  /// Коды для показа: весь каталог (свои наборы из кабинета карточек тоже), плюс выбранные,
+  /// которых на сервере уже нет — чтобы их можно было снять. Каталог ещё грузится — базовые.
+  List<String> _setCodes(List<CardSetInfo>? catalog) {
+    if (catalog == null) return _fallbackTitles.keys.toList();
+    return [
+      for (final set in catalog) set.code,
+      for (final code in s.cardSets)
+        if (catalog.every((set) => set.code != code)) code,
+    ];
+  }
+
+  String _setTitle(String code, List<CardSetInfo>? catalog) =>
+      catalog?.where((set) => set.code == code).map((set) => set.title).firstOrNull ?? _fallbackTitles[code] ?? code;
+
+  String _setSubtitle(String code, List<CardSetInfo>? catalog) {
+    final known = catalog?.where((set) => set.code == code).firstOrNull;
+    if (known != null) return _setHints[code] ?? 'Активных карт: ${known.cards.length}';
+    return catalog == null ? (_setHints[code] ?? '') : 'Набора нет на сервере — снимите галочку';
+  }
+
   @override
   Widget build(BuildContext context) {
     final roles = s.roles;
+    final catalog = ref.watch(cardCatalogProvider).valueOrNull;
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.9,
@@ -224,17 +248,19 @@ class _SettingsSheetState extends State<SettingsSheet> {
           ],
           const Divider(),
           Text('НАБОРЫ КАРТ', style: sectionLabel(size: 13)),
-          for (final e in _sets.entries)
+          // Каталог с сервера — включая наборы, созданные в кабинете карточек. Выбранные, но уже
+          // удалённые наборы показываем тоже, чтобы их можно было снять. Пока каталог грузится — базовые.
+          for (final code in _setCodes(catalog))
             CheckboxListTile(
-              key: Key('set-${e.key}'),
-              title: Text(e.value),
-              subtitle: Text(_setHints[e.key] ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
-              value: s.cardSets.contains(e.key),
+              key: Key('set-$code'),
+              title: Text(_setTitle(code, catalog)),
+              subtitle: Text(_setSubtitle(code, catalog), style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+              value: s.cardSets.contains(code),
               onChanged: _rulesLocked
                   ? null
                   : (v) {
                       final sets = {...s.cardSets};
-                      v == true ? sets.add(e.key) : sets.remove(e.key);
+                      v == true ? sets.add(code) : sets.remove(code);
                       if (sets.isNotEmpty) setState(() => s = s.copyWith(cardSets: sets.toList()));
                     },
             ),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api.dart';
+import '../../core/card_catalog.dart';
 import '../../core/lobby_preferences.dart';
 import '../../core/realtime.dart';
 import '../../core/session.dart';
@@ -508,7 +509,7 @@ String _setName(String code) => switch (code) {
 typedef _Choice = (String label, LobbySettings Function(LobbySettings s));
 
 /// Метки текущих настроек. У хоста метка — кнопка: нажал и выбрал вариант прямо здесь.
-class _SettingsSummary extends StatelessWidget {
+class _SettingsSummary extends ConsumerWidget {
   const _SettingsSummary({
     required this.settings,
     required this.players,
@@ -536,9 +537,13 @@ class _SettingsSummary extends StatelessWidget {
   final bool inGame;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final r = settings.roles;
     final ghost = members.where((p) => p.userId == settings.ghostUserId).map((p) => p.nickname).firstOrNull;
+    // Названия наборов из каталога — свои наборы из кабинета карточек тоже подписаны по-человечески.
+    final catalog = ref.watch(cardCatalogProvider).valueOrNull ?? const <CardSetInfo>[];
+    String setName(String code) =>
+        catalog.where((s) => s.code == code).map((s) => s.title).firstOrNull ?? _setName(code);
     final chips = <Widget>[
       _chip(context, 'preset', 'Пресет: ${settings.presetLabel}', rules: true, opensSheet: true),
       _chip(context, 'ranked', settings.ranked ? 'рейтинговая' : 'обычная', rules: true, choices: [
@@ -576,7 +581,10 @@ class _SettingsSummary extends StatelessWidget {
         ('По жребию', (s) => s.copyWith(clearGhost: true)),
         for (final m in members) (m.nickname, (s) => s.copyWith(ghostUserId: m.userId)),
       ]),
-      _chip(context, 'sets', settings.cardSets.length >= 4 ? 'все наборы карт' : 'наборы: ${settings.cardSets.map(_setName).join(', ')}',
+      _chip(context, 'sets',
+          catalog.isNotEmpty && catalog.every((set) => settings.cardSets.contains(set.code))
+              ? 'все наборы карт'
+              : 'наборы: ${settings.cardSets.map(setName).join(', ')}',
           rules: true, opensSheet: true),
     ];
     return Wrap(spacing: 6, runSpacing: 6, children: chips);

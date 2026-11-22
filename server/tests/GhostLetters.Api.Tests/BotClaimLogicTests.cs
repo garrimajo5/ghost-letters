@@ -98,4 +98,31 @@ public sealed class BotClaimLogicTests
         using (BotTuning.Use(BotTuning.Default with { ClaimLogic = true, ClaimLogicWeight = 0 }))
             BotPlayer.Evidence(View(), Tags, mind, "wallet").Should().BeApproximately(BotPlayer.Evidence(View(), Tags, Mind([]), "wallet"), 1e-9);
     }
+
+    [Fact]
+    public void SameLetterClaimedInTwoRounds_IsACertainLie_TwoClaimants_IsAConflict()
+    {
+        var repeat = Mind([]) with { Claims = [new ClaimedLetter(Ann, "crown", 1), new ClaimedLetter(Ann, "crown", 2)] };
+        using (BotTuning.Use(On))
+        {
+            var d = BotPlayer.Logic(View(), Tags, repeat)!.Deductions.Should().ContainSingle(x => x.Kind == "repeat").Subject;
+            d.Who.Should().Be(Ann);
+            d.Strength.Should().Be(3, "брошенное письмо в руку не возвращается — это точная ложь");
+            d.Text.Should().Contain("Аня").And.Contain("раунде 1").And.Contain("врёшь");
+        }
+
+        var conflict = Mind([]) with { Claims = [new ClaimedLetter(Ann, "crown", 2), new ClaimedLetter(Bob, "crown", 2)] };
+        using (BotTuning.Use(On))
+        {
+            var d = BotPlayer.Logic(View(), Tags, conflict)!.Deductions.Should().ContainSingle(x => x.Kind == "conflict").Subject;
+            d.Who.Should().BeNull("не знаем, кто из двоих врёт");
+            d.Strength.Should().Be(1.2);
+            d.Text.Should().Contain("Аня").And.Contain("Боб").And.Contain("кто-то из них врёт");
+        }
+
+        var sameRound = Mind([]) with { Claims = [new ClaimedLetter(Ann, "crown", 2), new ClaimedLetter(Ann, "crown", 2)] };
+        using (BotTuning.Use(On))
+            BotPlayer.Logic(View(), Tags, sameRound)!.Deductions.Should().NotContain(x => x.Kind == "repeat",
+                "повторить заявление в том же раунде — не ложь");
+    }
 }

@@ -16,12 +16,16 @@ class BotLabScreen extends ConsumerStatefulWidget {
 
 class _BotLabScreenState extends ConsumerState<BotLabScreen> {
   final _seed = TextEditingController();
+  final _gameId = TextEditingController();
   int _players = 6;
   Map<String, String> _names = {};
   List<String> _categories = [];
   List<List<String>> _rows = [];
   List<int?> _truth = [];
   List<List<String>> _hints = [];
+  // Реальный номер раунда каждой строки подсказок (0 — зацепка до первого раунда).
+  List<int> _hintRounds = [];
+  int _rounds = 0;
   List<String> _pool = [];
   Json? _result;
   bool _busy = false;
@@ -39,6 +43,7 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
   @override
   void dispose() {
     _seed.dispose();
+    _gameId.dispose();
     super.dispose();
   }
 
@@ -60,8 +65,45 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
       _rows = [for (final r in board) (r['cards'] as List).cast<String>().toList()];
       _truth = [for (final t in deal['truth'] as List) t as int];
       _pool = (deal['pool'] as List).cast<String>();
-      _hints = List.generate(deal['rounds'] as int, (_) => <String>[]);
+      _rounds = deal['rounds'] as int;
+      _hints = List.generate(_rounds, (_) => <String>[]);
+      _hintRounds = [for (var i = 1; i <= _rounds; i++) i];
       _names = {..._names, ...(deal['names'] as Map).cast<String, String>()};
+      _result = null;
+    });
+    _think();
+  }
+
+  /// Загрузить завершённую партию по id (из истории): поле, истина и подсказки, как были за столом.
+  Future<void> _loadGame() async {
+    final id = _gameId.text.trim();
+    if (id.isEmpty) return;
+    setState(() => _busy = true);
+    final g = await runAction(context, () => ref.read(apiProvider).labGame(id));
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (g == null) return;
+      final board = (g['board'] as List).cast<Map>();
+      _categories = [for (final r in board) r['category'] as String];
+      _rows = [for (final r in board) (r['cards'] as List).cast<String>().toList()];
+      _truth = [for (final t in g['truth'] as List) t as int];
+      _pool = (g['pool'] as List).cast<String>();
+      _rounds = g['rounds'] as int;
+      final hints = (g['hints'] as List).cast<Map>();
+      _hintRounds = [for (final h in hints) h['round'] as int];
+      _hints = [for (final h in hints) (h['cards'] as List).cast<String>().toList()];
+      // Раунды без подсказок показываем пустыми — туда можно добавить свои.
+      for (var r = 1; r <= _rounds; r++) {
+        if (!_hintRounds.contains(r)) {
+          _hintRounds.add(r);
+          _hints.add(<String>[]);
+        }
+      }
+      final order = List.generate(_hintRounds.length, (i) => i)..sort((a, b) => _hintRounds[a].compareTo(_hintRounds[b]));
+      _hintRounds = [for (final i in order) _hintRounds[i]];
+      _hints = [for (final i in order) _hints[i]];
+      _names = {..._names, ...(g['names'] as Map).cast<String, String>()};
       _result = null;
     });
     _think();
@@ -73,10 +115,10 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
         ],
         'hints': [
           for (var i = 0; i < _hints.length; i++)
-            if (_hints[i].isNotEmpty) {'round': i + 1, 'cards': _hints[i]}
+            if (_hints[i].isNotEmpty) {'round': _hintRounds[i], 'cards': _hints[i]}
         ],
         if (_truth.every((t) => t != null)) 'truth': _truth,
-        'rounds': _hints.length,
+        'rounds': _rounds > 0 ? _rounds : _hints.length,
       };
 
   /// Перечитать стол после правки. Ответ на устаревший запрос не показываем.
@@ -140,8 +182,10 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
     _think();
   }
 
+  String _roundLabel(int i) => _hintRounds[i] == 0 ? 'Зацепка' : 'Раунд ${_hintRounds[i]}';
+
   Future<void> _addHint(int round) async {
-    final card = await _pick(title: 'Подсказка, раунд ${round + 1}', preferPool: true, exclude: {..._onBoard, ..._used});
+    final card = await _pick(title: 'Подсказка, ${_roundLabel(round).toLowerCase()}', preferPool: true, exclude: {..._onBoard, ..._used});
     if (card == null || !mounted) return;
     setState(() => _hints[round].add(card));
     _think();
@@ -154,10 +198,10 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
       ..._request(),
       'hints': [
         for (var i = 0; i < round; i++)
-          if (_hints[i].isNotEmpty) {'round': i + 1, 'cards': _hints[i]}
+          if (_hints[i].isNotEmpty) {'round': _hintRounds[i], 'cards': _hints[i]}
       ],
       'candidates': candidates,
-      'round': round + 1,
+      'round': _hintRounds[round],
     };
     final list = await runAction(context, () => ref.read(apiProvider).labSuggest(request));
     if (list == null || !mounted) return;
@@ -166,7 +210,7 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
         context: context,
         builder: (c) => StatefulBuilder(
             builder: (c, set) => AlertDialog(
-                    title: Text('Призрак-бот, раунд ${round + 1}'),
+                    title: Text('Призрак-бот, ${_roundLabel(round).toLowerCase()}'),
                     content: SizedBox(
                         width: 420,
                         child: ListView(shrinkWrap: true, children: [
@@ -225,6 +269,17 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
               onPressed: _busy ? null : _deal,
               icon: const Icon(Icons.casino_outlined),
               label: Text(_busy ? 'Раздаю…' : 'Раздать (Озон)')),
+          SizedBox(
+              width: 280,
+              child: TextField(
+                  key: const Key('lab-game-id'),
+                  controller: _gameId,
+                  decoration: const InputDecoration(labelText: 'Id партии', hintText: 'из истории игр'))),
+          OutlinedButton.icon(
+              key: const Key('lab-load-game'),
+              onPressed: _busy ? null : _loadGame,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Из партии')),
         ]),
         if (_rows.isNotEmpty) ...[
           const SizedBox(height: 16),
@@ -236,7 +291,13 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
             Expanded(child: Text('ПОДСКАЗКИ ПРИЗРАКА', style: sectionLabel())),
             TextButton.icon(
                 key: const Key('lab-add-round'),
-                onPressed: _hints.length >= 6 ? null : () => setState(() => _hints.add([])),
+                onPressed: _hints.length >= 6
+                    ? null
+                    : () => setState(() {
+                          _hintRounds.add(_hintRounds.isEmpty ? 1 : _hintRounds.reduce((a, b) => a > b ? a : b) + 1);
+                          _hints.add([]);
+                          _rounds = _hintRounds.reduce((a, b) => a > b ? a : b);
+                        }),
                 icon: const Icon(Icons.add),
                 label: const Text('Раунд')),
           ]),
@@ -275,7 +336,7 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
   Widget _hintRound(int i) => Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        SizedBox(width: 64, child: Text('Раунд ${i + 1}', style: const TextStyle(fontSize: 12, color: AppColors.muted))),
+        SizedBox(width: 64, child: Text(_roundLabel(i), style: const TextStyle(fontSize: 12, color: AppColors.muted))),
         Expanded(
             child: Wrap(spacing: 6, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
           for (final h in _hints[i])
@@ -291,7 +352,7 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
                     child: CardImage(cardId: h, size: 48))),
           IconButton.outlined(
               key: Key('lab-add-hint-$i'), tooltip: 'Добавить подсказку', onPressed: () => _addHint(i), icon: const Icon(Icons.add)),
-          if (_pool.isNotEmpty && _truth.every((t) => t != null))
+          if (_hintRounds[i] >= 1 && _pool.isNotEmpty && _truth.every((t) => t != null))
             TextButton.icon(
                 key: Key('lab-suggest-round-$i'),
                 onPressed: () => _suggest(i),

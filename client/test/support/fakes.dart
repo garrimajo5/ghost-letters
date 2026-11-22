@@ -60,6 +60,12 @@ class FakeApi extends Api {
     _record('adminCards', [query, setCode, active, page], () => AdminCardPage(cards: cards, total: cards.length, sets: cardSets));
   @override
   Future<AdminCard> saveCard(AdminCard card) async => _record('saveCard', [card], () { cards = [card]; return card; });
+  @override
+  Future<List<AdminCard>> moveCards(List<String> ids, String setCode) async =>
+    _record('moveCards', [ids, setCode], () => [for (final c in cards) if (ids.contains(c.id)) c]);
+  @override
+  Future<AdminCardSet> createCardSet(String code, String title) async =>
+    _record('createCardSet', [code, title], () => AdminCardSet(code, title));
 
   bool profileIsBot = false;
   List<BotRelationship> relationships = [];

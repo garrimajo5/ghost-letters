@@ -52,13 +52,15 @@ public static class BotSandboxRunner
         Simulate(scenario, seed, deck, tags, ct).Report;
 
     /// <summary>Прогон с итоговым состоянием партии (роли, исход) — для серий баланса.</summary>
+    /// <param name="timeLimit">Страховка от зависшей симуляции; в тестах больше — CI-машины под нагрузкой медленнее в разы.</param>
     public static (SandboxReport Report, GameState State) Simulate(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags,
-        CancellationToken ct, SandboxOptions? options = null)
+        CancellationToken ct, SandboxOptions? options = null, TimeSpan? timeLimit = null)
     {
         if (!Scenarios.Contains(scenario)) throw new ArgumentException("Unknown scenario", nameof(scenario));
         var custom = options is not null && scenario == "full-game";
         options ??= new SandboxOptions();
         var watch = Stopwatch.StartNew();
+        var limit = timeLimit ?? TimeSpan.FromSeconds(15);
         var count = custom ? options.Players : scenario == "witness-reveal" ? 7 : 6;
         var maxSteps = custom ? Math.Max(MaxSteps, 160 * (options.Rounds ?? 4) + 60 * count) : MaxSteps;
         var seats = Enumerable.Range(0, count).Select(i => {
@@ -71,7 +73,7 @@ public static class BotSandboxRunner
             Columns = custom && options.Columns is { } columns ? columns : GameDefaults.DefaultColumns,
             UseSecretRow = !custom || options.SecretRow,
             Roles = custom ? options.Roles ?? new RoleOptions() : new RoleOptions(KillerEnabled: scenario != "clear-hints")
-        }, deck.Order(StringComparer.Ordinal).ToList(), seed);
+        }, CardCatalog.WithoutDuplicateNames(deck, tags, seed).Order(StringComparer.Ordinal).ToList(), seed);
         var messages = new List<SandboxMessage>();
         var frames = new List<SandboxFrame>();
         var parsedAccusations = new List<Accusation>();
@@ -136,7 +138,7 @@ public static class BotSandboxRunner
         for (var step = 0; status == "completed" && state.Result is null && step < maxSteps; step++)
         {
             ct.ThrowIfCancellationRequested();
-            if (watch.Elapsed > TimeSpan.FromSeconds(15)) { status = "limit"; error = "Превышен лимит времени симуляции."; break; }
+            if (watch.Elapsed > limit) { status = "limit"; error = "Превышен лимит времени симуляции."; break; }
             clock += TimeSpan.FromSeconds(5);
             var moved = false;
             var waiting = false;

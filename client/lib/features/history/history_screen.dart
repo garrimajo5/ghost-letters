@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -81,6 +82,18 @@ class _HistoryCard extends StatelessWidget {
                     if (g.role != null) T.role(g.role),
                   ].join(' · '),
                   style: const TextStyle(fontSize: 13, color: AppColors.muted),
+                ),
+                const SizedBox(height: 2),
+                // Id партии: по нему партию можно открыть в лаборатории мыслей ботов. Нажатие копирует целиком.
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: g.gameId));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Id партии скопирован — по нему партию можно открыть в лаборатории')));
+                  },
+                  child: Text('#${g.gameId.length <= 8 ? g.gameId : g.gameId.substring(0, 8)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.muted, decoration: TextDecoration.underline,
+                          decorationStyle: TextDecorationStyle.dotted)),
                 ),
               ]),
             ),

@@ -274,6 +274,8 @@ class Api {
       await post('/admin/sandbox/lab/deal', {'players': players, if (seed != null) 'seed': seed}) as Json;
   Future<Json> labThink(Json request) async => await post('/admin/sandbox/lab/think', request) as Json;
   Future<List<Json>> labSuggest(Json request) async => ((await post('/admin/sandbox/lab/suggest', request)) as List).cast<Json>();
+  /// Перенос завершённой партии в лабораторию: поле, истина и подсказки, как были за столом.
+  Future<Json> labGame(String id) async => await get('/admin/sandbox/lab/game/$id') as Json;
 
   Future<bool> isAdmin() async => ((await get('/admin/me')) as Json)['isAdmin'] as bool? ?? false;
 
@@ -281,6 +283,18 @@ class Api {
       AdminCardPage.fromJson(await get('/admin/cards', query: {'query': query, 'setCode': setCode, if (active != null) 'active': active, 'page': page}) as Json);
 
   Future<AdminCard> saveCard(AdminCard card) async => AdminCard.fromJson(await put('/admin/cards/${card.id}', card.toJson()) as Json);
+
+  /// Массовый перенос выбранных карт в другой набор.
+  Future<List<AdminCard>> moveCards(List<String> ids, String setCode) async =>
+      ((await post('/admin/cards/move', {'ids': ids, 'setCode': setCode})) as List)
+          .map((e) => AdminCard.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+  /// Новый набор карт: код латиницей с дефисами («winter»), название — как в фильтре («Зимние каникулы»).
+  Future<AdminCardSet> createCardSet(String code, String title) async {
+    final j = await post('/admin/cards/sets', {'code': code, 'title': title}) as Json;
+    return AdminCardSet(j['code'] as String, j['title'] as String);
+  }
 
   Future<List<BotInfo>> adminBots() async =>
       ((await get('/admin/bots')) as List).map((e) => BotInfo.fromJson(Map<String, dynamic>.from(e as Map))).toList();

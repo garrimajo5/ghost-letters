@@ -71,6 +71,53 @@ void main() {
     });
   }
 
+  testWidgets('кабинет карточек: массовый перенос и новый набор', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    app.api.admin = true;
+    app.api.cards = const [
+      AdminCard(
+          id: 'card-1', imageKey: 'orig_0001', setCode: 'original', isActive: true, version: 0),
+      AdminCard(
+          id: 'card-2', imageKey: 'orig_0002', setCode: 'original', isActive: true, version: 0),
+    ];
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_horiz).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Карточки (кабинет)'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('card-select-card-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Выбрано: 1'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('card-select-card-2')));
+    await tester.pumpAndSettle();
+    expect(find.text('Выбрано: 2'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cards-move-set')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Зеркало истины').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cards-move-apply')));
+    await tester.pumpAndSettle();
+    final moved = app.api.named('moveCards').single.$2;
+    expect(moved[0], unorderedEquals(['card-1', 'card-2']));
+    expect(moved[1], 'mirror');
+    expect(find.textContaining('Выбрано:'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('cards-set-create')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('set-code')), 'winter');
+    await tester.enterText(find.byKey(const Key('set-title')), 'Зимние каникулы');
+    await tester.tap(find.byKey(const Key('set-create-apply')));
+    await tester.pumpAndSettle();
+    expect(app.api.named('createCardSet').single.$2, ['winter', 'Зимние каникулы']);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('обычный игрок не видит кабинет карточек', (tester) async {
     final app = await TestApp.create(user: watson);
     addTearDown(app.container.dispose);
