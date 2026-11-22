@@ -1,0 +1,1207 @@
+{
+  "title": "Жижа",
+  "status": "final",
+  "count": 200,
+  "cards": [
+    {
+      "id": "zhizha_0001",
+      "name": "Лава-лампа",
+      "file": "zhizha_0001.webp",
+      "sha256": "7790dd705d04883831f49a8527811c79ad6d81d34bc6663563014b7c931bb9c4"
+    },
+    {
+      "id": "zhizha_0002",
+      "name": "Медовые соты",
+      "file": "zhizha_0002.webp",
+      "sha256": "f8003c2eef1f4438bf2b98be2871c281a904d0e13f39cc48872365f812624ddd"
+    },
+    {
+      "id": "zhizha_0003",
+      "name": "Пружинка-радуга",
+      "file": "zhizha_0003.webp",
+      "sha256": "9b8d4207d283c0fe73ecdaf6d9042bec8bb2c896fb54fafcdf03a5106eb426f8"
+    },
+    {
+      "id": "zhizha_0004",
+      "name": "Ткацкий челнок",
+      "file": "zhizha_0004.webp",
+      "sha256": "de0a789c21f0aaed17f89c0287704f8f71c4e5f7d9e32724f6b9ddbf97978f25"
+    },
+    {
+      "id": "zhizha_0005",
+      "name": "Строительный отвес",
+      "file": "zhizha_0005.webp",
+      "sha256": "2c92133b883c504e14d5774079729c0083465a59e2fef8c0be19a5878ec6d491"
+    },
+    {
+      "id": "zhizha_0006",
+      "name": "Калейдоскоп",
+      "file": "zhizha_0006.webp",
+      "sha256": "590db6a55a15abe34ed77f8cdf2f572ab7aa5e49f7fc1d06062d00880b2e524a"
+    },
+    {
+      "id": "zhizha_0007",
+      "name": "Калимба",
+      "file": "zhizha_0007.webp",
+      "sha256": "3ecdc147993b0c0033d0422edd155423d20c5d446bda0f5fd39558926e96c564"
+    },
+    {
+      "id": "zhizha_0008",
+      "name": "Ласты",
+      "file": "zhizha_0008.webp",
+      "sha256": "590489073a8d2d1a2c343b33dab65b3a5d02f9f226adce93155583f44266efc5"
+    },
+    {
+      "id": "zhizha_0009",
+      "name": "Рак-отшельник",
+      "file": "zhizha_0009.webp",
+      "sha256": "169567c3b0f2c45cca62549c45e2f78f5d869d05aeb974b48dc5489e9519d398"
+    },
+    {
+      "id": "zhizha_0010",
+      "name": "Венерина мухоловка",
+      "file": "zhizha_0010.webp",
+      "sha256": "c70a65e61fd80c7f9b3df19fd5729ba0e082a3938e038aa058e2c5333509f2ba"
+    },
+    {
+      "id": "zhizha_0011",
+      "name": "Аммонит",
+      "file": "zhizha_0011.webp",
+      "sha256": "10a3aff9b170ae1f6defdc674d38d400aca842e75d15b5488d1c9b6c58377829"
+    },
+    {
+      "id": "zhizha_0012",
+      "name": "Сургучная печать",
+      "file": "zhizha_0012.webp",
+      "sha256": "5555f2bb8f9e8a55e09fecb195c6d8abd262a21541faa2336b84713c03194581"
+    },
+    {
+      "id": "zhizha_0013",
+      "name": "Маятник Ньютона",
+      "file": "zhizha_0013.webp",
+      "sha256": "0743417b4f1741e4322894a2da9ea060248b23af5d1b9f1f6c17ec38b1a5afdd"
+    },
+    {
+      "id": "zhizha_0014",
+      "name": "Скалка с тестом",
+      "file": "zhizha_0014.webp",
+      "sha256": "77711e8c34750f4ba98754b767e2212713f43ed356a976a41b174f6ed884e882"
+    },
+    {
+      "id": "zhizha_0015",
+      "name": "Кузнечные мехи",
+      "file": "zhizha_0015.webp",
+      "sha256": "49cc85f4c2b4c2271bcbe126870c9cca96b42aae083d6a19a617847558cab0db"
+    },
+    {
+      "id": "zhizha_0016",
+      "name": "Стетоскоп",
+      "file": "zhizha_0016.webp",
+      "sha256": "447e5fcb694757d98032ed896e6a97c7f7858284011d2db1ef6655866f92fcca"
+    },
+    {
+      "id": "zhizha_0017",
+      "name": "Английская булавка",
+      "file": "zhizha_0017.webp",
+      "sha256": "1e74582d342f8a5afce53b347b14844938eeb1c46ab62fb2d8693340cba3bfc2"
+    },
+    {
+      "id": "zhizha_0018",
+      "name": "Банная губка",
+      "file": "zhizha_0018.webp",
+      "sha256": "efc44f2348d1fd697acd05d9d89de6e0551030739ffef6e7e4164411c2a784ed"
+    },
+    {
+      "id": "zhizha_0019",
+      "name": "Напёрсток",
+      "file": "zhizha_0019.webp",
+      "sha256": "97c084099a14cd825ba97b36083e059f6e76d1bf26d6d824dd7d4652e63339e8"
+    },
+    {
+      "id": "zhizha_0020",
+      "name": "Ручной насос",
+      "file": "zhizha_0020.webp",
+      "sha256": "07380d82fcc89b49f996b458a0491f2cde31bc6021326a4892437bf819cafcab"
+    },
+    {
+      "id": "zhizha_0021",
+      "name": "Смородиновое желе",
+      "file": "zhizha_0021.webp",
+      "sha256": "5c12fdd6d781c6a16fabe3510cc17bd5ba35fd1b477a7689127c492cfd0285d2"
+    },
+    {
+      "id": "zhizha_0022",
+      "name": "Камертон",
+      "file": "zhizha_0022.webp",
+      "sha256": "9bbccdf8208c7f8643a0ad4f55b4d88e5242f0f11e9a03f8fc024068ddcc8ffc"
+    },
+    {
+      "id": "zhizha_0023",
+      "name": "Снегоступ",
+      "file": "zhizha_0023.webp",
+      "sha256": "d5a9dac33a54aee08d4a1750060fd64d161e115dae8a314e089f5fa3244c6eb8"
+    },
+    {
+      "id": "zhizha_0024",
+      "name": "Комар в янтаре",
+      "file": "zhizha_0024.webp",
+      "sha256": "cbb756ab1647cc9f103d5b97f2240dfb9e281855422c2135d23a3ba3ea70b250"
+    },
+    {
+      "id": "zhizha_0025",
+      "name": "Игольница-помидор",
+      "file": "zhizha_0025.webp",
+      "sha256": "e2f7eee571a73f9ef674bc4c4ef8a555cd50ab878ed48cfdb2538bf65d8ff2ff"
+    },
+    {
+      "id": "zhizha_0026",
+      "name": "Волан",
+      "file": "zhizha_0026.webp",
+      "sha256": "de3b0211a83550568656246b1a85b4a2d801aff6308c7d0d21e7f93c45426bbd"
+    },
+    {
+      "id": "zhizha_0027",
+      "name": "Бобр",
+      "file": "zhizha_0027.webp",
+      "sha256": "f2285e483fdcdcf1c1de591cf0bb47c652d6f48a93bc29ac90b074378a2e36cf"
+    },
+    {
+      "id": "zhizha_0028",
+      "name": "Кабинка канатной дороги",
+      "file": "zhizha_0028.webp",
+      "sha256": "751d4887f6022bdae7cceea0edd2a3d6ec5e8ba37b0053eea220e18dc4cc97df"
+    },
+    {
+      "id": "zhizha_0029",
+      "name": "Резиновая грелка",
+      "file": "zhizha_0029.webp",
+      "sha256": "a393feb735707a8106a2677660b118a64032890c56084491d5ac1cf78a1d8c72"
+    },
+    {
+      "id": "zhizha_0030",
+      "name": "Краснокочанная капуста",
+      "file": "zhizha_0030.webp",
+      "sha256": "f14941ad24383e079a192cccdeafd1336ec2cd4ab92791897745ef25643ad2e7"
+    },
+    {
+      "id": "zhizha_0031",
+      "name": "Перфокарта",
+      "file": "zhizha_0031.webp",
+      "sha256": "4fc5282699409fc14048480f50373a64f37b2fb7731ec4a851711ed706dced79"
+    },
+    {
+      "id": "zhizha_0032",
+      "name": "Пьющая птичка",
+      "file": "zhizha_0032.webp",
+      "sha256": "d29639d1ed1bc0786749b1c21c8513556e886524df5aa5f67473cc65eb2ba6a5"
+    },
+    {
+      "id": "zhizha_0033",
+      "name": "Летучая мышь",
+      "file": "zhizha_0033.webp",
+      "sha256": "3fdf2bb1bf8bddc6442f411aca13d039b3d442e5ce4c4c725054b4d8680b4655"
+    },
+    {
+      "id": "zhizha_0034",
+      "name": "Ступка с пестиком",
+      "file": "zhizha_0034.webp",
+      "sha256": "574e59ac59bf97c16a59de4b77b5e80bcf3cbacfec24579247fd1729141fa727"
+    },
+    {
+      "id": "zhizha_0035",
+      "name": "Пяльцы",
+      "file": "zhizha_0035.webp",
+      "sha256": "1fdf25e514855fd65e69dfee8f1af1d0f2d250e2424d0a1a8f62ecadca1ddd58"
+    },
+    {
+      "id": "zhizha_0036",
+      "name": "Ветроуказатель",
+      "file": "zhizha_0036.webp",
+      "sha256": "b53a5638240b832e8d02b4222688d07dd57fd0c5290bd0c5acdccd91d341ded2"
+    },
+    {
+      "id": "zhizha_0037",
+      "name": "Коробочка лотоса",
+      "file": "zhizha_0037.webp",
+      "sha256": "4b326ec1fd34aed70eb2fd73beb547f8dfacf994e87e7ec572731c97690a39b6"
+    },
+    {
+      "id": "zhizha_0038",
+      "name": "Оптическая призма",
+      "file": "zhizha_0038.webp",
+      "sha256": "2f021a8fad6add5eacd4ff70fd16c9f73d7134bdc12cb2f65baec9534f9a598f"
+    },
+    {
+      "id": "zhizha_0039",
+      "name": "Машинная маслёнка",
+      "file": "zhizha_0039.webp",
+      "sha256": "6b51153ff0b9795d14d223858d29edbc643e9d7b477735f1741e6895773d87ee"
+    },
+    {
+      "id": "zhizha_0040",
+      "name": "Костяшки домино",
+      "file": "zhizha_0040.webp",
+      "sha256": "20dfee2b3e96a0aa44671a87d5f213136ca02257a493f978c2007c346a57c5f8"
+    },
+    {
+      "id": "zhizha_0041",
+      "name": "Фартук пекаря",
+      "file": "zhizha_0041.webp",
+      "sha256": "66c326f4f05f8e55b38b55a8f23d16d34e82dfb97e4170a6044e5c25f4dfa69e"
+    },
+    {
+      "id": "zhizha_0042",
+      "name": "Кленовые крылатки",
+      "file": "zhizha_0042.webp",
+      "sha256": "7332c871eb0fd7d28b3efa007dcb7e5a11b2527e888869601ad09bacf7458701"
+    },
+    {
+      "id": "zhizha_0043",
+      "name": "Камень для кёрлинга",
+      "file": "zhizha_0043.webp",
+      "sha256": "0c90e3df5ab8c2723e7076c9944bc0007cb447e9e083b37a21df2c9ba9b76802"
+    },
+    {
+      "id": "zhizha_0044",
+      "name": "Балетная пачка",
+      "file": "zhizha_0044.webp",
+      "sha256": "5071b2bc9201514cd5b2475c8d2e5d4d1ad47b43880294d1ec9d36d66dfef6ff"
+    },
+    {
+      "id": "zhizha_0045",
+      "name": "Соковыжималка для лимона",
+      "file": "zhizha_0045.webp",
+      "sha256": "47c0070c92b7e51a7a66e6927468ac9635653df4cb3defb988e72145dd37f489"
+    },
+    {
+      "id": "zhizha_0046",
+      "name": "Светлячок",
+      "file": "zhizha_0046.webp",
+      "sha256": "27fe898388b2e635d49bfb43a674f56821c22e07538055ca053e76e4b2146660"
+    },
+    {
+      "id": "zhizha_0047",
+      "name": "Подтяжки",
+      "file": "zhizha_0047.webp",
+      "sha256": "c66c145868a258fb81ca59fb779b3328a6d8c1fb94d0440c8a1372b046f2fe1f"
+    },
+    {
+      "id": "zhizha_0048",
+      "name": "Музыкальная шкатулка",
+      "file": "zhizha_0048.webp",
+      "sha256": "0063309e70ad472222c5d0caa4b68950cadcf49a9d4c8eda04691c80689bef04"
+    },
+    {
+      "id": "zhizha_0049",
+      "name": "Гранат в разломе",
+      "file": "zhizha_0049.webp",
+      "sha256": "2298ba8ab61039cafd5695434dec91a224b72c993fd678fc82e4393343e3387e"
+    },
+    {
+      "id": "zhizha_0050",
+      "name": "Дождевик-пончо",
+      "file": "zhizha_0050.webp",
+      "sha256": "a05cb846e51645f9f32629fe329afe0b39b239e8e60f50946102b7c7fe3df4f7"
+    },
+    {
+      "id": "zhizha_0051",
+      "name": "Садовая тачка",
+      "file": "zhizha_0051.webp",
+      "sha256": "d45146090b905598cd2055e7a22635eae9e558894a97480f013c15670125b08f"
+    },
+    {
+      "id": "zhizha_0052",
+      "name": "Йо-йо",
+      "file": "zhizha_0052.webp",
+      "sha256": "4bcd7b8d899d4c0ab85392023d6bfe92228f15ba6d81e47e0a5a72eed056c8e6"
+    },
+    {
+      "id": "zhizha_0053",
+      "name": "Морской конёк",
+      "file": "zhizha_0053.webp",
+      "sha256": "0c765e7169797db14b8b8d86a9ca92d02d367bfe8d8f32d2146e76d73c9bc99a"
+    },
+    {
+      "id": "zhizha_0054",
+      "name": "Меховая муфта",
+      "file": "zhizha_0054.webp",
+      "sha256": "5e598bbeaf95605f4d634f5b45f75580d59fe41774baeec5bbbab942683805a7"
+    },
+    {
+      "id": "zhizha_0055",
+      "name": "Дырокол",
+      "file": "zhizha_0055.webp",
+      "sha256": "36bc3df44e9d734025b9578da26c3d3dedd2df691a9e435742fd08cf86a5d231"
+    },
+    {
+      "id": "zhizha_0056",
+      "name": "Щипцы для сахара",
+      "file": "zhizha_0056.webp",
+      "sha256": "32d8391948f040b9002a49b147c2b388adc478aa22ce8c48bdbe690b4632df9f"
+    },
+    {
+      "id": "zhizha_0057",
+      "name": "Рогоз",
+      "file": "zhizha_0057.webp",
+      "sha256": "c8af7ebe89557e12759fdc67a224786835ac3c90dd9caad12931ddedc49bc523"
+    },
+    {
+      "id": "zhizha_0058",
+      "name": "Печатный валик",
+      "file": "zhizha_0058.webp",
+      "sha256": "e8b45ab98bc1ad4660e25f357d160182cf99c28384ba33d3b4c1fdac2614a6fc"
+    },
+    {
+      "id": "zhizha_0059",
+      "name": "Чайный гриб",
+      "file": "zhizha_0059.webp",
+      "sha256": "bf47b5c53c3b5a19ffe0f95504e9dbe8d40b930f9478e34c32d69e9ef24b102c"
+    },
+    {
+      "id": "zhizha_0060",
+      "name": "Бумажная вертушка",
+      "file": "zhizha_0060.webp",
+      "sha256": "9fe22397f68e52d6f1effc8f2f6168b9cbc011bb742ed58500492ae254102d05"
+    },
+    {
+      "id": "zhizha_0061",
+      "name": "Пейджер",
+      "file": "zhizha_0061.webp",
+      "sha256": "286504e086fe0ea35468b0b2aa31a24c1813af6f25a07556a87232d9e0587a95"
+    },
+    {
+      "id": "zhizha_0062",
+      "name": "Бумажные человечки",
+      "file": "zhizha_0062.webp",
+      "sha256": "f18c48e432d9c656b2732f9297ed916eb6ad7b58058ade2a38fe554c44640d50"
+    },
+    {
+      "id": "zhizha_0063",
+      "name": "Алебарда",
+      "file": "zhizha_0063.webp",
+      "sha256": "390d95849aa6feed597ca1fe62b57499f0951b52fd50076c54d57f824cc7d34d"
+    },
+    {
+      "id": "zhizha_0064",
+      "name": "Каштан в кожуре",
+      "file": "zhizha_0064.webp",
+      "sha256": "9b64ad0e9355479f9255583e371c59d3dda99155caa754ffa23282acc1c69c1a"
+    },
+    {
+      "id": "zhizha_0065",
+      "name": "Платёжный терминал",
+      "file": "zhizha_0065.webp",
+      "sha256": "440d7f39937cd277f945b1fc884cc438723cc1ac27aca21a2c4d61dd461be1d0"
+    },
+    {
+      "id": "zhizha_0066",
+      "name": "Книжка-панорама",
+      "file": "zhizha_0066.webp",
+      "sha256": "dd544d56ded68d8ddd1fb7f2d04a2b69c4c4ae5bd5324084492aadadbef60f22"
+    },
+    {
+      "id": "zhizha_0067",
+      "name": "Рыцарский щит",
+      "file": "zhizha_0067.webp",
+      "sha256": "2eb705f40e38294d1e6058f99cb21a6db37113f3f7b4d71bdf55dfc26f7a243d"
+    },
+    {
+      "id": "zhizha_0068",
+      "name": "Радиолампа",
+      "file": "zhizha_0068.webp",
+      "sha256": "d2ebbde773b10b5407b322f37fc8d027799f75f679f8298d0e1e213a81b2aefb"
+    },
+    {
+      "id": "zhizha_0069",
+      "name": "Выкройка рукава",
+      "file": "zhizha_0069.webp",
+      "sha256": "5783c528106bc51093cb977a40c784b2b12b4786e6318baef2370a625f625a90"
+    },
+    {
+      "id": "zhizha_0070",
+      "name": "Кухонная тёрка",
+      "file": "zhizha_0070.webp",
+      "sha256": "7d0f2262b7be4f8824c8a65e59065ec002197141588b2fb271127f9ee5aabc73"
+    },
+    {
+      "id": "zhizha_0071",
+      "name": "Луноход",
+      "file": "zhizha_0071.webp",
+      "sha256": "38444cc6c1d9ad9cd3b50103aa76d5e0e3900cce6dba0c76ddf2af4a098ccb0b"
+    },
+    {
+      "id": "zhizha_0072",
+      "name": "Бумажная формочка",
+      "file": "zhizha_0072.webp",
+      "sha256": "e1276a468b912f2bcfd00e9c116adabb91cc58233679557b4a067d3798356784"
+    },
+    {
+      "id": "zhizha_0073",
+      "name": "Рыба-ёж",
+      "file": "zhizha_0073.webp",
+      "sha256": "5c0b4c8572a1e4730633d57ed0ea6aa46d83b2144403c2e357507aa9aeba462f"
+    },
+    {
+      "id": "zhizha_0074",
+      "name": "Тостер",
+      "file": "zhizha_0074.webp",
+      "sha256": "5b214ebaa36ce65f5af64c3d46471b42694139f1a7960a60b1a1494f3a716c7a"
+    },
+    {
+      "id": "zhizha_0075",
+      "name": "Лототрон",
+      "file": "zhizha_0075.webp",
+      "sha256": "171abdbc0028d93c78037c7c0147cd1a38da821a5d86a8905edea1dd697369e6"
+    },
+    {
+      "id": "zhizha_0076",
+      "name": "Медиатор",
+      "file": "zhizha_0076.webp",
+      "sha256": "e2983735f3a437b14c167d26e8ecfa1a7ac80c16a3c0c1f5f41f60a09a26da05"
+    },
+    {
+      "id": "zhizha_0077",
+      "name": "Кремнёвый наконечник",
+      "file": "zhizha_0077.webp",
+      "sha256": "394113dacd39997a84552cf84dbb7fc0bb8f122e7a70827554b7be9aac8c6619"
+    },
+    {
+      "id": "zhizha_0078",
+      "name": "Переводные татуировки",
+      "file": "zhizha_0078.webp",
+      "sha256": "cf1e01f44006c7e1d3f60c1044538cabc7f4299d4d4919915ac7cbc14c0de2d1"
+    },
+    {
+      "id": "zhizha_0079",
+      "name": "Зажим для бумаг",
+      "file": "zhizha_0079.webp",
+      "sha256": "1a0370b370815fb62fa4df07958cf399deebfd4ff5bfe446271cd80f5fbeb22b"
+    },
+    {
+      "id": "zhizha_0080",
+      "name": "Аккордеон",
+      "file": "zhizha_0080.webp",
+      "sha256": "a566997e2298d55c86c703491deeb1306fab9f9c9a9e6b4877feab11a7c5ee7f"
+    },
+    {
+      "id": "zhizha_0081",
+      "name": "Турникет",
+      "file": "zhizha_0081.webp",
+      "sha256": "8ab89a4a50bf1bb1eea01af05da6ea1f92be3878aa9755eac0e49531034e5ee9"
+    },
+    {
+      "id": "zhizha_0082",
+      "name": "Брошь-камея",
+      "file": "zhizha_0082.webp",
+      "sha256": "069da7c09f265af7cd5de959a65a15aa5c47c362a069d13696bbf9a22a9096ab"
+    },
+    {
+      "id": "zhizha_0083",
+      "name": "Рентген кисти",
+      "file": "zhizha_0083.webp",
+      "sha256": "db818a1c02727f3a5d6a03d300f1b7a785bbc1194156d29dc44d45d2da7d4024"
+    },
+    {
+      "id": "zhizha_0084",
+      "name": "Разводной мост",
+      "file": "zhizha_0084.webp",
+      "sha256": "2f5a1f09bad465a9efcfc826a6f25268a5a26695f2eccb1b0ee272c5c02c0b45"
+    },
+    {
+      "id": "zhizha_0085",
+      "name": "Рунические камни",
+      "file": "zhizha_0085.webp",
+      "sha256": "056b0c68dfe507e436611f4e8847e03557a98276fe53f596ed3a4a99f3f0aa6b"
+    },
+    {
+      "id": "zhizha_0086",
+      "name": "Чертёжный пантограф",
+      "file": "zhizha_0086.webp",
+      "sha256": "422fd38bcd061cf5abba957bdf207604373d0aba020ab0c6dd0aa74dac36d288"
+    },
+    {
+      "id": "zhizha_0087",
+      "name": "Штормгласс",
+      "file": "zhizha_0087.webp",
+      "sha256": "1fcb23cbb4e1176f1fc60b8a051718009bcd2ccdefa592fe27fa8e28a94b22fc"
+    },
+    {
+      "id": "zhizha_0088",
+      "name": "Ширма",
+      "file": "zhizha_0088.webp",
+      "sha256": "c1825278317aeeb29370027376191d584846f91c496daa31faa247eb112c3ad2"
+    },
+    {
+      "id": "zhizha_0089",
+      "name": "Бигуди",
+      "file": "zhizha_0089.webp",
+      "sha256": "f8635e90a7352b844f9441be4d7e8137adf2e41b40dec1704dc33c0e66c5f9b7"
+    },
+    {
+      "id": "zhizha_0090",
+      "name": "Пожарный гидрант",
+      "file": "zhizha_0090.webp",
+      "sha256": "deee6a781726def0cbb790fc5b3a46c47e62c944e76af80bbc62daae4db0346e"
+    },
+    {
+      "id": "zhizha_0091",
+      "name": "Стартовые колодки",
+      "file": "zhizha_0091.webp",
+      "sha256": "19a05e85c3a60efc269dcd969f3de3c494b2786ad8506302d539774a72bc0054"
+    },
+    {
+      "id": "zhizha_0092",
+      "name": "Слуховой аппарат",
+      "file": "zhizha_0092.webp",
+      "sha256": "052032b26ff748a255e9cf760a774a3eef1a1ddcd9f204c558a4fb2fc23940ca"
+    },
+    {
+      "id": "zhizha_0093",
+      "name": "Кариатида",
+      "file": "zhizha_0093.webp",
+      "sha256": "0279583eae25ea50ea54fac21d521537aa55e106f66434519edcd0e22432eaaa"
+    },
+    {
+      "id": "zhizha_0094",
+      "name": "Жемчужная устрица",
+      "file": "zhizha_0094.webp",
+      "sha256": "4743fdf6cb2b7dac5f69a9b37d6e21d1bb2cd5d17a0a201c152bdb36537b9491"
+    },
+    {
+      "id": "zhizha_0095",
+      "name": "Гасильник для свечи",
+      "file": "zhizha_0095.webp",
+      "sha256": "0d515245c080f8a3b27d0c392f9abb7300e161ac7e934771c5a3838a8ca6bcfa"
+    },
+    {
+      "id": "zhizha_0096",
+      "name": "Промокашка с ручкой",
+      "file": "zhizha_0096.webp",
+      "sha256": "72ae759332213e5eb1842edf9a733bda06b2f627bbb13585aa9645e7fcb5c2e7"
+    },
+    {
+      "id": "zhizha_0097",
+      "name": "Паркомат с циферблатом",
+      "file": "zhizha_0097.webp",
+      "sha256": "70b252edfb97b40aea1dc5c1b93e5034d5753289dbf94fd9410845e0d79a2e8a"
+    },
+    {
+      "id": "zhizha_0098",
+      "name": "Намордник",
+      "file": "zhizha_0098.webp",
+      "sha256": "1e8c486ee38ae5dda0388e6210260432b43758de79ea7ff1eb0f95285bb6bca9"
+    },
+    {
+      "id": "zhizha_0099",
+      "name": "Кадило",
+      "file": "zhizha_0099.webp",
+      "sha256": "a5ac95591268f78535dcecd4ef353009075475299aca2edf4641d0a51071c4dd"
+    },
+    {
+      "id": "zhizha_0100",
+      "name": "Модель сердца",
+      "file": "zhizha_0100.webp",
+      "sha256": "fb531a32f6138d7bb6241ed910c6505c4e521217badf7590676870add9a588eb"
+    },
+    {
+      "id": "zhizha_0101",
+      "name": "Пляжная кабинка",
+      "file": "zhizha_0101.webp",
+      "sha256": "2ce99f02269dbfe182d1ccad1db664e72a344c8f35801b2ad227e38c6af4ff93"
+    },
+    {
+      "id": "zhizha_0102",
+      "name": "Костыль",
+      "file": "zhizha_0102.webp",
+      "sha256": "b0767dcbb0065f6d5a4520ef9f141a410fd2c3a4c522c7bb1d51bbc31ffdeff9"
+    },
+    {
+      "id": "zhizha_0103",
+      "name": "Бутоньерка",
+      "file": "zhizha_0103.webp",
+      "sha256": "23f21c739e674c772cf102ac17e6efb22d5c38d319d1b55a160184b7f2ec894c"
+    },
+    {
+      "id": "zhizha_0104",
+      "name": "Картотечный шкаф",
+      "file": "zhizha_0104.webp",
+      "sha256": "70ca43d211cf1a4b2782c513ae3f3f6ca8dc982ab1c6d59301210ee596a088da"
+    },
+    {
+      "id": "zhizha_0105",
+      "name": "Спил дерева",
+      "file": "zhizha_0105.webp",
+      "sha256": "348d6cc44907dc07c94ca90eb60c1534c9c76ea07e6c7328bc8bdb216095412e"
+    },
+    {
+      "id": "zhizha_0106",
+      "name": "Садовая купальня для птиц",
+      "file": "zhizha_0106.webp",
+      "sha256": "b32120c3e7b16271a452c927a21c46f14cc220969bf1523c2e996e9c40dc4e52"
+    },
+    {
+      "id": "zhizha_0107",
+      "name": "Шифровальный диск",
+      "file": "zhizha_0107.webp",
+      "sha256": "62b68547a8cf567a317dc8551e71d748effa97da32c2b78b21b14215e5602f50"
+    },
+    {
+      "id": "zhizha_0108",
+      "name": "Глиняная свистулька",
+      "file": "zhizha_0108.webp",
+      "sha256": "2acf208ae34ce5d99bcc656b25cd34e3d4424651cb49e97a4b65280a1a32347f"
+    },
+    {
+      "id": "zhizha_0109",
+      "name": "Помазок",
+      "file": "zhizha_0109.webp",
+      "sha256": "4992317ca98d8a9f7280af921cda6606201cbc3a6c4bd7237e609956cb90599a"
+    },
+    {
+      "id": "zhizha_0110",
+      "name": "Дверной молоток",
+      "file": "zhizha_0110.webp",
+      "sha256": "6e438e6f2f39711f5052e4b40ce1e149d7aadb2c35cd23fc2c2781adccd2a502"
+    },
+    {
+      "id": "zhizha_0111",
+      "name": "Сейсмограф",
+      "file": "zhizha_0111.webp",
+      "sha256": "aa6e9c21083f6dc47fc99e9d52d348fbf10a320c1c11dd458933a4c746e43482"
+    },
+    {
+      "id": "zhizha_0112",
+      "name": "Трубный орган",
+      "file": "zhizha_0112.webp",
+      "sha256": "9d5254b0343501d294bce455f88378312a1c7db7f160b11b6ac3f8abb2186224"
+    },
+    {
+      "id": "zhizha_0113",
+      "name": "Фехтовальная маска",
+      "file": "zhizha_0113.webp",
+      "sha256": "8d960af313dc16a872bad1d5834214a61b7f77d08bb2f0e04537db6dd16a6bbb"
+    },
+    {
+      "id": "zhizha_0114",
+      "name": "Медицинская пиявка",
+      "file": "zhizha_0114.webp",
+      "sha256": "5d40b3de547d0b9a013a4dfe4b4dd40fdc7d41fb4fb9ec7921c6db7b890d6b76"
+    },
+    {
+      "id": "zhizha_0115",
+      "name": "Зимородок",
+      "file": "zhizha_0115.webp",
+      "sha256": "ea5da7ccfb29037ffc094228d871e1eec90162ba44bdd960c40417c7870ca139"
+    },
+    {
+      "id": "zhizha_0116",
+      "name": "Колокольный буй",
+      "file": "zhizha_0116.webp",
+      "sha256": "823544207c42c122805763890dd0681fa043093ea905297fe710275d3f355a9b"
+    },
+    {
+      "id": "zhizha_0117",
+      "name": "Бадьян",
+      "file": "zhizha_0117.webp",
+      "sha256": "49a8fe6cb8b280e0473c04bf18c84d8bb466b9a491d5f43a09caf66854d057e2"
+    },
+    {
+      "id": "zhizha_0118",
+      "name": "Подставка для колец",
+      "file": "zhizha_0118.webp",
+      "sha256": "7be454e2c8089f21b53f85aec8d96542db460523cebc91a406f6de53fd9f6a98"
+    },
+    {
+      "id": "zhizha_0119",
+      "name": "Спальный мешок",
+      "file": "zhizha_0119.webp",
+      "sha256": "1a214b6ec74e91cb944208323912ce1b15e4122efbab2e4329d156814b74f178"
+    },
+    {
+      "id": "zhizha_0120",
+      "name": "Капсула пневмопочты",
+      "file": "zhizha_0120.webp",
+      "sha256": "e8aed03d83c1b89535bb798d6b2cecd42590e529296d4bf1266a2abfa362a962"
+    },
+    {
+      "id": "zhizha_0121",
+      "name": "Инкубатор для цыплят",
+      "file": "zhizha_0121.webp",
+      "sha256": "6b08699a9b7f53b213d3d86c45c41cbcd1ae467cb41ee48a6f81baeedddd2226"
+    },
+    {
+      "id": "zhizha_0122",
+      "name": "Отбивочный шнур",
+      "file": "zhizha_0122.webp",
+      "sha256": "963c573c157b84752cb9655f49da854621911ef6ec01e8e3cde366deb5d305aa"
+    },
+    {
+      "id": "zhizha_0123",
+      "name": "Дверной засов",
+      "file": "zhizha_0123.webp",
+      "sha256": "9e58b909d10da2961a852044b8b0016c5f929619084522031b8ea4b9f8c7720a"
+    },
+    {
+      "id": "zhizha_0124",
+      "name": "Железнодорожный семафор",
+      "file": "zhizha_0124.webp",
+      "sha256": "0de22331951d703f722bef1dd9c923cd83dd08e0a0c4e30a8ba72a5db518a225"
+    },
+    {
+      "id": "zhizha_0125",
+      "name": "Сифон для газировки",
+      "file": "zhizha_0125.webp",
+      "sha256": "7f549dc0ca07ac31aa23f3a8450503388fd44a71b6fc709d4880b48735f1a618"
+    },
+    {
+      "id": "zhizha_0126",
+      "name": "Веретено с шерстью",
+      "file": "zhizha_0126.webp",
+      "sha256": "3ac90da68ffa8cfb6e67d88cbaf332def05f3780396daf762bcaa8f8d674d1c3"
+    },
+    {
+      "id": "zhizha_0127",
+      "name": "Кольцеброс",
+      "file": "zhizha_0127.webp",
+      "sha256": "85e0edb82e9d9952dd98944184e95675431ca250baae9bd27b7971e7c58fa5ff"
+    },
+    {
+      "id": "zhizha_0128",
+      "name": "Колёсный блокиратор",
+      "file": "zhizha_0128.webp",
+      "sha256": "d8fee01c95acb8a154d20710090c4e04800bcea81d765511196e242c15e23b56"
+    },
+    {
+      "id": "zhizha_0129",
+      "name": "Пиньята-ослик",
+      "file": "zhizha_0129.webp",
+      "sha256": "f34b5ae8bc39fe65d2f3068694569e8c8e3f5f17d980c50a59b549cb901cf03f"
+    },
+    {
+      "id": "zhizha_0130",
+      "name": "Мешочек магнезии",
+      "file": "zhizha_0130.webp",
+      "sha256": "f4ec8fe3afc3a48e0259479aea81efe3805ee473fc73b03aff939a280c3c0c2e"
+    },
+    {
+      "id": "zhizha_0131",
+      "name": "Маслобойка",
+      "file": "zhizha_0131.webp",
+      "sha256": "a844651167cfeddaaab300ee2928e75c0d1839ab6fc7bbec157e1dd70709fcb7"
+    },
+    {
+      "id": "zhizha_0132",
+      "name": "Язычок-гудок",
+      "file": "zhizha_0132.webp",
+      "sha256": "289350422ab5a75f147a4fcee6e2487d77077c73c62179ed56baab8635d0b44c"
+    },
+    {
+      "id": "zhizha_0133",
+      "name": "Таблица для проверки зрения",
+      "file": "zhizha_0133.webp",
+      "sha256": "f1480af132a9be8909d665c2619ee89387a8902ba853a50bd6790de92ba6df85"
+    },
+    {
+      "id": "zhizha_0134",
+      "name": "Водяное колесо",
+      "file": "zhizha_0134.webp",
+      "sha256": "ae2877fcd59d74e88ca919e4dc287459ff71aa68816d13d5b0f8cd486dd20588"
+    },
+    {
+      "id": "zhizha_0135",
+      "name": "Переноска для кошки",
+      "file": "zhizha_0135.webp",
+      "sha256": "dbfc99bde79aaf7554999b610a48a818c6d52440cccd04c699f1ddcf4d040869"
+    },
+    {
+      "id": "zhizha_0136",
+      "name": "Сухой ультрамарин",
+      "file": "zhizha_0136.webp",
+      "sha256": "584840bac5a75a4761ede633fff762e029e677e0d8f604167e47fda99ef8eb07"
+    },
+    {
+      "id": "zhizha_0137",
+      "name": "Монгольфьер",
+      "file": "zhizha_0137.webp",
+      "sha256": "4d642d55c65c91c6a4bc9290e8ecc382d8cb3450202ea37a77ce32e005521ce6"
+    },
+    {
+      "id": "zhizha_0138",
+      "name": "Кукурузный початок",
+      "file": "zhizha_0138.webp",
+      "sha256": "e04c5e73bc4a6d3d0b123e52a0427c2fe292fc3a51d98d69ecfa25a0531b7347"
+    },
+    {
+      "id": "zhizha_0139",
+      "name": "Свинцовая пломба",
+      "file": "zhizha_0139.webp",
+      "sha256": "15a78f253db115cad6aca451cdb4932c3c56c2d7a524cded1c3f765637b7fd51"
+    },
+    {
+      "id": "zhizha_0140",
+      "name": "Знак цирюльника",
+      "file": "zhizha_0140.webp",
+      "sha256": "d7b0cc1fcc0a779516dc8824b84bd943151bc81308dc34ac8b4bddb1326abc13"
+    },
+    {
+      "id": "zhizha_0141",
+      "name": "Одноколёсный велосипед",
+      "file": "zhizha_0141.webp",
+      "sha256": "a2196ed74d61800344325675e7e86de6dde87ec1af67f169676b962071dedc07"
+    },
+    {
+      "id": "zhizha_0142",
+      "name": "Розовый лукум",
+      "file": "zhizha_0142.webp",
+      "sha256": "12eaa033031c67e20e6462ec14183353aa96904ce4d1a09655ab1878606eef15"
+    },
+    {
+      "id": "zhizha_0143",
+      "name": "Бензоколонка",
+      "file": "zhizha_0143.webp",
+      "sha256": "b92e246f448a3bad0a6c32f779234236b8f61eff88d5d1bd42fed4df05bb37ab"
+    },
+    {
+      "id": "zhizha_0144",
+      "name": "Кресло-мешок",
+      "file": "zhizha_0144.webp",
+      "sha256": "1371cb55e4b06b7ebe1d596451cb715af9dcbf93fef94aaccc4761f6053f0727"
+    },
+    {
+      "id": "zhizha_0145",
+      "name": "Дымарь пчеловода",
+      "file": "zhizha_0145.webp",
+      "sha256": "2b609abfa4a3ea2ff28cddff0772f2f7e658cf7c17e3d41386494afdbc43dec5"
+    },
+    {
+      "id": "zhizha_0146",
+      "name": "Бачок с цепочкой",
+      "file": "zhizha_0146.webp",
+      "sha256": "c6e45e3c6ea636c42774a29ca9daed180da93a10533ee0315c1d1e12ea3b2b46"
+    },
+    {
+      "id": "zhizha_0147",
+      "name": "Сахарный череп",
+      "file": "zhizha_0147.webp",
+      "sha256": "0b69533b5c9908647ae771c5eadd84a12e2230e3fdbcd574719bcfbd5bfb19dc"
+    },
+    {
+      "id": "zhizha_0148",
+      "name": "Тактильная плитка",
+      "file": "zhizha_0148.webp",
+      "sha256": "7269ee6f5bd651fd0f6e24c704bc9aaa217a42bda16b9fb42bae04c5c3a9ebc7"
+    },
+    {
+      "id": "zhizha_0149",
+      "name": "Стремя",
+      "file": "zhizha_0149.webp",
+      "sha256": "d53f79f2b8d52353261c674bd6cbea2f8b0ecd0cf3e89629de919789059edd8e"
+    },
+    {
+      "id": "zhizha_0150",
+      "name": "Магнитная жидкость",
+      "file": "zhizha_0150.webp",
+      "sha256": "cc9eed850abb4b0309c7872cfa524dbea74c413de5f163c36de5cf50cd0e7e81"
+    },
+    {
+      "id": "zhizha_0151",
+      "name": "Плюшевый лев",
+      "file": "zhizha_0151.webp",
+      "sha256": "acabcd5173837fb64e5d4c6bfb24fb5c200e8b4d39f809f2c8488ff6510ed081"
+    },
+    {
+      "id": "zhizha_0152",
+      "name": "Линза Френеля",
+      "file": "zhizha_0152.webp",
+      "sha256": "313030fcd881060e2805e338ac90dfdb85489b46705334c5c4b5ad762fb1d7c1"
+    },
+    {
+      "id": "zhizha_0153",
+      "name": "Гимнастическая лента",
+      "file": "zhizha_0153.webp",
+      "sha256": "1e7f876139ea3336777a9e8914d0982520c26e85de9b06be39e15897850d04be"
+    },
+    {
+      "id": "zhizha_0154",
+      "name": "Шарикоподшипник",
+      "file": "zhizha_0154.webp",
+      "sha256": "977488ad514d21e1241174bd3af80ae157f11d414b8cf97ba279630426812482"
+    },
+    {
+      "id": "zhizha_0155",
+      "name": "Стеклянная ловушка для ос",
+      "file": "zhizha_0155.webp",
+      "sha256": "fee52bbe39831bd5255c496a8d6bec404d267587d32b9f2a95a0e7582bb1d072"
+    },
+    {
+      "id": "zhizha_0156",
+      "name": "Ананасовое кольцо",
+      "file": "zhizha_0156.webp",
+      "sha256": "70c19d5cd85b7baff41680cbd2881580cc67efd032d9042b4e3e10432aaeaddc"
+    },
+    {
+      "id": "zhizha_0157",
+      "name": "Оптоволоконный светильник",
+      "file": "zhizha_0157.webp",
+      "sha256": "ea802ba67eb2c857457c62ad4ccd533380051544c6c517f2f02a47611cc041bd"
+    },
+    {
+      "id": "zhizha_0158",
+      "name": "Ситечко на цепочке",
+      "file": "zhizha_0158.webp",
+      "sha256": "b39de46bd1b58075a6df3e556bfbae4b63c87574c981d220291461c88115d1fd"
+    },
+    {
+      "id": "zhizha_0159",
+      "name": "Гайка-барашек",
+      "file": "zhizha_0159.webp",
+      "sha256": "c12a8cc6c93f40043d609f30cd7490e68f862d3d67ac5f7862b4479d55f8bf06"
+    },
+    {
+      "id": "zhizha_0160",
+      "name": "Галстук-боло",
+      "file": "zhizha_0160.webp",
+      "sha256": "515cea82fbf4e0ba5456ab72b5ff6b636601312bea3a09f300ed8a9ef93007e2"
+    },
+    {
+      "id": "zhizha_0161",
+      "name": "Кистевой эспандер",
+      "file": "zhizha_0161.webp",
+      "sha256": "8087ba0ade9674bf5ac33026c83288254c95479b6808046c04b76d3ec458af9d"
+    },
+    {
+      "id": "zhizha_0162",
+      "name": "Химический светлячок",
+      "file": "zhizha_0162.webp",
+      "sha256": "b57b3bc59e431ce385bfac0dfe1a3289b6ee894a68e87676df86958f4ca11dde"
+    },
+    {
+      "id": "zhizha_0163",
+      "name": "Песчаный доллар",
+      "file": "zhizha_0163.webp",
+      "sha256": "424309c667448fc342815f205f0b4f26331cb39044f8fb8f235fb96c6532f815"
+    },
+    {
+      "id": "zhizha_0164",
+      "name": "Стеклянное перо",
+      "file": "zhizha_0164.webp",
+      "sha256": "9d2af63d584f6aa119d49e35e8bfc6d5e48052adb89d0b38671d3fc722239609"
+    },
+    {
+      "id": "zhizha_0165",
+      "name": "Наградная розетка",
+      "file": "zhizha_0165.webp",
+      "sha256": "990a52ef68f5eda495ea3ee38ec1d4643da29e7042922e53b378a9f978c7e56a"
+    },
+    {
+      "id": "zhizha_0166",
+      "name": "Кольцевой трансформатор",
+      "file": "zhizha_0166.webp",
+      "sha256": "fbdba7aaeeb6778481618d12a69dbb6769a8f0ebe6b42719511fde4497d7fff9"
+    },
+    {
+      "id": "zhizha_0167",
+      "name": "Физалис",
+      "file": "zhizha_0167.webp",
+      "sha256": "844bab31d1630b3055b4a799315841bcb41aa08adc4192d020adf5deea557828"
+    },
+    {
+      "id": "zhizha_0168",
+      "name": "Монокль на ленте",
+      "file": "zhizha_0168.webp",
+      "sha256": "25788cd2f13cdbe5a80a1bb4c78359bbbb06c594e70628d8444ffa2ee9d883f4"
+    },
+    {
+      "id": "zhizha_0169",
+      "name": "Пресс для гербария",
+      "file": "zhizha_0169.webp",
+      "sha256": "902a2879c26cd476c18563dd1bf173f18f9b3429d5bb6526e64fa70ada626776"
+    },
+    {
+      "id": "zhizha_0170",
+      "name": "Корабль в бутылке",
+      "file": "zhizha_0170.webp",
+      "sha256": "e9ecbe1f83882a8e4076c6faf2f6e1a49b106a5df6c6f8aae649913096b15dd4"
+    },
+    {
+      "id": "zhizha_0171",
+      "name": "Шёпот",
+      "file": "zhizha_0171.webp",
+      "sha256": "7a8c2848ab41f3b2317452729bd39ae4d63efa3454dcc2cdc9b7b501d9b1d7ec"
+    },
+    {
+      "id": "zhizha_0172",
+      "name": "Книжка сусального золота",
+      "file": "zhizha_0172.webp",
+      "sha256": "27a460557765159b35760ebcb84e699e2a5cecce463998a0e6ddc0a95fcff63d"
+    },
+    {
+      "id": "zhizha_0173",
+      "name": "Чаша кинцуги",
+      "file": "zhizha_0173.webp",
+      "sha256": "55f4b3a428a438678dd4a893ee06678f16b9bc4a43aa916c4f571dab476a3f32"
+    },
+    {
+      "id": "zhizha_0174",
+      "name": "Старательский лоток",
+      "file": "zhizha_0174.webp",
+      "sha256": "89a1b44dc8c2fc09758335248616fae2e2a6b83f1831b28f8ff8470732fc9b3e"
+    },
+    {
+      "id": "zhizha_0175",
+      "name": "Позолоченная шишка",
+      "file": "zhizha_0175.webp",
+      "sha256": "b88d471469463bd64ba8d5644a0e7c4a30247bb9b7fa351fde38b0573212ad2c"
+    },
+    {
+      "id": "zhizha_0176",
+      "name": "Конфета в золотой фольге",
+      "file": "zhizha_0176.webp",
+      "sha256": "b96f0672754bb6193cce2f379b1e9a5b5f2d2e47a63f86c8a986102c1c85a4f0"
+    },
+    {
+      "id": "zhizha_0177",
+      "name": "Застёжка-молния",
+      "file": "zhizha_0177.webp",
+      "sha256": "5a2484b23cb77f3b6ec20bd603b5506043093e2d8f314ee4fe99209989ce4f8b"
+    },
+    {
+      "id": "zhizha_0178",
+      "name": "Пузырьковый уровень",
+      "file": "zhizha_0178.webp",
+      "sha256": "383c1504254f7381a27d58c1fc32b3e7a9ee30f3fd1544fea71f8cbd1bf8a23a"
+    },
+    {
+      "id": "zhizha_0179",
+      "name": "Одуванчик с семенами",
+      "file": "zhizha_0179.webp",
+      "sha256": "e671750655eaf98b6f1e56621b9265879aa22ee2b1b5c94b19f9333c5112e4df"
+    },
+    {
+      "id": "zhizha_0180",
+      "name": "Медовая палочка",
+      "file": "zhizha_0180.webp",
+      "sha256": "edb5fdf8168d166cfca1a5a6e73d21652c275754dba03076c75fef0e12a5101c"
+    },
+    {
+      "id": "zhizha_0181",
+      "name": "Погребальная маска",
+      "file": "zhizha_0181.webp",
+      "sha256": "3007c0204c9d993aee9c171fb095f6f91fa3a5838acd0763492c1a5e5e13e900"
+    },
+    {
+      "id": "zhizha_0182",
+      "name": "Пустая могила",
+      "file": "zhizha_0182.webp",
+      "sha256": "d53cef031e1379847e1215731c0491ffcfa9a54b30f450bcef67488bab00f71e"
+    },
+    {
+      "id": "zhizha_0183",
+      "name": "Траурный венок",
+      "file": "zhizha_0183.webp",
+      "sha256": "a544999c56b4cc30aa62ef5472755685ef0f30a9d55b9295c3f5d799213420c4"
+    },
+    {
+      "id": "zhizha_0184",
+      "name": "Монета Харона",
+      "file": "zhizha_0184.webp",
+      "sha256": "6233639ecfd5a52186a7ed9ba5d1c357aa33307f328b3370d426f2e88f755c00"
+    },
+    {
+      "id": "zhizha_0185",
+      "name": "Бахилы",
+      "file": "zhizha_0185.webp",
+      "sha256": "8789144f39e10abee0f60fa2029e351038d533afe87221f0e57ded9f434811e6"
+    },
+    {
+      "id": "zhizha_0186",
+      "name": "Силуэт за окном",
+      "file": "zhizha_0186.webp",
+      "sha256": "e1b77a2c82e951d3db989bde9c286bb6e5b3f24c29a364de1e9739893a1a4430"
+    },
+    {
+      "id": "zhizha_0187",
+      "name": "Канатоходец",
+      "file": "zhizha_0187.webp",
+      "sha256": "eb3479bf55b91596df8054d26d30f4cd5fc60376db1e1aff8aca5ba98ab841e3"
+    },
+    {
+      "id": "zhizha_0188",
+      "name": "Рубанок",
+      "file": "zhizha_0188.webp",
+      "sha256": "2849c4e42149c21d9485ed2ecea6d7d568ac9b194e4aa9a2e2585cf144682afe"
+    },
+    {
+      "id": "zhizha_0189",
+      "name": "Контурный шаблон",
+      "file": "zhizha_0189.webp",
+      "sha256": "cf9ff0b929732e05372bc848e80fb8704e0883e774f028a3c2dbdfbf8f405e68"
+    },
+    {
+      "id": "zhizha_0190",
+      "name": "Стеклорез",
+      "file": "zhizha_0190.webp",
+      "sha256": "be8f1afa5fb97d380658bae7b8f66b4f9a07b86ebd43a8911e8de77a4960021c"
+    },
+    {
+      "id": "zhizha_0191",
+      "name": "Цирковой шатёр в полоску",
+      "file": "zhizha_0191.webp",
+      "sha256": "6ae1f4404665442bdc935f427f9fc1777ac77708a8971ba9dee40a74b021d9d5"
+    },
+    {
+      "id": "zhizha_0192",
+      "name": "Колчан со стрелами",
+      "file": "zhizha_0192.webp",
+      "sha256": "41fec2d47abcbc4245854e2f8ecf12b068b4df7baefcb24bb2e8f9a414b6dcd8"
+    },
+    {
+      "id": "zhizha_0193",
+      "name": "Флюгер",
+      "file": "zhizha_0193.webp",
+      "sha256": "0d2566020da9e7c3ec9d8dc561a723827963321ae453d23d19c71047326950b4"
+    },
+    {
+      "id": "zhizha_0194",
+      "name": "Вилка с вензелями",
+      "file": "zhizha_0194.webp",
+      "sha256": "1a77698786b15d0803a7acd8c50b8e066f234c32dd54fcb23925fbc47a0d5d9b"
+    },
+    {
+      "id": "zhizha_0195",
+      "name": "Ложка для обуви",
+      "file": "zhizha_0195.webp",
+      "sha256": "706b1012384d17282f868f58671949bec4a65860c859356cea801fe1dc9306e3"
+    },
+    {
+      "id": "zhizha_0196",
+      "name": "Крестик на цепочке",
+      "file": "zhizha_0196.webp",
+      "sha256": "82cdbc9ef4f86416a5b4bdf4d2dcc7c232dd52b4cde07075f1e64590cc425c45"
+    },
+    {
+      "id": "zhizha_0197",
+      "name": "Набор мячиков для пинг-понга",
+      "file": "zhizha_0197.webp",
+      "sha256": "83286952a370a0ae8e6297710b9051a1daddc898351eda2e363e5018df6c11d5"
+    },
+    {
+      "id": "zhizha_0198",
+      "name": "Переходник для розетки",
+      "file": "zhizha_0198.webp",
+      "sha256": "33391bb2768d87b1df1d3f982a6e7b7fc4cad24462c6bf4610732c9a04aa4386"
+    },
+    {
+      "id": "zhizha_0199",
+      "name": "Валентинка",
+      "file": "zhizha_0199.webp",
+      "sha256": "269a18dbe5db6e7801fc0454b1cd01e3d5da3a3dca370604745219811aded7e8"
+    },
+    {
+      "id": "zhizha_0200",
+      "name": "Игровое кресло",
+      "file": "zhizha_0200.webp",
+      "sha256": "01d1bfa7da1ae7c0feaa0fa74d06edc229e280b5d3c7cd2b044ee06bacf82648"
+    }
+  ]
+}

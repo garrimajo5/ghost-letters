@@ -32,40 +32,59 @@ public static partial class BotPlayer
         /// <summary>Логика заявлений работает у мирных с памятью о чате; чёрные знают своих и так.</summary>
         private bool LogicOn => BotTuning.Current.ClaimLogic && !Classic && !KillerTeam && mind is not null;
 
-        /// <summary>Заявление «проверял карту письмом, письмо исчезло»: S — насколько письмо указывало именно на неё.</summary>
         private sealed record CheckClaim(Guid Author, string Card, int Row, double S, int? Round);
+
+        private List<ClaimedLetter>? _reports;
+        private List<ClaimedLetter>? _reportedMisses;
+
+        // Chat and board reports describe physical letters, independently of the proposed targets.
+        private List<ClaimedLetter> PublicReports()
+        {
+            if (_reports is not null) return _reports;
+            if (mind is null) return [];
+            var players = view.Players.Where(p => !p.IsGhost && p.Id != me.Id).Select(p => p.Id).ToHashSet();
+            var reports = mind.ClaimList
+                .Concat(view.Table?.Claims.Select(c => new ClaimedLetter(c.Author, c.Card, c.Round)) ?? [])
+                .Concat(mind.Opinions.Where(o => o.Public && o.IsCheck && o.SourceCard is not null)
+                    .Select(o => new ClaimedLetter(o.Author, o.SourceCard!, o.Round ?? view.Round)));
+            return _reports = reports.Where(c => players.Contains(c.Author) && c.Round > 0 && c.Round <= view.Round)
+                .Distinct().ToList();
+        }
+
+        private List<ClaimedLetter> ReportedMisses()
+        {
+            if (_reportedMisses is not null) return _reportedMisses;
+            if (mind is null) return [];
+            var unavailable = view.Board.SelectMany(r => r.Cards).Concat(view.Hints.SelectMany(h => h.Cards))
+                .Concat(me.Letters.Select(l => l.CardId)).Concat(me.Hand).Concat(me.Discarded ?? []).ToHashSet();
+            return _reportedMisses = PublicReports().Where(c => !unavailable.Contains(c.Card)
+                    && (c.Round < view.Round || view.Phase >= Phase.Refill))
+                .GroupBy(c => c.Card)
+                // Conflicting ownership is social evidence, not two independent negative checks.
+                .Where(g => g.Count() == 1).Select(g => g.Single()).ToList();
+        }
 
         private List<CheckClaim> CheckClaims()
         {
-            var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
-            var mine = me.Letters.Select(l => l.CardId).ToHashSet();
-            var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
-            var players = view.Players.Where(p => !p.IsGhost && p.Id != me.Id).Select(p => p.Id).ToHashSet();
             var claims = new List<CheckClaim>();
-            foreach (var g in mind!.Opinions
-                .Where(o => o.IsCheck && players.Contains(o.Author) && o.SourceCard is { } src && !shown.Contains(src) && !mine.Contains(src) && !board.Contains(src))
-                .GroupBy(o => (o.Author, o.SourceCard, o.CardId)))
-            {
-                var o = g.Last();
-                var row = Position(o.CardId).Row;
-                if (row < 0) continue;
-                var s = Math.Clamp(GhostCluePolicy.Read(Sim(o.SourceCard!, o.CardId), HintTop(o.SourceCard!), Focus)
-                    * OutshoneFactor(o.SourceCard!, o.Round, o.CardId) * Recall(o.Round, .6), 0, 1);
-                // Автор сам говорит, что целился в эту карту: даже при размытом сходстве это весомо (Призрак понимает
-                // намерение чаще, чем видно по одним меткам).
-                if (s >= .05) claims.Add(new CheckClaim(o.Author, o.CardId, row, BotTuning.Current.ClaimFloor + (1 - BotTuning.Current.ClaimFloor) * s, o.Round));
-            }
+            foreach (var report in ReportedMisses())
+                for (var row = 0; row < view.Board.Count; row++)
+                    foreach (var card in view.Board[row].Cards)
+                    {
+                        var match = VanishWeight(report.Card, card);
+                        if (match <= 0) continue;
+                        var clarity = 1 - Math.Exp(-4 * match);
+                        if (match >= BotTuning.Current.VanishBar) clarity = Math.Max(clarity, Math.Clamp(BotTuning.Current.ClaimFloor, 0, 1));
+                        var strength = clarity * OutshoneFactor(report.Card, report.Round, card) * Recall(report.Round, .6);
+                        claims.Add(new(report.Author, card, row, strength, report.Round));
+                    }
             return claims;
         }
 
-        /// <summary>Улики без чужих слов: подсказки и мои исчезнувшие письма.</summary>
-        private double BaseEvidence(string card)
-        {
-            var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => (Classic || !BotTuning.Current.VanishedFocus ? Sim(l.CardId, card)
-                : GhostCluePolicy.Read(Sim(l.CardId, card), HintTop(l.CardId), Focus)) * OutshoneFactor(l.CardId, l.Round, card));
-            return hints - NegativeWeight * vanished;
-        }
+        private double BaseEvidence(string card) =>
+            view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card))
+            - NegativeWeight * me.Letters.Where(l => l.Revealed == false)
+                .Sum(l => VanishWeight(l.CardId, card) * OutshoneFactor(l.CardId, l.Round, card));
 
         /// <summary>Резкость убеждений о ряде — та же, что в <see cref="RowBelief"/>.</summary>
         private double Beta => 2 + 4 * P.Strictness;
@@ -96,19 +115,19 @@ public static partial class BotPlayer
             var knownBlack = others.Where(p => p.KnownRole is { } r && r.IsKillerTeam()).Select(p => p.Id).ToHashSet();
             var unknown = others.Where(p => p.KnownRole is null).Select(p => p.Id).ToList();
             var k = Math.Clamp(_baseBlack is null ? 0 : _blackAmongUnknown, 0, unknown.Count);
-            var claims = CheckClaims();
+            var claims = CheckClaims().Where(c => !knownBlack.Contains(c.Author)).ToList();
 
-            // Убеждения о рядах до чужих слов.
+            // Evaluate a report against the clues and our own letters before hearing it.
+            // Otherwise an ambiguous hint can incriminate a player even though a different row explains it.
             var prior = new Dictionary<string, double>();
-            for (var r = 0; r < view.Board.Count; r++)
-            {
-                var cards = view.Board[r].Cards;
-                var e = cards.Select(BaseEvidence).ToList();
-                var top = e.Max();
-                var w = e.Select(x => Math.Exp(Beta * (x - top))).ToList();
-                var sum = w.Sum();
-                for (var i = 0; i < cards.Count; i++) prior[cards[i]] = w[i] / sum;
-            }
+            if (claims.Count > 0 && TheoryOn)
+                prior = new(ComputeTheory(BaseEvidence, includeIntent: false).Truth);
+            else
+                foreach (var row in view.Board)
+                {
+                    Normalize(row.Cards.Select(BaseEvidence).ToArray(), Beta, out var rowPrior);
+                    for (var i = 0; i < rowPrior.Length; i++) prior[row.Cards[i]] = rowPrior[i];
+                }
 
             // Никто ничего не проверял — логике нечего добавить (но повторные «письма» сказать стоит).
             if (claims.Count == 0)
@@ -199,7 +218,7 @@ public static partial class BotPlayer
                 if (authors < 2 || prior[g.Key] < .12 || truth[g.Key] > Math.Min(.2, prior[g.Key] / 2)) continue;
                 var name = CardName(g.Key);
                 var text = authors > blacks && blacks > 0
-                    ? $"{Cap(name)} проверили {Times(authors)}, а у нас {Blacks(blacks)} — значит, хоть один из них честный: {name} не истина."
+                    ? $"{Cap(name)} проверили {Times(authors)}, а у нас {Blacks(blacks)} — хоть один говорил честно. Если Призрак понял письмо так же, эту карту я бы отодвинул."
                     : $"{Cap(name)} проверили {Times(authors)} — вряд ли все они чёрные, так что {name} я вычёркиваю.";
                 result.Add(new Deduction("consensus", g.First().Row, g.Key, null, g.Max(c => c.Round), prior[g.Key] - truth[g.Key], text));
             }
@@ -228,7 +247,7 @@ public static partial class BotPlayer
         {
             var result = new List<Deduction>();
             if (mind is null) return result;
-            var claims = mind.ClaimList.Where(c => c.Author != me.Id).ToList();
+            var claims = PublicReports();
             string CardLabel(string card) => tags.NameOf(card) ?? CardName(card);
             foreach (var g in claims.GroupBy(c => (c.Author, c.Card)))
             {

@@ -15,11 +15,36 @@ class ReviewedTagsTest(unittest.TestCase):
     def test_catalog_is_complete_and_valid(self):
         self.assertEqual([], check_tags.validate(self.root, self.tags, self.details, self.manual, self.assoc))
 
+    def test_construction_platform_does_not_describe_a_baby_cradle(self):
+        tags = set(self.tags['orig_0718'])
+        self.assertTrue({'construction', 'lift', 'metal', 'work'} <= tags)
+        self.assertFalse(tags & {'child', 'bedroom', 'lie-on', 'soft', 'wood'})
+        self.assertNotIn('family', {a['tag'] for a in self.assoc['orig_0718']})
+
+    def test_storage_and_fuel_tools_do_not_inherit_unrelated_profiles(self):
+        for card in ('orig_0213', 'orig_0302', 'orig_0346'):
+            self.assertIn('store', self.tags[card])
+            self.assertNotIn('sound', self.tags[card])
+            self.assertNotIn('play', self.tags[card])
+        for card in ('orig_0242', 'orig_0442', 'orig_0624', 'orig_0689'):
+            self.assertNotIn('electric', self.tags[card])
+        for card in ('orig_0375', 'orig_0598', 'orig_0696'):
+            self.assertNotIn('kitchen', self.tags[card])
+
+    def test_literal_objects_are_not_confused_with_their_symbols(self):
+        self.assertIn('jewelry', self.tags['orig_0463'])
+        self.assertNotIn('animal', self.tags['orig_0463'])
+        self.assertNotIn('insect', self.tags['orig_0076'])
+        self.assertNotIn('shoot', self.tags['orig_0680'])
+        self.assertIn('concert', self.tags['orig_0614'])
+        self.assertNotIn('transport', self.tags['orig_0614'])
+
     def test_every_visual_review_row_reproduces_the_saved_tags(self):
         with Path(retag_cards.__file__).with_name('retag_review.csv').open(encoding='utf-8') as source:
             rows = list(csv.DictReader(source, delimiter=';'))
-        self.assertEqual(set(self.tags), {r['card'] for r in rows})
-        self.assertEqual(len(rows), len(self.tags))
+        original = {card for card in self.tags if card.startswith('orig_')}
+        self.assertEqual(original, {r['card'] for r in rows})
+        self.assertEqual(len(rows), len(original))
         for row in rows:
             self.assertEqual(self.tags[row['card']], retag_cards.reviewed_tags(row), row['card'])
 

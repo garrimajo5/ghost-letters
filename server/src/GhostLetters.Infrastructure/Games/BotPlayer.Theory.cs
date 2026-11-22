@@ -33,8 +33,6 @@ public static partial class BotPlayer
     public static HintTheory? Theory(PlayerView view, CardTags tags, BotMind? mind) =>
         view.Me is { Role: not Role.Ghost } me && view.Board.Count > 0 ? new Brain(view, me, new Random(0), tags, mind).Theory() : null;
 
-    private static readonly Dictionary<object, HintTheory> TheoryCache = new();
-
     private sealed partial class Brain
     {
         private HintTheory? _theory;
@@ -59,31 +57,18 @@ public static partial class BotPlayer
         {
             if (_theory is not null) return _theory;
             if (!TheoryOn || _inTheory) return null;
-            // Теория меняется только с новой подсказкой, письмом или репликой: решения одного хода её не пересчитывают.
-            // Ключ — то, от чего теория зависит: подсказки, мои письма, мнения и заявления стола.
-            var key = (view.GameId, me.Id, view.Round, view.Hints.Sum(h => h.Cards.Count), me.Letters.Count(l => l.Revealed is not null),
-                mind?.Opinions.Count ?? 0, (mind?.ClaimList.Count ?? 0) * 31 + (BotTuning.Current.GetHashCode() ^ P.GetHashCode()));
             _inTheory = true;
             try
             {
-                // Логика заявлений и модель игроков считаются внутри теории (без неё). Готовим их до кэша — иначе при
-                // попадании в кэш они посчитались бы позже, уже с теорией, и одна и та же партия шла бы по-разному.
                 if (BotTuning.Current.UnifiedTrust && !Classic && !KillerTeam) BlackOdds();
                 Logic();
-                lock (TheoryCache)
-                    if (TheoryCache.TryGetValue(key, out var cached)) return _theory = cached;
-                _theory = ComputeTheory();
+                _theory = ComputeTheory(Evidence, includeIntent: true);
             }
             finally { _inTheory = false; }
-            lock (TheoryCache)
-            {
-                if (TheoryCache.Count > 4000) TheoryCache.Clear();
-                TheoryCache[key] = _theory;
-            }
             return _theory;
         }
 
-        private HintTheory ComputeTheory()
+        private HintTheory ComputeTheory(Func<string, double> evidence, bool includeIntent)
         {
             var t = BotTuning.Current;
             var rows = view.Board.Count;
@@ -102,7 +87,7 @@ public static partial class BotPlayer
             for (var r = 0; r < rows; r++)
             {
                 var cards = view.Board[r].Cards;
-                var full = cards.Select(Evidence).ToArray();
+                var full = cards.Select(evidence).ToArray();
                 var row = r;
                 var noHints = cards.Select((c, i) => full[i] - hw.Sum(h => h[row][i])).ToArray();
                 Normalize(full, beta, out var b);
@@ -128,7 +113,7 @@ public static partial class BotPlayer
                 var all = top.DefaultIfEmpty(0).Max();
                 return top.Select(x => all <= 0 ? 1 : t.TheoryRowFloor + (1 - t.TheoryRowFloor) * x / all).ToArray();
             }).ToArray();
-            if (t.TheoryVersions && t.TheoryIntent > 0 && mind is not null)
+            if (includeIntent && t.TheoryVersions && t.TheoryIntent > 0 && mind is not null)
                 for (var j = 0; j < hintCards.Count; j++)
                 {
                     var claims = mind.Opinions.Where(o => o.IsCheck && o.SourceCard == hintCards[j] && onBoard.Contains(o.CardId))

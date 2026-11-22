@@ -468,6 +468,13 @@ namespace GhostLetters.Infrastructure.Persistence.Migrations
                             Code = "mirror",
                             IsBuiltin = true,
                             Title = "Зеркало истины"
+                        },
+                        new
+                        {
+                            Id = new Guid("6f1d0c2e-0001-4a11-9a00-000000000005"),
+                            Code = "zhizha",
+                            IsBuiltin = true,
+                            Title = "Жижа"
                         });
                 });
 

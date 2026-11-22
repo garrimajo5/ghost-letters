@@ -38,7 +38,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
   late LobbySettings s = widget.initial;
 
   /// Названия встроенных наборов — запасной вариант, пока каталог грузится, и для наборов, удалённых с сервера.
-  static const _fallbackTitles = {'original': 'Оригинальный', 'mailbox': 'Почтовый ящик', 'ritual': 'Тайный ритуал', 'mirror': 'Зеркало истины'};
+  static const _fallbackTitles = {'original': 'Оригинальный', 'mailbox': 'Почтовый ящик', 'ritual': 'Тайный ритуал', 'mirror': 'Зеркало истины', 'zhizha': 'Жижа'};
 
   /// Как отличить набор: символ в правом верхнем углу карты.
   static const _setHints = {
@@ -46,6 +46,7 @@ class _SettingsSheetState extends ConsumerState<SettingsSheet> {
     'mailbox': 'символ — почтовый ящик',
     'ritual': 'символ — пламя',
     'mirror': 'символ — зеркало',
+    'zhizha': 'символ — сиреневый призрак-лужица',
   };
 
   bool get _rulesLocked => widget.inGame;

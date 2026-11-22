@@ -30,7 +30,7 @@ public sealed class AuthTests : IAsyncLifetime
         var sets = await _factory.WithDbAsync(db => db.CardSets.OrderBy(s => s.Code).Select(s => s.Code).ToListAsync());
         var nominations = await _factory.WithDbAsync(db => db.Nominations.Select(n => n.Code).ToListAsync());
 
-        sets.Should().Equal("mailbox", "mirror", "original", "ritual");
+        sets.Should().Equal("mailbox", "mirror", "original", "ritual", "zhizha");
         nominations.Should().Contain("steel_balls");
     }
 

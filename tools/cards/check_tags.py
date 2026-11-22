@@ -17,11 +17,28 @@ COLORS = set('red orange yellow green blue purple pink brown black white gray'.s
 UNTRUSTED = {'shape-diagonal', 'shape-compact', 'shape-spiky'}
 # Материал предмета — слабый признак, как в CardTags.Materials / BotTuning.MaterialWeight:
 # считается отдельно от смысла и с малым весом, разметка по картинке может быть ошибочной.
-MATERIALS = set('bone ceramic clay fabric fur glass leather metal paper plastic rubber stone straw wax wood wool'.split())
-MATERIAL_WEIGHT = .15
+MATERIALS = set('bone ceramic clay fabric fur glass leather metal paper plastic rubber stone straw wax wood wool gold silver steel'.split())
+MATERIAL_WEIGHT = .055
+MATERIAL_SUBJECTS = {
+    'plank': 'wood', 'brushwood': 'wood', 'wooden-crutch': 'wood',
+    'gold-leaf-booklet': 'gold', 'gold-bar': 'gold', 'gold-nugget': 'gold', 'silver-bar': 'silver',
+}
+
+
+def is_material(tag):
+    return tag in MATERIALS or tag.startswith('material-accent-') and tag.removeprefix('material-accent-') in MATERIALS
+
+
+class Features(dict):
+    """Main tag weights plus visible detail tags for the surface fallback."""
+    def __init__(self, main, details):
+        super().__init__((tag, 1.0) for tag in main)
+        self.details = {tag for tag in details if group(tag) == 0 and not is_material(tag)}
 
 
 def group(t):
+    if t.startswith('material-accent-') and is_material(t):
+        return 3
     return 1 if t.startswith('shape-') else 2 if t in COLORS or (t.startswith(('accent-', 'dominant-')) and t.split('-', 1)[1] in COLORS) else 0
 
 
@@ -33,7 +50,7 @@ def features(tags, details, associations, secondary=.35, scale=.5):
         main -= {'shape-diagonal', 'shape-compact'}
         if not main.intersection({'sharp','cactus','thorn','spike','star','starfish'}):
             main.discard('shape-spiky')
-        own = {t: 1.0 for t in main}
+        own = Features(main, removed)
         for d in associations.get(card, []):
             if group(d['tag']) == 0 and d['tag'] not in own:
                 own[d['tag']] = min(.95, d['weight']) * secondary * scale
@@ -47,13 +64,24 @@ def similarity(x, y):
         confidence = min(max(a.values(),default=0), max(b.values(),default=0))
         return confidence * sum(min(a[t],b[t]) for t in a.keys()&b.keys()) / union if union else 0
     def match(g):
-        a = {t:v for t,v in x.items() if group(t)==g and t not in MATERIALS and (g!=2 or t.startswith('dominant-'))}
-        b = {t:v for t,v in y.items() if group(t)==g and t not in MATERIALS and (g!=2 or t.startswith('dominant-'))}
+        a = {t:v for t,v in x.items() if group(t)==g and not is_material(t) and (g!=2 or t.startswith('dominant-'))}
+        b = {t:v for t,v in y.items() if group(t)==g and not is_material(t) and (g!=2 or t.startswith('dominant-'))}
         return overlap(a, b)
     meaning = match(0)
-    material = overlap({t:v for t,v in x.items() if t in MATERIALS}, {t:v for t,v in y.items() if t in MATERIALS})
-    fallback = .05 if meaning >= .25 else 1-meaning
-    return .8*meaning + .15*fallback*match(1) + .05*fallback*match(2) + MATERIAL_WEIGHT*fallback*material
+    shape = match(1)
+    if meaning or shape:
+        fallback = .05 if meaning >= .25 else 1 - meaning
+        return .8 * meaning + .12 * fallback * shape
+    dx, dy = getattr(x, 'details', set()), getattr(y, 'details', set())
+    if dx.intersection(dy) or any(y.get(t, 0) > 0 for t in dx) or any(x.get(t, 0) > 0 for t in dy):
+        return 0  # Default detail attention is zero, but a visible detail precludes a colour reading.
+
+    def accents(features):
+        marks = {t.removeprefix('material-accent-') for t, w in features.items() if w == 1 and t.startswith('material-accent-') and is_material(t)}
+        return marks | {MATERIAL_SUBJECTS[t] for t, w in features.items() if w == 1 and t in MATERIAL_SUBJECTS}
+
+    material = MATERIAL_WEIGHT if accents(x).intersection(accents(y)) else 0
+    return max(.05 * match(2), material)
 
 
 def control_report(data, names):
@@ -85,8 +113,12 @@ def control_report(data, names):
 
 def validate(root, tags, details, manual, associations):
     errors=[]
-    expected={p.stem for p in root.glob('orig_*.webp')}
-    if len(expected)!=761:errors.append(f'Expected 761 images, got {len(expected)}')
+    manifest=json.loads((root/'cards.json').read_text('utf-8'))
+    entries=[c for s in manifest['sets'] for c in s['cards']]
+    expected={c['id'] for c in entries}
+    if len(expected)!=len(entries):errors.append('Duplicate card IDs in manifest')
+    for card in entries:
+        if not (root/card['file']).is_file():errors.append(f"Missing image: {card['file']}")
     vocab=set(re.findall(r'^\| `([^`]+)` \|', (root/'vocabulary.md').read_text('utf-8'),re.M))
     for name,data in [('tags',tags),('details',details),('details_manual',manual),('associations',associations)]:
         if set(data)!=expected:errors.append(f'{name}: key coverage differs from images')
@@ -120,7 +152,7 @@ def main():
     errors=validate(a.root,tags,details,manual,assoc)
     report=control_report(features(tags,details,assoc),read('names.json')) if not errors else {'checks': [], 'top10': {}}
     report['structural_errors']=errors
-    report['scoring']={'method':'CardTags.Similarity(a,b)', 'attention':[.8,.15,.05], 'secondary_meanings':.35, 'association_scale':.5, 'details_attention':0, 'candidate_scope':'all 761 cards except the query', 'tie_break':'card ID ascending; tied_rank also reported'}
+    report['scoring']={'method':'CardTags.Similarity(a,b)', 'attention':[.8,.15,.05], 'secondary_meanings':.35, 'association_scale':.5, 'details_attention':0, 'candidate_scope':f'all {len(tags)} cards except the query', 'tie_break':'card ID ascending; tied_rank also reported'}
     report['stats']={'cards':len(tags),'tag_assignments':sum(map(len,tags.values())),'unique_main_tags':len(set(t for v in tags.values() for t in v)), 'group_assignments':{str(g):sum(group(t)==g for v in tags.values() for t in v) for g in range(3)}}
     if a.report:a.report.parent.mkdir(parents=True,exist_ok=True);a.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report['stats'],ensure_ascii=False))

@@ -133,7 +133,7 @@ class LobbySettings {
     this.tempo = 'live',
     this.turnHours = 24,
     this.timers = const {},
-    this.cardSets = const ['original', 'mailbox', 'ritual', 'mirror'],
+    this.cardSets = const ['original', 'mailbox', 'ritual', 'mirror', 'zhizha'],
     this.ghostUserId,
     this.ranked = true,
     this.botVoice = true,
@@ -155,7 +155,7 @@ class LobbySettings {
         timers: j['timers'] is Map
             ? Map<String, dynamic>.from(j['timers'] as Map).map((k, v) => MapEntry(k, (v as num).toInt()))
             : const {},
-        cardSets: _strings(j['cardSets']).isEmpty ? const ['original', 'mailbox', 'ritual', 'mirror'] : _strings(j['cardSets']),
+        cardSets: _strings(j['cardSets']).isEmpty ? const ['original', 'mailbox', 'ritual', 'mirror', 'zhizha'] : _strings(j['cardSets']),
         ghostUserId: j['ghostUserId'] as String?,
         ranked: j['ranked'] as bool? ?? true,
         botVoice: j['botVoice'] as bool? ?? true,

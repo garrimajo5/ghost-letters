@@ -133,11 +133,19 @@ public static partial class BotPlayer
             return Math.Min(2, .5 * useless);
         }
 
+        private double ReportSuspicion(Guid id)
+        {
+            if (!BotTuning.Current.ClaimLogicBlack || !LogicOn || !ReportedMisses().Any(c => c.Author == id)) return 0;
+            var updated = Black(id);
+            return _baseBlack is not null ? Math.Max(0, updated - _baseBlack.GetValueOrDefault(id)) * 4 : 0;
+        }
+
         /// <summary>Самая весомая причина подозрения — для реплики «из чёрных: …».</summary>
         private string RoleReason(Guid id)
         {
             var reasons = new List<(double Weight, string Text)>
             {
+                (ReportSuspicion(id), "исчезнувшее письмо похоже на карту, которую поддерживают другие улики"),
                 (BotTuning.Current.LieDetect * LiedChecks(id), "отверг карту, на которую потом указала подсказка"),
                 (RepeatedClaim(id) ? 3.1 : 0, "дважды назвал своим одно и то же письмо — брошенное письмо в руку не возвращается"),
                 (ClaimConflict(id), "назвал своим письмо, которое было не его"),

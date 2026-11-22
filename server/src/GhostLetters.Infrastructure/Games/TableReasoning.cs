@@ -30,9 +30,9 @@ public static class TableReasoning
         if (line.Notes.Any(IsSource) || line.Cards.Count == 0)
             return new(ChatChannels.Public, line.Text, null, line.Cards, line.Notes);
         var target = line.Cards[0];
-        var p = mind?.Personality ?? BotPersonality.Default;
+        var reading = tags.AtBoard(view.Board, mind?.Personality ?? BotPersonality.Default);
         var source = view.Hints.SelectMany(h => h.Cards).Distinct().Where(c => !line.Cards.Contains(c))
-            .Select(c => (Card: c, Score: tags.Similarity(c, target, p.Attention, p.Details, p.SecondaryMeanings)))
+            .Select(c => (Card: c, Score: reading.Similarity(c, target)))
             .Where(x => x.Score > .01).OrderByDescending(x => x.Score).FirstOrDefault();
         if (source.Card is null) return new(ChatChannels.Public, line.Text, null, line.Cards, line.Notes);
         // Only the first hypothesis was actually explained by this clue. Other

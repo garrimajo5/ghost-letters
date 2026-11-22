@@ -8,10 +8,11 @@ namespace GhostLetters.Api.Tests;
 /// <summary>
 /// Логика заявлений: бот перебирает, кто за столом чёрный, и из «проверял — исчезло» делает человеческие выводы.
 /// </summary>
-public sealed class BotClaimLogicTests
+public sealed class BotClaimLogicTests(Xunit.Abstractions.ITestOutputHelper output)
 {
-    private static readonly Guid Ghost = Guid.NewGuid(), Me = Guid.NewGuid(),
-        Ann = Guid.NewGuid(), Bob = Guid.NewGuid(), Cid = Guid.NewGuid(), Dan = Guid.NewGuid(), Eva = Guid.NewGuid(), Fay = Guid.NewGuid();
+    private static Guid Seat(int i) => new(i, 0, 0, new byte[8]);
+    private static readonly Guid Ghost = Seat(1), Me = Seat(2), Ann = Seat(3), Bob = Seat(4),
+        Cid = Seat(5), Dan = Seat(6), Eva = Seat(7), Fay = Seat(8);
 
     // Ряд 0: кольцо | кошелёк | лодка; ряд 1: меч | кот | роза.
     private static readonly CardTags Tags = new(new Dictionary<string, HashSet<string>>
@@ -84,19 +85,92 @@ public sealed class BotClaimLogicTests
     }
 
     [Fact]
-    public void ByDefault_OnlySpeech_EvidenceUnchanged()
+    public void PublicReportUpdatesTrustWithoutUsingTheClaimedTarget()
     {
-        var mind = Mind([Check(Ann, "ring", "crown")]);
-        BotPlayer.Logic(View(), Tags, mind).Should().NotBeNull("по умолчанию логика рассуждает вслух");
-        using (BotTuning.Use(BotTuning.Default with { ClaimLogic = false }))
-            BotPlayer.Logic(View(), Tags, mind).Should().BeNull();
-        // Решения — как без логики: вес 0.
-        var plain = BotTuning.Default with { ClaimLogic = false };
-        double off;
-        using (BotTuning.Use(plain)) off = BotPlayer.Evidence(View(), Tags, mind, "ring");
-        BotPlayer.Evidence(View(), Tags, mind, "ring").Should().BeApproximately(off, 1e-9);
-        using (BotTuning.Use(BotTuning.Default with { ClaimLogic = true, ClaimLogicWeight = 0 }))
-            BotPlayer.Evidence(View(), Tags, mind, "wallet").Should().BeApproximately(BotPlayer.Evidence(View(), Tags, Mind([]), "wallet"), 1e-9);
+        var view = View();
+        var mind = Mind([Check(Ann, "boat", "crown")]);
+        var empty = BotPlayer.Journal(view, Tags, Mind([]))!;
+        var after = BotPlayer.Journal(view, Tags, mind)!;
+        after.Evidence["ring"].Should().BeLessThan(empty.Evidence["ring"]);
+        after.Evidence["boat"].Should().Be(empty.Evidence["boat"]);
+        after.Black[Ann].Should().BeGreaterThan(empty.Black[Ann]);
+        after.Trust[Ann].Should().BeLessThan(empty.Trust[Ann]);
+        var known = view with { Players = view.Players.Select(p => p.Id == Ann ? p with { KnownRole = Role.Accomplice } : p).ToList() };
+        BotPlayer.Evidence(known, Tags, mind, "ring").Should().Be(BotPlayer.Evidence(known, Tags, Mind([]), "ring"));
+    }
+
+    [Fact]
+    public void Seed42_DetectiveRevisesTheRowAndSendsADifferentProbeAfterTheReport()
+    {
+        var tags = CardTags.Parse("""
+            {"ring":["jewelry","wear"],"wallet":["money","bag"],"crown":["jewelry","wear"],
+             "tiara":["jewelry","wear"],"purse":["money","bag"],
+             "portrait":["jewelry","person","face","portrait","oil","canvas","art","paint","frame"],
+             "blade":["weapon"],"cat":["animal"],"house":["home"],"pier":["port"],"rose":["flower"],"mask":["theater"]}
+            """);
+        var view = View() with
+        {
+            GameId = Seat(42), Phase = Phase.Mailbox, Round = 2,
+            Board = [new(Category.Motive, ["ring","wallet"]), new(Category.Method, ["blade","cat"]),
+                     new(Category.Place, ["house","pier"]), new(Category.Secret, ["rose","mask"])],
+            Hints = [new(0, ["portrait"])],
+            Me = new(Me, Role.Detective, ["tiara","purse"], []), AllowedCommands = [nameof(SendLetter)],
+        };
+        var names = Mind([]).Names;
+        var board = view.Board.SelectMany(r => r.Cards).ToHashSet();
+        var profile = BotPersonality.Default with { Negative = 1, Variability = 0 };
+        var message = new BotService.MindMessage(Ann, 1, "Кидала корону, проверяла кошелёк.",
+            ["crown","wallet"], ["кидал эту","проверял:0"], true);
+        BotMind Read(params BotService.MindMessage[] messages) =>
+            BotService.BuildMind(Me, profile, new Dictionary<Guid, PlayerHistory>(), messages, board, names);
+        var before = Read();
+        var after = Read(message);
+        var prior = BotPlayer.Journal(view, tags, before)!;
+        var revised = BotPlayer.Journal(view, tags, after)!;
+        string Letter(BotMind mind) => ((SendLetter)BotPlayer.Decide(view, new Random(42), tags, mind)!).CardIds.Single();
+        string Pick(BotMind mind) => view.Board[0].Cards[BotPlayer.Plan(view, tags, mind, new Random(42))[0]];
+        output.WriteLine($"ring {prior.Truth["ring"]:F3} -> {revised.Truth["ring"]:F3}; black {prior.Black[Ann]:F3} -> {revised.Black[Ann]:F3}; trust {prior.Trust[Ann]:F3} -> {revised.Trust[Ann]:F3}; plan {Pick(before)} -> {Pick(after)}; letter {Letter(before)} -> {Letter(after)}");
+        Pick(before).Should().Be("ring");
+        Pick(after).Should().Be("wallet");
+        revised.Black[Ann].Should().BeGreaterThan(prior.Black[Ann]);
+        revised.Trust[Ann].Should().BeLessThan(prior.Trust[Ann]);
+        Letter(before).Should().Be("tiara");
+        Letter(after).Should().Be("purse");
+
+        var echo = Read(message, message);
+        BotPlayer.Journal(view, tags, echo)!.Truth.Should().BeEquivalentTo(revised.Truth);
+        var boardOnly = view with { Table = new([], [], [], [new(Ann, 1, "crown")], true, false) };
+        BotPlayer.Journal(boardOnly, tags, before)!.Truth.Should().BeEquivalentTo(revised.Truth);
+        var pending = view with { Round = 1, Phase = Phase.GhostPick };
+        BotPlayer.Journal(pending, tags, after)!.Truth.Should().BeEquivalentTo(BotPlayer.Journal(pending, tags, before)!.Truth);
+    }
+
+    [Theory]
+    [InlineData("theme,flower,silhouette,red", "theme")]
+    [InlineData("flower,silhouette,red", "flower")]
+    [InlineData("silhouette,red", "silhouette")]
+    [InlineData("red,incidental", "red")]
+    public void VisualDetectiveChoosesLettersInPriorityOrder(string hand, string expected)
+    {
+        var tags = CardTags.Parse("""
+            {"ring":["jewelry","dominant-red","shape-round"],"wallet":["money"],"theme":["jewelry","wear","royal","ceremony"],
+             "flower":["plant"],"silhouette":["shape-round"],"red":["dominant-red"],"incidental":["red","metal"]}
+            """).WithDetails("""{"flower":[{"tag":"rose","weight":1,"label":"роза"}],"ring":[{"tag":"rose","weight":1,"label":"роза"}]}""");
+        var view = View() with { Phase = Phase.Mailbox, AllowedCommands = [nameof(SendLetter)],
+            Me = new(Me, Role.Detective, hand.Split(','), []), Board = [new(Category.Motive, ["ring","wallet"])] };
+        var mind = Mind([]) with { Personality = new() { Meaning = 0, Details = 1, Shape = 1, Color = 1 } };
+        ((SendLetter)BotPlayer.Decide(view, new Random(42), tags, mind)!).CardIds.Should().Equal(expected);
+    }
+
+    [Fact]
+    public void TextClaimCanNameABluffAndItsTargetWithoutPrivateLetterHistory()
+    {
+        var tags = Tags.WithNames("""{"crown":["корона"],"wallet":["кошелёк"],"tiara":["диадема"],"brooch":["диадема"]}""");
+        var row = new BoardRow { Category = Category.Motive, Cards = ["ring","wallet"] };
+        var read = Infrastructure.Speech.SpokenCards.ReadPublic("Я кидала корону, проверяла кошелёк.", [row], [], tags);
+        read.Cards.Should().Equal("crown","wallet");
+        read.Notes.Should().Equal("кидал эту","проверял:0");
+        Infrastructure.Speech.SpokenCards.ReadPublic("Я кидала диадему.", [row], [], tags).Cards.Should().BeEmpty();
     }
 
     [Fact]

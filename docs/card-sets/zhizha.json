@@ -1,0 +1,7180 @@
+{
+  "schema_version": 1,
+  "code": "zhizha",
+  "title": "Жижа",
+  "status": "final",
+  "image_status": "illustrated",
+  "image_directory": "zhizha",
+  "scope": "Самостоятельный набор улик для стандартных правил «Писем призрака».",
+  "art_direction": "Квадрат 512 × 512. Предмет или связанная группа расположены по центру. По сравнению с первым выпуском линейный размер иллюстрации уменьшен примерно на 12%. Фон тёмный сине-бирюзовый, по карте №171 «Шёпот», с мягкой живописной дымкой за предметом и спокойными полями. На самом предмете сохранены тёплый направленный свет и фактура гуаши.",
+  "cards": [
+    {
+      "id": "zhizha_0001",
+      "names": [
+        "Лава-лампа",
+        "лампа с воском"
+      ],
+      "illustration": "Высокая стеклянная лампа: внутри два янтарных восковых пузыря, один вытянулся каплей. Тёмное металлическое основание, мягкое внутреннее свечение.",
+      "tags": [
+        "lava-lamp",
+        "lamp",
+        "light",
+        "illuminate",
+        "glass",
+        "transparent",
+        "liquid",
+        "wax",
+        "heat",
+        "hot",
+        "electric",
+        "shape-container",
+        "shape-cylinder",
+        "dominant-orange",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "relaxation",
+          "weight": 0.5,
+          "label": "отдых, расслабление"
+        },
+        {
+          "tag": "retro",
+          "weight": 0.5,
+          "label": "ретро"
+        }
+      ],
+      "distinct_from_existing": "От обычных фонарей отличается движением восковых капель; от колбы — основанием и внутренним светом."
+    },
+    {
+      "id": "zhizha_0002",
+      "names": [
+        "Медовые соты",
+        "соты"
+      ],
+      "illustration": "Неровный янтарный кусок сот. Из одной ячейки тянется короткая густая капля; никаких пчёл или банки.",
+      "tags": [
+        "honeycomb",
+        "food",
+        "eat",
+        "sweet",
+        "sticky",
+        "wax",
+        "fragile",
+        "nature",
+        "shape-net",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "farm",
+          "weight": 0.5,
+          "label": "ферма"
+        },
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        }
+      ],
+      "distinct_from_existing": "Не банка варенья и не губка: главный признак — шестигранные ячейки и мёд."
+    },
+    {
+      "id": "zhizha_0003",
+      "names": [
+        "Пружинка-радуга",
+        "пружинка",
+        "слинки"
+      ],
+      "illustration": "Игрушечная пружина из цветного пластика, перекинутая дугой; основная масса синяя, второй конец розовый.",
+      "tags": [
+        "slinky",
+        "toy",
+        "play",
+        "hold-in-hand",
+        "child",
+        "plastic",
+        "elastic",
+        "flexible",
+        "shape-spiral",
+        "dominant-blue",
+        "dominant-pink"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "balance",
+          "weight": 0.5,
+          "label": "равновесие"
+        }
+      ],
+      "distinct_from_existing": "Самостоятельная пружина с витками; без замка, проволочных шипов или верёвки."
+    },
+    {
+      "id": "zhizha_0004",
+      "names": [
+        "Ткацкий челнок",
+        "челнок"
+      ],
+      "illustration": "Потёртый деревянный челнок-лодочка с красной катушкой внутри. Из прорези выходит короткая нить.",
+      "tags": [
+        "weaving-shuttle",
+        "tool",
+        "hold-in-hand",
+        "make",
+        "craft",
+        "wood",
+        "fabric",
+        "pull",
+        "hard",
+        "shape-container",
+        "dominant-brown",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        },
+        {
+          "tag": "patience",
+          "weight": 0.5,
+          "label": "терпение"
+        }
+      ],
+      "distinct_from_existing": "Не клубок или крючок: нить заключена в продолговатый деревянный корпус."
+    },
+    {
+      "id": "zhizha_0005",
+      "names": [
+        "Строительный отвес",
+        "отвес"
+      ],
+      "illustration": "Тяжёлый стальной конус на прямом красном шнуре, рядом короткая свободная петля того же шнура. Без шкалы.",
+      "tags": [
+        "plumb-bob",
+        "tool",
+        "hold-in-hand",
+        "measure",
+        "metal",
+        "heavy",
+        "hard",
+        "cord",
+        "construction",
+        "shape-cone",
+        "shape-stick",
+        "dominant-gray",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "accuracy",
+          "weight": 0.5,
+          "label": "точность"
+        },
+        {
+          "tag": "balance",
+          "weight": 0.5,
+          "label": "равновесие"
+        }
+      ],
+      "distinct_from_existing": "Измеряет вертикаль силой тяжести; не маятник часов, дротик или циркуль."
+    },
+    {
+      "id": "zhizha_0006",
+      "names": [
+        "Калейдоскоп"
+      ],
+      "illustration": "Бордовая картонная трубка, на ближнем торце виден узор из трёх крупных разноцветных осколков. Никакого отдельного узора вокруг предмета.",
+      "tags": [
+        "kaleidoscope",
+        "toy",
+        "play",
+        "hold-in-hand",
+        "look-through",
+        "rotate",
+        "glass",
+        "paper",
+        "fragile",
+        "shape-cylinder",
+        "dominant-purple"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "imagination",
+          "weight": 0.5,
+          "label": "воображение"
+        }
+      ],
+      "distinct_from_existing": "Не телескоп: узор виден в торце, отсутствуют объектив и штатив."
+    },
+    {
+      "id": "zhizha_0007",
+      "names": [
+        "Калимба",
+        "пальцевое пианино"
+      ],
+      "illustration": "Небольшой деревянный резонатор с семью металлическими язычками; круглое отверстие чуть смещено, как удивлённый рот, без нарисованного лица.",
+      "tags": [
+        "kalimba",
+        "music",
+        "play",
+        "sound",
+        "hold-in-hand",
+        "wood",
+        "metal",
+        "hard",
+        "musician",
+        "shape-box",
+        "dominant-brown",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "rhythm",
+          "weight": 0.5,
+          "label": "ритм"
+        },
+        {
+          "tag": "concert",
+          "weight": 0.5,
+          "label": "концерт"
+        }
+      ],
+      "distinct_from_existing": "Иной инструмент и силуэт: нет струн, смычка, клавиш или мехов."
+    },
+    {
+      "id": "zhizha_0008",
+      "names": [
+        "Ласты",
+        "пара ласт"
+      ],
+      "illustration": "Две жёлтые резиновые ласты разной ориентации; у одной кончик загнулся, на другой одна капля воды.",
+      "tags": [
+        "diving-fins",
+        "wear",
+        "swim",
+        "rubber",
+        "elastic",
+        "soft",
+        "water",
+        "sea",
+        "sport",
+        "shape-pair",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "diving",
+          "weight": 0.5,
+          "label": "подводное плавание"
+        },
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        }
+      ],
+      "distinct_from_existing": "Не обувь или лыжи: широкие лопасти и открытые пятки; плавание вместо ходьбы."
+    },
+    {
+      "id": "zhizha_0009",
+      "names": [
+        "Рак-отшельник",
+        "рак в ракушке"
+      ],
+      "illustration": "Небольшой красный рак выглядывает из обычной кремовой спиральной раковины; одна клешня слегка приподнята.",
+      "tags": [
+        "hermit-crab",
+        "animal",
+        "crawl",
+        "sea",
+        "water",
+        "hard",
+        "shell",
+        "protect",
+        "shape-animal",
+        "shape-spiral",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "shelter",
+          "weight": 0.5,
+          "label": "укрытие"
+        },
+        {
+          "tag": "beach",
+          "weight": 0.5,
+          "label": "пляж"
+        }
+      ],
+      "distinct_from_existing": "Новое животное с переносным укрытием, не скорпион и не отдельная раковина."
+    },
+    {
+      "id": "zhizha_0010",
+      "names": [
+        "Венерина мухоловка",
+        "растение-хищник"
+      ],
+      "illustration": "Одна розетка хищного растения с двумя открытыми зелёными ловушками и красной внутренней поверхностью. Небольшой ком земли, без горшка и насекомых.",
+      "tags": [
+        "venus-flytrap",
+        "plant",
+        "grow",
+        "biological",
+        "nature",
+        "catch",
+        "open-close",
+        "soft",
+        "shape-pair",
+        "dominant-green",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "trap",
+          "weight": 0.5,
+          "label": "ловушка"
+        },
+        {
+          "tag": "danger",
+          "weight": 0.5,
+          "label": "опасность"
+        }
+      ],
+      "distinct_from_existing": "Не кактус и не капкан: живые листья складываются, металлических зубьев нет."
+    },
+    {
+      "id": "zhizha_0011",
+      "names": [
+        "Аммонит",
+        "окаменелость"
+      ],
+      "illustration": "Расколотая серая каменная плитка с отчётливой спиралью окаменелого аммонита. Крошечный скол открывает светлые камеры.",
+      "tags": [
+        "ammonite-fossil",
+        "stone",
+        "hard",
+        "heavy",
+        "nature",
+        "biological",
+        "look-at",
+        "shape-spiral",
+        "shape-flat",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "history",
+          "weight": 0.5,
+          "label": "история"
+        },
+        {
+          "tag": "sea",
+          "weight": 0.5,
+          "label": "море"
+        }
+      ],
+      "distinct_from_existing": "Не кристалл, метеорит или скелет динозавра: главный образ — спираль в камне."
+    },
+    {
+      "id": "zhizha_0012",
+      "names": [
+        "Сургучная печать",
+        "сургуч"
+      ],
+      "illustration": "Отдельная тёмно-красная восковая печать с крупным простым отпечатком листа. Отбитый край и тонкий хвостик застывшей капли; без конверта и ручки штампа.",
+      "tags": [
+        "wax-seal",
+        "wax",
+        "hard",
+        "fragile",
+        "stamp",
+        "information",
+        "display",
+        "shape-flat",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "secret",
+          "weight": 0.5,
+          "label": "тайна"
+        },
+        {
+          "tag": "documents",
+          "weight": 0.5,
+          "label": "документы"
+        }
+      ],
+      "distinct_from_existing": "От канцелярского штампа отличается материалом и отсутствием ручки; это готовый отпечаток."
+    },
+    {
+      "id": "zhizha_0013",
+      "names": [
+        "Маятник Ньютона",
+        "шарики Ньютона"
+      ],
+      "illustration": "Настольная рамка с пятью стальными шарами на нитях. Крайний шар отведён в сторону; остальные выстроены в линию.",
+      "tags": [
+        "newtons-cradle",
+        "device",
+        "metal",
+        "hard",
+        "swing",
+        "hit",
+        "move",
+        "science",
+        "shape-box",
+        "shape-chain",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "balance",
+          "weight": 0.5,
+          "label": "равновесие"
+        },
+        {
+          "tag": "rhythm",
+          "weight": 0.5,
+          "label": "ритм"
+        }
+      ],
+      "distinct_from_existing": "Не часы и не счёты: пять подвешенных шаров передают удар; нет циферблата или счётных рядов."
+    },
+    {
+      "id": "zhizha_0014",
+      "names": [
+        "Скалка с тестом",
+        "скалка"
+      ],
+      "illustration": "Деревянная скалка, к середине которой прилип короткий белый лоскут теста. Небольшая складка теста напоминает загнувшийся язычок.",
+      "tags": [
+        "rolling-pin",
+        "tool",
+        "kitchen",
+        "cook",
+        "hold-in-hand",
+        "roll",
+        "wood",
+        "hard",
+        "food",
+        "sticky",
+        "shape-cylinder",
+        "dominant-brown",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "bakery",
+          "weight": 0.5,
+          "label": "выпечка"
+        },
+        {
+          "tag": "housework",
+          "weight": 0.5,
+          "label": "домашняя работа"
+        }
+      ],
+      "distinct_from_existing": "Не дубинка и не кисть: симметричные ручки и прилипшее тесто задают кухонное применение."
+    },
+    {
+      "id": "zhizha_0015",
+      "names": [
+        "Кузнечные мехи",
+        "мехи для огня"
+      ],
+      "illustration": "Небольшие ручные мехи из тёмного дерева и бордовой кожи; складчатый корпус наполовину раскрыт, металлический носик. Без огня рядом.",
+      "tags": [
+        "fire-bellows",
+        "tool",
+        "hold-in-hand",
+        "push",
+        "pull",
+        "blow",
+        "air",
+        "wood",
+        "leather",
+        "flexible",
+        "shape-container",
+        "dominant-brown",
+        "dominant-purple"
+      ],
+      "associations": [
+        {
+          "tag": "fire",
+          "weight": 0.5,
+          "label": "огонь"
+        },
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Не фен или волынка: воздух нагнетается сжатием складок, нет провода или музыкальных трубок."
+    },
+    {
+      "id": "zhizha_0016",
+      "names": [
+        "Стетоскоп",
+        "фонендоскоп"
+      ],
+      "illustration": "Две металлические ушные дужки сходятся в зелёной Y-образной развилке. От неё одна изогнутая трубка идёт прямо к серебристой мембране.",
+      "tags": [
+        "stethoscope",
+        "medical",
+        "doctor",
+        "hospital",
+        "hear",
+        "sound",
+        "rubber",
+        "metal",
+        "flexible",
+        "shape-pair",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "health",
+          "weight": 0.5,
+          "label": "здоровье"
+        },
+        {
+          "tag": "care",
+          "weight": 0.5,
+          "label": "уход, забота"
+        }
+      ],
+      "distinct_from_existing": "Две ушные дужки соединены с одной мембраной общей трубкой."
+    },
+    {
+      "id": "zhizha_0017",
+      "names": [
+        "Английская булавка",
+        "булавка"
+      ],
+      "illustration": "Крупная раскрытая серебристая булавка с маленьким лоскутом синей ткани на тупой стороне. Кончик свободен и хорошо виден.",
+      "tags": [
+        "safety-pin",
+        "tool",
+        "hold-in-hand",
+        "attach",
+        "open-close",
+        "metal",
+        "sharp",
+        "hard",
+        "fabric",
+        "shape-stick",
+        "dominant-gray",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "sew",
+          "weight": 0.5,
+          "label": "шить"
+        },
+        {
+          "tag": "repair",
+          "weight": 0.5,
+          "label": "ремонт"
+        }
+      ],
+      "distinct_from_existing": "Не заколка или скрепка: замочек, пружинный виток и открытое острие."
+    },
+    {
+      "id": "zhizha_0018",
+      "names": [
+        "Банная губка",
+        "пористая губка"
+      ],
+      "illustration": "Жёлтая пористая морская губка неправильной формы, два белых пузыря пены у края. Без ванной, ведра и мыла.",
+      "tags": [
+        "bath-sponge",
+        "clean",
+        "wash",
+        "hygiene",
+        "bathroom",
+        "soft",
+        "wet",
+        "water",
+        "shape-ball",
+        "dominant-yellow",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "sea",
+          "weight": 0.5,
+          "label": "море"
+        },
+        {
+          "tag": "relaxation",
+          "weight": 0.5,
+          "label": "отдых, расслабление"
+        }
+      ],
+      "distinct_from_existing": "Не кусок мыла: видна пористая структура, нет этикетки или правильной формы бруска."
+    },
+    {
+      "id": "zhizha_0019",
+      "names": [
+        "Напёрсток"
+      ],
+      "illustration": "Перевёрнутый медный напёрсток с крупными углублениями; небольшая вмятина сбоку, тёмное открытое дно видно под углом.",
+      "tags": [
+        "thimble",
+        "tool",
+        "craft",
+        "sew",
+        "wear",
+        "protect",
+        "metal",
+        "hard",
+        "shape-container",
+        "shape-cylinder",
+        "dominant-orange"
+      ],
+      "associations": [
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        },
+        {
+          "tag": "care",
+          "weight": 0.5,
+          "label": "уход, забота"
+        }
+      ],
+      "distinct_from_existing": "Не чашка и не колокольчик: нет ручки или языка, характерные точечные углубления."
+    },
+    {
+      "id": "zhizha_0020",
+      "names": [
+        "Ручной насос",
+        "велосипедный насос"
+      ],
+      "illustration": "Синий напольный ручной насос с Т-образной чёрной ручкой и коротким гибким шлангом, свёрнутым одним кольцом. Без колеса.",
+      "tags": [
+        "hand-pump",
+        "tool",
+        "hold-in-hand",
+        "push",
+        "pull",
+        "blow",
+        "air",
+        "metal",
+        "hard",
+        "rubber",
+        "shape-stick",
+        "shape-ring",
+        "dominant-blue",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "bicycle",
+          "weight": 0.5,
+          "label": "велосипед"
+        },
+        {
+          "tag": "repair",
+          "weight": 0.5,
+          "label": "ремонт"
+        }
+      ],
+      "distinct_from_existing": "Не компрессор: ручной поршень, нет двигателя, провода и манометра."
+    },
+    {
+      "id": "zhizha_0021",
+      "names": [
+        "Смородиновое желе",
+        "Ягодное желе"
+      ],
+      "illustration": "Рифлёный тёмно-малиновый купол желе, внизу от края отломилась маленькая дрожащая долька. Рубиновый полупрозрачный срез, без тарелки и ягод.",
+      "tags": [
+        "jelly-mold-dessert",
+        "food",
+        "eat",
+        "sweet",
+        "soft",
+        "transparent",
+        "kitchen",
+        "shape-ball",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "dessert",
+          "weight": 0.5,
+          "label": "десерт"
+        },
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        }
+      ],
+      "distinct_from_existing": "Рёбра от формы и отделившаяся долька выдают застывший десерт."
+    },
+    {
+      "id": "zhizha_0022",
+      "names": [
+        "Камертон",
+        "Музыкальный камертон"
+      ],
+      "illustration": "Простой стальной камертон, две длинные одинаковые параллельные ветви, плавная U-образная развилка и одна короткая ручка с шариком. Диагональная композиция.",
+      "tags": [
+        "tuning-fork",
+        "music",
+        "sound",
+        "hit",
+        "hear",
+        "metal",
+        "hard",
+        "hold-in-hand",
+        "musician",
+        "shape-stick",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "accuracy",
+          "weight": 0.5,
+          "label": "точность"
+        },
+        {
+          "tag": "rhythm",
+          "weight": 0.5,
+          "label": "ритм"
+        }
+      ],
+      "distinct_from_existing": "Узкая стальная вилка задаёт тон при ударе."
+    },
+    {
+      "id": "zhizha_0023",
+      "names": [
+        "Снегоступ",
+        "Плетёный снегоступ"
+      ],
+      "illustration": "Один старинный снегоступ формы вытянутой капли, гнутая деревянная рама и сетка из кожаных ремешков, синий ремень для стопы с металлической пряжкой.",
+      "tags": [
+        "snowshoe",
+        "wear",
+        "walk",
+        "snow",
+        "wood",
+        "leather",
+        "flexible",
+        "sport",
+        "shape-net",
+        "shape-flat",
+        "dominant-brown",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        },
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        }
+      ],
+      "distinct_from_existing": "Широкая плетёная подошва распределяет вес на снегу."
+    },
+    {
+      "id": "zhizha_0024",
+      "names": [
+        "Комар в янтаре",
+        "Янтарь с комаром"
+      ],
+      "illustration": "Плоский медовый кусочек полупрозрачного янтаря, внутри в профиль навсегда застыл единственный тёмный длинноногий комар. Никакой оправы.",
+      "tags": [
+        "amber-inclusion",
+        "hard",
+        "transparent",
+        "insect",
+        "nature",
+        "fragile",
+        "light",
+        "hold-in-hand",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "history",
+          "weight": 0.5,
+          "label": "история"
+        },
+        {
+          "tag": "memory",
+          "weight": 0.5,
+          "label": "воспоминания"
+        }
+      ],
+      "distinct_from_existing": "Включение внутри смолы даёт два читаемых образа — насекомое и камень."
+    },
+    {
+      "id": "zhizha_0025",
+      "names": [
+        "Игольница-помидор",
+        "Портновская игольница"
+      ],
+      "illustration": "Красная бархатная игольница стянута нитками в дольки. На макушке пришита зелёная фетровая звёздочка, из ткани торчат четыре булавки с разноцветными стеклянными головками.",
+      "tags": [
+        "tomato-pincushion",
+        "fabric",
+        "sew",
+        "soft",
+        "sharp",
+        "metal",
+        "stab",
+        "craft",
+        "tool",
+        "shape-ball",
+        "dominant-red",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "tailor",
+          "weight": 0.5,
+          "label": "портной"
+        },
+        {
+          "tag": "vegetable",
+          "weight": 0.5,
+          "label": "овощ"
+        }
+      ],
+      "distinct_from_existing": "На помидоре видны портновские швы, а над мягкими дольками расходятся четыре булавки."
+    },
+    {
+      "id": "zhizha_0026",
+      "names": [
+        "Волан",
+        "Волан для бадминтона"
+      ],
+      "illustration": "Один бадминтонный волан по диагонали: белая коническая юбка из перекрывающихся перьев, красное кольцо у округлой пробковой головки. Одно перо выбилось из ровного венчика.",
+      "tags": [
+        "shuttlecock",
+        "sport",
+        "play",
+        "hit",
+        "fly",
+        "feather",
+        "light-weight",
+        "shape-cone",
+        "dominant-white",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        },
+        {
+          "tag": "wind",
+          "weight": 0.5,
+          "label": "ветер"
+        }
+      ],
+      "distinct_from_existing": "Конус из перьев стабилизирует полёт волана."
+    },
+    {
+      "id": "zhizha_0027",
+      "names": [
+        "Бобр",
+        "Бобр с веткой"
+      ],
+      "illustration": "Коренастый мокрый бобр в профиль. Держит передними лапами короткую светлую ветку с парой следов зубов, широкий плоский чешуйчатый хвост виден целиком.",
+      "tags": [
+        "beaver",
+        "animal",
+        "swim",
+        "river",
+        "wood",
+        "wet",
+        "biological",
+        "teeth",
+        "shape-animal",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "construction",
+          "weight": 0.5,
+          "label": "стройка"
+        },
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Плоский хвост и погрызенная ветка связывают зверя с плотиной."
+    },
+    {
+      "id": "zhizha_0028",
+      "names": [
+        "Кабинка канатной дороги",
+        "Подвесная гондола"
+      ],
+      "illustration": "Красная закрытая кабинка подвесной канатной дороги в три четверти, кремовая крыша, синие окна и изогнутый металлический подвес с роликами на коротком отрезке троса. Без пейзажа и людей.",
+      "tags": [
+        "cable-car",
+        "transport",
+        "ride",
+        "move",
+        "mountain",
+        "metal",
+        "hard",
+        "travel",
+        "shape-box",
+        "dominant-red",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "height",
+          "weight": 0.5,
+          "label": "высота"
+        },
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        }
+      ],
+      "distinct_from_existing": "Кабинка висит на тросе благодаря верхней роликовой каретке."
+    },
+    {
+      "id": "zhizha_0029",
+      "names": [
+        "Резиновая грелка",
+        "Грелка"
+      ],
+      "illustration": "Плоская вишнёвая резиновая грелка с округлыми плечиками и небольшим светлым винтовым колпачком. На боку заметны вертикальные рёбра и мягкая вмятина.",
+      "tags": [
+        "hot-water-bottle",
+        "rubber",
+        "soft",
+        "flexible",
+        "container",
+        "hot",
+        "water",
+        "heat",
+        "shape-container",
+        "shape-flat",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "care",
+          "weight": 0.5,
+          "label": "уход, забота"
+        },
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        }
+      ],
+      "distinct_from_existing": "Рёбра и пробка узнаются как у грелки, которую наполняют горячей водой."
+    },
+    {
+      "id": "zhizha_0030",
+      "names": [
+        "Краснокочанная капуста",
+        "Срез капусты"
+      ],
+      "illustration": "Половина кочана фиолетовой капусты, срез обращён к зрителю: витки белых прожилок похожи на лабиринт.",
+      "tags": [
+        "red-cabbage",
+        "food",
+        "plant",
+        "eat",
+        "cook",
+        "biological",
+        "edible",
+        "kitchen",
+        "shape-ball",
+        "dominant-purple",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "garden",
+          "weight": 0.5,
+          "label": "сад"
+        },
+        {
+          "tag": "harvest",
+          "weight": 0.5,
+          "label": "урожай"
+        }
+      ],
+      "distinct_from_existing": "Разветвлённый узор прожилок виден на поперечном срезе."
+    },
+    {
+      "id": "zhizha_0031",
+      "names": [
+        "Перфокарта",
+        "Компьютерная перфокарта"
+      ],
+      "illustration": "Старая прямоугольная кремовая картонная перфокарта с одним срезанным углом. Сетка мелких прямоугольных пробитых отверстий группируется в столбцы, нижний угол загнулся. Чистая бумага без букв и цифр.",
+      "tags": [
+        "punched-card",
+        "paper",
+        "information",
+        "read",
+        "store",
+        "computer",
+        "light-weight",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "retro",
+          "weight": 0.5,
+          "label": "ретро"
+        },
+        {
+          "tag": "secret",
+          "weight": 0.5,
+          "label": "тайна"
+        }
+      ],
+      "distinct_from_existing": "Ряды отверстий образуют физическую запись данных."
+    },
+    {
+      "id": "zhizha_0032",
+      "names": [
+        "Пьющая птичка",
+        "Птичка Хоттабыча"
+      ],
+      "illustration": "Классическая физическая игрушка drinking bird в простом профильном силуэте: красная войлочная голова с длинным клювом наклонена вперёд; стеклянная трубка-шея, прозрачная пузатая колба с синей жидкостью, две узкие опорные стойки на основании. Без стакана.",
+      "tags": [
+        "drinking-bird",
+        "toy",
+        "play",
+        "balance",
+        "glass",
+        "liquid",
+        "transparent",
+        "move",
+        "bird",
+        "shape-animal",
+        "dominant-blue",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "science",
+          "weight": 0.5,
+          "label": "наука"
+        },
+        {
+          "tag": "rhythm",
+          "weight": 0.5,
+          "label": "ритм"
+        }
+      ],
+      "distinct_from_existing": "На стойках качается стеклянная колба в форме птицы."
+    },
+    {
+      "id": "zhizha_0033",
+      "names": [
+        "Летучая мышь",
+        "Спящая летучая мышь"
+      ],
+      "illustration": "Одна небольшая летучая мышь висит вниз головой на короткой веточке. Сложила тёмные перепончатые крылья вокруг тела как плащ, из-под них выглядывают рыжеватая мордочка и два уха.",
+      "tags": [
+        "hanging-bat",
+        "animal",
+        "fly",
+        "night",
+        "soft",
+        "fur",
+        "forest",
+        "rest",
+        "shape-animal",
+        "dominant-black",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "sleep",
+          "weight": 0.5,
+          "label": "сон"
+        },
+        {
+          "tag": "cave",
+          "weight": 0.5,
+          "label": "пещера"
+        }
+      ],
+      "distinct_from_existing": "Перепончатые крылья сложены вокруг висящего вниз головой зверька."
+    },
+    {
+      "id": "zhizha_0034",
+      "names": [
+        "Ступка с пестиком",
+        "Каменная ступка"
+      ],
+      "illustration": "Низкая белая мраморная ступка, тяжёлый пестик лежит на бортике. Внутри немного густой ультрамариновой краски, синий след остаётся на округлом конце пестика.",
+      "tags": [
+        "mortar-pestle",
+        "tool",
+        "hold-in-hand",
+        "grind",
+        "stone",
+        "hard",
+        "heavy",
+        "paint",
+        "art",
+        "shape-container",
+        "dominant-white",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "craft",
+          "weight": 0.5,
+          "label": "рукоделие"
+        },
+        {
+          "tag": "powder",
+          "weight": 0.5,
+          "label": "порошок, мелкие частицы"
+        }
+      ],
+      "distinct_from_existing": "У тяжёлой чаши и пестика один общий след растёртого пигмента."
+    },
+    {
+      "id": "zhizha_0035",
+      "names": [
+        "Пяльцы",
+        "Вышивальные пяльцы"
+      ],
+      "illustration": "Круглые деревянные пяльцы с молочно-белой тканью, на которой жёлтой нитью наполовину вышит полумесяц. Осталась одна длинная свободная ниточка, виден винт зажима.",
+      "tags": [
+        "embroidery-hoop",
+        "tool",
+        "make",
+        "sew",
+        "craft",
+        "fabric",
+        "wood",
+        "flexible",
+        "shape-ring",
+        "shape-flat",
+        "dominant-white",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "patience",
+          "weight": 0.5,
+          "label": "терпение"
+        },
+        {
+          "tag": "moon",
+          "weight": 0.5,
+          "label": "луна"
+        }
+      ],
+      "distinct_from_existing": "Ткань натянута в ободе, свободная нить показывает, где остановился стежок."
+    },
+    {
+      "id": "zhizha_0036",
+      "names": [
+        "Ветроуказатель",
+        "Ветровой конус"
+      ],
+      "illustration": "Оранжево-белый полосатый аэродромный ветроуказатель на коротком металлическом кронштейне. Толстое круглое горло открыто, сужающийся тканевый рукав надулся вбок и изгибается.",
+      "tags": [
+        "windsock",
+        "wind",
+        "air",
+        "fabric",
+        "flexible",
+        "measure",
+        "weather",
+        "light-weight",
+        "shape-cone",
+        "dominant-orange",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "airplane",
+          "weight": 0.5,
+          "label": "самолёт"
+        },
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        }
+      ],
+      "distinct_from_existing": "Полый рукав показывает ветер своей формой и наклоном."
+    },
+    {
+      "id": "zhizha_0037",
+      "names": [
+        "Коробочка лотоса",
+        "Семенная коробочка лотоса"
+      ],
+      "illustration": "Одна высохшая оливково-коричневая семенная коробочка лотоса на коротком выгнутом стебле. Плоский круглый верх с семью крупными гнёздами, два блестящих тёмных семени ещё внутри.",
+      "tags": [
+        "lotus-pod",
+        "plant",
+        "grow",
+        "dry",
+        "nature",
+        "biological",
+        "hollow",
+        "store",
+        "shape-container",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "garden",
+          "weight": 0.5,
+          "label": "сад"
+        },
+        {
+          "tag": "water",
+          "weight": 0.5,
+          "label": "вода"
+        }
+      ],
+      "distinct_from_existing": "Семена сидят в отдельных крупных гнёздах плоской коробочки."
+    },
+    {
+      "id": "zhizha_0038",
+      "names": [
+        "Оптическая призма",
+        "Стеклянная призма"
+      ],
+      "illustration": "Один бесцветный треугольный оптический клин из полированного стекла. Узкий белый луч входит с одной стороны, короткий веер спектральных полос выходит с другой; сам клин крупнее лучей.",
+      "tags": [
+        "optical-prism",
+        "glass",
+        "transparent",
+        "fragile",
+        "light",
+        "instrument",
+        "look-at",
+        "lab",
+        "shape-prism",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "science",
+          "weight": 0.5,
+          "label": "наука"
+        },
+        {
+          "tag": "rainbow",
+          "weight": 0.5,
+          "label": "радуга"
+        }
+      ],
+      "distinct_from_existing": "Грани стекла разделяют белый луч на цветной спектр."
+    },
+    {
+      "id": "zhizha_0039",
+      "names": [
+        "Машинная маслёнка",
+        "Маслёнка с носиком"
+      ],
+      "illustration": "Невысокая красная металлическая маслёнка слесаря, округлый жестяной корпус с продавленным донышком, очень длинный тонкий латунный носик наклонён вбок. Одна тёмная капля на самом кончике, без ручки-дуги.",
+      "tags": [
+        "oil-can",
+        "tool",
+        "hold-in-hand",
+        "metal",
+        "liquid",
+        "pour",
+        "container",
+        "hard",
+        "repair",
+        "shape-container",
+        "shape-cone",
+        "dominant-red",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "machine",
+          "weight": 0.5,
+          "label": "механизм"
+        },
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Очень тонкий носик подаёт масло по капле в механизм."
+    },
+    {
+      "id": "zhizha_0040",
+      "names": [
+        "Костяшки домино",
+        "Домино"
+      ],
+      "illustration": "Три чёрные костяшки домино с крупными белыми точками и тонкой поперечной чертой. Одна уже лежит, вторая наклонилась, третья ещё стоит, образуя начинающуюся цепочку падения. Только традиционные точки.",
+      "tags": [
+        "domino-tiles",
+        "game",
+        "play",
+        "count",
+        "hard",
+        "fall",
+        "balance",
+        "table",
+        "shape-box",
+        "shape-flat",
+        "dominant-black",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "strategy",
+          "weight": 0.5,
+          "label": "стратегия"
+        },
+        {
+          "tag": "number",
+          "weight": 0.5,
+          "label": "числа"
+        }
+      ],
+      "distinct_from_existing": "Ряд прямоугольных костяшек складывается в цепочку падения."
+    },
+    {
+      "id": "zhizha_0041",
+      "names": [
+        "Фартук пекаря",
+        "Пекарский фартук"
+      ],
+      "illustration": "Индиговый полотняный фартук с одной шейной петлёй, белые завязки, на широком кармане пыльный отпечаток трёх пальцев в муке. Фартук один, расправлен как перед надеванием, без тела и вешалки.",
+      "tags": [
+        "bib-apron",
+        "clothes",
+        "wear",
+        "tie",
+        "protect",
+        "fabric",
+        "soft",
+        "kitchen",
+        "cook",
+        "shape-flat",
+        "shape-humanoid",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "bakery",
+          "weight": 0.5,
+          "label": "выпечка"
+        },
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Шейная петля, боковые завязки и след муки на кармане."
+    },
+    {
+      "id": "zhizha_0042",
+      "names": [
+        "Кленовые крылатки",
+        "Кленовые вертолётики"
+      ],
+      "illustration": "Одна парная крылатка клёна крупным планом: две тонкие рыжевато-зелёные полупрозрачные лопасти образуют букву V и соединены у двух округлых семян. Одно крыло надломлено у края.",
+      "tags": [
+        "maple-samara",
+        "plant",
+        "grow",
+        "fly",
+        "rotate",
+        "light-weight",
+        "nature",
+        "forest",
+        "shape-pair",
+        "shape-flat",
+        "dominant-orange",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "wind",
+          "weight": 0.5,
+          "label": "ветер"
+        },
+        {
+          "tag": "autumn",
+          "weight": 0.5,
+          "label": "осень"
+        }
+      ],
+      "distinct_from_existing": "У двух крыльев заметны жилки, а у основания сидят парные семена."
+    },
+    {
+      "id": "zhizha_0043",
+      "names": [
+        "Камень для кёрлинга",
+        "Кёрлинговый камень"
+      ],
+      "illustration": "Приземистый круглый камень для кёрлинга из пятнистого серого гранита. Над верхушкой — толстая жёлтая изогнутая ручка; по нижнему ребру тонкий иней.",
+      "tags": [
+        "curling-stone",
+        "sport",
+        "slide",
+        "push",
+        "hard",
+        "heavy",
+        "stone",
+        "handle",
+        "cold",
+        "shape-cylinder",
+        "dominant-gray",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        },
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        }
+      ],
+      "distinct_from_existing": "Плоское дно камня скользит по льду, за дуговую ручку его раскручивают."
+    },
+    {
+      "id": "zhizha_0044",
+      "names": [
+        "Балетная пачка",
+        "Юбка-пачка"
+      ],
+      "illustration": "Одна бледно-розовая классическая балетная юбка-пачка, вид сверху и сбоку. Пустое овальное отверстие пояса, плоский расходящийся круг из нескольких пушистых слоёв фатина. Одна лента свисает сбоку. Без лифа, ног или балерины.",
+      "tags": [
+        "ballet-tutu",
+        "clothes",
+        "wear",
+        "dance",
+        "fabric",
+        "soft",
+        "light-weight",
+        "costume",
+        "stage",
+        "shape-ring",
+        "shape-flat",
+        "dominant-pink",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "ballet",
+          "weight": 0.5,
+          "label": "балет"
+        },
+        {
+          "tag": "theater",
+          "weight": 0.5,
+          "label": "театр"
+        }
+      ],
+      "distinct_from_existing": "Плоский многослойный круг фатина расходится от пояса."
+    },
+    {
+      "id": "zhizha_0045",
+      "names": [
+        "Соковыжималка для лимона",
+        "Стеклянная соковыжималка"
+      ],
+      "illustration": "Круглая светло-зелёная прессованная стеклянная ручная соковыжималка: в центре выпуклый ребристый конус, вокруг кольцевой желоб, сбоку маленький носик. В желобе одна лимонная косточка и капля сока; фрукт не изображать.",
+      "tags": [
+        "citrus-reamer",
+        "kitchen",
+        "tool",
+        "rotate",
+        "push",
+        "glass",
+        "transparent",
+        "hard",
+        "liquid",
+        "fruit",
+        "shape-cone",
+        "shape-ring",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "lemonade",
+          "weight": 0.5,
+          "label": "лимонад"
+        },
+        {
+          "tag": "breakfast",
+          "weight": 0.5,
+          "label": "завтрак"
+        }
+      ],
+      "distinct_from_existing": "Сок стекает с ребристого конуса в кольцевой желоб."
+    },
+    {
+      "id": "zhizha_0046",
+      "names": [
+        "Светлячок",
+        "Жук-светлячок"
+      ],
+      "illustration": "Один небольшой тёмный жук-светлячок крупно в ракурсе три четверти; коричнево-чёрные надкрылья слегка раскрыты, под ними выделяется светящийся лимонно-зелёный кончик брюшка. Тусклое свечение узко охватывает кончик.",
+      "tags": [
+        "firefly-beetle",
+        "animal",
+        "insect",
+        "fly",
+        "night",
+        "light",
+        "biological",
+        "light-weight",
+        "shape-animal",
+        "dominant-brown",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        },
+        {
+          "tag": "lamp",
+          "weight": 0.5,
+          "label": "светильник"
+        }
+      ],
+      "distinct_from_existing": "Свет исходит из конца брюшка насекомого."
+    },
+    {
+      "id": "zhizha_0047",
+      "names": [
+        "Подтяжки",
+        "Брючные подтяжки"
+      ],
+      "illustration": "Бордовые эластичные подтяжки лежат в ясной Y-образной форме: две плечевые ленты сверху сходятся в кожаной нашивке, внизу одна лента. На каждом из трёх свободных концов серебристая прищепка. Без брюк и человека.",
+      "tags": [
+        "suspenders",
+        "clothes",
+        "wear",
+        "attach",
+        "pull",
+        "elastic",
+        "fabric",
+        "leather",
+        "metal",
+        "shape-stick",
+        "shape-pair",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "formal",
+          "weight": 0.5,
+          "label": "торжественная или деловая обстановка"
+        },
+        {
+          "tag": "fashion",
+          "weight": 0.5,
+          "label": "мода"
+        }
+      ],
+      "distinct_from_existing": "Три зажима и развилка из ремешков образуют узнаваемый силуэт."
+    },
+    {
+      "id": "zhizha_0048",
+      "names": [
+        "Музыкальная шкатулка",
+        "Шкатулка с ручкой"
+      ],
+      "illustration": "Миниатюрная музыкальная шкатулка без крышки, в небольшом синем деревянном коробе видны латунный цилиндр с точками-штифтами и зубчатый металлический гребень. Сбоку выступает заводная ручка с деревянной бусиной. Крупный единый предмет.",
+      "tags": [
+        "crank-music-box",
+        "music",
+        "play",
+        "rotate",
+        "sound",
+        "wood",
+        "metal",
+        "hard",
+        "device",
+        "shape-box",
+        "shape-cylinder",
+        "dominant-blue",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "retro",
+          "weight": 0.5,
+          "label": "ретро"
+        },
+        {
+          "tag": "musician",
+          "weight": 0.5,
+          "label": "музыкант"
+        }
+      ],
+      "distinct_from_existing": "Ручка поворачивает валик, его штифты задевают металлический гребень."
+    },
+    {
+      "id": "zhizha_0049",
+      "names": [
+        "Гранат в разломе",
+        "Зёрна граната"
+      ],
+      "illustration": "Одна половинка спелого граната, надломленная руками. Тёмно-бордовая корона чашелистиков сбоку, белые перегородки и гроздья рубиновых полупрозрачных зёрен смотрят на зрителя. Одно гнездо пустое.",
+      "tags": [
+        "pomegranate",
+        "food",
+        "fruit",
+        "eat",
+        "plant",
+        "sweet",
+        "edible",
+        "liquid",
+        "biological",
+        "shape-ball",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "harvest",
+          "weight": 0.5,
+          "label": "урожай"
+        },
+        {
+          "tag": "juice",
+          "weight": 0.5,
+          "label": "сок"
+        }
+      ],
+      "distinct_from_existing": "Разлом показывает зернистые камеры вокруг светлых перегородок."
+    },
+    {
+      "id": "zhizha_0050",
+      "names": [
+        "Дождевик-пончо",
+        "Плащ-пончо"
+      ],
+      "illustration": "Охристо-жёлтое непромокаемое пончо с пустым капюшоном и одной тёмной застёжкой у горла. Широкое цельное треугольное полотнище расправлено, на складке три дождевые капли. Без рукавов, тела, лица и вешалки.",
+      "tags": [
+        "rain-poncho",
+        "clothes",
+        "wear",
+        "protect",
+        "water",
+        "flexible",
+        "wet",
+        "rain",
+        "travel",
+        "shape-cone",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "weather",
+          "weight": 0.5,
+          "label": "погода"
+        },
+        {
+          "tag": "camping",
+          "weight": 0.5,
+          "label": "поход"
+        }
+      ],
+      "distinct_from_existing": "Широкое цельное полотнище отводит дождь вокруг плеч."
+    },
+    {
+      "id": "zhizha_0051",
+      "names": [
+        "Садовая тачка",
+        "Одноколёсная тачка"
+      ],
+      "illustration": "Зелёная садовая тачка с пустым потёртым кузовом, одно чёрное колесо спереди, две деревянные рукоятки и две задние опоры. Немного подсохшей земли на ободе. Ракурс сбоку в три четверти.",
+      "tags": [
+        "wheelbarrow",
+        "garden",
+        "tool",
+        "push",
+        "carry",
+        "transport",
+        "metal",
+        "hard",
+        "wheel",
+        "shape-container",
+        "dominant-green",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        },
+        {
+          "tag": "farm",
+          "weight": 0.5,
+          "label": "ферма"
+        }
+      ],
+      "distinct_from_existing": "Кузов тачки держится на одном колесе и двух опорах."
+    },
+    {
+      "id": "zhizha_0052",
+      "names": [
+        "Йо-йо",
+        "Игрушка йо-йо"
+      ],
+      "illustration": "Фиолетовое деревянное йо-йо: две круглые половинки, между ними намотана одна светлая нить. Свободный конец описывает дугу и заканчивается маленькой петлёй для пальца. Без надписей.",
+      "tags": [
+        "yo-yo",
+        "toy",
+        "play",
+        "rotate",
+        "pull",
+        "wood",
+        "hard",
+        "cord",
+        "hold-in-hand",
+        "shape-cylinder",
+        "shape-ring",
+        "dominant-purple",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "balance",
+          "weight": 0.5,
+          "label": "равновесие"
+        }
+      ],
+      "distinct_from_existing": "Две половинки вращаются на общей оси с намотанной нитью."
+    },
+    {
+      "id": "zhizha_0053",
+      "names": [
+        "Морской конёк",
+        "Морской конёк с завитым хвостом"
+      ],
+      "illustration": "Один маленький золотисто-оранжевый морской конёк в профиль, вертикально: длинное трубчатое рыльце, прозрачный спинной плавник и спирально закрученный хвост. Никаких растений вокруг.",
+      "tags": [
+        "seahorse",
+        "animal",
+        "fish",
+        "swim",
+        "sea",
+        "water",
+        "wet",
+        "biological",
+        "shape-animal",
+        "shape-spiral",
+        "dominant-orange"
+      ],
+      "associations": [
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        },
+        {
+          "tag": "horse",
+          "weight": 0.5,
+          "label": "лошадь"
+        }
+      ],
+      "distinct_from_existing": "Вертикальный силуэт рыбки с вытянутым рыльцем и завитым хвостом."
+    },
+    {
+      "id": "zhizha_0054",
+      "names": [
+        "Меховая муфта",
+        "Муфта для рук"
+      ],
+      "illustration": "Одна кремово-белая цилиндрическая винтажная муфта для согревания обеих рук. Толстый мех снаружи, с одного видимого торца синяя тканевая подкладка и сквозное отверстие, сбоку короткая петля для запястья. Без пальцев, рукавов, рук или тела.",
+      "tags": [
+        "fur-muff",
+        "clothes",
+        "wear",
+        "fur",
+        "soft",
+        "hollow",
+        "cold",
+        "fabric",
+        "winter",
+        "shape-cylinder",
+        "dominant-white",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "comfort",
+          "weight": 0.5,
+          "label": "уют"
+        },
+        {
+          "tag": "fashion",
+          "weight": 0.5,
+          "label": "мода"
+        }
+      ],
+      "distinct_from_existing": "Обе руки прячутся в одну сквозную меховую трубку."
+    },
+    {
+      "id": "zhizha_0055",
+      "names": [
+        "Дырокол",
+        "Канцелярский дырокол"
+      ],
+      "illustration": "Старый тёмно-синий настольный канцелярский дырокол на два отверстия, плоский откидной рычаг приподнят. Из-под него выглядывает край кремовой бумаги с двумя ровными круглыми отверстиями и рядом два бумажных кружка.",
+      "tags": [
+        "paper-hole-punch",
+        "tool",
+        "push",
+        "cut",
+        "paper",
+        "office",
+        "metal",
+        "hard",
+        "school",
+        "shape-box",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "documents",
+          "weight": 0.5,
+          "label": "документы"
+        },
+        {
+          "tag": "circle",
+          "weight": 0.5,
+          "label": "круг"
+        }
+      ],
+      "distinct_from_existing": "Пара круглых высечек остаётся рядом с пробитым краем бумаги."
+    },
+    {
+      "id": "zhizha_0056",
+      "names": [
+        "Щипцы для сахара",
+        "Сахарные щипцы"
+      ],
+      "illustration": "Одна изогнутая U-образная пара небольших потускневших серебряных щипцов для сахара с ложечкообразными концами держит единственный белый неровный кубик рафинада. Вид сбоку, простая конструкция из одной пружинящей полосы.",
+      "tags": [
+        "sugar-tongs",
+        "kitchen",
+        "tool",
+        "hold-in-hand",
+        "metal",
+        "hard",
+        "food",
+        "sweet",
+        "shape-pair",
+        "dominant-gray",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "tea",
+          "weight": 0.5,
+          "label": "чай"
+        },
+        {
+          "tag": "sugar",
+          "weight": 0.5,
+          "label": "сахар"
+        }
+      ],
+      "distinct_from_existing": "Две маленькие чашечки щипцов удерживают кубик рафинада."
+    },
+    {
+      "id": "zhizha_0057",
+      "names": [
+        "Рогоз",
+        "Початок рогоза"
+      ],
+      "illustration": "Один стебель рогоза с коричневым бархатистым цилиндрическим початком и узким зелёным листом. Бок созревшего початка лопнул, оттуда выступает небольшой клочок белого пуха с семенами.",
+      "tags": [
+        "cattail",
+        "plant",
+        "grow",
+        "nature",
+        "river",
+        "soft",
+        "light-weight",
+        "biological",
+        "shape-stick",
+        "shape-cylinder",
+        "dominant-brown",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "wind",
+          "weight": 0.5,
+          "label": "ветер"
+        },
+        {
+          "tag": "water",
+          "weight": 0.5,
+          "label": "вода"
+        }
+      ],
+      "distinct_from_existing": "Бурый початок распускается лёгким белым пухом."
+    },
+    {
+      "id": "zhizha_0058",
+      "names": [
+        "Печатный валик",
+        "Валик для линогравюры"
+      ],
+      "illustration": "Ручной валик гравёра: короткая деревянная ручка, П-образная стальная скоба и широкий гладкий цилиндр из чёрной резины, поворачивающийся на оси. С одного края к цилиндру прилипла густая бирюзовая типографская краска. Без листа и надписей.",
+      "tags": [
+        "ink-brayer",
+        "tool",
+        "hold-in-hand",
+        "roll",
+        "print",
+        "ink",
+        "art",
+        "rubber",
+        "wood",
+        "sticky",
+        "shape-handle-plus-head",
+        "shape-cylinder",
+        "dominant-black",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "craft",
+          "weight": 0.5,
+          "label": "рукоделие"
+        },
+        {
+          "tag": "paper",
+          "weight": 0.5,
+          "label": "бумага"
+        }
+      ],
+      "distinct_from_existing": "Широкий резиновый цилиндр переносит тонкий слой краски на форму."
+    },
+    {
+      "id": "zhizha_0059",
+      "names": [
+        "Чайный гриб",
+        "Банка с чайным грибом"
+      ],
+      "illustration": "Открытая прозрачная цилиндрическая банка, наполненная янтарно-коричневым чаем. Прямо на поверхности плавает один отчётливый толстый кремовый слоистый диск чайного гриба, виден сквозь стекло; по краю диска три пузырька. Без этикетки, крышки и плесени.",
+      "tags": [
+        "kombucha-pellicle",
+        "glass",
+        "transparent",
+        "liquid",
+        "float",
+        "drink",
+        "food",
+        "kitchen",
+        "soft",
+        "shape-container",
+        "shape-cylinder",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "tea",
+          "weight": 0.5,
+          "label": "чай"
+        },
+        {
+          "tag": "time",
+          "weight": 0.5,
+          "label": "время"
+        }
+      ],
+      "distinct_from_existing": "На поверхности напитка хорошо виден светлый слоистый диск."
+    },
+    {
+      "id": "zhizha_0060",
+      "names": [
+        "Бумажная вертушка",
+        "Вертушка на палочке"
+      ],
+      "illustration": "Одна бумажная вертушка на тонкой деревянной палочке, ровно четыре загнутые лопасти из синей и коралловой бумаги закреплены одной круглой латунной кнопкой. Вид в три четверти, один угол слегка помялся.",
+      "tags": [
+        "paper-pinwheel",
+        "toy",
+        "play",
+        "rotate",
+        "paper",
+        "wood",
+        "light-weight",
+        "wind",
+        "child",
+        "shape-star",
+        "shape-stick",
+        "dominant-blue",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        },
+        {
+          "tag": "fair",
+          "weight": 0.5,
+          "label": "ярмарка"
+        }
+      ],
+      "distinct_from_existing": "Четыре угла листа загнуты к одной вращающейся кнопке."
+    },
+    {
+      "id": "zhizha_0061",
+      "names": [
+        "Пейджер",
+        "Карманный пейджер"
+      ],
+      "illustration": "Потёртый тёмно-синий поясной пейджер. Узкий янтарный экран с единственной пиктограммой конверта, три круглые кнопки в ряд и сбоку выступает клипса.",
+      "tags": [
+        "pager",
+        "device",
+        "electric",
+        "plastic",
+        "hard",
+        "read",
+        "attach",
+        "information",
+        "communication",
+        "shape-box",
+        "dominant-blue",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "retro",
+          "weight": 0.5,
+          "label": "ретро"
+        },
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        }
+      ],
+      "distinct_from_existing": "Клипса и крошечный однострочный экран с конвертом."
+    },
+    {
+      "id": "zhizha_0062",
+      "names": [
+        "Бумажные человечки",
+        "Хоровод из бумаги"
+      ],
+      "illustration": "Одна гармошка из вырезанной кремовой бумаги, развёрнутая в ряд из четырёх одинаковых человечков. Фигурки соединены ладонями, по сгибам чередуются свет и тень.",
+      "tags": [
+        "paper-doll-chain",
+        "paper",
+        "craft",
+        "cut",
+        "make",
+        "child",
+        "play",
+        "light-weight",
+        "flexible",
+        "shape-humanoid",
+        "shape-chain",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "family",
+          "weight": 0.5,
+          "label": "семья"
+        },
+        {
+          "tag": "teamwork",
+          "weight": 0.5,
+          "label": "совместный труд"
+        }
+      ],
+      "distinct_from_existing": "Четыре фигурки соединены краями одного сложенного листа."
+    },
+    {
+      "id": "zhizha_0063",
+      "names": [
+        "Алебарда",
+        "Парадная алебарда"
+      ],
+      "illustration": "Старинная парадная алебарда, целиком по диагонали. Характерный силуэт полумесяца, клюва и острия на длинном тёмном древке. Под серебристым навершием выцветшая бордовая кисточка. Один музейный предмет.",
+      "tags": [
+        "halberd",
+        "weapon",
+        "metal",
+        "wood",
+        "sharp",
+        "hard",
+        "heavy",
+        "soldier",
+        "history",
+        "hold-in-hand",
+        "shape-stick",
+        "shape-handle-plus-head",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "guard",
+          "weight": 0.5,
+          "label": "стража"
+        },
+        {
+          "tag": "ceremony",
+          "weight": 0.5,
+          "label": "церемония"
+        }
+      ],
+      "distinct_from_existing": "Парадное древко с асимметричным навершием и выцветшей кисточкой."
+    },
+    {
+      "id": "zhizha_0064",
+      "names": [
+        "Каштан в кожуре",
+        "Колючий каштан"
+      ],
+      "illustration": "Один плод конского каштана в надтреснувшей зелёной оболочке с короткими шипами. Внутри выглядывает гладкий блестящий коричневый каштан со светлым пятном.",
+      "tags": [
+        "horse-chestnut",
+        "plant",
+        "grow",
+        "nature",
+        "forest",
+        "hard",
+        "sharp",
+        "seed",
+        "shape-ball",
+        "shape-container",
+        "dominant-green",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "autumn",
+          "weight": 0.5,
+          "label": "осень"
+        },
+        {
+          "tag": "tree",
+          "weight": 0.5,
+          "label": "деревья"
+        }
+      ],
+      "distinct_from_existing": "Колючая оболочка расходится вокруг гладкого семени."
+    },
+    {
+      "id": "zhizha_0065",
+      "names": [
+        "Платёжный терминал",
+        "Терминал оплаты"
+      ],
+      "illustration": "Синий переносной платёжный терминал с цифровой клавиатурой, маленьким тёмным экраном и тремя цветными клавишами. Из встроенной прорези сверху выходит короткий белый завиток чека. Без брендов и разборчивого текста.",
+      "tags": [
+        "payment-terminal",
+        "device",
+        "electric",
+        "pay",
+        "read",
+        "money",
+        "paper",
+        "plastic",
+        "hard",
+        "shopping",
+        "shape-box",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "bank-card",
+          "weight": 0.5,
+          "label": "банковская карта"
+        },
+        {
+          "tag": "receipt",
+          "weight": 0.5,
+          "label": "чек"
+        }
+      ],
+      "distinct_from_existing": "Из корпуса с клавиатурой выступает свежий бумажный чек."
+    },
+    {
+      "id": "zhizha_0066",
+      "names": [
+        "Книжка-панорама",
+        "Объёмная книжка"
+      ],
+      "illustration": "В раскрытой книге из бумажных страниц поднимается миниатюрная театральная сцена. Красные кулисы обрамляют золотой полумесяц над силуэтом города.",
+      "tags": [
+        "pop-up-theatre",
+        "book",
+        "paper",
+        "read",
+        "open-close",
+        "craft",
+        "fragile",
+        "theater",
+        "art",
+        "shape-box",
+        "shape-flat",
+        "dominant-red",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "imagination",
+          "weight": 0.5,
+          "label": "воображение"
+        }
+      ],
+      "distinct_from_existing": "При раскрытии страницы превращаются в маленькую сцену."
+    },
+    {
+      "id": "zhizha_0067",
+      "names": [
+        "Рыцарский щит",
+        "Щит с вмятиной"
+      ],
+      "illustration": "Один старинный треугольный рыцарский щит: выгнутый верх, острый нижний угол, эмаль разделена на белую и синюю половины, на ободе заметная вмятина. Лицевая сторона без герба, букв или другого оружия.",
+      "tags": [
+        "heater-shield",
+        "armor",
+        "protect",
+        "metal",
+        "hard",
+        "heavy",
+        "soldier",
+        "history",
+        "shape-flat",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "safety",
+          "weight": 0.5,
+          "label": "безопасность"
+        },
+        {
+          "tag": "knight",
+          "weight": 0.5,
+          "label": "рыцарь"
+        }
+      ],
+      "distinct_from_existing": "Вмятина на металлическом ободе и две половины эмали."
+    },
+    {
+      "id": "zhizha_0068",
+      "names": [
+        "Радиолампа",
+        "Электронная лампа"
+      ],
+      "illustration": "Одна винтажная электронная радиолампа. В прозрачном вытянутом стекле видны тёмные металлические пластины и маленький оранжевый накал, снизу чёрный цоколь с короткими контактными ножками. Никаких букв.",
+      "tags": [
+        "vacuum-tube",
+        "device",
+        "electric",
+        "glass",
+        "transparent",
+        "fragile",
+        "metal",
+        "heat",
+        "radio",
+        "shape-cylinder",
+        "dominant-gray",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "retro",
+          "weight": 0.5,
+          "label": "ретро"
+        },
+        {
+          "tag": "sound",
+          "weight": 0.5,
+          "label": "звук"
+        }
+      ],
+      "distinct_from_existing": "Металлические пластины видны сквозь стекло над контактами."
+    },
+    {
+      "id": "zhizha_0069",
+      "names": [
+        "Выкройка рукава",
+        "Бумажная выкройка"
+      ],
+      "illustration": "Изогнутая портновская выкройка одного рукава из тонкой бежевой бумаги, слегка развёрнута после складывания. Штриховая линия шва повторяет дугу верхнего края, по краям маленькие насечки. Никаких букв, рулеток, ножниц.",
+      "tags": [
+        "sleeve-pattern",
+        "paper",
+        "cut",
+        "measure",
+        "sew",
+        "craft",
+        "clothes",
+        "light-weight",
+        "flexible",
+        "shape-flat",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "fashion",
+          "weight": 0.5,
+          "label": "мода"
+        },
+        {
+          "tag": "tailor",
+          "weight": 0.5,
+          "label": "портной"
+        }
+      ],
+      "distinct_from_existing": "Линия шва повторяет дугу оката, по краю видны насечки."
+    },
+    {
+      "id": "zhizha_0070",
+      "names": [
+        "Кухонная тёрка",
+        "Четырёхгранная тёрка"
+      ],
+      "illustration": "Старая четырёхгранная металлическая кухонная тёрка с красной ручкой наверху. На соседних сторонах разный калибр рельефных отверстий, у нижнего края застряла тонкая морковная стружка.",
+      "tags": [
+        "box-grater",
+        "tool",
+        "kitchen",
+        "cook",
+        "food",
+        "metal",
+        "sharp",
+        "hard",
+        "hold-in-hand",
+        "shape-box",
+        "dominant-gray",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "carrot",
+          "weight": 0.5,
+          "label": "морковь"
+        },
+        {
+          "tag": "salad",
+          "weight": 0.5,
+          "label": "салат"
+        }
+      ],
+      "distinct_from_existing": "У двух видимых граней разный рельеф отверстий."
+    },
+    {
+      "id": "zhizha_0071",
+      "names": [
+        "Луноход",
+        "Лунный вездеход"
+      ],
+      "illustration": "У серебристого лунохода несколько пар колёс, два объектива и тонкая антенна. Над корпусом поднята круглая крышка с синей сеткой солнечной панели.",
+      "tags": [
+        "lunar-rover",
+        "transport",
+        "move",
+        "wheel",
+        "metal",
+        "hard",
+        "electric",
+        "space",
+        "science",
+        "shape-box",
+        "dominant-gray",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "exploration",
+          "weight": 0.5,
+          "label": "исследование"
+        },
+        {
+          "tag": "moon",
+          "weight": 0.5,
+          "label": "луна"
+        }
+      ],
+      "distinct_from_existing": "Ряды маленьких колёс идут под корпусом с поднятой панелью."
+    },
+    {
+      "id": "zhizha_0072",
+      "names": [
+        "Бумажная формочка",
+        "Формочка для кекса"
+      ],
+      "illustration": "Одна пустая сиреневая бумажная формочка для кекса с веером вертикальных складок. С одного края несколько складок расправлены, внутри пара крошек. Никакого самого кекса.",
+      "tags": [
+        "cupcake-liner",
+        "paper",
+        "container",
+        "kitchen",
+        "cook",
+        "light-weight",
+        "flexible",
+        "open-top",
+        "food",
+        "shape-container",
+        "shape-cone",
+        "dominant-purple"
+      ],
+      "associations": [
+        {
+          "tag": "bakery",
+          "weight": 0.5,
+          "label": "выпечка"
+        },
+        {
+          "tag": "celebration",
+          "weight": 0.5,
+          "label": "праздник"
+        }
+      ],
+      "distinct_from_existing": "Расправленный край показывает, что рифлёная чашечка сложена из бумаги."
+    },
+    {
+      "id": "zhizha_0073",
+      "names": [
+        "Рыба-ёж",
+        "Колючая рыба"
+      ],
+      "illustration": "Одна круглая раздутая рыба-ёж в три четверти. Короткие светлые иглы торчат по всему жёлто-коричневому телу, заметны два крошечных плавника и округлый хвост. Без воды или кораллов вокруг.",
+      "tags": [
+        "porcupinefish",
+        "fish",
+        "animal",
+        "swim",
+        "sea",
+        "water",
+        "sharp",
+        "biological",
+        "protect",
+        "shape-ball",
+        "shape-animal",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "danger",
+          "weight": 0.5,
+          "label": "опасность"
+        },
+        {
+          "tag": "defense",
+          "weight": 0.5,
+          "label": "защита"
+        }
+      ],
+      "distinct_from_existing": "Вокруг плавников на раздутом теле видны торчащие иглы."
+    },
+    {
+      "id": "zhizha_0074",
+      "names": [
+        "Тостер",
+        "Тостер с гренкой"
+      ],
+      "illustration": "Небольшой бирюзовый винтажный электрический тостер со скруглённым эмалированным корпусом и боковым рычажком. Из одной из двух прорезей наполовину выскочил золотой тост.",
+      "tags": [
+        "toaster",
+        "kitchen",
+        "device",
+        "electric",
+        "heat",
+        "cook",
+        "hard",
+        "metal",
+        "food",
+        "shape-box",
+        "dominant-green",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "breakfast",
+          "weight": 0.5,
+          "label": "завтрак"
+        },
+        {
+          "tag": "bread",
+          "weight": 0.5,
+          "label": "хлеб"
+        }
+      ],
+      "distinct_from_existing": "Ломтик хлеба виден над прорезью рядом с боковым рычагом."
+    },
+    {
+      "id": "zhizha_0075",
+      "names": [
+        "Лототрон",
+        "Лотерейный барабан"
+      ],
+      "illustration": "Небольшой круглый лотерейный барабан из латунных прутьев на тёмной настольной подставке. В нижней части лежат несколько шариков цвета слоновой кости, ручка сбоку. На шарах нет текста.",
+      "tags": [
+        "lottery-drum",
+        "game",
+        "play",
+        "rotate",
+        "ball",
+        "metal",
+        "hard",
+        "chance",
+        "count",
+        "shape-ball",
+        "shape-net",
+        "dominant-yellow",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "luck",
+          "weight": 0.5,
+          "label": "удача"
+        },
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        }
+      ],
+      "distinct_from_existing": "Шарики перекатываются внутри решётчатой сферы."
+    },
+    {
+      "id": "zhizha_0076",
+      "names": [
+        "Медиатор",
+        "Гитарный медиатор",
+        "Медиатор «Звери»"
+      ],
+      "illustration": "На бирюзовом перламутровом медиаторе светлыми буквами напечатано название группы «Звери». Видны округлая треугольная форма и потёртый кончик.",
+      "tags": [
+        "guitar-pick",
+        "music",
+        "play",
+        "hold-in-hand",
+        "plastic",
+        "hard",
+        "light-weight",
+        "musician",
+        "read",
+        "shape-flat",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "guitar",
+          "weight": 0.5,
+          "label": "гитара"
+        },
+        {
+          "tag": "concert",
+          "weight": 0.5,
+          "label": "концерт"
+        }
+      ],
+      "distinct_from_existing": "Название «Звери» напечатано на лицевой стороне перламутрового треугольника."
+    },
+    {
+      "id": "zhizha_0077",
+      "names": [
+        "Кремнёвый наконечник",
+        "Наконечник стрелы"
+      ],
+      "illustration": "Одиночная археологическая находка — небольшой серо-охристый кремнёвый наконечник листовидного силуэта, одна грань светлее другой. Просто музейный портрет предмета, без стрелы, людей, схем и подписей.",
+      "tags": [
+        "stone-arrowhead",
+        "stone",
+        "hard",
+        "sharp",
+        "weapon",
+        "history",
+        "hold-in-hand",
+        "hunting",
+        "shape-flat",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "arrow",
+          "weight": 0.5,
+          "label": "стрела"
+        },
+        {
+          "tag": "museum",
+          "weight": 0.5,
+          "label": "музей"
+        }
+      ],
+      "distinct_from_existing": "У небольшой каменной находки хорошо читается листовидный контур."
+    },
+    {
+      "id": "zhizha_0078",
+      "names": [
+        "Переводные татуировки",
+        "Лист переводных татуировок"
+      ],
+      "illustration": "На кремовой бумаге напечатаны синяя ласточка, якорь и красная роза. Угол прозрачной защитной плёнки отогнут и бликует над рисунками.",
+      "tags": [
+        "tattoo-transfer-sheet",
+        "paper",
+        "ink",
+        "art",
+        "apply",
+        "decorate",
+        "flexible",
+        "light-weight",
+        "plastic",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "body",
+          "weight": 0.5,
+          "label": "тело"
+        },
+        {
+          "tag": "sea",
+          "weight": 0.5,
+          "label": "море"
+        }
+      ],
+      "distinct_from_existing": "Загнутый угол плёнки открывает три наколки на одном листе."
+    },
+    {
+      "id": "zhizha_0079",
+      "names": [
+        "Зажим для бумаг",
+        "Канцелярский зажим"
+      ],
+      "illustration": "Один чёрный стальной канцелярский зажим держит веер из нескольких белых листков за угол. Одна серебристая проволочная ручка поднята, вторая откинута на бумагу.",
+      "tags": [
+        "binder-clip",
+        "tool",
+        "attach",
+        "open-close",
+        "metal",
+        "hard",
+        "paper",
+        "office",
+        "hold-in-hand",
+        "shape-flat",
+        "dominant-black",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "documents",
+          "weight": 0.5,
+          "label": "документы"
+        },
+        {
+          "tag": "school",
+          "weight": 0.5,
+          "label": "школа"
+        }
+      ],
+      "distinct_from_existing": "У пружинящего чёрного корпуса две откидные проволочные ручки."
+    },
+    {
+      "id": "zhizha_0080",
+      "names": [
+        "Аккордеон",
+        "Красный аккордеон"
+      ],
+      "illustration": "Небольшой красный перламутровый аккордеон с белой фортепианной клавиатурой по правую руку исполнителя и светлыми басовыми кнопками напротив; чёрные складчатые мехи растянуты на несколько складок. Без рук, музыканта или букв.",
+      "tags": [
+        "accordion",
+        "music",
+        "musician",
+        "play",
+        "sound",
+        "push",
+        "pull",
+        "flexible",
+        "instrument",
+        "shape-box",
+        "dominant-red",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "dance",
+          "weight": 0.5,
+          "label": "танец"
+        },
+        {
+          "tag": "stage",
+          "weight": 0.5,
+          "label": "сцена"
+        }
+      ],
+      "distinct_from_existing": "Складчатые мехи соединяют клавишную и кнопочную половины."
+    },
+    {
+      "id": "zhizha_0081",
+      "names": [
+        "Турникет",
+        "Проходной турникет"
+      ],
+      "illustration": "Один потёртый проходной турникет на тумбе из тёмно-синей эмали. Три стальные перекладины расходятся от единой ступицы; сверху маленькая зелёная стрелка. Вид в три четверти.",
+      "tags": [
+        "turnstile",
+        "metal",
+        "move",
+        "push",
+        "rotate",
+        "hard",
+        "enter",
+        "security",
+        "street",
+        "shape-handle-plus-head",
+        "dominant-blue",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "station",
+          "weight": 0.5,
+          "label": "станция"
+        },
+        {
+          "tag": "gate",
+          "weight": 0.5,
+          "label": "проходная"
+        }
+      ],
+      "distinct_from_existing": "Зелёная стрелка указывает путь между поворотными перекладинами."
+    },
+    {
+      "id": "zhizha_0082",
+      "names": [
+        "Брошь-камея",
+        "Камея с профилем"
+      ],
+      "illustration": "Овальная кораллово-розовая камея в тонкой витой золотой оправе. Резной профиль женщины из сливочно-белого слоя выступает над розовым камнем.",
+      "tags": [
+        "cameo-brooch",
+        "jewelry",
+        "wear",
+        "fashion",
+        "decorate",
+        "hard",
+        "art",
+        "face",
+        "ornament",
+        "shape-flat",
+        "dominant-pink",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "history",
+          "weight": 0.5,
+          "label": "история"
+        },
+        {
+          "tag": "statue",
+          "weight": 0.5,
+          "label": "скульптуры"
+        }
+      ],
+      "distinct_from_existing": "Белый профиль вырезан в верхнем слое розового камня."
+    },
+    {
+      "id": "zhizha_0083",
+      "names": [
+        "Рентген кисти",
+        "Рентгеновский снимок ладони"
+      ],
+      "illustration": "Отдельный синий полупрозрачный рентгеновский снимок одной раскрытой человеческой кисти с пятью пальцами. Кости читаются белыми на тёмной плёнке, нижний угол слегка загнут.",
+      "tags": [
+        "hand-radiograph",
+        "medical",
+        "hospital",
+        "anatomy",
+        "body",
+        "bone",
+        "transparent",
+        "flexible",
+        "look-at",
+        "information",
+        "shape-flat",
+        "shape-humanoid",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "doctor",
+          "weight": 0.5,
+          "label": "врач"
+        },
+        {
+          "tag": "injury",
+          "weight": 0.5,
+          "label": "травма"
+        }
+      ],
+      "distinct_from_existing": "Силуэт ладони складывается из костей на полупрозрачной плёнке."
+    },
+    {
+      "id": "zhizha_0084",
+      "names": [
+        "Разводной мост",
+        "Двукрылый разводной мост"
+      ],
+      "illustration": "Небольшой архитектурный этюд одного разводного моста. Два симметричных стальных пролёта подняты буквой V над узкой полоской воды, у основания два кирпичных устоя. Целиком, без города.",
+      "tags": [
+        "bascule-bridge",
+        "architecture",
+        "street",
+        "transport",
+        "move",
+        "lift",
+        "metal",
+        "hard",
+        "water",
+        "shape-pair",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "river",
+          "weight": 0.5,
+          "label": "река"
+        },
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        }
+      ],
+      "distinct_from_existing": "У моста две поднятые половины и зазор для прохода судна."
+    },
+    {
+      "id": "zhizha_0085",
+      "names": [
+        "Рунические камни",
+        "Камни для гадания"
+      ],
+      "illustration": "Три гладкие тёмно-серые речные гальки треугольником. На каждой вырезан один отличный от двух других угловатый знак, заполненный охрой.",
+      "tags": [
+        "rune-stones",
+        "stone",
+        "hard",
+        "magic",
+        "ritual",
+        "carve",
+        "read",
+        "history",
+        "shape-flat",
+        "dominant-gray",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "fortune",
+          "weight": 0.5,
+          "label": "предсказание"
+        },
+        {
+          "tag": "game",
+          "weight": 0.5,
+          "label": "игры"
+        }
+      ],
+      "distinct_from_existing": "На каждой из трёх галек выгравирована своя руна."
+    },
+    {
+      "id": "zhizha_0086",
+      "names": [
+        "Чертёжный пантограф",
+        "Пантограф для рисования"
+      ],
+      "illustration": "Старинный чертёжный пантограф на плоском листе. Тонкие латунные шарнирные планки объединены в косой параллелограмм, два коротких карандашных наконечника касаются двух схожих дуг разного размера.",
+      "tags": [
+        "drawing-pantograph",
+        "tool",
+        "draw",
+        "measure",
+        "paper",
+        "metal",
+        "hard",
+        "art",
+        "science",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "school",
+          "weight": 0.5,
+          "label": "школа"
+        },
+        {
+          "tag": "print",
+          "weight": 0.5,
+          "label": "печатать"
+        }
+      ],
+      "distinct_from_existing": "Шарнирный параллелограмм соединяет два рисующих наконечника."
+    },
+    {
+      "id": "zhizha_0087",
+      "names": [
+        "Штормгласс",
+        "Кристаллический барометр"
+      ],
+      "illustration": "Высокий запаянный прозрачный стеклянный сосуд каплевидной формы на маленькой круглой деревянной подставке. В прозрачной жидкости из белых кристаллов выросло подобие ветки папоротника.",
+      "tags": [
+        "storm-glass",
+        "glass",
+        "liquid",
+        "transparent",
+        "fragile",
+        "measure",
+        "weather",
+        "science",
+        "shape-cone",
+        "dominant-white",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "cold",
+          "weight": 0.5,
+          "label": "холод"
+        },
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        }
+      ],
+      "distinct_from_existing": "Белые кристаллы разветвляются в жидкости запаянного сосуда."
+    },
+    {
+      "id": "zhizha_0088",
+      "names": [
+        "Ширма",
+        "Складная ширма"
+      ],
+      "illustration": "Отдельно стоящая трёхстворчатая ширма, две створки под углом. Тёмная деревянная рама, оливково-зелёная ткань, одна вытканная ветка переходит с панели на панель.",
+      "tags": [
+        "folding-screen",
+        "furniture",
+        "home",
+        "fabric",
+        "wood",
+        "hard",
+        "open-close",
+        "decorate",
+        "bedroom",
+        "shape-flat",
+        "dominant-green",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "clothes",
+          "weight": 0.5,
+          "label": "одежда"
+        },
+        {
+          "tag": "shelter",
+          "weight": 0.5,
+          "label": "укрытие"
+        }
+      ],
+      "distinct_from_existing": "Ветка на ткани соединяет три створки ширмы в одну картину."
+    },
+    {
+      "id": "zhizha_0089",
+      "names": [
+        "Бигуди",
+        "Пара бигуди"
+      ],
+      "illustration": "Две крупные розовые сетчатые бигуди лежат крест-накрест. На одну намотана короткая прядь каштановых волос, вторая полая, видно её сетку.",
+      "tags": [
+        "hair-rollers",
+        "fashion",
+        "body",
+        "hair",
+        "plastic",
+        "hollow",
+        "wear",
+        "rotate",
+        "bathroom",
+        "shape-cylinder",
+        "shape-pair",
+        "dominant-pink",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "hygiene",
+          "weight": 0.5,
+          "label": "гигиена"
+        },
+        {
+          "tag": "curl",
+          "weight": 0.5,
+          "label": "завиток"
+        }
+      ],
+      "distinct_from_existing": "Рядом с накрученным локоном видна пустая сетчатая бигуди."
+    },
+    {
+      "id": "zhizha_0090",
+      "names": [
+        "Пожарный гидрант",
+        "Уличный гидрант"
+      ],
+      "illustration": "Приземистый красный пожарный гидрант с куполообразной головкой, двумя боковыми крышками и короткой цепочкой. На эмали несколько светлых сколов.",
+      "tags": [
+        "fire-hydrant",
+        "street",
+        "water",
+        "rescue",
+        "safety",
+        "metal",
+        "hard",
+        "heavy",
+        "protect",
+        "shape-cross",
+        "shape-cylinder",
+        "dominant-red",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "fire",
+          "weight": 0.5,
+          "label": "огонь"
+        },
+        {
+          "tag": "hose",
+          "weight": 0.5,
+          "label": "шланг"
+        }
+      ],
+      "distinct_from_existing": "Крышки на боковых отводах держатся на коротких цепочках."
+    },
+    {
+      "id": "zhizha_0091",
+      "names": [
+        "Стартовые колодки",
+        "Колодки для бега"
+      ],
+      "illustration": "Одна пара спортивных стартовых колодок. Две наклонные синие ребристые опоры смещены одна относительно другой на общей алюминиевой рейке.",
+      "tags": [
+        "starting-blocks",
+        "sport",
+        "sportsman",
+        "run",
+        "push",
+        "metal",
+        "rubber",
+        "hard",
+        "shape-pair",
+        "dominant-blue",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        },
+        {
+          "tag": "shoe",
+          "weight": 0.5,
+          "label": "туфли"
+        }
+      ],
+      "distinct_from_existing": "Площадки для двух ног смещены вдоль общей рейки."
+    },
+    {
+      "id": "zhizha_0092",
+      "names": [
+        "Слуховой аппарат",
+        "Заушный слуховой аппарат"
+      ],
+      "illustration": "Один заушный слуховой аппарат. Бежевый корпус в форме запятой, от него изогнутая прозрачная трубочка ведёт к мягкому вкладышу. Вкладыш и корпус хорошо различимы.",
+      "tags": [
+        "hearing-aid",
+        "medical",
+        "device",
+        "hear",
+        "sound",
+        "wear",
+        "body",
+        "plastic",
+        "electric",
+        "light-weight",
+        "shape-ring",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "ear",
+          "weight": 0.5,
+          "label": "длинные уши"
+        },
+        {
+          "tag": "music",
+          "weight": 0.5,
+          "label": "музыка и музыкальные инструменты"
+        }
+      ],
+      "distinct_from_existing": "Изогнутая звуковая трубка соединяет заушный корпус с вкладышем."
+    },
+    {
+      "id": "zhizha_0093",
+      "names": [
+        "Кариатида",
+        "Колонна-кариатида"
+      ],
+      "illustration": "Один светлый каменный архитектурный фрагмент. Женская фигура в длинном складчатом одеянии стоит на квадратном основании и поддерживает на голове тяжёлую плоскую капитель.",
+      "tags": [
+        "caryatid",
+        "statue",
+        "architecture",
+        "stone",
+        "art",
+        "person",
+        "body",
+        "hard",
+        "heavy",
+        "display",
+        "shape-humanoid",
+        "dominant-white",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "history",
+          "weight": 0.5,
+          "label": "история"
+        },
+        {
+          "tag": "building",
+          "weight": 0.5,
+          "label": "здания"
+        }
+      ],
+      "distinct_from_existing": "Капитель опирается на голову каменной фигуры."
+    },
+    {
+      "id": "zhizha_0094",
+      "names": [
+        "Жемчужная устрица",
+        "Устрица с жемчужиной"
+      ],
+      "illustration": "Две неровные створки открытой устрицы соединены сзади. В розовом перламутре нижней створки лежит одна круглая жемчужина. Вид под углом со стороны жемчужины.",
+      "tags": [
+        "pearl-oyster",
+        "animal",
+        "sea",
+        "water",
+        "biological",
+        "hard",
+        "open-close",
+        "jewelry",
+        "shape-container",
+        "dominant-pink",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "treasure",
+          "weight": 0.5,
+          "label": "сокровища"
+        },
+        {
+          "tag": "shell",
+          "weight": 0.5,
+          "label": "раковина"
+        }
+      ],
+      "distinct_from_existing": "Одна жемчужина лежит в естественной перламутровой чаше."
+    },
+    {
+      "id": "zhizha_0095",
+      "names": [
+        "Гасильник для свечи",
+        "Свечной гасильник"
+      ],
+      "illustration": "Латунный гасильник на длинной тёмной деревянной ручке. Маленький латунный конус висит отверстием вниз; из закопчённого края выходит тонкий завиток дыма.",
+      "tags": [
+        "candle-snuffer",
+        "tool",
+        "metal",
+        "wood",
+        "hard",
+        "hold-in-hand",
+        "fire",
+        "burn",
+        "hollow",
+        "shape-handle-plus-head",
+        "shape-cone",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "candle",
+          "weight": 0.5,
+          "label": "свечи"
+        },
+        {
+          "tag": "ceremony",
+          "weight": 0.5,
+          "label": "церемония"
+        }
+      ],
+      "distinct_from_existing": "Почерневший край конуса указывает, где погасло пламя."
+    },
+    {
+      "id": "zhizha_0096",
+      "names": [
+        "Промокашка с ручкой",
+        "Пресс-бювар"
+      ],
+      "illustration": "Одна настольная промокашка с грибовидной ручкой из полированного дерева. Покачивающееся полукруглое основание обтянуто розовой промокательной бумагой, у края два синих чернильных пятна.",
+      "tags": [
+        "rocker-blotter",
+        "paper",
+        "ink",
+        "office",
+        "wood",
+        "tool",
+        "write",
+        "dry",
+        "hold-in-hand",
+        "shape-handle-plus-head",
+        "dominant-pink",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        },
+        {
+          "tag": "print",
+          "weight": 0.5,
+          "label": "печатать"
+        }
+      ],
+      "distinct_from_existing": "На выпуклой бумажной подошве остались следы чернил."
+    },
+    {
+      "id": "zhizha_0097",
+      "names": [
+        "Паркомат с циферблатом",
+        "Механический паркомат"
+      ],
+      "illustration": "Головка старого зелёного парковочного счётчика на короткой части металлической стойки. За стеклом красный сектор и единственная стрелка, ниже явная монетная щель.",
+      "tags": [
+        "parking-meter",
+        "street",
+        "time",
+        "pay",
+        "money",
+        "car",
+        "measure",
+        "hard",
+        "metal",
+        "device",
+        "shape-box",
+        "dominant-green",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "clock",
+          "weight": 0.5,
+          "label": "часы"
+        },
+        {
+          "tag": "transport",
+          "weight": 0.5,
+          "label": "транспорт"
+        }
+      ],
+      "distinct_from_existing": "Монетная щель и шкала времени соединены в одном приборе."
+    },
+    {
+      "id": "zhizha_0098",
+      "names": [
+        "Намордник",
+        "Корзинчатый намордник"
+      ],
+      "illustration": "Один пустой коричневый плетёный кожаный намордник собаки. Корзинка из пересекающихся ремешков с круглым носом, за ней дугой поднят ремень с пряжкой.",
+      "tags": [
+        "basket-muzzle",
+        "pet",
+        "animal",
+        "leather",
+        "wear",
+        "protect",
+        "safety",
+        "flexible",
+        "shape-net",
+        "shape-container",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "dog",
+          "weight": 0.5,
+          "label": "собака"
+        },
+        {
+          "tag": "danger",
+          "weight": 0.5,
+          "label": "опасность"
+        }
+      ],
+      "distinct_from_existing": "Носовую корзинку держит кожаный ремень с пряжкой."
+    },
+    {
+      "id": "zhizha_0099",
+      "names": [
+        "Кадило",
+        "Подвесное кадило"
+      ],
+      "illustration": "Бронзовое церковное кадило висит на трёх сходящихся цепочках. Сферическая чашечка с ажурной крышкой, через отверстия поднимается сероватый дым.",
+      "tags": [
+        "chain-censer",
+        "religion",
+        "ritual",
+        "metal",
+        "container",
+        "hollow",
+        "swing",
+        "burn",
+        "smell",
+        "shape-ball",
+        "shape-chain",
+        "dominant-yellow",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "ceremony",
+          "weight": 0.5,
+          "label": "церемония"
+        },
+        {
+          "tag": "fire",
+          "weight": 0.5,
+          "label": "огонь"
+        }
+      ],
+      "distinct_from_existing": "Дым проходит через ажурную крышку подвешенной чаши."
+    },
+    {
+      "id": "zhizha_0100",
+      "names": [
+        "Модель сердца",
+        "Анатомическая модель сердца"
+      ],
+      "illustration": "Одна старая учебная анатомическая модель сердца на короткой чёрной подставке. Красная мышца, крупная синяя вена и красная дуга аорты. Чистый окрашенный учебный муляж из пластика.",
+      "tags": [
+        "heart-model",
+        "anatomy",
+        "body",
+        "medical",
+        "school",
+        "science",
+        "display",
+        "plastic",
+        "hard",
+        "shape-cone",
+        "dominant-red",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "hospital",
+          "weight": 0.5,
+          "label": "больница"
+        },
+        {
+          "tag": "pulse",
+          "weight": 0.5,
+          "label": "пульс"
+        }
+      ],
+      "distinct_from_existing": "Учебный муляж на подставке позволяет различить крупные сосуды."
+    },
+    {
+      "id": "zhizha_0101",
+      "names": [
+        "Пляжная кабинка",
+        "Кабинка для переодевания"
+      ],
+      "illustration": "Одна закрытая деревянная пляжная кабинка на ножках со ступенькой. Белые и голубые вертикальные полосы, остроконечная крыша, на двери металлический крючок.",
+      "tags": [
+        "beach-hut",
+        "building",
+        "beach",
+        "shelter",
+        "clothes",
+        "wood",
+        "hard",
+        "enter",
+        "open-close",
+        "shape-box",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "sea",
+          "weight": 0.5,
+          "label": "море"
+        },
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        }
+      ],
+      "distinct_from_existing": "Полосатые стенки и дверь с крючком образуют укрытие на пляже."
+    },
+    {
+      "id": "zhizha_0102",
+      "names": [
+        "Костыль",
+        "Подмышечный костыль"
+      ],
+      "illustration": "Один деревянный подмышечный костыль целиком по небольшой диагонали. Раздвоенная рама с поперечной ручкой, серая мягкая опора наверху и резиновая насадка внизу.",
+      "tags": [
+        "wooden-crutch",
+        "medical",
+        "hospital",
+        "walk",
+        "body",
+        "wood",
+        "rubber",
+        "hard",
+        "balance",
+        "shape-stick",
+        "dominant-brown",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "injury",
+          "weight": 0.5,
+          "label": "травма"
+        },
+        {
+          "tag": "sportsman",
+          "weight": 0.5,
+          "label": "спортсмен"
+        }
+      ],
+      "distinct_from_existing": "Подмышечная опора и ручка расположены на разной высоте."
+    },
+    {
+      "id": "zhizha_0103",
+      "names": [
+        "Бутоньерка",
+        "Цветок в петлице"
+      ],
+      "illustration": "Одна свадебная бутоньерка. Кремовая калла и два шалфейных листика собраны в маленький пучок, стебель обмотан синей лентой, сзади выступает булавка для лацкана.",
+      "tags": [
+        "boutonniere",
+        "flower",
+        "fashion",
+        "wear",
+        "decorate",
+        "clothes",
+        "plant",
+        "soft",
+        "ceremony",
+        "shape-stick",
+        "dominant-white",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "wedding",
+          "weight": 0.5,
+          "label": "свадьба"
+        },
+        {
+          "tag": "smell",
+          "weight": 0.5,
+          "label": "запах"
+        }
+      ],
+      "distinct_from_existing": "Короткий стебель с лентой и булавкой крепится на лацкан."
+    },
+    {
+      "id": "zhizha_0104",
+      "names": [
+        "Картотечный шкаф",
+        "Библиотечная картотека"
+      ],
+      "illustration": "Низкий старинный деревянный библиотечный шкаф с восемью маленькими выдвижными ящиками, латунными ручками и окошками для этикеток. Один ящик выдвинут, видны ряды кремовых карточек.",
+      "tags": [
+        "index-cabinet",
+        "furniture",
+        "wood",
+        "paper",
+        "office",
+        "store",
+        "open-close",
+        "hard",
+        "information",
+        "shape-box",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "book",
+          "weight": 0.5,
+          "label": "книги"
+        },
+        {
+          "tag": "read",
+          "weight": 0.5,
+          "label": "читать"
+        }
+      ],
+      "distinct_from_existing": "В выдвинутом ящике виден упорядоченный ряд карточек."
+    },
+    {
+      "id": "zhizha_0105",
+      "names": [
+        "Спил дерева",
+        "Древесные годичные кольца"
+      ],
+      "illustration": "Один неровный спил дерева с тёмным ободком коры и хорошо видимыми годичными кольцами. Радиальная трещина пересекает несколько колец, снаружи клочок зелёного мха.",
+      "tags": [
+        "tree-cross-section",
+        "wood",
+        "tree",
+        "nature",
+        "forest",
+        "hard",
+        "grow",
+        "count",
+        "time",
+        "shape-flat",
+        "shape-ring",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "age",
+          "weight": 0.5,
+          "label": "возраст"
+        },
+        {
+          "tag": "history",
+          "weight": 0.5,
+          "label": "история"
+        }
+      ],
+      "distinct_from_existing": "Трещина пересекает кольца роста от сердцевины к коре."
+    },
+    {
+      "id": "zhizha_0106",
+      "names": [
+        "Садовая купальня для птиц",
+        "Купальня на ножке"
+      ],
+      "illustration": "Неглубокая каменная садовая чаша на одной невысокой резной ножке. В воде круги, на краю один маленький воробей наклонился к воде.",
+      "tags": [
+        "birdbath",
+        "garden",
+        "bird",
+        "water",
+        "stone",
+        "wet",
+        "wash",
+        "animal",
+        "drink",
+        "shape-container",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "rain",
+          "weight": 0.5,
+          "label": "дождь"
+        },
+        {
+          "tag": "fountain",
+          "weight": 0.5,
+          "label": "фонтан"
+        }
+      ],
+      "distinct_from_existing": "На краю каменной чаши сидит птица, в воде расходятся круги."
+    },
+    {
+      "id": "zhizha_0107",
+      "names": [
+        "Шифровальный диск",
+        "Диск для шифрования"
+      ],
+      "illustration": "Два концентрических медных диска разного диаметра соединены центральной заклёпкой. На ободках два ряда выгравированных разных условных знаков и одна короткая красная отметка для совмещения.",
+      "tags": [
+        "cipher-disk",
+        "security",
+        "information",
+        "metal",
+        "hard",
+        "rotate",
+        "read",
+        "write",
+        "history",
+        "shape-ring",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "secret",
+          "weight": 0.5,
+          "label": "тайна"
+        },
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        }
+      ],
+      "distinct_from_existing": "Два ряда знаков совмещаются поворотом одного диска."
+    },
+    {
+      "id": "zhizha_0108",
+      "names": [
+        "Глиняная свистулька",
+        "Свистулька-птичка"
+      ],
+      "illustration": "Терракотовая свистулька в виде округлой птички с маленьким синим крылом. Полый хвост-мундштук заострён, сверху ясно видно круглое игровое отверстие.",
+      "tags": [
+        "clay-bird-whistle",
+        "ceramic",
+        "clay",
+        "craft",
+        "bird",
+        "toy",
+        "hollow",
+        "blow",
+        "sound",
+        "music",
+        "instrument",
+        "shape-animal",
+        "dominant-orange",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "air",
+          "weight": 0.5,
+          "label": "воздух"
+        }
+      ],
+      "distinct_from_existing": "В керамической птице есть игровой свисток и хвост-мундштук."
+    },
+    {
+      "id": "zhizha_0109",
+      "names": [
+        "Помазок",
+        "Кисть для бритья"
+      ],
+      "illustration": "Один короткий бритвенный помазок. Густой округлый пучок светлого ворса на тёмно-зелёной точёной ручке, на кончиках шапочка белой мыльной пены.",
+      "tags": [
+        "shaving-brush",
+        "hygiene",
+        "bathroom",
+        "soft",
+        "wash",
+        "clean",
+        "apply",
+        "body",
+        "foam",
+        "shape-handle-plus-head",
+        "dominant-white",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "hair",
+          "weight": 0.5,
+          "label": "волосы"
+        },
+        {
+          "tag": "barber",
+          "weight": 0.5,
+          "label": "парикмахер"
+        }
+      ],
+      "distinct_from_existing": "Пена держится на округлом пучке короткого густого ворса."
+    },
+    {
+      "id": "zhizha_0110",
+      "names": [
+        "Дверной молоток",
+        "Молоток в виде руки"
+      ],
+      "illustration": "Один старинный бронзовый дверной молоток в виде кисти руки, сжимающей небольшой шар. Петля-шарнир у запястья, под костяшками видна овальная пластина для удара.",
+      "tags": [
+        "door-knocker",
+        "home",
+        "architecture",
+        "metal",
+        "hard",
+        "hit",
+        "sound",
+        "hand",
+        "body",
+        "shape-humanoid",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "visitor",
+          "weight": 0.5,
+          "label": "гость"
+        },
+        {
+          "tag": "ring",
+          "weight": 0.5,
+          "label": "звенеть"
+        }
+      ],
+      "distinct_from_existing": "Литая рука с шаром служит ударной частью дверного молотка."
+    },
+    {
+      "id": "zhizha_0111",
+      "names": [
+        "Сейсмограф",
+        "Самописец землетрясений"
+      ],
+      "illustration": "Настольный механический сейсмограф. На светлом бумажном цилиндрическом барабане одна чёрная зигзагообразная линия, кончик длинного пера касается бумаги, деревянное основание.",
+      "tags": [
+        "seismograph",
+        "device",
+        "science",
+        "measure",
+        "record",
+        "paper",
+        "ink",
+        "hard",
+        "instrument",
+        "shape-cylinder",
+        "dominant-white",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "earthquake",
+          "weight": 0.5,
+          "label": "землетрясение"
+        },
+        {
+          "tag": "wave",
+          "weight": 0.5,
+          "label": "волна"
+        }
+      ],
+      "distinct_from_existing": "Перо записывает колебания на вращающемся бумажном цилиндре."
+    },
+    {
+      "id": "zhizha_0112",
+      "names": [
+        "Трубный орган",
+        "Церковный орган"
+      ],
+      "illustration": "Небольшой цельный барочный орган с одним рядом клавиш в деревянном корпусе. Над клавиатурой поднимается веер серебряных органных труб разной высоты. Без фигуры органиста.",
+      "tags": [
+        "pipe-organ",
+        "music",
+        "instrument",
+        "sound",
+        "religion",
+        "wood",
+        "metal",
+        "hard",
+        "play",
+        "shape-box",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "ceremony",
+          "weight": 0.5,
+          "label": "церемония"
+        },
+        {
+          "tag": "air",
+          "weight": 0.5,
+          "label": "воздух"
+        }
+      ],
+      "distinct_from_existing": "Клавиатура расположена под ярусами воздушных труб."
+    },
+    {
+      "id": "zhizha_0113",
+      "names": [
+        "Фехтовальная маска",
+        "Защитная маска фехтовальщика"
+      ],
+      "illustration": "Пустая спортивная фехтовальная маска чуть повёрнута в три четверти. Лицо закрывает овальная тёмная мелкая сетка, внизу белая стёганая горловина, окантовка синяя.",
+      "tags": [
+        "fencing-mask",
+        "sport",
+        "sportsman",
+        "protect",
+        "wear",
+        "safety",
+        "face",
+        "metal",
+        "hard",
+        "shape-net",
+        "shape-humanoid",
+        "dominant-black",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "weapon",
+          "weight": 0.5,
+          "label": "оружие"
+        },
+        {
+          "tag": "duel",
+          "weight": 0.5,
+          "label": "дуэль"
+        }
+      ],
+      "distinct_from_existing": "Жёсткая сетка прикрывает лицо, а стёганый клапан защищает шею."
+    },
+    {
+      "id": "zhizha_0114",
+      "names": [
+        "Медицинская пиявка",
+        "Пиявка"
+      ],
+      "illustration": "Одна оливково-коричневая медицинская пиявка изогнулась плавной буквой S на мокром плоском светлом камне. Низкий ракурс: поперечные кольца, рыжие полоски вдоль спины и маленькая присоска.",
+      "tags": [
+        "medicinal-leech",
+        "animal",
+        "medical",
+        "water",
+        "biological",
+        "wet",
+        "soft",
+        "crawl",
+        "shape-animal",
+        "dominant-brown",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "hospital",
+          "weight": 0.5,
+          "label": "больница"
+        },
+        {
+          "tag": "blood",
+          "weight": 0.5,
+          "label": "кровь"
+        }
+      ],
+      "distinct_from_existing": "На влажном камне видны кольца тела и присоска."
+    },
+    {
+      "id": "zhizha_0115",
+      "names": [
+        "Зимородок",
+        "Обыкновенный зимородок"
+      ],
+      "illustration": "Одна небольшая сине-бирюзовая птица с рыжей грудкой и длинным острым клювом сидит на короткой ветке. В клюве серебристая маленькая рыбка.",
+      "tags": [
+        "kingfisher",
+        "bird",
+        "animal",
+        "feather",
+        "fly",
+        "water",
+        "fish",
+        "catch",
+        "sharp",
+        "shape-animal",
+        "dominant-blue",
+        "dominant-orange"
+      ],
+      "associations": [
+        {
+          "tag": "river",
+          "weight": 0.5,
+          "label": "река"
+        },
+        {
+          "tag": "nature",
+          "weight": 0.5,
+          "label": "природа"
+        }
+      ],
+      "distinct_from_existing": "Синяя птица удерживает рыбку длинным прямым клювом."
+    },
+    {
+      "id": "zhizha_0116",
+      "names": [
+        "Колокольный буй",
+        "Навигационный буй"
+      ],
+      "illustration": "Один морской навигационный буй. Красный поплавок с широким пузатым основанием, над ним открытая металлическая башенка с одним видимым бронзовым колоколом. У основания тонкая кромка волны.",
+      "tags": [
+        "bell-buoy",
+        "sea",
+        "water",
+        "float",
+        "metal",
+        "hollow",
+        "ring",
+        "sound",
+        "safety",
+        "transport",
+        "shape-cone",
+        "dominant-red",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "ship",
+          "weight": 0.5,
+          "label": "корабли"
+        },
+        {
+          "tag": "warning",
+          "weight": 0.5,
+          "label": "предупреждение"
+        }
+      ],
+      "distinct_from_existing": "Открытый колокол над поплавком служит звуковым ориентиром."
+    },
+    {
+      "id": "zhizha_0117",
+      "names": [
+        "Бадьян",
+        "Звёздчатый анис"
+      ],
+      "illustration": "Один крупный плод бадьяна, вокруг центра расходятся восемь сухих лодочек-лучей. В нескольких раскрытых лучах блестят мелкие коричневые семена.",
+      "tags": [
+        "star-anise",
+        "plant",
+        "food",
+        "kitchen",
+        "spice",
+        "smell",
+        "cook",
+        "dry",
+        "seed",
+        "shape-star",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        },
+        {
+          "tag": "sweet",
+          "weight": 0.5,
+          "label": "сладкое"
+        }
+      ],
+      "distinct_from_existing": "Семена прячутся в отдельных лучах сухой звёздочки."
+    },
+    {
+      "id": "zhizha_0118",
+      "names": [
+        "Подставка для колец",
+        "Ювелирная ладонь"
+      ],
+      "illustration": "Тёмно-фиолетовая бархатная подставка в форме вертикальной ладони с пятью пальцами на круглом основании. На двух пальцах простые золотые кольца разной толщины.",
+      "tags": [
+        "ring-display-hand",
+        "jewelry",
+        "display",
+        "fashion",
+        "hand",
+        "body",
+        "fabric",
+        "soft",
+        "store",
+        "ornament",
+        "shape-humanoid",
+        "dominant-purple",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "shop",
+          "weight": 0.5,
+          "label": "магазин"
+        },
+        {
+          "tag": "statue",
+          "weight": 0.5,
+          "label": "скульптуры"
+        }
+      ],
+      "distinct_from_existing": "Бархатная ладонь служит витриной для украшений."
+    },
+    {
+      "id": "zhizha_0119",
+      "names": [
+        "Спальный мешок",
+        "Туристический спальник"
+      ],
+      "illustration": "Один пустой оранжевый походный спальник-кокон лежит по диагонали. Капюшон раскрыт, из-под приоткрытой молнии видна синяя подкладка, поперечная стёжка образует мягкие валики.",
+      "tags": [
+        "sleeping-bag",
+        "travel",
+        "shelter",
+        "fabric",
+        "soft",
+        "lie-on",
+        "rest",
+        "open-close",
+        "protect",
+        "shape-container",
+        "dominant-orange",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "camping",
+          "weight": 0.5,
+          "label": "поход"
+        },
+        {
+          "tag": "night",
+          "weight": 0.5,
+          "label": "ночь"
+        }
+      ],
+      "distinct_from_existing": "Откинутый край капюшона открывает яркую подкладку кокона."
+    },
+    {
+      "id": "zhizha_0120",
+      "names": [
+        "Капсула пневмопочты",
+        "Капсула пневматической почты"
+      ],
+      "illustration": "Прозрачная цилиндрическая капсула с двумя тёмно-красными амортизирующими кольцами. Одна торцевая крышка откинута, изнутри чуть выступает свёрнутая бумажная записка.",
+      "tags": [
+        "pneumatic-mail-carrier",
+        "container",
+        "paper",
+        "information",
+        "communication",
+        "move",
+        "carry",
+        "open-close",
+        "transparent",
+        "device",
+        "shape-cylinder",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        },
+        {
+          "tag": "air",
+          "weight": 0.5,
+          "label": "воздух"
+        }
+      ],
+      "distinct_from_existing": "За прозрачной стенкой транспортной капсулы виден свёрток бумаги."
+    },
+    {
+      "id": "zhizha_0121",
+      "names": [
+        "Инкубатор для цыплят",
+        "Птичий инкубатор"
+      ],
+      "illustration": "Небольшой мятно-зелёный настольный инкубатор с прозрачным куполом. Под куполом на ячеистом лотке сидит пушистый жёлтый цыплёнок рядом с расколотой скорлупой и двумя целыми яйцами. На корпусе маленькая ручка термостата.",
+      "tags": [
+        "chick-incubator",
+        "farm",
+        "bird",
+        "egg",
+        "device",
+        "heat",
+        "electric",
+        "plastic",
+        "transparent",
+        "shape-container",
+        "dominant-green",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "spring",
+          "weight": 0.5,
+          "label": "весна"
+        },
+        {
+          "tag": "hospital",
+          "weight": 0.5,
+          "label": "больница"
+        }
+      ],
+      "distinct_from_existing": "За прозрачным куполом различимы выводной лоток, скорлупа и уже обсохший цыплёнок."
+    },
+    {
+      "id": "zhizha_0122",
+      "names": [
+        "Отбивочный шнур",
+        "Меловая отбивка"
+      ],
+      "illustration": "Потёртая оранжевая строительная отбивка с плоским корпусом, боковой откидной рукояткой и выглядывающим из носика синим меловым шнуром. Короткий свободный конец изогнут, на нём маленький крючок и следы синей пыли.",
+      "tags": [
+        "chalk-line-reel",
+        "tool",
+        "powder",
+        "draw",
+        "pull",
+        "rotate",
+        "hard",
+        "string",
+        "build",
+        "shape-box",
+        "dominant-orange",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "measure",
+          "weight": 0.5,
+          "label": "измерение"
+        },
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Окрашенный мелом шнур выходит из корпуса с намоточным рычажком."
+    },
+    {
+      "id": "zhizha_0123",
+      "names": [
+        "Дверной засов",
+        "Накладной засов"
+      ],
+      "illustration": "Крупный старый стальной засов горизонтально на стыке двух небольших фрагментов бирюзовых досок. Изогнутая рукоятка опущена; конец задвижки вошёл в отдельную ответную скобу на второй доске.",
+      "tags": [
+        "sliding-bolt",
+        "lock",
+        "security",
+        "metal",
+        "hard",
+        "push",
+        "slide",
+        "open-close",
+        "home",
+        "shape-stick",
+        "dominant-brown",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "door",
+          "weight": 0.5,
+          "label": "дверь"
+        },
+        {
+          "tag": "shelter",
+          "weight": 0.5,
+          "label": "укрытие"
+        }
+      ],
+      "distinct_from_existing": "Прямая задвижка соединяет две доски через отдельную скобу."
+    },
+    {
+      "id": "zhizha_0124",
+      "names": [
+        "Железнодорожный семафор",
+        "Поворотный семафор"
+      ],
+      "illustration": "Один старинный железнодорожный семафор. Белая металлическая стойка на коротком основании, на шарнире поднято красное сигнальное крыло с белой полосой, под ним два цветных стекла.",
+      "tags": [
+        "railway-semaphore",
+        "sign",
+        "transport",
+        "rotate",
+        "metal",
+        "hard",
+        "safety",
+        "street",
+        "display",
+        "shape-stick",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "station",
+          "weight": 0.5,
+          "label": "станция"
+        },
+        {
+          "tag": "warning",
+          "weight": 0.5,
+          "label": "предупреждение"
+        }
+      ],
+      "distinct_from_existing": "Положение крыла и цвет стёкол передают сигнал поезду."
+    },
+    {
+      "id": "zhizha_0125",
+      "names": [
+        "Сифон для газировки",
+        "Содовый сифон"
+      ],
+      "illustration": "Тяжёлый голубоватый стеклянный сифон с рифлёными стенками. На узкой горловине потемневшая головка с коротким боковым носиком и рычагом; в воде хорошо видны пузырьки.",
+      "tags": [
+        "soda-siphon",
+        "glass",
+        "transparent",
+        "liquid",
+        "gas",
+        "water",
+        "drink",
+        "pour",
+        "container",
+        "device",
+        "shape-container",
+        "dominant-blue",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "cafe",
+          "weight": 0.5,
+          "label": "кафе"
+        },
+        {
+          "tag": "pressure",
+          "weight": 0.5,
+          "label": "давление"
+        }
+      ],
+      "distinct_from_existing": "Рычаг и носик посажены прямо на рифлёную бутылку с газированной водой."
+    },
+    {
+      "id": "zhizha_0126",
+      "names": [
+        "Веретено с шерстью",
+        "Ручное веретено"
+      ],
+      "illustration": "Тонкое деревянное подвесное веретено с круглым пряслицем и намотанной кремовой пряжей. От острого конца тонкая скрученная нить переходит в маленькую прядь ещё рыхлой шерсти.",
+      "tags": [
+        "drop-spindle",
+        "wool",
+        "wood",
+        "craft",
+        "rotate",
+        "twist",
+        "soft",
+        "fabric",
+        "hold-in-hand",
+        "shape-stick",
+        "shape-cone",
+        "dominant-white",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "sheep",
+          "weight": 0.5,
+          "label": "овца"
+        },
+        {
+          "tag": "clothes",
+          "weight": 0.5,
+          "label": "одежда"
+        }
+      ],
+      "distinct_from_existing": "Пряслице утяжеляет ось, на которую ложится скрученная шерсть."
+    },
+    {
+      "id": "zhizha_0127",
+      "names": [
+        "Кольцеброс",
+        "Игра в кольца"
+      ],
+      "illustration": "Миниатюрный настольный кольцеброс. Из деревянного крестообразного основания торчат разноцветные короткие колышки; красное верёвочное кольцо на одном, другое лежит у основания.",
+      "tags": [
+        "ring-toss",
+        "game",
+        "toy",
+        "aim",
+        "throw",
+        "play",
+        "wood",
+        "hard",
+        "sport",
+        "shape-ring",
+        "shape-cross",
+        "dominant-red",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        },
+        {
+          "tag": "fair",
+          "weight": 0.5,
+          "label": "ярмарка"
+        }
+      ],
+      "distinct_from_existing": "Мягкое кольцо охватывает один из колышков на крестовине."
+    },
+    {
+      "id": "zhizha_0128",
+      "names": [
+        "Колёсный блокиратор",
+        "Парковочный блокиратор"
+      ],
+      "illustration": "Автомобильное колесо в три четверти, на него надет широкий жёлтый металлический парковочный зажим. Его наружная лапа закрывает ступицу, две другие яркие лапы охватывают тёмную шину. Отдельный предмет на фоне.",
+      "tags": [
+        "wheel-clamp",
+        "lock",
+        "security",
+        "car",
+        "street",
+        "metal",
+        "hard",
+        "wheel",
+        "attach",
+        "heavy",
+        "shape-ring",
+        "dominant-yellow",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "police",
+          "weight": 0.5,
+          "label": "полиция"
+        },
+        {
+          "tag": "parking",
+          "weight": 0.5,
+          "label": "парковка"
+        }
+      ],
+      "distinct_from_existing": "Яркая стальная лапа закрывает ступицу и прижимает колесо автомобиля."
+    },
+    {
+      "id": "zhizha_0129",
+      "names": [
+        "Пиньята-ослик",
+        "Праздничная пиньята"
+      ],
+      "illustration": "Одна подвешенная за петельку пиньята в форме ослика, собранная из полос бахромчатой бумаги. Бирюзовые и малиновые полосы, маленький разрыв снизу, из него выглядывают две конфеты.",
+      "tags": [
+        "donkey-pinata",
+        "party",
+        "paper",
+        "toy",
+        "play",
+        "hit",
+        "hollow",
+        "sweet",
+        "animal",
+        "shape-animal",
+        "dominant-pink",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "childhood",
+          "weight": 0.5,
+          "label": "детство"
+        },
+        {
+          "tag": "celebration",
+          "weight": 0.5,
+          "label": "праздник"
+        }
+      ],
+      "distinct_from_existing": "За бахромой цветного ослика видна начинка из конфет."
+    },
+    {
+      "id": "zhizha_0130",
+      "names": [
+        "Мешочек магнезии",
+        "Магнезница скалолаза"
+      ],
+      "illustration": "Открытый бирюзовый поясной мешочек скалолаза с коротким ремешком и шнуром-затяжкой. У горловины виден белый порошок, снаружи на ткани отпечатались три запылённых пальца.",
+      "tags": [
+        "climbing-chalk-bag",
+        "powder",
+        "sport",
+        "climb",
+        "hand",
+        "dry",
+        "fabric",
+        "container",
+        "attach",
+        "shape-container",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "mountain",
+          "weight": 0.5,
+          "label": "горы"
+        },
+        {
+          "tag": "grip",
+          "weight": 0.5,
+          "label": "сцепление"
+        }
+      ],
+      "distinct_from_existing": "След белых пальцев связывает поясной мешочек со скалолазанием."
+    },
+    {
+      "id": "zhizha_0131",
+      "names": [
+        "Маслобойка",
+        "Ручная маслобойка"
+      ],
+      "illustration": "Высокая узкая деревянная маслобойка из клёпок с тёмными обручами. Через круглую крышку проходит вертикальная рукоять толкача; у отверстия мазок густых сливок.",
+      "tags": [
+        "butter-churn",
+        "farm",
+        "kitchen",
+        "food",
+        "milk",
+        "wood",
+        "container",
+        "hard",
+        "push",
+        "make",
+        "shape-cylinder",
+        "shape-stick",
+        "dominant-brown",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "butter",
+          "weight": 0.5,
+          "label": "сливочное масло"
+        },
+        {
+          "tag": "cream",
+          "weight": 0.5,
+          "label": "сливки"
+        }
+      ],
+      "distinct_from_existing": "Длинный толкач проходит сквозь крышку узкой бондарной кадки."
+    },
+    {
+      "id": "zhizha_0132",
+      "names": [
+        "Язычок-гудок",
+        "Праздничный гудок"
+      ],
+      "illustration": "Один праздничный язычок-гудок по диагонали. Короткий жёлтый мундштук переходит в длинную малиновую бумажную полоску в горошек, дальний конец закручен плотной спиралью.",
+      "tags": [
+        "party-blower",
+        "party",
+        "blow",
+        "sound",
+        "paper",
+        "toy",
+        "flexible",
+        "light-weight",
+        "play",
+        "shape-spiral",
+        "dominant-pink",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "celebration",
+          "weight": 0.5,
+          "label": "праздник"
+        },
+        {
+          "tag": "air",
+          "weight": 0.5,
+          "label": "воздух"
+        }
+      ],
+      "distinct_from_existing": "Бумажный язычок на конце мундштука свёрнут спиралью."
+    },
+    {
+      "id": "zhizha_0133",
+      "names": [
+        "Таблица для проверки зрения",
+        "Таблица с кольцами Ландольта"
+      ],
+      "illustration": "Одна плоская кремовая офтальмологическая таблица. Сверху одно крупное чёрное кольцо с разрывом. Ниже несколько рядов постепенно уменьшающихся колец, у каждого один разрыв, повёрнутый в свою сторону. Только кольца, без букв, цифр или подписей.",
+      "tags": [
+        "vision-chart",
+        "medical",
+        "hospital",
+        "vision",
+        "look-at",
+        "measure",
+        "sign",
+        "paper",
+        "light-weight",
+        "shape-flat",
+        "shape-ring",
+        "dominant-white",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "doctor",
+          "weight": 0.5,
+          "label": "врач"
+        },
+        {
+          "tag": "eye",
+          "weight": 0.5,
+          "label": "взгляд"
+        }
+      ],
+      "distinct_from_existing": "Разрывы в уменьшающихся кольцах смотрят в разные стороны."
+    },
+    {
+      "id": "zhizha_0134",
+      "names": [
+        "Водяное колесо",
+        "Мельничное водяное колесо"
+      ],
+      "illustration": "Большое вертикальное деревянное мельничное колесо на короткой видимой оси и каменной опоре, без здания. По нижним лопастям проходит небольшая струя синей воды.",
+      "tags": [
+        "waterwheel",
+        "energy",
+        "water",
+        "rotate",
+        "wheel",
+        "wood",
+        "hard",
+        "farm",
+        "move",
+        "shape-ring",
+        "dominant-brown",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "river",
+          "weight": 0.5,
+          "label": "река"
+        },
+        {
+          "tag": "machine",
+          "weight": 0.5,
+          "label": "механизм"
+        }
+      ],
+      "distinct_from_existing": "Лопасти большого колеса встречаются с потоком воды у нижнего обода."
+    },
+    {
+      "id": "zhizha_0135",
+      "names": [
+        "Переноска для кошки",
+        "Кошачья переноска"
+      ],
+      "illustration": "Закрытая пластиковая переноска тёплого горчичного цвета. Поднятая ручка и тёмная решётчатая дверца с боковой защёлкой; из-за решётки виден любопытный серый кошачий нос и лапа.",
+      "tags": [
+        "cat-carrier",
+        "pet",
+        "cat",
+        "animal",
+        "carry",
+        "lock",
+        "travel",
+        "plastic",
+        "hard",
+        "container",
+        "shape-box",
+        "shape-net",
+        "dominant-yellow",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "vet",
+          "weight": 0.5,
+          "label": "ветеринар"
+        },
+        {
+          "tag": "safety",
+          "weight": 0.5,
+          "label": "безопасность"
+        }
+      ],
+      "distinct_from_existing": "За дверцей переноски видны нос и лапа пассажира."
+    },
+    {
+      "id": "zhizha_0136",
+      "names": [
+        "Сухой ультрамарин",
+        "Порошок ультрамарина"
+      ],
+      "illustration": "На развёрнутой кремовой бумажной аптечной капсуле лежит маленькая горка ярко-синего сухого пигмента. Из горки выскользнула узкая плоская лопаточка с синим кончиком, по бумаге тянется след пыли.",
+      "tags": [
+        "ultramarine-pigment",
+        "powder",
+        "art",
+        "dry",
+        "paper",
+        "material",
+        "draw",
+        "pour",
+        "shape-flat",
+        "dominant-blue",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "paint",
+          "weight": 0.5,
+          "label": "краска"
+        },
+        {
+          "tag": "print",
+          "weight": 0.5,
+          "label": "печатать"
+        }
+      ],
+      "distinct_from_existing": "Пыль на бумажной складке показывает цвет ещё сухой краски."
+    },
+    {
+      "id": "zhizha_0137",
+      "names": [
+        "Монгольфьер",
+        "Тепловой аэростат"
+      ],
+      "illustration": "Один целый тепловой аэростат в полёте. Каплевидная полосатая оболочка бордового и кремового цвета, под её горловиной маленькое оранжевое пламя горелки и одна плетёная корзинка на стропах. Без пейзажа.",
+      "tags": [
+        "hot-air-balloon",
+        "air",
+        "transport",
+        "fly",
+        "heat",
+        "gas",
+        "travel",
+        "fabric",
+        "inflatable",
+        "shape-ball",
+        "shape-container",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "fuel",
+          "weight": 0.5,
+          "label": "топливо"
+        },
+        {
+          "tag": "height",
+          "weight": 0.5,
+          "label": "высота"
+        }
+      ],
+      "distinct_from_existing": "Пламя под горловиной и корзина на стропах отличают воздушный шар для полётов."
+    },
+    {
+      "id": "zhizha_0138",
+      "names": [
+        "Кукурузный початок",
+        "Початок в листьях"
+      ],
+      "illustration": "Один золотой початок с частично отогнутыми зелёными листьями. В плотных рядах зёрен виден небольшой пробел; с верхушки свисает пучок тонких кукурузных рылец.",
+      "tags": [
+        "corn-ear",
+        "farm",
+        "plant",
+        "food",
+        "grow",
+        "eat",
+        "edible",
+        "seed",
+        "garden",
+        "shape-cylinder",
+        "dominant-yellow",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "harvest",
+          "weight": 0.5,
+          "label": "урожай"
+        },
+        {
+          "tag": "grain",
+          "weight": 0.5,
+          "label": "мешок зерна"
+        }
+      ],
+      "distinct_from_existing": "Отогнутые листья открывают ряды зёрен и тонкие волокна початка."
+    },
+    {
+      "id": "zhizha_0139",
+      "names": [
+        "Свинцовая пломба",
+        "Пломба на проволоке"
+      ],
+      "illustration": "Крупно показана одна старая плоская круглая свинцовая пломба на замкнутой петле витой медной проволоки. На мягком сером металле рельефный оттиск маленькой звезды, без надписи.",
+      "tags": [
+        "lead-wire-seal",
+        "security",
+        "metal",
+        "hard",
+        "attach",
+        "hold-in-hand",
+        "information",
+        "shape-ring",
+        "shape-flat",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "inspection",
+          "weight": 0.5,
+          "label": "проверка"
+        },
+        {
+          "tag": "cargo",
+          "weight": 0.5,
+          "label": "груз"
+        }
+      ],
+      "distinct_from_existing": "Оттиск звезды и проволочная петля показывают, как опечатан груз."
+    },
+    {
+      "id": "zhizha_0140",
+      "names": [
+        "Знак цирюльника",
+        "Полосатая вывеска цирюльника"
+      ],
+      "illustration": "Отдельная винтажная вывеска цирюльника: вертикальный стеклянный цилиндр с широкой красно-белой винтовой полосой внутри. Металлические колпаки сверху и снизу, сбоку заметен короткий настенный кронштейн.",
+      "tags": [
+        "barber-pole",
+        "sign",
+        "street",
+        "rotate",
+        "display",
+        "glass",
+        "transparent",
+        "hair",
+        "hygiene",
+        "shape-cylinder",
+        "shape-spiral",
+        "dominant-red",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "barber",
+          "weight": 0.5,
+          "label": "парикмахер"
+        },
+        {
+          "tag": "shop",
+          "weight": 0.5,
+          "label": "магазин"
+        }
+      ],
+      "distinct_from_existing": "Полосатый цилиндр на настенном кронштейне отмечает вход к цирюльнику."
+    },
+    {
+      "id": "zhizha_0141",
+      "names": [
+        "Одноколёсный велосипед",
+        "Моноцикл"
+      ],
+      "illustration": "Один цирковой одноколёсный велосипед целиком. Сверху маленькое красное седло на стойке, снизу одно большое чёрное колесо со спицами, две педали у ступицы. Руля нет.",
+      "tags": [
+        "unicycle",
+        "transport",
+        "wheel",
+        "ride",
+        "balance",
+        "sport",
+        "sit-on",
+        "metal",
+        "hard",
+        "shape-ring",
+        "dominant-black",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "circus",
+          "weight": 0.5,
+          "label": "цирк"
+        },
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        }
+      ],
+      "distinct_from_existing": "Две педали у единственной ступицы и седло наверху образуют цирковой моноцикл."
+    },
+    {
+      "id": "zhizha_0142",
+      "names": [
+        "Розовый лукум",
+        "Лукум в сахарной пудре"
+      ],
+      "illustration": "Два небольших кубика розового лукума; один разрезан, на срезе видно полупрозрачное розовое желе. Верхние грани припудрены сахарной пудрой, на поверхности под кубиками белая россыпь.",
+      "tags": [
+        "rose-lokum",
+        "powder",
+        "food",
+        "sweet",
+        "edible",
+        "soft",
+        "sticky",
+        "eat",
+        "shape-box",
+        "dominant-pink",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "sugar",
+          "weight": 0.5,
+          "label": "сахар"
+        },
+        {
+          "tag": "celebration",
+          "weight": 0.5,
+          "label": "праздник"
+        }
+      ],
+      "distinct_from_existing": "На срезе видна розовая серединка, а сухая пудра припорошила края."
+    },
+    {
+      "id": "zhizha_0143",
+      "names": [
+        "Бензоколонка",
+        "Колонка с мерным стеклом"
+      ],
+      "illustration": "Одна винтажная красная бензоколонка с высоким прозрачным мерным цилиндром наверху. С бокового крючка спускается чёрный шланг с металлическим заправочным пистолетом. Без марок и цифр.",
+      "tags": [
+        "vintage-petrol-pump",
+        "fuel",
+        "energy",
+        "car",
+        "liquid",
+        "pour",
+        "measure",
+        "metal",
+        "hard",
+        "street",
+        "shape-cylinder",
+        "dominant-red",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        },
+        {
+          "tag": "machine",
+          "weight": 0.5,
+          "label": "механизм"
+        }
+      ],
+      "distinct_from_existing": "Мерник и закреплённый сбоку шланг образуют старую заправочную колонку."
+    },
+    {
+      "id": "zhizha_0144",
+      "names": [
+        "Кресло-мешок",
+        "Кресло-груша"
+      ],
+      "illustration": "Одно мягкое сливово-фиолетовое кресло-груша с низкой вмятиной для сидения, петелькой на верхушке и крепким боковым швом. Мягкий свет подчёркивает складки плотной ткани.",
+      "tags": [
+        "beanbag-chair",
+        "furniture",
+        "home",
+        "soft",
+        "fabric",
+        "sit-on",
+        "rest",
+        "flexible",
+        "shape-container",
+        "dominant-purple"
+      ],
+      "associations": [
+        {
+          "tag": "bedroom",
+          "weight": 0.5,
+          "label": "спальня"
+        },
+        {
+          "tag": "comfort",
+          "weight": 0.5,
+          "label": "уют"
+        }
+      ],
+      "distinct_from_existing": "В мягком чехле видна глубокая посадочная впадина."
+    },
+    {
+      "id": "zhizha_0145",
+      "names": [
+        "Дымарь пчеловода",
+        "Пасечный дымарь"
+      ],
+      "illustration": "Один пасечный дымарь. Закопчённый цилиндр из серебристого металла с конусообразным носиком, сбоку прикреплены небольшие кожаные мехи, сверху выходит тонкая белая струйка прохладного дыма.",
+      "tags": [
+        "beekeeper-smoker",
+        "farm",
+        "tool",
+        "metal",
+        "leather",
+        "blow",
+        "air",
+        "smoke",
+        "hard",
+        "heat",
+        "shape-cylinder",
+        "shape-cone",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "bee",
+          "weight": 0.5,
+          "label": "пчела"
+        },
+        {
+          "tag": "fuel",
+          "weight": 0.5,
+          "label": "топливо"
+        }
+      ],
+      "distinct_from_existing": "У коптящего металлического корпуса сбоку закреплены кожаные мехи."
+    },
+    {
+      "id": "zhizha_0146",
+      "names": [
+        "Бачок с цепочкой",
+        "Подвесной сливной бачок"
+      ],
+      "illustration": "Старинный белый керамический бачок с закруглённым передним краем на двух кронштейнах. Из дна вниз уходит короткая изогнутая сливная труба, справа свободно свисает длинная цепочка с синей ручкой.",
+      "tags": [
+        "pull-chain-cistern",
+        "toilet",
+        "bathroom",
+        "water",
+        "ceramic",
+        "container",
+        "hard",
+        "pull",
+        "clean",
+        "shape-box",
+        "shape-chain",
+        "dominant-white",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "home",
+          "weight": 0.5,
+          "label": "домашний быт"
+        },
+        {
+          "tag": "wash",
+          "weight": 0.5,
+          "label": "мыть"
+        }
+      ],
+      "distinct_from_existing": "Керамический резервуар снабжён выпускной трубой и длинной цепочкой."
+    },
+    {
+      "id": "zhizha_0147",
+      "names": [
+        "Сахарный череп",
+        "Праздничная калавера"
+      ],
+      "illustration": "Один небольшой мексиканский сахарный череп анфас. Белая зернистая сахарная поверхность, ярко-розовые цветы из глазури вокруг глазниц, несколько голубых точек и крошечные сахарные зубы. Без надписей.",
+      "tags": [
+        "sugar-skull",
+        "skull",
+        "sweet",
+        "food",
+        "decoration",
+        "party",
+        "decorate",
+        "granular",
+        "ritual",
+        "shape-humanoid",
+        "dominant-white",
+        "dominant-pink"
+      ],
+      "associations": [
+        {
+          "tag": "flower",
+          "weight": 0.5,
+          "label": "цветы"
+        },
+        {
+          "tag": "memory",
+          "weight": 0.5,
+          "label": "воспоминания"
+        }
+      ],
+      "distinct_from_existing": "Зернистый сахар и цветочная глазурь образуют праздничную фигурку."
+    },
+    {
+      "id": "zhizha_0148",
+      "names": [
+        "Тактильная плитка",
+        "Плитка с рельефными точками"
+      ],
+      "illustration": "Одна квадратная жёлтая тротуарная плитка. Правильные ряды выпуклых круглых усечённых рифов бросают короткие тени, у одного угла виден серый бетонный скол. Ракурс в три четверти, чтобы читался рельеф.",
+      "tags": [
+        "tactile-paving",
+        "sign",
+        "street",
+        "touch",
+        "vision",
+        "walk",
+        "safety",
+        "hard",
+        "heavy",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "orientation",
+          "weight": 0.5,
+          "label": "ориентирование"
+        },
+        {
+          "tag": "warning",
+          "weight": 0.5,
+          "label": "предупреждение"
+        }
+      ],
+      "distinct_from_existing": "Выпуклые рифы обозначают предупреждение, которое можно почувствовать подошвой."
+    },
+    {
+      "id": "zhizha_0149",
+      "names": [
+        "Стремя",
+        "Конное стремя"
+      ],
+      "illustration": "Одно старинное серебристое конное стремя на коротком обрезе коричневого кожаного путлища. Металлическая дуга и широкая плоская ребристая площадка для подошвы хорошо видны.",
+      "tags": [
+        "riding-stirrup",
+        "horse",
+        "ride",
+        "metal",
+        "leather",
+        "hard",
+        "balance",
+        "climb",
+        "sport",
+        "shape-ring",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "shoe",
+          "weight": 0.5,
+          "label": "туфли"
+        },
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        }
+      ],
+      "distinct_from_existing": "Под металлической дугой есть широкая полка для ноги всадника."
+    },
+    {
+      "id": "zhizha_0150",
+      "names": [
+        "Магнитная жидкость",
+        "Феррожидкость"
+      ],
+      "illustration": "Одна неглубокая белая фарфоровая чашечка с глянцевой чёрной магнитной жидкостью. В центре жидкость поднялась в локальный венец из чётких конических пиков, ближе к краю виден гладкий жидкий ободок. Под чашечкой сбоку выглядывает край небольшого тёмного дискового магнита. Без текста.",
+      "tags": [
+        "ferrofluid",
+        "liquid",
+        "science",
+        "magnet",
+        "move",
+        "reflect",
+        "wet",
+        "shape-container",
+        "shape-cone",
+        "dominant-black",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "experiment",
+          "weight": 0.5,
+          "label": "опыт"
+        },
+        {
+          "tag": "wave",
+          "weight": 0.5,
+          "label": "волна"
+        }
+      ],
+      "distinct_from_existing": "Один край жидкости гладкий, а над магнитом та же жидкость собирается в острые пики."
+    },
+    {
+      "id": "zhizha_0151",
+      "names": [
+        "Плюшевый лев",
+        "Львёнок с флагом"
+      ],
+      "illustration": "Сидящий мягкий игрушечный лев медово-золотого цвета с лохматой каштановой гривой. В одной лапе маленький российский флаг на коротком древке. На флаге три ровные горизонтальные полосы сверху вниз: белая, синяя, красная. На животе отдельная тёмная тканевая нашивка с одной крупной белой латинской буквой Z. Видны швы на лапах.",
+      "tags": [
+        "flag-lion-plush",
+        "toy",
+        "animal",
+        "fabric",
+        "soft",
+        "play",
+        "lion",
+        "flag",
+        "child",
+        "shape-animal",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "gift",
+          "weight": 0.5,
+          "label": "подарок"
+        },
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        },
+        {
+          "tag": "russia",
+          "weight": 0.5,
+          "label": "Россия"
+        }
+      ],
+      "distinct_from_existing": "Триколор в лапе и нашивка Z на животе различимы по отдельности."
+    },
+    {
+      "id": "zhizha_0152",
+      "names": [
+        "Линза Френеля",
+        "Ступенчатая линза"
+      ],
+      "illustration": "Круглая толстая стеклянная линза Френеля почти анфас в узком латунном ободе. Прозрачный центральный глазок окружён ступенчатыми концентрическими призмами. Голубовато-белый блик прерывается на каждой ступени.",
+      "tags": [
+        "fresnel-lens",
+        "glass",
+        "transparent",
+        "light",
+        "science",
+        "reflect",
+        "fragile",
+        "look-through",
+        "shape-flat",
+        "shape-ring",
+        "dominant-gray",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "lighthouse",
+          "weight": 0.5,
+          "label": "маяк"
+        },
+        {
+          "tag": "vision",
+          "weight": 0.5,
+          "label": "зрение"
+        }
+      ],
+      "distinct_from_existing": "Ступеньки стекла концентрически окружают прозрачный центр."
+    },
+    {
+      "id": "zhizha_0153",
+      "names": [
+        "Гимнастическая лента",
+        "Лента гимнастки"
+      ],
+      "illustration": "Короткая светлая палочка для художественной гимнастики лежит по диагонали. На её конце закреплена одна широкая малиновая лента, которая рисует плавную S-образную волну и заканчивается свободным срезом. Видна изнанка одного витка.",
+      "tags": [
+        "rhythmic-ribbon",
+        "sport",
+        "fabric",
+        "flexible",
+        "swing",
+        "move",
+        "dance",
+        "light-weight",
+        "ribbon",
+        "shape-stick",
+        "shape-spiral",
+        "dominant-pink",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "stage",
+          "weight": 0.5,
+          "label": "сцена"
+        },
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        }
+      ],
+      "distinct_from_existing": "Палочка держит один конец широкой ленты, другой конец свободен."
+    },
+    {
+      "id": "zhizha_0154",
+      "names": [
+        "Шарикоподшипник",
+        "Открытый подшипник"
+      ],
+      "illustration": "Один открытый стальной шарикоподшипник под небольшим углом. Между внутренним и наружным кольцами виден ряд полированных шариков. Сквозное отверстие в центре хорошо читается, кромка слегка смазана янтарным маслом.",
+      "tags": [
+        "ball-bearing",
+        "metal",
+        "hard",
+        "rotate",
+        "wheel",
+        "machine",
+        "tool",
+        "heavy",
+        "shape-ring",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "oil",
+          "weight": 0.5,
+          "label": "масло"
+        },
+        {
+          "tag": "transport",
+          "weight": 0.5,
+          "label": "транспорт"
+        }
+      ],
+      "distinct_from_existing": "Между двумя обоймами видны шарики и сквозной центр."
+    },
+    {
+      "id": "zhizha_0155",
+      "names": [
+        "Стеклянная ловушка для ос",
+        "Осиная ловушка"
+      ],
+      "illustration": "Одна пузатая ловушка из зеленоватого стекла на трёх коротких стеклянных ножках. Снизу отчётливо видна вогнутая воронка для входа насекомых, на дне немного янтарной приманки. Горлышко закрыто пробкой и перевязано бечёвкой с одним коротким свисающим концом.",
+      "tags": [
+        "glass-wasp-trap",
+        "glass",
+        "fragile",
+        "transparent",
+        "insect",
+        "catch",
+        "garden",
+        "container",
+        "liquid",
+        "shape-container",
+        "dominant-green",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "honey",
+          "weight": 0.5,
+          "label": "мёд"
+        },
+        {
+          "tag": "summer",
+          "weight": 0.5,
+          "label": "лето"
+        }
+      ],
+      "distinct_from_existing": "Вход снизу поднят над поверхностью на трёх стеклянных ножках."
+    },
+    {
+      "id": "zhizha_0156",
+      "names": [
+        "Ананасовое кольцо",
+        "Сушёный ломтик ананаса"
+      ],
+      "illustration": "Одно золотистое сушёное ананасовое кольцо в три четверти, тонкое и слегка изогнутое, с крупным ясно видимым отверстием посередине. Волокна расходятся лучами от срезанной сердцевины, один край карамельно-коричневый.",
+      "tags": [
+        "dried-pineapple-ring",
+        "fruit",
+        "food",
+        "edible",
+        "sweet",
+        "dry",
+        "eat",
+        "plant",
+        "shape-ring",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "sun",
+          "weight": 0.5,
+          "label": "солнце"
+        },
+        {
+          "tag": "heat",
+          "weight": 0.5,
+          "label": "жара"
+        }
+      ],
+      "distinct_from_existing": "Вокруг вырезанной сердцевины видны радиальные волокна плода."
+    },
+    {
+      "id": "zhizha_0157",
+      "names": [
+        "Оптоволоконный светильник",
+        "Светильник из световодов"
+      ],
+      "illustration": "Небольшой настольный оптоволоконный светильник на тёмно-синем основании. Из одного основания фонтаном расходятся тонкие гибкие нити, точечные голубые и розовые огоньки светятся только на их концах. Пучок сохраняет чёткий общий силуэт.",
+      "tags": [
+        "fiber-optic-lamp",
+        "lamp",
+        "light",
+        "electric",
+        "illuminate",
+        "flexible",
+        "device",
+        "fiber",
+        "shape-cone",
+        "dominant-blue",
+        "dominant-pink"
+      ],
+      "associations": [
+        {
+          "tag": "night",
+          "weight": 0.5,
+          "label": "ночь"
+        },
+        {
+          "tag": "star",
+          "weight": 0.5,
+          "label": "звезда"
+        }
+      ],
+      "distinct_from_existing": "У расходящихся нитей светятся кончики."
+    },
+    {
+      "id": "zhizha_0158",
+      "names": [
+        "Ситечко на цепочке",
+        "Ситечко для заварки"
+      ],
+      "illustration": "Шарообразное чайное ситечко из двух закрытых полусфер тонкой металлической сетки. От маленькой застёжки сбоку тянется короткая свободная цепочка с крючком для края чашки. Несколько листочков чая видны сквозь сетку.",
+      "tags": [
+        "tea-infuser-ball",
+        "metal",
+        "drink",
+        "kitchen",
+        "open-close",
+        "container",
+        "hollow",
+        "chain",
+        "pour",
+        "shape-ball",
+        "shape-net",
+        "dominant-gray",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "tea",
+          "weight": 0.5,
+          "label": "чай"
+        },
+        {
+          "tag": "heat",
+          "weight": 0.5,
+          "label": "жара"
+        }
+      ],
+      "distinct_from_existing": "На свободном конце цепочки крючок, за мелкой сеткой видна заварка."
+    },
+    {
+      "id": "zhizha_0159",
+      "names": [
+        "Гайка-барашек",
+        "Крыльчатая гайка"
+      ],
+      "illustration": "Одна большая бронзовая гайка-барашек. По бокам от короткого резьбового цилиндра поднимаются два массивных округлых ушка, одно ловит тёплый блик. В середине видна настоящая внутренняя резьба и просвет.",
+      "tags": [
+        "wing-nut",
+        "metal",
+        "hard",
+        "tool",
+        "twist",
+        "rotate",
+        "attach",
+        "hold-in-hand",
+        "shape-pair",
+        "shape-ring",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "machine",
+          "weight": 0.5,
+          "label": "механизм"
+        },
+        {
+          "tag": "wing",
+          "weight": 0.5,
+          "label": "крылья по бокам"
+        }
+      ],
+      "distinct_from_existing": "Два выступа для пальцев расположены по сторонам сквозной резьбы."
+    },
+    {
+      "id": "zhizha_0160",
+      "names": [
+        "Галстук-боло",
+        "Шнурок боло"
+      ],
+      "illustration": "Галстук-боло из тёмного плетёного шнурка с овальной бирюзовой каменной застёжкой в серебряной оправе. Сверху видна узкая петля, ниже застёжки свисают два отдельных конца разной высоты с металлическими наконечниками.",
+      "tags": [
+        "bolo-tie",
+        "clothes",
+        "fashion",
+        "wear",
+        "leather",
+        "flexible",
+        "jewelry",
+        "tie",
+        "stone",
+        "shape-ring",
+        "shape-pair",
+        "dominant-blue",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "neck",
+          "weight": 0.5,
+          "label": "шея"
+        },
+        {
+          "tag": "decoration",
+          "weight": 0.5,
+          "label": "декор"
+        }
+      ],
+      "distinct_from_existing": "Каменная застёжка скользит по двум концам плетёного шнурка."
+    },
+    {
+      "id": "zhizha_0161",
+      "names": [
+        "Кистевой эспандер",
+        "Резиновый эспандер"
+      ],
+      "illustration": "Один толстый зелёный кистевой эспандер в форме замкнутого резинового тора. Крупное отверстие в центре и несколько неглубоких выемок для пальцев снаружи. Матовая резина с небольшими потёртостями.",
+      "tags": [
+        "hand-grip-ring",
+        "sport",
+        "hand",
+        "rubber",
+        "elastic",
+        "flexible",
+        "push",
+        "hold-in-hand",
+        "body",
+        "shape-ring",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "training",
+          "weight": 0.5,
+          "label": "тренировка"
+        },
+        {
+          "tag": "strength",
+          "weight": 0.5,
+          "label": "сила"
+        }
+      ],
+      "distinct_from_existing": "Цельное упругое кольцо с выемками для пальцев можно сжимать в ладони."
+    },
+    {
+      "id": "zhizha_0162",
+      "names": [
+        "Химический светлячок",
+        "Светящаяся палочка"
+      ],
+      "illustration": "Одна полупрозрачная палочка химического света, светится лаймово-зелёным изнутри. Из ушка верхнего колпачка выходит тонкий чёрный шнурок с простым узлом и свободным хвостиком. Вокруг палочки только узкое мягкое свечение.",
+      "tags": [
+        "glow-stick",
+        "light",
+        "illuminate",
+        "liquid",
+        "plastic",
+        "transparent",
+        "carry",
+        "night",
+        "shape-stick",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "party",
+          "weight": 0.5,
+          "label": "вечеринка"
+        },
+        {
+          "tag": "rescue",
+          "weight": 0.5,
+          "label": "спасать"
+        }
+      ],
+      "distinct_from_existing": "Светится сама трубка, у колпачка висит шнурок."
+    },
+    {
+      "id": "zhizha_0163",
+      "names": [
+        "Песчаный доллар",
+        "Скелет плоского морского ежа"
+      ],
+      "illustration": "Один выцветший скелет песчаного доллара. Плоский округлый известковый диск цвета слоновой кости с пятью лепестками из парных рядов мелких пор и несколькими сквозными продолговатыми щелями ближе к краю. Вид слегка сверху.",
+      "tags": [
+        "sand-dollar",
+        "sea",
+        "animal",
+        "biological",
+        "fragile",
+        "dry",
+        "nature",
+        "hard",
+        "look-at",
+        "shape-flat",
+        "shape-star",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "beach",
+          "weight": 0.5,
+          "label": "пляж"
+        },
+        {
+          "tag": "fossil",
+          "weight": 0.5,
+          "label": "окаменелость"
+        }
+      ],
+      "distinct_from_existing": "Пять рядов пор образуют цветок на цельном плоском диске."
+    },
+    {
+      "id": "zhizha_0164",
+      "names": [
+        "Стеклянное перо",
+        "Стеклянная ручка для туши"
+      ],
+      "illustration": "Цельная светло-голубая стеклянная ручка для письма по диагонали. Толстая витая рукоятка переходит в остро заточенное стеклянное перо с глубокими спиральными желобками, в них видны густые синие чернила. Никаких колпачков и чернильниц.",
+      "tags": [
+        "glass-dip-pen",
+        "glass",
+        "ink",
+        "transparent",
+        "fragile",
+        "write",
+        "hold-in-hand",
+        "office",
+        "art",
+        "shape-stick",
+        "shape-spiral",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "letter",
+          "weight": 0.5,
+          "label": "письма"
+        },
+        {
+          "tag": "water",
+          "weight": 0.5,
+          "label": "вода"
+        }
+      ],
+      "distinct_from_existing": "Чернила удерживаются в желобках стеклянного наконечника."
+    },
+    {
+      "id": "zhizha_0165",
+      "names": [
+        "Наградная розетка",
+        "Розетка с лентами"
+      ],
+      "illustration": "Одна бордовая наградная розетка из складчатого атласа с небольшим золотистым центром без надписей. Вниз свободно свисают два ленточных хвоста разной длины с V-образными вырезами на концах.",
+      "tags": [
+        "award-rosette",
+        "ribbon",
+        "fabric",
+        "competition",
+        "wear",
+        "decorate",
+        "prize",
+        "soft",
+        "attach",
+        "shape-flat",
+        "dominant-red",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "sport",
+          "weight": 0.5,
+          "label": "спорт"
+        },
+        {
+          "tag": "ceremony",
+          "weight": 0.5,
+          "label": "церемония"
+        }
+      ],
+      "distinct_from_existing": "Радиальные складки и два хвоста с вырезами образуют силуэт розетки."
+    },
+    {
+      "id": "zhizha_0166",
+      "names": [
+        "Кольцевой трансформатор",
+        "Тороидальный трансформатор"
+      ],
+      "illustration": "Одно толстое кольцо тороидального трансформатора, плотно и аккуратно обмотанное блестящим медным проводом. Тёмный сквозной центр, сбоку выходят два коротких цветных изолированных вывода. Вид в три четверти.",
+      "tags": [
+        "toroidal-transformer",
+        "electric",
+        "energy",
+        "metal",
+        "hard",
+        "device",
+        "wire",
+        "machine",
+        "use",
+        "shape-ring",
+        "dominant-orange",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "radio",
+          "weight": 0.5,
+          "label": "радио"
+        },
+        {
+          "tag": "magnet",
+          "weight": 0.5,
+          "label": "магнит"
+        }
+      ],
+      "distinct_from_existing": "Медная обмотка огибает кольцевой сердечник со всех сторон."
+    },
+    {
+      "id": "zhizha_0167",
+      "names": [
+        "Физалис",
+        "Ягода в фонарике"
+      ],
+      "illustration": "Одна оранжевая коробочка физалиса на коротком изогнутом стебельке. С одной стороны сухая оболочка истончилась до ажурной сетки, за ней видна гладкая круглая ягода. Матовая ломкая фактура и чёткие жилки.",
+      "tags": [
+        "physalis-lantern",
+        "plant",
+        "fruit",
+        "grow",
+        "fragile",
+        "dry",
+        "garden",
+        "nature",
+        "seed",
+        "shape-container",
+        "shape-net",
+        "dominant-orange",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "autumn",
+          "weight": 0.5,
+          "label": "осень"
+        },
+        {
+          "tag": "lantern",
+          "weight": 0.5,
+          "label": "фонарь"
+        }
+      ],
+      "distinct_from_existing": "Под сеткой сухих жилок видна целая оранжевая ягода."
+    },
+    {
+      "id": "zhizha_0168",
+      "names": [
+        "Монокль на ленте",
+        "Монокль с репсовой лентой"
+      ],
+      "illustration": "Один круглый монокль с прозрачной линзой в очень тонкой латунной оправе. Из бокового ушка выходит одна узкая чёрная репсовая лента; её свободный конец плавно загибается вниз. Бледный блик показывает целое стекло внутри обода.",
+      "tags": [
+        "ribbon-monocle",
+        "glass",
+        "transparent",
+        "fragile",
+        "vision",
+        "look-through",
+        "wear",
+        "fashion",
+        "ribbon",
+        "shape-ring",
+        "shape-flat",
+        "dominant-yellow",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "eye",
+          "weight": 0.5,
+          "label": "взгляд"
+        },
+        {
+          "tag": "read",
+          "weight": 0.5,
+          "label": "читать"
+        }
+      ],
+      "distinct_from_existing": "Боковое ушко соединяет одну круглую линзу со свободной лентой."
+    },
+    {
+      "id": "zhizha_0169",
+      "names": [
+        "Пресс для гербария",
+        "Цветочный пресс"
+      ],
+      "illustration": "Небольшой деревянный пресс для сушки растений. Между двумя дощечками лежат слои промокательной бумаги; по углам видны четыре винта с ушками. Из одного зазора выступает один плоский фиолетовый цветок.",
+      "tags": [
+        "flower-press",
+        "wood",
+        "paper",
+        "plant",
+        "flower",
+        "dry",
+        "tool",
+        "push",
+        "craft",
+        "store",
+        "shape-box",
+        "shape-flat",
+        "dominant-brown",
+        "dominant-purple"
+      ],
+      "associations": [
+        {
+          "tag": "garden",
+          "weight": 0.5,
+          "label": "сад"
+        },
+        {
+          "tag": "book",
+          "weight": 0.5,
+          "label": "книги"
+        }
+      ],
+      "distinct_from_existing": "Слои бумаги зажаты винтами между дощечками, из-под края виден высушенный цветок."
+    },
+    {
+      "id": "zhizha_0170",
+      "names": [
+        "Корабль в бутылке",
+        "Бутылочный парусник"
+      ],
+      "illustration": "Одна прозрачная бесцветная бутылка лежит горизонтально на небольшой тёмной деревянной подставке. Внутри прекрасно различим крошечный парусник с двумя мачтами, кремовыми парусами и тонким такелажем. Горлышко закрыто пробкой.",
+      "tags": [
+        "ship-in-a-bottle",
+        "glass",
+        "transparent",
+        "fragile",
+        "ship",
+        "sea",
+        "craft",
+        "wood",
+        "display",
+        "model",
+        "shape-container",
+        "dominant-white",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествия"
+        },
+        {
+          "tag": "patience",
+          "weight": 0.5,
+          "label": "терпение"
+        }
+      ],
+      "distinct_from_existing": "Мачты и паруса помещаются внутри закупоренной бутылки."
+    },
+    {
+      "id": "zhizha_0171",
+      "names": [
+        "Шёпот",
+        "Секрет на ухо"
+      ],
+      "illustration": "Женское ухо с убранными назад тёмными волосами и близко к нему приоткрытые мужские губы со щетиной. Видны только фрагменты лиц; глаз нет. Края фрагментов растворяются в синей дымке.",
+      "tags": [
+        "whisper-scene",
+        "body",
+        "anatomy",
+        "person",
+        "ear",
+        "mouth",
+        "speak",
+        "hear",
+        "soft",
+        "hair",
+        "shape-pair",
+        "dominant-brown",
+        "dominant-pink"
+      ],
+      "associations": [
+        {
+          "tag": "secret",
+          "weight": 0.5,
+          "label": "тайна"
+        },
+        {
+          "tag": "trust",
+          "weight": 0.5,
+          "label": "доверие"
+        }
+      ],
+      "distinct_from_existing": "Изображено взаимодействие двух людей, а не отдельные губы или анатомическая модель уха."
+    },
+    {
+      "id": "zhizha_0172",
+      "names": [
+        "Книжка сусального золота",
+        "Листы для золочения"
+      ],
+      "illustration": "Открытая книжка с тонкими светлыми прокладочными листами и квадратом мятого сусального золота. У золотого листа приподнят угол; рядом лежит тонкая кисть.",
+      "tags": [
+        "gold-leaf-booklet",
+        "gold",
+        "metal",
+        "paper",
+        "fragile",
+        "flexible",
+        "craft",
+        "decorate",
+        "apply",
+        "tool",
+        "shape-flat",
+        "shape-box",
+        "dominant-yellow",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "wealth",
+          "weight": 0.5,
+          "label": "богатство"
+        },
+        {
+          "tag": "restoration",
+          "weight": 0.5,
+          "label": "реставрация"
+        }
+      ],
+      "distinct_from_existing": "Золотой лист между бумажными прокладками показывает материал для золочения, а не книгу с текстом."
+    },
+    {
+      "id": "zhizha_0173",
+      "names": [
+        "Чаша кинцуги",
+        "Чаша с золотыми швами"
+      ],
+      "illustration": "Тёмно-синяя керамическая чаша с неровными ветвящимися золотыми швами, соединяющими осколки. Видны пустая внутренняя поверхность и небольшая круглая ножка.",
+      "tags": [
+        "kintsugi-bowl",
+        "container",
+        "ceramic",
+        "fragile",
+        "hard",
+        "gold",
+        "metal",
+        "repair",
+        "craft",
+        "hold-in-hand",
+        "shape-container",
+        "shape-ball",
+        "dominant-blue",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "healing",
+          "weight": 0.5,
+          "label": "исцеление"
+        },
+        {
+          "tag": "memory",
+          "weight": 0.5,
+          "label": "воспоминания"
+        }
+      ],
+      "distinct_from_existing": "Главная особенность — золотые линии ремонта на синей керамике, а не обычная целая миска."
+    },
+    {
+      "id": "zhizha_0174",
+      "names": [
+        "Старательский лоток",
+        "Лоток для промывки золота"
+      ],
+      "illustration": "Наклонённый тёмный круглый лоток с рифлёным краем. Внутри полумесяц мокрого песка и несколько отдельных неровных золотых самородков.",
+      "tags": [
+        "gold-panning-pan",
+        "tool",
+        "container",
+        "hard",
+        "gold",
+        "metal",
+        "sand",
+        "wet",
+        "wash",
+        "rotate",
+        "shape-container",
+        "shape-ball",
+        "dominant-black",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "river",
+          "weight": 0.5,
+          "label": "река"
+        },
+        {
+          "tag": "wealth",
+          "weight": 0.5,
+          "label": "богатство"
+        }
+      ],
+      "distinct_from_existing": "Самородки лежат среди песка в лотке для промывки, а не представлены слитком или монетами."
+    },
+    {
+      "id": "zhizha_0175",
+      "names": [
+        "Позолоченная шишка",
+        "Шишка в сусальном золоте"
+      ],
+      "illustration": "Одна сосновая шишка с раскрытыми древесными чешуйками, покрытыми потёртой позолотой. Местами видна коричневая древесина. Сверху небольшая петля для подвешивания.",
+      "tags": [
+        "gilded-pinecone",
+        "plant",
+        "nature",
+        "wood",
+        "gold",
+        "metal",
+        "ornament",
+        "hard",
+        "decorate",
+        "hang",
+        "shape-cone",
+        "dominant-yellow",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "winter",
+          "weight": 0.5,
+          "label": "зима"
+        },
+        {
+          "tag": "gift",
+          "weight": 0.5,
+          "label": "подарок"
+        }
+      ],
+      "distinct_from_existing": "Под позолотой остаются узнаваемые древесные чешуйки натуральной шишки."
+    },
+    {
+      "id": "zhizha_0176",
+      "names": [
+        "Конфета в золотой фольге",
+        "Надкушенный трюфель"
+      ],
+      "illustration": "Круглая шоколадная конфета с одним откушенным краем, открывающим светлую карамельную начинку. Вокруг раскрыта мятая золотистая фольга с серебристыми внутренними складками.",
+      "tags": [
+        "gold-wrapped-truffle",
+        "food",
+        "chocolate",
+        "sweet",
+        "edible",
+        "soft",
+        "foil",
+        "metal",
+        "eat",
+        "open-close",
+        "shape-ball",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "gift",
+          "weight": 0.5,
+          "label": "подарок"
+        },
+        {
+          "tag": "surprise",
+          "weight": 0.5,
+          "label": "неожиданность"
+        }
+      ],
+      "distinct_from_existing": "Видны отдельная надкушенная конфета, начинка и раскрытая металлическая обёртка."
+    },
+    {
+      "id": "zhizha_0177",
+      "names": [
+        "Застёжка-молния",
+        "Молния с бегунком"
+      ],
+      "illustration": "Отдельная красная тканевая застёжка-молния: внизу зубцы соединены, над серебристым бегунком расходятся две ленты. Видны язычок бегунка и оба конца застёжки.",
+      "tags": [
+        "zip-fastener",
+        "fabric",
+        "metal",
+        "clothes",
+        "flexible",
+        "fastener",
+        "open-close",
+        "pull",
+        "attach",
+        "shape-stick",
+        "dominant-red",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "connection",
+          "weight": 0.5,
+          "label": "соединение"
+        },
+        {
+          "tag": "separation",
+          "weight": 0.5,
+          "label": "разделение"
+        }
+      ],
+      "distinct_from_existing": "Два ряда зубцов сходятся в одном подвижном бегунке; одежды вокруг нет."
+    },
+    {
+      "id": "zhizha_0178",
+      "names": [
+        "Пузырьковый уровень",
+        "Строительный уровень"
+      ],
+      "illustration": "Короткий жёлтый строительный уровень с тёмными торцами. В центральной прозрачной колбе зелёная жидкость и один пузырёк воздуха между двумя чёрными метками.",
+      "tags": [
+        "spirit-level",
+        "tool",
+        "build",
+        "measure",
+        "hard",
+        "glass",
+        "transparent",
+        "liquid",
+        "gas",
+        "shape-box",
+        "shape-stick",
+        "dominant-yellow",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "balance",
+          "weight": 0.5,
+          "label": "равновесие"
+        },
+        {
+          "tag": "precision",
+          "weight": 0.5,
+          "label": "точность"
+        }
+      ],
+      "distinct_from_existing": "Положение пузырька между метками показывает горизонталь; это не термометр и не линейка."
+    },
+    {
+      "id": "zhizha_0179",
+      "names": [
+        "Одуванчик с семенами",
+        "Пушистый одуванчик"
+      ],
+      "illustration": "Белая пушистая головка одуванчика на коротком изогнутом зелёном стебле. Два семени с парашютиками летят рядом, в шаре остался небольшой просвет.",
+      "tags": [
+        "dandelion-seedhead",
+        "plant",
+        "nature",
+        "flower",
+        "seed",
+        "fragile",
+        "light-weight",
+        "grow",
+        "fly",
+        "shape-ball",
+        "shape-stick",
+        "dominant-white",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "wish",
+          "weight": 0.5,
+          "label": "желание"
+        },
+        {
+          "tag": "wind",
+          "weight": 0.5,
+          "label": "ветер"
+        }
+      ],
+      "distinct_from_existing": "Пушистые парашютики и отлетевшие семена отличают его от букета и декоративного цветка."
+    },
+    {
+      "id": "zhizha_0180",
+      "names": [
+        "Медовая палочка",
+        "Ложка-веретено для мёда"
+      ],
+      "illustration": "Деревянная палочка с овальной головкой из глубоких кольцевых канавок. Янтарный мёд заполняет канавки и стекает одной короткой нитью с округлой каплей.",
+      "tags": [
+        "honey-dipper",
+        "tool",
+        "kitchen",
+        "wood",
+        "honey",
+        "sticky",
+        "liquid",
+        "sweet",
+        "hold-in-hand",
+        "rotate",
+        "shape-stick",
+        "shape-ball",
+        "dominant-brown",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "bee",
+          "weight": 0.5,
+          "label": "пчела"
+        },
+        {
+          "tag": "breakfast",
+          "weight": 0.5,
+          "label": "завтрак"
+        }
+      ],
+      "distinct_from_existing": "Кольцевые канавки деревянной головки удерживают мёд; нет банки или сот."
+    },
+    {
+      "id": "zhizha_0181",
+      "names": [
+        "Погребальная маска"
+      ],
+      "illustration": "Золотая маска с закрытыми глазами",
+      "tags": [
+        "funeral-mask",
+        "face",
+        "gold",
+        "metal",
+        "hard",
+        "wear",
+        "ritual",
+        "death",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "memory",
+          "weight": 0.5,
+          "label": "память"
+        }
+      ],
+      "distinct_from_existing": "Золотая маска с закрытыми глазами"
+    },
+    {
+      "id": "zhizha_0182",
+      "names": [
+        "Пустая могила"
+      ],
+      "illustration": "Земляная яма с лопатой",
+      "tags": [
+        "empty-grave",
+        "earth",
+        "ground",
+        "deep",
+        "hollow",
+        "dig",
+        "shovel",
+        "death",
+        "shape-box",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "loss",
+          "weight": 0.5,
+          "label": "утрата"
+        }
+      ],
+      "distinct_from_existing": "Земляная яма с лопатой"
+    },
+    {
+      "id": "zhizha_0183",
+      "names": [
+        "Траурный венок"
+      ],
+      "illustration": "Белые цветы и чёрная лента",
+      "tags": [
+        "mourning-wreath",
+        "flower",
+        "plant",
+        "ribbon",
+        "soft",
+        "tie",
+        "decorate",
+        "death",
+        "shape-ring",
+        "dominant-green"
+      ],
+      "associations": [
+        {
+          "tag": "memory",
+          "weight": 0.5,
+          "label": "память"
+        }
+      ],
+      "distinct_from_existing": "Белые цветы и чёрная лента"
+    },
+    {
+      "id": "zhizha_0184",
+      "names": [
+        "Монета Харона"
+      ],
+      "illustration": "Монета лежит на языке",
+      "tags": [
+        "charon-coin",
+        "coin",
+        "mouth",
+        "tongue",
+        "gold",
+        "hard",
+        "pay",
+        "ritual",
+        "shape-flat",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "death",
+          "weight": 0.5,
+          "label": "смерть"
+        }
+      ],
+      "distinct_from_existing": "Монета лежит на языке"
+    },
+    {
+      "id": "zhizha_0185",
+      "names": [
+        "Бахилы"
+      ],
+      "illustration": "Пара ботинок в голубых чехлах",
+      "tags": [
+        "shoe-covers",
+        "shoe",
+        "pair",
+        "plastic",
+        "flexible",
+        "wear",
+        "protect",
+        "hospital",
+        "shape-flat",
+        "dominant-blue"
+      ],
+      "associations": [
+        {
+          "tag": "clean",
+          "weight": 0.5,
+          "label": "чистота"
+        }
+      ],
+      "distinct_from_existing": "Пара ботинок в голубых чехлах"
+    },
+    {
+      "id": "zhizha_0186",
+      "names": [
+        "Силуэт за окном"
+      ],
+      "illustration": "Ладонь за матовым стеклом и конверт",
+      "tags": [
+        "window-silhouette",
+        "hand",
+        "glass",
+        "letter",
+        "fragile",
+        "touch",
+        "frame",
+        "person",
+        "shape-box",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "secret",
+          "weight": 0.5,
+          "label": "тайна"
+        }
+      ],
+      "distinct_from_existing": "Ладонь за матовым стеклом и конверт"
+    },
+    {
+      "id": "zhizha_0187",
+      "names": [
+        "Канатоходец"
+      ],
+      "illustration": "Артист балансирует на канате",
+      "tags": [
+        "tightrope-walker",
+        "circus",
+        "person",
+        "rope",
+        "flexible",
+        "walk",
+        "balance",
+        "height",
+        "shape-stick",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "risk",
+          "weight": 0.5,
+          "label": "риск"
+        }
+      ],
+      "distinct_from_existing": "Артист балансирует на канате"
+    },
+    {
+      "id": "zhizha_0188",
+      "names": [
+        "Рубанок"
+      ],
+      "illustration": "Ручной рубанок с завитком стружки",
+      "tags": [
+        "hand-plane",
+        "wood",
+        "blade",
+        "tool",
+        "sharp",
+        "carve",
+        "push",
+        "shape-box",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "work",
+          "weight": 0.5,
+          "label": "работа"
+        }
+      ],
+      "distinct_from_existing": "Ручной рубанок с завитком стружки"
+    },
+    {
+      "id": "zhizha_0189",
+      "names": [
+        "Контурный шаблон"
+      ],
+      "illustration": "Красные штифты повторяют контур ключа",
+      "tags": [
+        "contour-gauge",
+        "tool",
+        "key",
+        "metal",
+        "hard",
+        "measure",
+        "copy",
+        "shape-box",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "precision",
+          "weight": 0.5,
+          "label": "точность"
+        }
+      ],
+      "distinct_from_existing": "Красные штифты повторяют контур ключа"
+    },
+    {
+      "id": "zhizha_0190",
+      "names": [
+        "Стеклорез"
+      ],
+      "illustration": "Резак лежит на цветном стекле",
+      "tags": [
+        "glass-cutter",
+        "tool",
+        "glass",
+        "metal",
+        "hard",
+        "fragile",
+        "cut",
+        "shape-stick",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "art",
+          "weight": 0.5,
+          "label": "искусство"
+        }
+      ],
+      "distinct_from_existing": "Резак лежит на цветном стекле"
+    },
+    {
+      "id": "zhizha_0191",
+      "names": [
+        "Цирковой шатёр в полоску"
+      ],
+      "illustration": "Красно-белый шатёр с флажком",
+      "tags": [
+        "circus-tent",
+        "circus",
+        "fabric",
+        "flexible",
+        "enter",
+        "shelter",
+        "flag",
+        "stripe",
+        "shape-cone",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "performance",
+          "weight": 0.5,
+          "label": "представление"
+        }
+      ],
+      "distinct_from_existing": "Красно-белый шатёр с флажком"
+    },
+    {
+      "id": "zhizha_0192",
+      "names": [
+        "Колчан со стрелами"
+      ],
+      "illustration": "Кожаный колчан с оперёнными стрелами",
+      "tags": [
+        "arrow-quiver",
+        "leather",
+        "arrow",
+        "feather",
+        "sharp",
+        "carry",
+        "store",
+        "hollow",
+        "shape-cylinder",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "hunt",
+          "weight": 0.5,
+          "label": "охота"
+        }
+      ],
+      "distinct_from_existing": "Кожаный колчан с оперёнными стрелами"
+    },
+    {
+      "id": "zhizha_0193",
+      "names": [
+        "Флюгер"
+      ],
+      "illustration": "Гончая над стрелой и четырьмя указателями",
+      "tags": [
+        "hound-vane",
+        "dog",
+        "metal",
+        "wind",
+        "hard",
+        "rotate",
+        "arrow",
+        "direction",
+        "shape-cross",
+        "dominant-brown"
+      ],
+      "associations": [
+        {
+          "tag": "weather",
+          "weight": 0.5,
+          "label": "погода"
+        }
+      ],
+      "distinct_from_existing": "Гончая над стрелой и четырьмя указателями"
+    },
+    {
+      "id": "zhizha_0194",
+      "names": [
+        "Вилка с вензелями"
+      ],
+      "illustration": "Серебряная вилка с гравировкой",
+      "tags": [
+        "engraved-fork",
+        "fork",
+        "food",
+        "metal",
+        "hard",
+        "stab",
+        "eat",
+        "ornament",
+        "shape-stick",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "luxury",
+          "weight": 0.5,
+          "label": "роскошь"
+        }
+      ],
+      "distinct_from_existing": "Серебряная вилка с гравировкой"
+    },
+    {
+      "id": "zhizha_0195",
+      "names": [
+        "Ложка для обуви"
+      ],
+      "illustration": "Длинный металлический обувной рожок",
+      "tags": [
+        "shoehorn",
+        "shoe",
+        "metal",
+        "tool",
+        "hard",
+        "long",
+        "slide",
+        "hold-in-hand",
+        "shape-stick",
+        "dominant-gray"
+      ],
+      "associations": [
+        {
+          "tag": "clothing",
+          "weight": 0.5,
+          "label": "одежда"
+        }
+      ],
+      "distinct_from_existing": "Длинный металлический обувной рожок"
+    },
+    {
+      "id": "zhizha_0196",
+      "names": [
+        "Крестик на цепочке"
+      ],
+      "illustration": "Золотой крестик на тонкой цепочке",
+      "tags": [
+        "cross-pendant",
+        "cross",
+        "chain",
+        "gold",
+        "metal",
+        "hard",
+        "wear",
+        "religion",
+        "shape-cross",
+        "dominant-yellow"
+      ],
+      "associations": [
+        {
+          "tag": "faith",
+          "weight": 0.5,
+          "label": "вера"
+        }
+      ],
+      "distinct_from_existing": "Золотой крестик на тонкой цепочке"
+    },
+    {
+      "id": "zhizha_0197",
+      "names": [
+        "Набор мячиков для пинг-понга"
+      ],
+      "illustration": "Белые и оранжевый мячики у открытой упаковки",
+      "tags": [
+        "ping-pong-balls",
+        "ball",
+        "sport",
+        "plastic",
+        "hollow",
+        "light-weight",
+        "play",
+        "roll",
+        "shape-ball",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "competition",
+          "weight": 0.5,
+          "label": "соревнование"
+        }
+      ],
+      "distinct_from_existing": "Белые и оранжевый мячики у открытой упаковки"
+    },
+    {
+      "id": "zhizha_0198",
+      "names": [
+        "Переходник для розетки"
+      ],
+      "illustration": "Белый сетевой переходник с универсальным гнездом",
+      "tags": [
+        "plug-adapter",
+        "electric",
+        "plastic",
+        "metal",
+        "hard",
+        "attach",
+        "use",
+        "device",
+        "shape-box",
+        "dominant-white"
+      ],
+      "associations": [
+        {
+          "tag": "travel",
+          "weight": 0.5,
+          "label": "путешествие"
+        }
+      ],
+      "distinct_from_existing": "Белый сетевой переходник с универсальным гнездом"
+    },
+    {
+      "id": "zhizha_0199",
+      "names": [
+        "Валентинка"
+      ],
+      "illustration": "На сложенном сердечке надпись «Я люблю» и строка для имени",
+      "tags": [
+        "valentine",
+        "heart",
+        "paper",
+        "ribbon",
+        "flexible",
+        "write",
+        "read",
+        "love",
+        "shape-heart",
+        "dominant-red"
+      ],
+      "associations": [
+        {
+          "tag": "gift",
+          "weight": 0.5,
+          "label": "подарок"
+        }
+      ],
+      "distinct_from_existing": "На сложенном сердечке надпись «Я люблю» и строка для имени"
+    },
+    {
+      "id": "zhizha_0200",
+      "names": [
+        "Игровое кресло"
+      ],
+      "illustration": "Чёрно-бордовое кресло на колёсиках",
+      "tags": [
+        "gaming-chair",
+        "chair",
+        "wheel",
+        "soft",
+        "sit-on",
+        "roll",
+        "rotate",
+        "game",
+        "shape-box",
+        "dominant-black"
+      ],
+      "associations": [
+        {
+          "tag": "computer",
+          "weight": 0.5,
+          "label": "компьютер"
+        }
+      ],
+      "distinct_from_existing": "Чёрно-бордовое кресло на колёсиках"
+    }
+  ],
+  "new_tag_labels": {
+    "lava-lamp": "Лава-лампа",
+    "honeycomb": "Медовые соты",
+    "slinky": "Пружинка-радуга",
+    "weaving-shuttle": "Ткацкий челнок",
+    "plumb-bob": "Строительный отвес",
+    "kaleidoscope": "Калейдоскоп",
+    "kalimba": "Калимба",
+    "diving-fins": "Ласты",
+    "hermit-crab": "Рак-отшельник",
+    "venus-flytrap": "Венерина мухоловка",
+    "ammonite-fossil": "Аммонит",
+    "wax-seal": "Сургучная печать",
+    "newtons-cradle": "Маятник Ньютона",
+    "rolling-pin": "Скалка с тестом",
+    "fire-bellows": "Кузнечные мехи",
+    "stethoscope": "Стетоскоп",
+    "safety-pin": "Английская булавка",
+    "bath-sponge": "Банная губка",
+    "thimble": "Напёрсток",
+    "hand-pump": "Ручной насос",
+    "air": "воздух",
+    "shell": "раковина",
+    "jelly-mold-dessert": "Смородиновое желе",
+    "tuning-fork": "Камертон",
+    "snowshoe": "Снегоступ",
+    "amber-inclusion": "Комар в янтаре",
+    "shuttlecock": "Волан",
+    "beaver": "Бобр",
+    "cable-car": "Кабинка канатной дороги",
+    "height": "высота",
+    "hot-water-bottle": "Резиновая грелка",
+    "red-cabbage": "Краснокочанная капуста",
+    "punched-card": "Перфокарта",
+    "drinking-bird": "Пьющая птичка",
+    "hanging-bat": "Летучая мышь",
+    "mortar-pestle": "Ступка с пестиком",
+    "embroidery-hoop": "Пяльцы",
+    "windsock": "Ветроуказатель",
+    "lotus-pod": "Коробочка лотоса",
+    "optical-prism": "Оптическая призма",
+    "shape-prism": "призма",
+    "rainbow": "радуга",
+    "oil-can": "Машинная маслёнка",
+    "machine": "механизм",
+    "domino-tiles": "Костяшки домино",
+    "bib-apron": "Фартук пекаря",
+    "maple-samara": "Кленовые крылатки",
+    "curling-stone": "Камень для кёрлинга",
+    "ballet-tutu": "Балетная пачка",
+    "citrus-reamer": "Соковыжималка для лимона",
+    "firefly-beetle": "Светлячок",
+    "suspenders": "Подтяжки",
+    "pomegranate": "Гранат в разломе",
+    "juice": "сок",
+    "rain-poncho": "Дождевик-пончо",
+    "wheelbarrow": "Садовая тачка",
+    "yo-yo": "Йо-йо",
+    "seahorse": "Морской конёк",
+    "ocean": "океан",
+    "fur-muff": "Меховая муфта",
+    "paper-hole-punch": "Дырокол",
+    "circle": "круг",
+    "sugar-tongs": "Щипцы для сахара",
+    "sugar": "сахар",
+    "cattail": "Рогоз",
+    "ink-brayer": "Печатный валик",
+    "kombucha-pellicle": "Чайный гриб",
+    "paper-pinwheel": "Бумажная вертушка",
+    "fair": "ярмарка",
+    "fruit": "фрукт",
+    "crank-music-box": "Музыкальная шкатулка",
+    "tomato-pincushion": "Игольница-помидор",
+    "tailor": "портной",
+    "vegetable": "овощ",
+    "pager": "Пейджер",
+    "paper-doll-chain": "Бумажные человечки",
+    "halberd": "Алебарда",
+    "guard": "стража",
+    "ceremony": "церемония",
+    "horse-chestnut": "Каштан в кожуре",
+    "seed": "семя",
+    "payment-terminal": "Платёжный терминал",
+    "receipt": "чек",
+    "pop-up-theatre": "Книжка-панорама",
+    "heater-shield": "Рыцарский щит",
+    "armor": "доспехи",
+    "knight": "рыцарь",
+    "vacuum-tube": "Радиолампа",
+    "sleeve-pattern": "Выкройка рукава",
+    "box-grater": "Кухонная тёрка",
+    "carrot": "морковь",
+    "salad": "салат",
+    "lunar-rover": "Луноход",
+    "cupcake-liner": "Бумажная формочка",
+    "porcupinefish": "Рыба-ёж",
+    "defense": "защита",
+    "toaster": "Тостер",
+    "bread": "хлеб",
+    "lottery-drum": "Лототрон",
+    "guitar-pick": "Медиатор",
+    "guitar": "гитара",
+    "stone-arrowhead": "Кремнёвый наконечник",
+    "arrow": "стрела",
+    "museum": "музей",
+    "tattoo-transfer-sheet": "Переводные татуировки",
+    "binder-clip": "Зажим для бумаг",
+    "accordion": "Аккордеон",
+    "turnstile": "Турникет",
+    "station": "станция",
+    "gate": "проходная",
+    "cameo-brooch": "Брошь-камея",
+    "hand-radiograph": "Рентген кисти",
+    "injury": "травма",
+    "bascule-bridge": "Разводной мост",
+    "rune-stones": "Рунические камни",
+    "fortune": "предсказание",
+    "drawing-pantograph": "Чертёжный пантограф",
+    "storm-glass": "Штормгласс",
+    "folding-screen": "Ширма",
+    "hair-rollers": "Бигуди",
+    "curl": "завиток",
+    "fire-hydrant": "Пожарный гидрант",
+    "starting-blocks": "Стартовые колодки",
+    "hearing-aid": "Слуховой аппарат",
+    "caryatid": "Кариатида",
+    "pearl-oyster": "Жемчужная устрица",
+    "candle-snuffer": "Гасильник для свечи",
+    "rocker-blotter": "Промокашка с ручкой",
+    "parking-meter": "Паркомат с циферблатом",
+    "clock": "часы",
+    "basket-muzzle": "Намордник",
+    "chain-censer": "Кадило",
+    "heart-model": "Модель сердца",
+    "pulse": "пульс",
+    "beach-hut": "Пляжная кабинка",
+    "wooden-crutch": "Костыль",
+    "boutonniere": "Бутоньерка",
+    "index-cabinet": "Картотечный шкаф",
+    "tree-cross-section": "Спил дерева",
+    "age": "возраст",
+    "birdbath": "Садовая купальня для птиц",
+    "fountain": "фонтан",
+    "cipher-disk": "Шифровальный диск",
+    "clay-bird-whistle": "Глиняная свистулька",
+    "shaving-brush": "Помазок",
+    "barber": "парикмахер",
+    "door-knocker": "Дверной молоток",
+    "visitor": "гость",
+    "seismograph": "Сейсмограф",
+    "earthquake": "землетрясение",
+    "wave": "волна",
+    "pipe-organ": "Трубный орган",
+    "fencing-mask": "Фехтовальная маска",
+    "medicinal-leech": "Медицинская пиявка",
+    "kingfisher": "Зимородок",
+    "bell-buoy": "Колокольный буй",
+    "warning": "предупреждение",
+    "star-anise": "Бадьян",
+    "ring-display-hand": "Подставка для колец",
+    "shop": "магазин",
+    "sleeping-bag": "Спальный мешок",
+    "pneumatic-mail-carrier": "Капсула пневмопочты",
+    "chick-incubator": "Инкубатор для цыплят",
+    "sliding-bolt": "Дверной засов",
+    "railway-semaphore": "Железнодорожный семафор",
+    "soda-siphon": "Сифон для газировки",
+    "cafe": "кафе",
+    "pressure": "давление",
+    "drop-spindle": "Веретено с шерстью",
+    "ring-toss": "Кольцеброс",
+    "wheel-clamp": "Колёсный блокиратор",
+    "parking": "парковка",
+    "donkey-pinata": "Пиньята-ослик",
+    "climbing-chalk-bag": "Мешочек магнезии",
+    "grip": "сцепление",
+    "butter-churn": "Маслобойка",
+    "butter": "сливочное масло",
+    "cream": "сливки",
+    "party-blower": "Язычок-гудок",
+    "vision-chart": "Таблица для проверки зрения",
+    "waterwheel": "Водяное колесо",
+    "cat-carrier": "Переноска для кошки",
+    "vet": "ветеринар",
+    "ultramarine-pigment": "Сухой ультрамарин",
+    "hot-air-balloon": "Монгольфьер",
+    "corn-ear": "Кукурузный початок",
+    "lead-wire-seal": "Свинцовая пломба",
+    "inspection": "проверка",
+    "cargo": "груз",
+    "barber-pole": "Знак цирюльника",
+    "unicycle": "Одноколёсный велосипед",
+    "rose-lokum": "Розовый лукум",
+    "vintage-petrol-pump": "Бензоколонка",
+    "beanbag-chair": "Кресло-мешок",
+    "beekeeper-smoker": "Дымарь пчеловода",
+    "bee": "пчела",
+    "pull-chain-cistern": "Бачок с цепочкой",
+    "sugar-skull": "Сахарный череп",
+    "tactile-paving": "Тактильная плитка",
+    "orientation": "ориентирование",
+    "riding-stirrup": "Стремя",
+    "ferrofluid": "Магнитная жидкость",
+    "chalk-line-reel": "Отбивочный шнур",
+    "string": "шнур",
+    "flag-lion-plush": "Плюшевый лев",
+    "lion": "лев",
+    "flag": "флаг",
+    "russia": "Россия",
+    "fresnel-lens": "Линза Френеля",
+    "rhythmic-ribbon": "Гимнастическая лента",
+    "ball-bearing": "Шарикоподшипник",
+    "oil": "масло",
+    "glass-wasp-trap": "Стеклянная ловушка для ос",
+    "honey": "мёд",
+    "dried-pineapple-ring": "Ананасовое кольцо",
+    "fiber-optic-lamp": "Оптоволоконный светильник",
+    "fiber": "волокно",
+    "star": "звезда",
+    "tea-infuser-ball": "Ситечко на цепочке",
+    "wing-nut": "Гайка-барашек",
+    "bolo-tie": "Галстук-боло",
+    "neck": "шея",
+    "hand-grip-ring": "Кистевой эспандер",
+    "training": "тренировка",
+    "glow-stick": "Химический светлячок",
+    "sand-dollar": "Песчаный доллар",
+    "fossil": "окаменелость",
+    "glass-dip-pen": "Стеклянное перо",
+    "award-rosette": "Наградная розетка",
+    "prize": "приз",
+    "toroidal-transformer": "Кольцевой трансформатор",
+    "physalis-lantern": "Физалис",
+    "ribbon-monocle": "Монокль на ленте",
+    "flower-press": "Пресс для гербария",
+    "ship-in-a-bottle": "Корабль в бутылке",
+    "model": "модель",
+    "whisper-scene": "Шёпот",
+    "mouth": "рот",
+    "trust": "доверие",
+    "gold-leaf-booklet": "Книжка сусального золота",
+    "gold": "золото",
+    "restoration": "реставрация",
+    "kintsugi-bowl": "Чаша кинцуги",
+    "healing": "исцеление",
+    "gold-panning-pan": "Старательский лоток",
+    "gilded-pinecone": "Позолоченная шишка",
+    "hang": "висеть",
+    "gold-wrapped-truffle": "Конфета в золотой фольге",
+    "foil": "фольга",
+    "zip-fastener": "Застёжка-молния",
+    "fastener": "застёжка",
+    "connection": "соединение",
+    "separation": "разделение",
+    "spirit-level": "Пузырьковый уровень",
+    "precision": "точность",
+    "dandelion-seedhead": "Одуванчик с семенами",
+    "wish": "желание",
+    "honey-dipper": "Медовая палочка",
+    "funeral-mask": "погребальная маска",
+    "memory": "воспоминания",
+    "empty-grave": "пустая могила",
+    "loss": "утрата",
+    "mourning-wreath": "траурный венок",
+    "charon-coin": "монета харона",
+    "death": "смерть",
+    "shoe-covers": "бахилы",
+    "clean": "чистить",
+    "window-silhouette": "силуэт за окном",
+    "secret": "тайна",
+    "tightrope-walker": "канатоходец",
+    "risk": "риск",
+    "hand-plane": "рубанок",
+    "work": "работа",
+    "contour-gauge": "контурный шаблон",
+    "glass-cutter": "стеклорез",
+    "art": "искусство",
+    "circus-tent": "цирковой шатёр в полоску",
+    "performance": "представление",
+    "arrow-quiver": "колчан со стрелами",
+    "hunt": "охота",
+    "hound-vane": "флюгер",
+    "weather": "погода",
+    "engraved-fork": "вилка с вензелями",
+    "luxury": "роскошь",
+    "shoehorn": "ложка для обуви",
+    "clothing": "одежда",
+    "cross-pendant": "крестик на цепочке",
+    "faith": "вера",
+    "ping-pong-balls": "набор мячиков для пинг-понга",
+    "competition": "соревнование",
+    "plug-adapter": "переходник для розетки",
+    "travel": "путешествия",
+    "valentine": "валентинка",
+    "gift": "подарок",
+    "gaming-chair": "игровое кресло",
+    "computer": "компьютер",
+    "chair": "кресло",
+    "copy": "копирование",
+    "deep": "глубокий",
+    "direction": "направление",
+    "earth": "земля",
+    "fork": "вилка",
+    "frame": "рама",
+    "ground": "грунт",
+    "heart": "сердце",
+    "long": "длинный",
+    "pair": "пара",
+    "tongue": "язык"
+  }
+}

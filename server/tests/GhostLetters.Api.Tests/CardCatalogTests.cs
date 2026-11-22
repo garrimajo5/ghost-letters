@@ -12,6 +12,33 @@ namespace GhostLetters.Api.Tests;
 public sealed class CardCatalogTests(PostgresFixture postgres)
 {
     [Fact]
+    public async Task Zhizha_ImportsRealDeck_AndCanBePlayedOnItsOwn()
+    {
+        await using var db = await FreshDatabaseAsync();
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "client", "assets", "cards")))
+            dir = dir.Parent;
+        dir.Should().NotBeNull();
+        var assets = Path.Combine(dir!.FullName, "client", "assets", "cards");
+        var catalog = new CardCatalog(db, new ConfigurationBuilder().Build(), NullLogger<CardCatalog>.Instance);
+        var set = await db.CardSets.SingleAsync(s => s.Code == "zhizha");
+        set.Title.Should().Be("Жижа");
+        set.IsBuiltin.Should().BeTrue();
+        (await catalog.ImportManifestAsync(Path.Combine(assets, "cards.json"), default)).Should().Be(961);
+        (await catalog.ImportManifestAsync(Path.Combine(assets, "cards.json"), default)).Should().Be(0);
+        var deck = await catalog.DeckAsync(["zhizha"], default);
+        deck.Should().Equal(Enumerable.Range(1, 200).Select(n => $"zhizha_{n:0000}"));
+        var tags = CardTags.Parse(File.ReadAllText(Path.Combine(assets, "tags.json")))
+            .WithNames(File.ReadAllText(Path.Combine(assets, "names.json")))
+            .WithAssociations(File.ReadAllText(Path.Combine(assets, "associations.json")));
+        CardCatalog.WithoutDuplicateNames(deck, tags, 42).Should().HaveCount(200);
+        tags.NameOf("zhizha_0171").Should().Be("Шёпот");
+        tags.Of("zhizha_0171").Should().Contain(["ear", "speak", "hear"]);
+        (await catalog.DeckAsync(["original"], default)).Should().NotContain(c => c.StartsWith("zhizha_"));
+        (await catalog.DeckAsync(LobbySettings.AllCardSets, default)).Should().HaveCount(961);
+    }
+
+    [Fact]
     public async Task Import_MovesCardsToTheirSets_AndDecksFollowSettings()
     {
         await using var db = await FreshDatabaseAsync();
