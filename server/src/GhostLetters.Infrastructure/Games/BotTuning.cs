@@ -45,6 +45,13 @@ public sealed record BotTuning
     /// <summary>Призрак на модели: ряд, где стол уверен в истине не меньше этого, больше не уточняем (1 — уточняем всё).</summary>
     public double GhostModelSettled { get; init; } = 1.01;
 
+    /// <summary>
+    /// Призрак слушает стол: последние публичные версии мирных («думаю, нож») сдвигают его модель стола, а ряд,
+    /// где мирные расходятся или ошибаются, весит в выборе писем больше (1 + GhostListen · доля неверных голосов).
+    /// 0 — прежний Призрак, читающий только открытые подсказки.
+    /// </summary>
+    public double GhostListen { get; init; } = 1;
+
     /// <summary>Модель игроков в подозрениях вслух. Выключено: боты с ней обвиняли реже, и стол терял (8 игроков: 44 → 35 %).</summary>
     public bool RoleModelSpeech { get; init; } = true;
 
@@ -370,6 +377,7 @@ public sealed record BotTuning
                 nameof(RoleModel) => t with { RoleModel = B() },
                 nameof(AccompliceLoud) => t with { AccompliceLoud = D() },
                 nameof(GhostModelSettled) => t with { GhostModelSettled = D() },
+                nameof(GhostListen) => t with { GhostListen = D() },
                 nameof(RoleModelSpeech) => t with { RoleModelSpeech = B() },
                 nameof(RoleModelVote) => t with { RoleModelVote = B() },
                 nameof(KillerClearRows) => t with { KillerClearRows = B() },
