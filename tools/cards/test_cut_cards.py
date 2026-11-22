@@ -43,6 +43,9 @@ class CutCardsTest(unittest.TestCase):
             with open(os.path.join(res, "sheets.json"), "w", encoding="utf-8") as f:
                 json.dump(catalog, f)
 
+            expansion = {"code": "zhizha", "title": "Жижа", "cards": [{"id": "zhizha_0001", "file": "zhizha_0001.webp"}]}
+            with open(os.path.join(out, "cards.json"), "w", encoding="utf-8") as f:
+                json.dump({"version": 1, "sets": [expansion]}, f)
             code = cut_cards.main(["--resource", res, "--out", out,
                                    "--catalog", os.path.join(res, "sheets.json"), "--size", "64",
                                    "--sets", os.path.join(res, "no-sets.json")])
@@ -52,6 +55,7 @@ class CutCardsTest(unittest.TestCase):
                 manifest = json.load(f)
             cards = manifest["sets"][0]["cards"]
             self.assertEqual(manifest["sets"][0]["code"], "original")
+            self.assertEqual(manifest["sets"][1:], [expansion])
             self.assertEqual([c["id"] for c in cards], ["orig_0001", "orig_0002", "orig_0003"])
             for c in cards:
                 with Image.open(os.path.join(out, c["file"])) as im:
