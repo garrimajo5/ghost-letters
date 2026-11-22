@@ -224,15 +224,14 @@ public sealed record BotTuning
     public double LiarCut { get; init; } = .5;
 
     /// <summary>
-    /// Вес логики заявлений в уликах о картах (1 — убеждение о ряде совпадает с выводом логики). По умолчанию 0:
-    /// в сериях на правилах Озона поправка не дала побед, логика пока только для речи (рассуждения вслух).
+    /// Дополнительный вес вывода логики о картах. По умолчанию влияние заявлений на карты уже проходит через пересчитанное доверие к автору.
     /// </summary>
     public double ClaimLogicWeight { get; init; }
 
     /// <summary>Логика уточняет модель игроков (подозрения и доверие); иначе — только карты и речь.</summary>
-    public bool ClaimLogicBlack { get; init; }
+    public bool ClaimLogicBlack { get; init; } = true;
 
-    /// <summary>Нижняя граница веса заявления «целился в эту» (0 — только по сходству письма с картой).</summary>
+    /// <summary>Нижняя граница силы ясно прочитанной связи, до поправок на раунд и конкурирующие подсказки.</summary>
     public double ClaimFloor { get; init; } = .4;
 
     /// <summary>Говорить выводы логики вслух.</summary>
@@ -314,9 +313,9 @@ public sealed record BotTuning
 
     /// <summary>
     /// Вес материала (металл, дерево, стекло…) в сходстве карт: признак слабый и авторазметка может ошибаться.
-    /// Как цвет и форма, материал лишь чуть усиливает смысловую связь и почти не работает сам по себе. 1 — как предмет (старое поведение).
+    /// Работает только при выраженном акценте и отсутствии на поле смыслового, детального или силуэтного объяснения.
     /// </summary>
-    public double MaterialWeight { get; init; } = .15;
+    public double MaterialWeight { get; init; } = .055;
 
     /// <summary>
     /// Исчезнувшее письмо ослабляет все карты, ради которых Призрак открыл бы его (<see cref="GhostCluePolicy.WouldReveal"/>),
@@ -437,8 +436,8 @@ public sealed record BotTuning
                 nameof(LiarCut) => t with { LiarCut = D() },
                 nameof(ClaimLogicWeight) => t with { ClaimLogicWeight = D() },
                 nameof(DeduceSpeech) => t with { DeduceSpeech = B() },
-                nameof(ClaimLogicBlack) => t with { ClaimLogicBlack = B() },
                 nameof(ClaimFloor) => t with { ClaimFloor = D() },
+                nameof(ClaimLogicBlack) => t with { ClaimLogicBlack = B() },
                 nameof(Outshone) => t with { Outshone = D() },
                 nameof(LetterStrict) => t with { LetterStrict = D() },
                 nameof(ExpertSubtle) => t with { ExpertSubtle = B() },

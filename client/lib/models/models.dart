@@ -120,6 +120,8 @@ class RoleOptions {
 
 /// Настройки лобби. Таймеры храним как есть (секунды по фазам) и правим нужные.
 class LobbySettings {
+  static const _defaultCardSets = ['original', 'mailbox', 'ritual', 'mirror', 'zhizha'];
+
   const LobbySettings({
     this.rulesPreset,
     this.presetName,
@@ -133,7 +135,7 @@ class LobbySettings {
     this.tempo = 'live',
     this.turnHours = 24,
     this.timers = const {},
-    this.cardSets = const ['original', 'mailbox', 'ritual', 'mirror'],
+    this.cardSets = _defaultCardSets,
     this.ghostUserId,
     this.ranked = true,
     this.botVoice = true,
@@ -155,7 +157,7 @@ class LobbySettings {
         timers: j['timers'] is Map
             ? Map<String, dynamic>.from(j['timers'] as Map).map((k, v) => MapEntry(k, (v as num).toInt()))
             : const {},
-        cardSets: _strings(j['cardSets']).isEmpty ? const ['original', 'mailbox', 'ritual', 'mirror'] : _strings(j['cardSets']),
+        cardSets: _strings(j['cardSets']).isEmpty ? _defaultCardSets : _strings(j['cardSets']),
         ghostUserId: j['ghostUserId'] as String?,
         ranked: j['ranked'] as bool? ?? true,
         botVoice: j['botVoice'] as bool? ?? true,
@@ -180,7 +182,7 @@ class LobbySettings {
     return useSecretRow && columns == 5 && rounds == null && handSize == 5 && ranked &&
         discussion == 'Radio' && tempo == 'live' && turnHours == 24 &&
         roles.toJson().entries.every((e) => defaults.roles.toJson()[e.key] == e.value) &&
-        cardSets.toSet().length == 4 && cardSets.every(defaults.cardSets.contains) &&
+        cardSets.toSet().length == _defaultCardSets.length && cardSets.every(_defaultCardSets.contains) &&
         timers.entries.every((e) => defaultTimers[e.key] == e.value);
   }
 

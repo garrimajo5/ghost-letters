@@ -16,13 +16,13 @@ public sealed class BotStrictnessTests
     private static readonly Guid Ann = Guid.NewGuid();
     private static readonly Guid Bob = Guid.NewGuid();
 
-    // Монета похожа на кольцо сильнее всего (золото, металл), слабее — на кошелёк (деньги) и меч (металл), на лодку — никак.
+    // Коллекционная монета и кольцо — сокровища и реликвии; кошелёк связан с деньгами, меч — с реликвиями.
     private static readonly CardTags Tags = new(new Dictionary<string, HashSet<string>>
     {
-        ["coin"] = ["coin", "money", "metal", "gold"],
-        ["ring"] = ["ring", "gold", "metal"],
+        ["coin"] = ["coin", "money", "treasure", "relic"],
+        ["ring"] = ["ring", "treasure", "relic"],
         ["wallet"] = ["wallet", "money", "leather"],
-        ["sword"] = ["sword", "metal", "weapon"],
+        ["sword"] = ["sword", "relic", "weapon"],
         ["boat"] = ["boat", "water", "travel"],
         ["cat"] = ["cat", "animal"],
     });
@@ -121,12 +121,12 @@ public sealed class BotStrictnessTests
     {
         // Цель — кошелёк. Бумажник похож на кошелёк сильнее, но так же и на кольцо; сумочка — только на кошелёк.
         // Кожа и металл — материалы (слабый признак), поэтому связь бумажника с кошельком держится на смысловых
-        // «деньгах» и «карманном» предмете, а на кольцо — на золоте и блеске.
+        // «деньгах» и «карманном» предмете, а на кольцо — на ценности и блеске.
         var tags = new CardTags(new Dictionary<string, HashSet<string>>
         {
-            ["billfold"] = ["money", "leather", "metal", "gold", "pocket", "shiny"],
+            ["billfold"] = ["money", "leather", "metal", "valuable", "pocket", "shiny"],
             ["purse"] = ["purse", "money", "bag"],
-            ["ring"] = ["ring", "gold", "metal", "shiny"],
+            ["ring"] = ["ring", "valuable", "metal", "shiny"],
             ["wallet"] = ["wallet", "money", "leather", "pocket"],
         });
         var view = View(Phase.Mailbox, [nameof(SendLetter)], Role.Expert, truth: [1]) with

@@ -670,8 +670,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         if (said.Count < 4 && mind is not null && await QuestionToAsync(state, botId, mind, said.Count > 0 ? said[0].CreatedAt : null, ct) is { } question)
         {
             var asked = question.CardIds.Count > 0 ? (IReadOnlyList<string>)question.CardIds
-                : Speech.SpokenCards.Read(question.Text ?? "", state.Board, state.Hints,
-                    state.Letters.Where(l => l.From == question.AuthorId).Select(l => l.CardId).ToList(), tags).Cards;
+                : Speech.SpokenCards.ReadPublic(question.Text ?? "", state.Board, state.Hints, tags).Cards;
             if (BotPlayer.Answer(view, rng, tags, mind, mind.Names.GetValueOrDefault(question.AuthorId!.Value, "Игрок"), question.Text ?? "", asked) is { } answer)
             {
                 if (AccusationReader.Read(question.AuthorId!.Value, question.Text, mind.Names).Any(a => a.Target == botId))
@@ -855,10 +854,9 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
             // Человек написал словами, без карт («мотив пять — оно», «точно не клетка») — боты понимают так же, как речь.
             if (m.AuthorId != botId && cards.Count == 0 && !string.IsNullOrWhiteSpace(m.Text) && !botPlayers.Contains(m.AuthorId!.Value))
             {
-                var ownLetters = state.Letters.Where(l => l.From == m.AuthorId).Select(l => l.CardId).ToList();
                 // Вопрос («Пуаро, почему ты за способ пять?») — не своё мнение о карте.
                 var statements = string.Join(" ", System.Text.RegularExpressions.Regex.Split(m.Text, @"(?<=[.!?…])\s+").Where(x => !x.TrimEnd().EndsWith('?')));
-                var spoken = Speech.SpokenCards.Read(statements, state.Board, state.Hints, ownLetters, tags);
+                var spoken = Speech.SpokenCards.ReadPublic(statements, state.Board, state.Hints, tags);
                 (cards, notes) = (spoken.Cards, spoken.Notes);
             }
 

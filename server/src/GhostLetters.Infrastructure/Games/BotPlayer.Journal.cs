@@ -152,17 +152,22 @@ public static partial class BotPlayer
             // Мои исчезнувшие письма — против похожих карт.
             foreach (var letter in me.Letters.Where(l => l.Revealed == false))
             {
-                var support = OnBoard(c => -NegativeWeight * (Classic || !BotTuning.Current.VanishedFocus ? Sim(letter.CardId, c)
-                    : GhostCluePolicy.Read(Sim(letter.CardId, c), HintTop(letter.CardId), Focus)) * OutshoneFactor(letter.CardId, letter.Round, c));
+                var support = OnBoard(c => -NegativeWeight * VanishWeight(letter.CardId, c) * OutshoneFactor(letter.CardId, letter.Round, c));
                 if (support.Count == 0) continue;
                 var top = support.MinBy(x => x.Value).Key;
                 clues.Add(new Clue(ClueKind.MyVanished, me.Id, letter.Round, .8, support, none, $"моё письмо исчезло — {CardName(top)} вряд ли истина"));
             }
 
             // Чужие исчезнувшие письма — со слов автора, с доверием к нему.
-            var vanished = OnBoard(c => -NegativeWeight * OthersVanished(c));
-            if (vanished.Count > 0)
-                clues.Add(new Clue(ClueKind.TheirVanished, null, null, .5, vanished, none, "письма других, которые не открыли"));
+            if (!KillerTeam)
+                foreach (var report in ReportedMisses())
+                {
+                    var support = OnBoard(c => -NegativeWeight * BotTuning.Current.OthersVanished * Trust(report.Author)
+                        * VanishWeight(report.Card, c) * OutshoneFactor(report.Card, report.Round, c) * Recall(report.Round, .6));
+                    if (support.Count > 0)
+                        clues.Add(new Clue(ClueKind.TheirVanished, report.Author, report.Round, .5, support, none,
+                            $"исчезнувшее письмо {tags.NameOf(report.Card) ?? report.Card} указывало на {CardName(support.MinBy(x => x.Value).Key)}"));
+                }
 
             // Улики против игроков — по одной на вид, чтобы у каждой была своя причина.
             foreach (var p in view.Players.Where(p => !p.IsGhost && p.Id != me.Id))

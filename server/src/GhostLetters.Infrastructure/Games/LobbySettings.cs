@@ -100,10 +100,10 @@ public sealed record LobbySettings
 
     public PhaseTimers Timers { get; init; } = new();
 
-    /// <summary>Наборы карт; по умолчанию — все четыре (761 карта).</summary>
+    /// <summary>Наборы карт; по умолчанию — все пять (961 карта).</summary>
     public IReadOnlyList<string> CardSets { get; init; } = AllCardSets;
 
-    public static readonly IReadOnlyList<string> AllCardSets = ["original", "mailbox", "ritual", "mirror"];
+    public static readonly IReadOnlyList<string> AllCardSets = ["original", "mailbox", "ritual", "mirror", "zhizha"];
 
     /// <summary>Рейтинговая или обычная партия.</summary>
     public bool Ranked { get; init; } = true;

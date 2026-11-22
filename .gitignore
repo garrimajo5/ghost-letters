@@ -30,3 +30,7 @@ client/analyze.txt
 client/test-results.json
 client/.metadata
 client/pubspec.lock
+/.tmp/
+/Resource/_cards_build/
+/Resource/_preview/
+/client/analysis_options.yaml.bak

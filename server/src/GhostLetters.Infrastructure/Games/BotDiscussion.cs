@@ -99,14 +99,15 @@ public static class BotDiscussion
         }
         var suspicion = BotPlayer.DiscussionSuspicion(view, tags, mind, rng);
         if (string.IsNullOrWhiteSpace(suspicion)) suspicion = " По игрокам пока недостаточно оснований для уверенного обвинения.";
+        var reading = tags.AtBoard(view.Board, mind.Personality);
         string Argument(int row)
         {
             var card = view.Board[row].Cards[plan[row]];
             var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .OrderByDescending(h => tags.Similarity(h.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings)).FirstOrDefault();
-            if (hint.Id is null || tags.Similarity(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings) <= 0)
+                .OrderByDescending(h => reading.Similarity(h.Id, card)).FirstOrDefault();
+            if (hint.Id is null || reading.Similarity(hint.Id, card) <= 0)
                 return "связь с открытыми уликами слабая, пока предположение";
-            var reason = tags.Explain(hint.Id, card, mind.Personality.Attention, mind.Personality.Details, mind.Personality.SecondaryMeanings);
+            var reason = reading.Explain(hint.Id, card);
             return $"{HintRef(hint.Round, hint.Number)}: {(reason.Length <= 120 ? reason : "сходство изображений")}";
         }
         (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line(string text, int? focus = null) =>

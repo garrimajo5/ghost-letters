@@ -14,19 +14,22 @@ public sealed class BotMaterialAndVanishTests
     private static readonly Guid Me = Guid.NewGuid(), Ghost = Guid.NewGuid();
 
     [Fact]
-    public void SharedMaterialAlone_IsAWeakLink_AndIsExplainedAsMaterial()
+    public void OnlyProminentMaterialGivesAWeakLink()
     {
         var tags = CardTags.Parse("""
             {"knife":["knife","metal","sharp","weapon"],"sword":["sword","sharp","weapon","metal"],
-             "pan":["pan","metal"],"pot":["pot","metal"],"rose":["rose","flower"]}
+             "pan":["pan","metal"],"pot":["pot","metal"],"rose":["rose","flower"],"board":["plank","wood"],"twigs":["brushwood","wood"],
+             "leaf":["material-accent-gold"],"bar":["gold-bar","gold"]}
             """);
         var materialOnly = tags.Similarity("pan", "pot");
-        materialOnly.Should().BeGreaterThan(0, "общий материал — не ноль: человек и его заметит");
-        materialOnly.Should().BeLessThan(.2, "но «оба металлические» не связывает карты, как общий предмет");
+        materialOnly.Should().Be(0);
+        tags.Similarity("board", "twigs").Should().BeInRange(.01, .1);
+        tags.Similarity("leaf", "bar").Should().BeInRange(.01, .1);
         tags.Similarity("pan", "rose").Should().Be(0);
-        tags.Similarity("knife", "sword").Should().BeGreaterThan(.4, "общий предмет и назначение связывают сильно");
+        tags.Similarity("knife", "sword").Should().BeGreaterThanOrEqualTo(.4, "общий предмет и назначение связывают сильно");
 
-        tags.Explain("pan", "pot", (.8, .15, .05), 0).Should().Be("по материалу: металл");
+        tags.Explain("pan", "pot", (.8, .15, .05), 0).Should().Be("явной связи не вижу");
+        tags.Explain("board", "twigs", (.8, .15, .05), 0).Should().Be("по материалу: дерево как материал");
         tags.Explain("knife", "sword", (.8, .15, .05), 0).Should().Contain("по смыслу")
             .And.NotContain("по материалу", "материал вспоминают, только когда другой связи нет");
     }

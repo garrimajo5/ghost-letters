@@ -5,7 +5,7 @@ public sealed class CardSet
 {
     public Guid Id { get; set; }
 
-    /// <summary>original / mailbox / ritual / mirror или код своего набора.</summary>
+    /// <summary>original / mailbox / ritual / mirror / zhizha или код своего набора.</summary>
     public string Code { get; set; } = string.Empty;
 
     public string Title { get; set; } = string.Empty;

@@ -20,7 +20,8 @@ public static class GhostCluePolicy
         if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return new(0, 0, 0, false);
         var p = mind.Personality;
         var trueCards = view.Board.Select((r, i) => r.Cards[truth[i]]).ToHashSet();
-        double Match(string card) => tags.Similarity(letter, card, p.Attention, p.Details, p.SecondaryMeanings);
+        var reading = tags.AtBoard(view.Board, p);
+        double Match(string card) => reading.Similarity(letter, card);
         var yes = trueCards.Select(Match).DefaultIfEmpty().Max();
         var no = view.Board.SelectMany(r => r.Cards).Where(c => !trueCards.Contains(c)).Select(Match).DefaultIfEmpty().Max();
         // Only expressed public opinions, never somebody else's private plan.
@@ -56,9 +57,8 @@ public static class GhostCluePolicy
         var p = mind.Personality;
         var candidates = cards.Distinct().Select(c => (Card: c, Value: Assess(view, tags, mind, c))).ToList();
         if (candidates.Count == 0) return [];
-        var memo = new Dictionary<(string, string), double>();
-        double Sim(string a, string b) => memo.TryGetValue((a, b), out var v) ? v
-            : memo[(a, b)] = tuning.GhostTableDefault ? tags.Similarity(a, b) : tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
+        var reading = tags.AtBoard(view.Board, tuning.GhostTableDefault ? null : p);
+        double Sim(string a, string b) => reading.Similarity(a, b);
         var shown = view.Hints.SelectMany(h => h.Cards).ToList();
         var all = candidates.Select(c => c.Card).ToList();
         // Как широко стол читает подсказку: строгий стол «объясняет» письмо одной картой, широкий — несколькими.
@@ -119,8 +119,8 @@ public static class GhostCluePolicy
     {
         if (cards.Count == 0) return [];
         var tuning = BotTuning.Current;
-        var memo = new Dictionary<(string, string), double>();
-        double Sim(string a, string b) => memo.TryGetValue((a, b), out var v) ? v : memo[(a, b)] = tags.Similarity(a, b);
+        var reading = tags.AtBoard(view.Board);
+        double Sim(string a, string b) => reading.Similarity(a, b);
         var breadth = Math.Clamp(mind.TableBreadth, 1, 4);
         var focus = 4 + 8 * (1 - (breadth - 1) / 3);
         var table = TableModel.Uniform(view.Board.Select(r => (IReadOnlyList<string>)r.Cards).ToList(), Sim, focus);

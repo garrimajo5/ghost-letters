@@ -37,7 +37,8 @@ public static class BotTable
         if (view.Me is not { } me || me.Role == Role.Ghost || view.Table is not { CanPost: true } table) return null;
         if (plan.Count < view.Board.Count) return null;
         var p = mind?.Personality ?? BotPersonality.Default;
-        double Sim(string a, string b) => tags.Similarity(a, b, p.Attention, p.Details, p.SecondaryMeanings);
+        var reading = tags.AtBoard(view.Board, p);
+        double Sim(string a, string b) => reading.Similarity(a, b);
         string Name(Guid id) => mind?.Names.GetValueOrDefault(id) ?? "Игрок";
         // Имя без «Бот »: «Пуаро: р.1 — это мотив 2. Согласен.»
         string Call(Guid id) => BotNames.Bare(Name(id));
@@ -104,7 +105,7 @@ public static class BotTable
             var (hint, target, _) = best;
             if (last is not null && last.Notes.Contains("смотрю") && last.Cards.SequenceEqual([hint, target]))
             {
-                var reason = tags.ReasonChip(hint, target, p.Attention, p.SecondaryMeanings);
+                var reason = reading.ReasonChip(hint, target);
                 var why = reason switch { "предмет" => ": общий предмет", "форма" => ": похожая форма", "цвет" => ": тот же цвет", _ => "" };
                 return new($"Подсказка {Source(TableSourceKind.Hint, hint)} — {Where(target)}{why}. Тяну нить «за».",
                     [hint, target], ["улика", "нить"],

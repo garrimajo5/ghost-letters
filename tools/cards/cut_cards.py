@@ -156,7 +156,18 @@ def main(argv: list[str] | None = None) -> int:
                       "source": {"sheet": card.sheet, "col": card.col, "row": card.row}})
 
     manifest = split_by_sets(cards, load_set_map(args.sets))
-    with open(os.path.join(args.out, "cards.json"), "w", encoding="utf-8") as f:
+    manifest_path = os.path.join(args.out, "cards.json")
+    if os.path.isfile(manifest_path):
+        # Expansion decks have their own installer and do not originate on these sprite sheets.
+        with open(manifest_path, encoding="utf-8") as f:
+            existing = json.load(f)
+        by_code = {s["code"]: s for s in manifest["sets"]}
+        for old in existing["sets"]:
+            extra = [c for c in old["cards"] if not c["id"].startswith("orig_")]
+            if extra:
+                by_code.setdefault(old["code"], {**old, "cards": []})["cards"].extend(extra)
+        manifest["sets"] = list(by_code.values())
+    with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=1)
 
     print(f"ячеек {stats['cells']}, пустых {stats['empty']}, рубашек {stats['backs']}, "
@@ -169,6 +180,7 @@ SET_TITLES = {
     "mailbox": "Почтовый ящик",
     "ritual": "Тайный ритуал",
     "mirror": "Зеркало истины",
+    "zhizha": "Жижа",
 }
 
 

@@ -18,7 +18,7 @@ public static class GhostDebrief
     {
         if (state.Result is null || state.Truth is null) return [];
         var view = GameProjection.For(state, state.Ghost.Id);
-        var p = mind.Personality;
+        var reading = tags.AtBoard(view.Board, mind.Personality);
         var truth = view.Board.Select((r, i) => r.Cards[state.Truth[i]]).ToList();
         var letters = state.Hints.Where(h => h.Round == 0).SelectMany(h => h.Cards)
             .Select(c => (Card: c, Round: 0, Revealed: true, From: (Guid?)null))
@@ -43,9 +43,9 @@ public static class GhostDebrief
         {
             var rated = round.Select(l =>
             {
-                var target = truth.OrderByDescending(c => tags.Similarity(l.Card, c, p.Attention, p.Details, p.SecondaryMeanings)).First();
+                var target = truth.OrderByDescending(c => reading.Similarity(l.Card, c)).First();
                 return (Letter: l, Target: target, Value: GhostCluePolicy.Assess(view, tags, mind, l.Card),
-                    Reason: Short(tags.Explain(l.Card, target, p.Attention, p.Details, p.SecondaryMeanings)));
+                    Reason: Short(reading.Explain(l.Card, target)));
             }).ToList();
             var parts = new List<string>();
             var cards = new List<string>();
@@ -78,7 +78,7 @@ public static class GhostDebrief
                 {
                     var why = x.Value.TrueMatch < .08 ? "связь с истиной слабая"
                         : x.Value.FalseMatch >= x.Value.TrueMatch ? "похоже и на ложную карту, открывать — риск"
-                        : p.Compromise < .4 ? "можно было открыть, но я перестраховался" : "почти подошло";
+                        : mind.Personality.Compromise < .4 ? "можно было открыть, но я перестраховался" : "почти подошло";
                     var whose = Name(x.Letter.From);
                     parts.Add((whose == "моё" ? "Своё письмо оставил закрытым" : $"{whose} — оставил закрытым") +
                         $": {why}" + (x.Reason.Length > 0 && x.Value.TrueMatch >= .08 ? $" ({x.Reason})." : "."));

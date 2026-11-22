@@ -45,9 +45,9 @@ String? _savedClaim(TestApp app) {
 }
 
 void main() {
-  test('каталог карт читается из манифеста: четыре набора', () {
+  test('каталог карт читается из манифеста: пять наборов', () {
     final sets = parseCardCatalog(File('assets/cards/cards.json').readAsStringSync());
-    expect(sets.map((s) => s.code), containsAll(['original', 'mailbox', 'ritual', 'mirror']));
+    expect(sets.map((s) => s.code), containsAll(['original', 'mailbox', 'ritual', 'mirror', 'zhizha']));
     expect(sets.every((s) => s.cards.isNotEmpty), isTrue);
   });
 

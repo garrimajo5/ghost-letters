@@ -42,6 +42,22 @@ public sealed class SemanticTableTests
         tags.Explain("clue", "background", (.7,.2,.1), 1).Should().Be("явной связи не вижу");
     }
 
+    [Theory]
+    [InlineData("meaning")]
+    [InlineData("shape")]
+    [InlineData("detail")]
+    public void DominantColourIsOnlyReadWhenThereIsNoOtherExplanationOnTheBoard(string competing)
+    {
+        var tags = Tags.WithDetails("""{"clue":[{"tag":"flower","weight":0.8,"label":"роза"}],"detail":[{"tag":"flower","weight":0.7,"label":"цветок"}]}""");
+        var p = new BotPersonality { Meaning = 0, Color = 1, Details = 1 };
+        CardTags.BoardReading Read(params string[] cards) => tags.AtBoard([new BoardRowView(Category.Place, cards)], p);
+        Read("background", "colour").Similarity("clue", "colour").Should().BeGreaterThan(0);
+        var board = Read("colour", competing);
+        board.Similarity("clue", "colour").Should().Be(0);
+        board.Explain("clue", "colour").Should().Be("явной связи не вижу");
+        board.ReasonChip("clue", "colour").Should().BeNull();
+    }
+
     [Fact]
     public void HumanLinksPreserveSourceAndExclusion_WithoutVotingForSource()
     {

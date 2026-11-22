@@ -163,6 +163,7 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
             var view = new PlayerView(Guid.NewGuid(), 1, Phase.Discussion, round, Math.Max(round, request.Rounds), DiscussionMode.FreeChat,
                 board, hints, 0, Players(Role.Detective), new MeView(Me, Role.Detective, [], []), null, 0, null, null, null, null, [], [], null);
             var mind = BotService.BuildMind(Me, p, new Dictionary<Guid, PlayerHistory>(), [], boardSet, Names());
+            var reading = tags.AtBoard(board, p);
             var journal = BotPlayer.Journal(view, tags, mind)!;
             var theory = BotPlayer.Theory(view, tags, mind);
             var votes = BotPlayer.Plan(view, tags, mind, new Random(1));
@@ -172,8 +173,8 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
                 var cards = r.Cards.Select(c => new LabCard(c, journal.Truth.GetValueOrDefault(c),
                     theory?.Before.GetValueOrDefault(c) ?? journal.Truth.GetValueOrDefault(c), theory?.Truth.GetValueOrDefault(c),
                     journal.Evidence.GetValueOrDefault(c),
-                    hintCards.Select(h => new LabLink(h, tags.Similarity(h, c, p.Attention, p.Details, p.SecondaryMeanings),
-                            tags.Explain(h, c, p.Attention, p.Details, p.SecondaryMeanings)))
+                    hintCards.Select(h => new LabLink(h, reading.Similarity(h, c),
+                            reading.Explain(h, c)))
                         .Where(l => l.Similarity >= .05).OrderByDescending(l => l.Similarity).Take(3).ToList())).ToList();
                 return new LabRowThought(r.Category.ToString(), votes[i], ok, cards);
             }).ToList();

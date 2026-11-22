@@ -164,7 +164,7 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
         var tags = value.Tags.Select(Tag).ToList();
         var meanings = Weighted(value.Meanings); var details = Weighted(value.Details);
         if (tags.Any(t => CardTags.Group(t) == 0) || meanings.Any(d => CardTags.Group(d.Tag) != 0))
-            throw AppException.Validation("Цвет и shape-* укажите в метках; предметы и темы — в смыслах.");
+            throw AppException.Validation("Цвет, shape-* и material-accent-* укажите в метках. Предметы и темы укажите в смыслах.");
         var all = tags.Concat(meanings.Select(d => d.Tag)).Concat(details.Select(d => d.Tag)).ToList();
         if (all.Distinct().Count() != all.Count) throw AppException.Validation("Не повторяйте один ключ в разных признаках карты.");
         var names = CardTags.CleanNames(value.Names);

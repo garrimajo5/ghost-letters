@@ -500,6 +500,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 String _setName(String code) => switch (code) {
       'original' => 'Оригинальный',
       'mailbox' => 'Почтовый ящик',
+      'zhizha' => 'Жижа',
       'ritual' => 'Тайный ритуал',
       'mirror' => 'Зеркало истины',
       _ => code,

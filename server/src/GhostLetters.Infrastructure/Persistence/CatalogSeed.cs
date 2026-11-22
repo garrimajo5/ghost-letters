@@ -13,6 +13,7 @@ public static class CatalogSeed
         new() { Id = new Guid("6f1d0c2e-0001-4a11-9a00-000000000002"), Code = "mailbox", Title = "Почтовый ящик", IsBuiltin = true },
         new() { Id = new Guid("6f1d0c2e-0001-4a11-9a00-000000000003"), Code = "ritual", Title = "Тайный ритуал", IsBuiltin = true },
         new() { Id = new Guid("6f1d0c2e-0001-4a11-9a00-000000000004"), Code = "mirror", Title = "Зеркало истины", IsBuiltin = true },
+        new() { Id = new Guid("6f1d0c2e-0001-4a11-9a00-000000000005"), Code = "zhizha", Title = "Жижа", IsBuiltin = true },
     ];
 
     public static readonly Nomination[] Nominations =

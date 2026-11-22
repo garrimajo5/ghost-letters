@@ -74,7 +74,7 @@ orig_0072;pastry-brush;hand-tool;plastic soft cook kitchen;handle-plus-head;whit
 orig_0073;mask;costume;plastic hard;humanoid;white purple;theater
 orig_0074;mummy;body;dry fabric lie-on;humanoid;brown;death:0.9
 orig_0075;well;water-source;stone open-top;container;gray;village
-orig_0076;spider;insect;climb;animal;brown;fear
+orig_0076;spider;arachnid;climb;animal;brown;fear
 orig_0077;cocktail;beverage;glass cold drinking-straw open-top;container cylinder;brown;party
 orig_0078;tent;shelter;fabric soft;cone;gray;camping
 orig_0079;crown;jewelry;metal royal;ring;yellow;king
@@ -211,7 +211,7 @@ orig_0209;videotape;recording;plastic;box;black;cinema:0.9
 orig_0210;dart;blade;throw sport;stick;green;accuracy
 orig_0211;sextant;measuring;metal sea;flat;yellow;navigation
 orig_0212;ghost-trap;enclosure;metal electric;box;black;ghost
-orig_0213;floppy-disk;recording;plastic;flat;black;retro
+orig_0213;floppy-disk;data-storage;plastic;flat;black;retro
 orig_0214;toilet;sanitary;ceramic sit-on toilet open-top;container;white;housework
 orig_0215;pet-bowl;utensil;metal pet open-top;container;gray;feed
 orig_0216;meteorite;stone;space;box;gray;astronomy
@@ -240,7 +240,7 @@ orig_0238;chess-knight;board-game;wood;animal;yellow;strategy
 orig_0239;kettlebell;sport-weight;metal;ball;black;strength
 orig_0240;step-stool;furniture;wood climb;box;brown;repair
 orig_0241;shovel;hand-tool;metal wood dig garden;handle-plus-head;black;work
-orig_0242;brazier;appliance;metal cook heat hot open-top;box;gray;barbecue
+orig_0242;brazier;fuel-heater;metal cook open-top;box;gray;barbecue
 orig_0243;pocket-watch;timer;metal hold-in-hand;ring chain;yellow;punctuality
 orig_0244;badge;signage;plastic wear office;flat;black;identity
 orig_0245;repellent;fluid;plastic spray;container cylinder;yellow;insect
@@ -260,7 +260,7 @@ orig_0258;evacuation-plan;book;safety;flat;white;escape
 orig_0259;bow-tie;clothing;fabric tie;pair;gray;formal
 orig_0260;toothpaste;cleaning;sticky bathroom;container;white;freshness
 orig_0261;binoculars;optics;metal hold-in-hand;pair cylinder;black;exploration
-orig_0262;money-envelope;money-item;paper;flat;yellow;payment
+orig_0262;money-envelope;paper-money;paper;flat;yellow;payment
 orig_0263;camera;optics;metal hold-in-hand;box;gray;memory
 orig_0264;car-key;locking;metal car hold-in-hand;stick;black;travel
 orig_0265;vitruvian-man;picture;anatomy;flat;yellow;science
@@ -300,7 +300,7 @@ orig_0298;angel;sculpture;stone religion;humanoid;white;faith
 orig_0299;vinyl-record;recording;plastic;flat;black;music:0.9
 orig_0300;dove;bird;letter;animal;white;peace
 orig_0301;milk;beverage;;flat;white;farm
-orig_0302;hard-drive;recording;metal;box;gray;computer
+orig_0302;hard-drive;data-storage;metal;box;gray;computer
 orig_0303;leaf;plant;forest soft;flat;green;tropics
 orig_0304;lips;body;soft kiss;flat;red;love
 orig_0305;sand;granular;beach;cone;brown;desert
@@ -344,7 +344,7 @@ orig_0342;throne;seat;metal hard royal;box;gray;king
 orig_0343;castle;building;stone heavy;box;black;horror
 orig_0344;can-opener;hand-tool;metal wood cut open-close kitchen;handle-plus-head;brown;cook-person
 orig_0345;skull;body;bone hard crown;humanoid;white;death:0.9
-orig_0346;usb-drive;recording;plastic hold-in-hand;box;yellow;computer
+orig_0346;usb-drive;data-storage;plastic hold-in-hand;box;yellow;computer
 orig_0347;scope;optics;metal weapon; cylinder;gray;accuracy
 orig_0348;molotov;fluid;glass burn throw weapon;container;brown;violence
 orig_0349;anchor;hand-tool;metal heavy sea pull;cross;yellow;ship
@@ -373,11 +373,11 @@ orig_0371;raven;sculpture;bird hard;animal;black;omen
 orig_0372;film-reel;recording;metal;ring;gray;cinema:0.9
 orig_0373;smoking-pipe;smoking;wood;handle-plus-head;brown;addiction
 orig_0374;doll;doll;fabric soft;humanoid;brown;childhood
-orig_0375;printer;appliance;paper office print;box;white;documents
+orig_0375;printer;electrical-tool;paper office print;box;white;documents
 orig_0376;dress;clothing;fabric;humanoid;black;party
 orig_0377;calendar;book;time count;flat;white;planning
 orig_0378;bastet;sculpture;metal cat religion;animal;black;egypt
-orig_0379;trimmer;appliance;metal cut garden hold-in-hand;stick;gray;work
+orig_0379;trimmer;electrical-tool;metal cut garden hold-in-hand;stick;gray;work
 orig_0380;toothbrush;cleaning;plastic bathroom;stick;blue;freshness
 orig_0381;peephole;optics;glass door;ring;gray;security
 orig_0382;axe;blade;wood swing hit;handle-plus-head;brown;woodcutting
@@ -387,7 +387,7 @@ orig_0385;crystal;stone;transparent sharp;cone;white;purity
 orig_0386;cheese;meal;soft;cone;yellow;milk
 orig_0387;lorgnette;eyewear;metal hold-in-hand;pair ring;yellow;theater
 orig_0388;lie-detector;measuring;plastic paper police;box;white;truth
-orig_0389;printer;appliance;metal plastic print;box;gray;manufacture
+orig_0389;printer;electrical-tool;metal plastic print;box;gray;manufacture
 orig_0390;menorah;lamp;metal religion;stick;yellow;judaism
 orig_0391;fortune-cookie;sweet;hard paper;ball;yellow;divination
 orig_0392;wheelchair;seat;metal ride push hospital;box;green;care
@@ -426,7 +426,7 @@ orig_0424;fly-agaric;fungus;poison;handle-plus-head;red white;danger
 orig_0425;furry-handcuffs;locking;metal soft fur;pair ring;pink;intimacy
 orig_0426;volleyball;ball;rubber elastic throw hit;ball;white;friendship
 orig_0427;flamingo-ring;water-toy;bird inflatable;animal ring;pink;childhood:0.9 summer:0.5
-orig_0428;fan;appliance;metal plastic cool blow;ring;white;summer
+orig_0428;fan;electrical-tool;metal plastic cool blow;ring;white;summer
 orig_0429;backgammon;board-game;wood;box;brown;strategy
 orig_0430;portrait;picture;man;flat;brown;history
 orig_0431;sneaker;footwear;fabric sport;pair;green red;youth
@@ -440,7 +440,7 @@ orig_0438;skull;body;bone hard;ball;white;death:0.9
 orig_0439;vinyl-record;recording;plastic;flat;black;music:0.9
 orig_0440;finger-ring;jewelry;metal;ring chain;yellow;fantasy
 orig_0441;rune-stone;stone;magic light;box;gray;divination
-orig_0442;fireplace;appliance;stone heat hot burn;container;black;comfort
+orig_0442;fireplace;fuel-heater;stone heat hot burn;container;black;comfort
 orig_0443;easter-cake;sweet;soft; cylinder;brown;easter
 orig_0444;walnut;plant-food;hard;ball;brown;autumn
 orig_0445;chalice;vessel;metal religion open-top;container;yellow;ritual
@@ -461,7 +461,7 @@ orig_0459;madonna;sculpture;ceramic religion;humanoid;white;faith
 orig_0460;staple-gun;hand-tool;metal hard push;handle-plus-head;blue;repair
 orig_0461;thermometer;measuring;glass fragile liquid hospital;stick;gray;danger
 orig_0462;felt-pen;writing-tool;plastic draw;stick;red green;child
-orig_0463;scorpion;insect;hard sharp;animal;yellow;poison
+orig_0463;scorpion;jewelry;metal hard;animal;yellow;poison:0.3
 orig_0464;lectern;furniture;wood read;box;brown;speech
 orig_0465;test-tube;fluid;glass transparent lab blood fragile hard;container cylinder;red;chemistry:0.9 experiment:0.9 poison:0.5
 orig_0466;signpost;signage;wood street;cross;green;travel
@@ -482,7 +482,7 @@ orig_0480;nuclear-briefcase;electric;metal soldier;box;black;war:0.9
 orig_0481;shopping-cart;carry;metal hard push shopping;container;gray;supermarket
 orig_0482;phone-booth;building;glass metal;box;red;communication:0.9
 orig_0483;ghost-detector;measuring;plastic hold-in-hand;stick;black;ghost
-orig_0484;compressor;appliance;metal blow gas; cylinder;black;repair
+orig_0484;compressor;electrical-tool;metal blow gas; cylinder;black;repair
 orig_0485;crossbow;gun;metal elastic;cross;black;hunting
 orig_0486;cassette;recording;plastic;box;black;retro
 orig_0487;chainsaw;blade;metal woodcutting;stick;orange;danger
@@ -548,7 +548,7 @@ orig_0546;straight-razor;blade;metal bathroom open-close;stick;gray;shave
 orig_0547;lantern;lamp;metal glass;container;yellow;east
 orig_0548;collar;clothing;leather sharp pet;ring;black;control
 orig_0549;incense;fuel;wood smell religion;stick;brown;meditation
-orig_0550;washing-machine;appliance;metal wash water;box;white;housework
+orig_0550;washing-machine;electrical-tool;metal wash water;box;white;housework
 orig_0551;book;book;school;box;brown;knowledge
 orig_0552;clothes-rack;furniture;metal dry clothes;net;white;housework
 orig_0553;television;screen;glass wood;box;brown;news
@@ -596,8 +596,8 @@ orig_0594;megaphone;instrument;plastic hold-in-hand speak;cone;green;protest
 orig_0595;sparkler;fuel;metal light party;stick;yellow;celebration
 orig_0596;traffic-cone;signage;plastic hard street;cone;orange;danger
 orig_0597;ice-lolly;sweet;cold soft chocolate;stick;brown;summer
-orig_0598;sewing-machine;appliance;metal fabric sew;box;white;craft
-orig_0599;banknote;money-item;paper; cylinder;green;wealth
+orig_0598;sewing-machine;electrical-tool;metal fabric sew;box;white;craft
+orig_0599;banknote;paper-money;paper; cylinder;green;wealth
 orig_0600;anatomy-book;book;medical school;box;white;doctor
 orig_0601;safe;enclosure;metal heavy lock;box;gray;security
 orig_0602;butterfly;insect;fly soft;animal;white;freedom
@@ -612,7 +612,7 @@ orig_0610;nougat;sweet;sticky soft;box;brown;dessert
 orig_0611;pencil;writing-tool;wood draw measure;stick;orange;school
 orig_0612;prescription;book;medical hospital;flat;white;doctor
 orig_0613;taxi-sign;signage;plastic light car;box;orange;travel
-orig_0614;ticket;book;transport;flat;white;travel
+orig_0614;ticket;book;music concert;flat;white;celebration
 orig_0615;suitcase;carry;plastic hard;box;blue;travel
 orig_0616;button;fastener;plastic hard;flat;gray;sew
 orig_0617;bandage;medical-tool;fabric soft tie;spiral;white;care
@@ -622,7 +622,7 @@ orig_0620;veil;clothing;fabric transparent;net;white;wedding
 orig_0621;board-game;board-game;paper;flat;blue;strategy
 orig_0622;candle;lamp;wax burn hot; cylinder;yellow;ritual
 orig_0623;keychain;jewelry;metal skull;chain;gray;death:0.9
-orig_0624;stove;appliance;metal heat hot burn; cylinder;gray;winter
+orig_0624;stove;fuel-heater;metal heat hot burn; cylinder;gray;winter
 orig_0625;projector;screen;plastic light;box;white;cinema:0.9
 orig_0626;jacket;clothing;fabric soldier;humanoid;green;winter
 orig_0627;sprout;plant-food;soft grow;ball;green;spring
@@ -675,10 +675,10 @@ orig_0673;notebook;book;write school;flat;white;learning
 orig_0674;knife;blade;metal kitchen;stick;gray;cook-person
 orig_0675;postage-stamp;signage;paper sticky;flat;white;communication:0.9
 orig_0676;paper-towel;cleaning;paper soft; cylinder;white;housework
-orig_0677;robot-vacuum;appliance;plastic clean;flat;black;housework
+orig_0677;robot-vacuum;electrical-tool;plastic clean;flat;black;housework
 orig_0678;sushi;meal;soft fish;box;orange;japan
 orig_0679;orange;plant-food;soft liquid;ball;orange;vitamin
-orig_0680;stun-gun;gun;plastic electric;stick;black;self-defense
+orig_0680;stun-gun;hand-tool;plastic electric weapon;stick;black;self-defense
 orig_0681;saucepan;vessel;metal cook heat hot;container;red;cook-person
 orig_0682;pine;plant;wood forest sharp;stick;green;winter
 orig_0683;pipette;medical-tool;glass fragile liquid pour open-top;stick;white;chemistry:0.9
@@ -687,14 +687,14 @@ orig_0685;apple;plant-food;hard sweet;ball;red;health
 orig_0686;measuring-tape;measuring;fabric soft;spiral;yellow;sew
 orig_0687;coral;marine;hard;net;orange;reef
 orig_0688;bubble-wrap;craft;plastic soft transparent push;spiral;white;packaging
-orig_0689;iron;appliance;metal heavy heat hold-in-hand;box;gray;housework
+orig_0689;iron;fuel-heater;metal heavy hold-in-hand clothes;box;gray;housework
 orig_0690;christmas-ornament;ornament;glass fragile;humanoid;red;christmas:0.9
 orig_0691;hanger;hand-tool;wood hard clothes;flat;brown;wardrobe
 orig_0692;blackboard;writing-surface;wood hard school;flat;green;teaching
 orig_0693;safe;enclosure;metal heavy lock;box;gray;security
 orig_0694;cotton-swab;cleaning;plastic soft bathroom;stick;white;care
 orig_0695;scratching-post;furniture;fabric soft cat scratch; cylinder;brown;pet
-orig_0696;shredder;appliance;plastic cut paper office;box;black;secret
+orig_0696;shredder;electrical-tool;plastic cut paper office;box;black;secret
 orig_0697;bracelet;jewelry;fabric soft;ring;yellow;friendship
 orig_0698;ice;frozen;transparent;box;white;winter
 orig_0699;fish-skeleton;body;bone hard sharp;animal;white;death:0.9
@@ -716,7 +716,7 @@ orig_0714;clothespin;fastener;wood hard push clothes;stick;brown;housework
 orig_0715;nest;enclosure;wood bird egg soft;container;brown;family
 orig_0716;revolver;gun;metal;handle-plus-head;gray;crime
 orig_0717;jam;sweet;sticky liquid glass;container;red;summer
-orig_0718;cradle;bedding;wood child rock;box;yellow;family
+orig_0718;cradle;work-platform;climb barrier;box;orange;building:0.9
 orig_0719;snowman;frozen;play child;humanoid;white;winter
 orig_0720;condom;medical-tool;rubber elastic transparent;ring;white;intimacy
 orig_0721;mop;cleaning;fabric wood wash water;handle-plus-head;white;housework

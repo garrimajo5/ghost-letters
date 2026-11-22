@@ -57,6 +57,32 @@ public static partial class SpokenCards
         "кидал", "кидала", "отправлял", "отправляла", "отправил", "отправила", "согласен", "согласна", "нет", "да", "или",
     ];
 
+    private sealed record LetterName(string Card, string[] Stems);
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<CardTags, LetterName[]> LetterNames = new();
+
+    // The listener may recognize any named letter, including a bluff. Never restrict the
+    // candidate list to letters the speaker actually sent. Ambiguous names stay unresolved.
+    public static Result ReadPublic(string text, IReadOnlyList<BoardRow> board, IReadOnlyList<HintGroup> hints, CardTags tags)
+    {
+        var words = Words().Matches(text.ToLowerInvariant().Replace('ё', 'е')).Select(m => m.Value).ToArray();
+        var reported = new HashSet<string>();
+        for (var i = 0; i < words.Length; i++)
+        {
+            if (!Claims.Contains(words[i]) || i > 0 && Negations.Contains(words[i - 1])) continue;
+            var start = i + 1;
+            while (start < words.Length && words[start] is "вот" or "эту" or "карту") start++;
+            var names = LetterNames.GetValue(tags, t => t.NamedCards.SelectMany(c => t.NamesOf(c)
+                .Select(n => new LetterName(c, Words().Matches(n.ToLowerInvariant().Replace('ё', 'е'))
+                    .Select(w => Stem(w.Value)).ToArray()))).Where(n => n.Stems.Length > 0 && n.Stems[0].Length >= 3).ToArray());
+            var matches = names.Where(n => n.Stems.Length <= words.Length - start &&
+                    n.Stems.Select((stem, k) => words[start + k].StartsWith(stem, StringComparison.Ordinal)).All(x => x))
+                .GroupBy(n => n.Stems.Length).OrderByDescending(g => g.Key).FirstOrDefault();
+            var ids = matches?.Select(n => n.Card).Distinct().Take(2).ToArray();
+            if (ids is { Length: 1 }) reported.Add(ids[0]);
+        }
+        return Read(text, board, hints, reported.ToList(), tags);
+    }
+
     /// <param name="aliases">Как этот игрок называл карты раньше: фраза (нижний регистр) → карта.</param>
     public static Result Read(string text, IReadOnlyList<BoardRow> board,
         IReadOnlyList<HintGroup> hints, IReadOnlyList<string> ownLetters, CardTags tags,
@@ -111,10 +137,16 @@ public static partial class SpokenCards
 
         var cards = new List<string>();
         var notes = new List<string>();
-        foreach (var (at, _, card, own) in found.OrderBy(f => f.At))
+        foreach (var (at, _, card, own) in found.OrderBy(f => f.At).ThenByDescending(f => f.Own))
         {
             if (cards.Contains(card)) continue;
             var note = NoteAt(at, own);
+            if (!own && note == "думаю, эта" && words.Skip(Math.Max(0, at - 2)).Take(Math.Min(2, at))
+                .Any(w => w is "проверял" or "проверяла" or "проверил" or "проверила"))
+            {
+                var source = notes.FindLastIndex(n => n == "кидал эту");
+                note = source < 0 ? "проверял" : $"проверял:{source}";
+            }
             // Своё письмо, названое без «кидал», — не версия о поле: пропускаем.
             if (own && note != "кидал эту" && !board.Any(r => r.Cards.Contains(card))) continue;
             if (note == "кидал эту" && !ownLetters.Contains(card)) note = "думаю, эта";

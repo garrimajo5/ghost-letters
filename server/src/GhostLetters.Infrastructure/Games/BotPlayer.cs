@@ -149,7 +149,7 @@ public static partial class BotPlayer
     private sealed partial class Brain(PlayerView view, MeView me, Random rng, CardTags tags, BotMind? mind)
     {
         // One immutable role projection per decision: never share scores between players or turns.
-        private readonly Dictionary<(string, string), double> _similarities = new();
+        private readonly CardTags.BoardReading _reading = tags.AtBoard(view.Board, mind?.Personality);
         private readonly Dictionary<string, double> _evidence = new();
         private readonly Dictionary<string, Dictionary<string, int>> _ranks = new();
         private readonly Dictionary<(int Row, int Column), ulong> _cardPreferences = new();
@@ -161,11 +161,7 @@ public static partial class BotPlayer
         private BotPersonality P => mind?.Personality ?? BotPersonality.Default;
 
         /// <summary>Похожесть карт глазами этого бота: внимание к смыслу, форме и цвету.</summary>
-        private double Sim(string a, string b)
-        {
-            if (_similarities.TryGetValue((a, b), out var score)) return score;
-            return _similarities[(a, b)] = Classic ? tags.Similarity(a, b) : tags.Similarity(a, b, P.Attention, P.Details, P.SecondaryMeanings);
-        }
+        private double Sim(string a, string b) => _reading.Similarity(a, b);
 
         /// <summary>Насколько «не открыли моё письмо» отталкивает от похожих карт.</summary>
         private double NegativeWeight => Classic ? 0.6 : 1.6 * P.Negative;
@@ -229,8 +225,8 @@ public static partial class BotPlayer
             var sum = 0.0;
             foreach (var o in mind.Opinions.Where(o => o.Author == id))
             {
-                var rejected = o.Strength < 0 ||
-                    (o.IsCheck && o.SourceCard is { } src && !shown.Contains(src) && !view.Board.Any(r => r.Cards.Contains(src)));
+                var rejected = !o.IsCheck && o.Strength < 0 ||
+                    (!BotTuning.Current.ClaimLogicBlack && o.IsCheck && o.SourceCard is { } src && !shown.Contains(src) && !view.Board.Any(r => r.Cards.Contains(src)));
                 if (!rejected) continue;
                 // Подсказка указывает именно на эту карту: она — единственное явное лучшее совпадение, а не одна из равных.
                 var support = shown.Where(h => h != o.SourceCard && Rank(h, o.CardId) == 0 && Sim(h, o.CardId) - view.Board.SelectMany(r => r.Cards)
@@ -472,17 +468,17 @@ public static partial class BotPlayer
         /// Два игрока назвали своим одно письмо — один из них точно врёт: подозрение обоим. Если назвали моё письмо —
         /// врёт он наверняка.
         /// </summary>
-        private bool RepeatedClaim(Guid id) => !Classic && mind is not null && mind.ClaimList.Where(c => c.Author == id)
+        private bool RepeatedClaim(Guid id) => !Classic && PublicReports().Where(c => c.Author == id)
             .GroupBy(c => c.Card).Any(g => g.Select(c => c.Round).Distinct().Count() > 1);
 
         private double ClaimConflict(Guid id)
         {
             if (Classic || mind is null) return 0;
-            var theirs = mind.ClaimList.Where(c => c.Author == id).ToList();
+            var theirs = PublicReports().Where(c => c.Author == id).ToList();
             if (theirs.Any(c => me.Letters.Any(l => l.CardId == c.Card && l.Round == c.Round))) return 3;
             // Одну и ту же карту назвал своим письмом в разных раундах — так не бывает: брошенное письмо в руку не возвращается.
             if (RepeatedClaim(id)) return 3;
-            return theirs.Any(c => mind.ClaimList.Any(o => o.Card == c.Card && o.Author != id)) ? 1.2 : 0;
+            return theirs.Any(c => PublicReports().Any(o => o.Card == c.Card && o.Author != id)) ? 1.2 : 0;
         }
 
         private string CardName(string card)
@@ -494,9 +490,9 @@ public static partial class BotPlayer
             return $"{category} {c + 1}";
         }
 
-        private string Connection(string from, string to) => tags.Explain(from, to, P.Attention, Classic ? 0 : P.Details, P.SecondaryMeanings);
+        private string Connection(string from, string to) => _reading.Explain(from, to);
 
-        private string BehaviourReason(Guid id) => ChatContrarian(id) > 0
+        private string BehaviourReason(Guid id) => ReportSuspicion(id) > 0 ? RoleReason(id) : ChatContrarian(id) > 0
             ? "его версия хуже объясняет открытые подсказки, чем соседние карты"
             : Contrarian(id) > 0 ? "его голоса расходятся с моим чтением подсказок"
             : "пока опираюсь на подозрения стола и прошлые встречи, прямой улики нет";
@@ -505,10 +501,11 @@ public static partial class BotPlayer
         {
             if (Classic) return null;
             var candidates = view.Players.Where(p => p.Id != me.Id && !p.IsGhost).ToList();
+            double SuspectScore(Guid id) => Suspicion(id) + ReportSuspicion(id);
             var ally = candidates.Where(p => Known(p.Id) is not { } role || !role.IsKillerTeam())
                 .Select(p => (Player: p, Opinion: mind!.Opinions.FirstOrDefault(o => o.Author == p.Id && o.Public && !o.IsCheck &&
                     o.Strength > 0 && Evidence(o.CardId) > 0.1)))
-                .Where(x => x.Opinion is not null && ChatContrarian(x.Player.Id) == 0 && Suspicion(x.Player.Id) < 0.6)
+                .Where(x => x.Opinion is not null && ChatContrarian(x.Player.Id) == 0 && SuspectScore(x.Player.Id) < 0.6)
                 .OrderByDescending(x => Evidence(x.Opinion!.CardId)).FirstOrDefault();
             if (ally.Opinion is null || NameOf(ally.Player.Id) is not { } name) return null;
             var card = ally.Opinion.CardId;
@@ -516,9 +513,9 @@ public static partial class BotPlayer
             var who = BotNames.Bare(name);
             List<Thought> thoughts = [new(ThoughtKind.Agree, CardName(card), who), new(ThoughtKind.Trust, Who: who)];
             var suspect = candidates.Where(p => p.Id != ally.Player.Id && (Known(p.Id) is null || Known(p.Id)!.Value.IsKillerTeam()))
-                .OrderByDescending(p => Suspicion(p.Id)).FirstOrDefault();
+                .OrderByDescending(p => SuspectScore(p.Id)).FirstOrDefault();
             _accused = null;
-            if (suspect is not null && Suspicion(suspect.Id) >= 1.3 - 0.9 * P.Risk && NameOf(suspect.Id) is { } target)
+            if (suspect is not null && SuspectScore(suspect.Id) >= 1.3 - 0.9 * P.Risk && NameOf(suspect.Id) is { } target)
             {
                 text += $"Подозреваю, что {target} из чёрных: {BehaviourReason(suspect.Id)}. Предлагаю вместе голосовать против него.";
                 _accused = new Thought(ThoughtKind.Accuse, Who: BotNames.Bare(target), Why: BehaviourReason(suspect.Id), Strength: .6);
@@ -713,11 +710,7 @@ public static partial class BotPlayer
         public double Evidence(string card)
         {
             if (_evidence.TryGetValue(card, out var score)) return score;
-            var hints = view.Hints.SelectMany(h => h.Cards).Sum(h => HintWeight(h, card));
-            // Исчезнувшее письмо «объясняется» лучшим совпадением — но Призрак открыл бы его ради любой карты,
-            // с которой оно связано ясно: вычёркиваем все такие, а не только самую похожую (VanishWeight).
-            var vanished = me.Letters.Where(l => l.Revealed == false).Sum(l => VanishWeight(l.CardId, card) * OutshoneFactor(l.CardId, l.Round, card));
-            var value = hints - NegativeWeight * (vanished + OthersVanished(card));
+            var value = BaseEvidence(card) - NegativeWeight * OthersVanished(card);
             // Пока считается модель игроков, логика ещё не готова — не запоминаем промежуточное.
             if (LogicOn && (_computingBlack || _inLogic)) return value;
             // Логика заявлений — поправкой к прежнему учёту чужих писем: кто из говоривших мог быть честным.
@@ -744,19 +737,10 @@ public static partial class BotPlayer
         /// </summary>
         private double OthersVanished(string card)
         {
-            if (Classic || mind is null || BotTuning.Current.OthersVanished <= 0) return 0;
-            var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
-            var mine = me.Letters.Select(l => l.CardId).ToHashSet();
-            var trusted = KillerTeam ? 0 : 1;
-            return trusted * BotTuning.Current.OthersVanished * mind.Opinions
-                .Where(o => o.IsCheck && o.CardId == card && o.Author != me.Id && o.SourceCard is { } src && !shown.Contains(src) && !mine.Contains(src)
-                    && !view.Board.Any(r => r.Cards.Contains(src)))
-                .GroupBy(o => o.SourceCard!).Sum(g =>
-                {
-                    var o = g.First();
-                    var trust = Known(o.Author) is { } r && r.IsKillerTeam() ? .2 : Trust(o.Author);
-                    return trust * VanishWeight(g.Key, card) * OutshoneFactor(g.Key, o.Round, card) * Recall(o.Round, .6);
-                });
+            if (Classic || KillerTeam || BotTuning.Current.OthersVanished <= 0) return 0;
+            return BotTuning.Current.OthersVanished * ReportedMisses().Sum(report =>
+                Trust(report.Author) * VanishWeight(report.Card, card) * OutshoneFactor(report.Card, report.Round, card)
+                * Recall(report.Round, .6));
         }
 
         /// <summary>
@@ -1015,8 +999,8 @@ public static partial class BotPlayer
                                 let aim = Card(r, known[r])
                                 let unclear = .1 * (1 - Math.Clamp(Certainty(r), 0, 1))
                                 from h in me.Hand.Where(h => !picked.Contains(h))
-                                select (Row: r, Letter: h, Score: Sim(h, aim) - strict * Best(h, all.Where(c => c != aim)) + unclear + Noise()))
-                        .OrderByDescending(x => x.Score).FirstOrDefault();
+                                select (Row: r, Letter: h, Kind: _reading.Kind(h, aim), Score: Sim(h, aim) - strict * Best(h, all.Where(c => c != aim)) + unclear + Noise()))
+                        .OrderByDescending(x => x.Kind).ThenByDescending(x => x.Score).FirstOrDefault();
                     if (best.Letter is null) break;
                     picked.Add(best.Letter);
                     usedRows.Add(best.Row);
@@ -1035,7 +1019,7 @@ public static partial class BotPlayer
             // Письмо должно ясно проверять одну карту: похожее на цель и ни на что больше на поле —
             // тогда Призраку есть что открыть, а исчезновение однозначно говорит «не эта».
             double Pick(string h) => Classic ? Sim(h, target) : Sim(h, target) - (BotTuning.Current.LetterBase + BotTuning.Current.LetterStrict * P.Strictness) * Best(h, board);
-            return me.Hand.OrderByDescending(h => Pick(h) + Soft("letter:" + h, .5 * BotTuning.Current.SoftLetters) + Noise()).Take(count).ToList();
+            return me.Hand.OrderByDescending(h => _reading.Kind(h, target)).ThenByDescending(h => Pick(h) + Soft("letter:" + h, .5 * BotTuning.Current.SoftLetters) + Noise()).Take(count).ToList();
         }
 
         private Bots.TableModel? _model;
@@ -1052,9 +1036,8 @@ public static partial class BotPlayer
             var shown = view.Hints.SelectMany(h => h.Cards).ToHashSet();
             foreach (var hint in shown) model = model.With(hint, true);
             foreach (var l in me.Letters.Where(l => l.Revealed == false)) model = model.With(l.CardId, false);
-            if (mind is not null)
-                foreach (var c in mind.ClaimList.Where(c => c.Author != me.Id && c.Round < view.Round && !shown.Contains(c.Card)))
-                    model = model.With(c.Card, false, BotTuning.Current.OthersVanished * (BotTuning.Current.UnifiedTrust ? Trust(c.Author) : DistrustFactor(c.Author)));
+            foreach (var report in ReportedMisses())
+                model = model.With(report.Card, false, BotTuning.Current.OthersVanished * Trust(report.Author) * Recall(report.Round, .6));
             return _model = model;
         }
 
@@ -1084,20 +1067,25 @@ public static partial class BotPlayer
         /// </summary>
         private string? Probe()
         {
-            var scored = me.Hand.Select(h => (Card: h, Value: ProbeValue(h))).Where(x => x.Value > 0).OrderByDescending(x => x.Value).ToList();
+            var scored = me.Hand.Select(h => (Card: h, Value: ProbeValue(h, out var kind), Kind: kind))
+                .Where(x => x.Value > 0).OrderByDescending(x => x.Kind).ThenByDescending(x => x.Value).ToList();
             if (scored.Count == 0) return null;
             var seat = view.Players.Where(p => !p.IsGhost).OrderBy(p => p.Seat).Select(p => p.Id).ToList().IndexOf(me.Id);
             // Из почти равноценных проверок каждый берёт «свою»; явно лучшую берут все.
-            var close = scored.TakeWhile(x => x.Value >= scored[0].Value * .75).ToList();
+            var close = scored.TakeWhile(x => x.Kind == scored[0].Kind && x.Value >= scored[0].Value * .75).ToList();
             return close[(Math.Max(0, seat) + view.Round) % close.Count].Card;
         }
 
-        private double ProbeValue(string letter)
+        private double ProbeValue(string letter) => ProbeValue(letter, out _);
+
+        private double ProbeValue(string letter, out CardTags.LinkKind kind)
         {
+            kind = CardTags.LinkKind.None;
             var cards = view.Board.SelectMany((r, ri) => r.Cards.Select((c, ci) => (Card: c, Row: ri, Column: ci))).Where(x => x.Card != letter)
                 .Select(x => (x.Card, x.Row, x.Column, S: Sim(letter, x.Card))).OrderByDescending(x => x.S).ToList();
-            if (cards.Count < 2 || cards[0].S <= 0.05) return 0;
+            if (cards.Count < 2 || cards[0].S <= 0) return 0;
             var top = cards[0];
+            kind = _reading.Kind(letter, top.Card);
             var margin = top.S - cards[1].S;
             if (margin <= 0) return 0;
             var row = view.Board[top.Row].Cards;

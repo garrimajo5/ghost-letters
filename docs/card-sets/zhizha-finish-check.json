@@ -1,0 +1,19 @@
+{
+  "cards": 180,
+  "badge": "lavender-puddle-ghost",
+  "badge_size": [
+    28,
+    20
+  ],
+  "right_margin": 24,
+  "top_margin": 18,
+  "central_368px_unchanged": true,
+  "webp_encoding": "lossless",
+  "archives": 15,
+  "previews": 9,
+  "full_sheet_size": [
+    2660,
+    5540
+  ],
+  "all_archive_members_byte_identical": true
+}

@@ -11,6 +11,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2] / 'client/assets/cards'
 PROFILES = {
+'data-storage': 'device store read write hard information',
+'electrical-tool': 'electric hard use tool device',
+'fuel-heater': 'heat hot hard burn',
+'work-platform': 'construction work lift hard heavy metal',
+'paper-money': 'money count pay hold-in-hand paper flexible',
+'arachnid': 'animal crawl light-weight biological',
 'glass-timer': 'time measure hold-in-hand container hollow glass transparent fragile',
 'ritual-doll': 'magic ritual body hold-in-hand stab soft',
 'scarecrow': 'figure protect garden bird fabric soft',
@@ -191,6 +197,9 @@ def main():
         # A probable association is secondary, never a duplicate of visible data.
         marks = [entry.split(':') for entry in row['association'].split()]
         associations[card] = [dict(tag=mark[0], weight=float(mark[1]) if len(mark)>1 else .5, label=labels[mark[0]]) for mark in marks if mark[0] not in tags[card]]
+    # Reviewed CSV covers the original editions; preserve separately authored sets.
+    tags = {**load('tags.json'), **tags}
+    associations = {**load('associations.json'), **associations}
     save('tags.json', tags)
     save('associations.json', associations)
     write_vocabulary(tags, associations, labels)
