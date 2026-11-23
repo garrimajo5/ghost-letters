@@ -100,12 +100,16 @@ public static class BotDiscussion
         var suspicion = BotPlayer.DiscussionSuspicion(view, tags, mind, rng);
         if (string.IsNullOrWhiteSpace(suspicion)) suspicion = " По игрокам пока недостаточно оснований для уверенного обвинения.";
         var reading = tags.AtBoard(view.Board, mind.Personality);
+        var clues = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1,
+            Top: view.Board.SelectMany(r => r.Cards).Where(c => c != id).Select(c => reading.Similarity(id, c)).DefaultIfEmpty().Max()))).ToList();
         string Argument(int row)
         {
             var card = view.Board[row].Cards[plan[row]];
-            var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .OrderByDescending(h => reading.Similarity(h.Id, card)).FirstOrDefault();
-            if (hint.Id is null || reading.Similarity(hint.Id, card) <= 0)
+            var hint = clues.Select(h => (h.Round, h.Number, h.Id,
+                Weight: GhostCluePolicy.Read(reading.Similarity(h.Id, card), h.Top,
+                    BotTuning.Current.FocusBase + BotTuning.Current.FocusStrict * mind.Personality.Strictness)))
+                .OrderByDescending(h => h.Weight).FirstOrDefault();
+            if (hint.Id is null || hint.Weight < GhostCluePolicy.PlausibleMatch(mind.Personality.Risk))
                 return "связь с открытыми уликами слабая, пока предположение";
             var reason = reading.Explain(hint.Id, card);
             return $"{HintRef(hint.Round, hint.Number)}: {(reason.Length <= 120 ? reason : "сходство изображений")}";

@@ -157,6 +157,18 @@ public sealed class BotFinalDiscussionTests
         }
     }
 
+    [Fact]
+    public void FinalArgumentDoesNotReuseAnElectricalClueToCallAHardObjectAHit()
+    {
+        var view = View with { Hints = [new(1, ["laptop"])], Board = [
+            new(Category.Motive, ["charger", "rose"]), new(Category.Place, ["brick", "cat"])] };
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["laptop"] = ["electric", "device", "hard"], ["charger"] = ["electric", "device", "hard"],
+            ["brick"] = ["stone", "hard"], ["cat"] = ["animal"], ["rose"] = ["flower"] });
+        var line = BotDiscussion.Compose(view, tags, Mind, [], new Random(1))!.Value;
+        line.Text.Should().Contain("Подсказка р.1 №1").And.Contain("связь с открытыми уликами слабая");
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(null)]

@@ -21,6 +21,7 @@ public sealed class TableModel
     private readonly Func<string, string, double> _sim;
     private readonly double _focus;
     private readonly double _clarity;
+    private readonly Dictionary<string, double[][]> _readings = new();
 
     private TableModel(IReadOnlyList<IReadOnlyList<string>> rows, double[][] p, Func<string, string, double> sim, double focus, double clarity = 0)
     {
@@ -40,9 +41,9 @@ public sealed class TableModel
     /// <summary>Указание письма с поправкой на осторожность Призрака.</summary>
     private double[][] Readable(string letter)
     {
+        if (_readings.TryGetValue(letter, out var cached)) return cached;
         var w = Pointing(letter);
-        if (_clarity <= 0) return w;
-        return w.Select(row => row.Select((x, c) =>
+        return _readings[letter] = _clarity <= 0 ? w : w.Select(row => row.Select((x, c) =>
             x * (1 - _clarity * row.Where((_, o) => o != c).DefaultIfEmpty(0).Max())).ToArray()).ToArray();
     }
 

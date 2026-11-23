@@ -171,7 +171,7 @@ public static partial class BotPlayer
 
         private double RevealThreshold => Classic ? 0.15 : 0.22 - 0.14 * P.Risk;
 
-        private double RevealFallback => Classic ? 0.08 : 0.12 - 0.08 * P.Risk;
+        private double RevealFallback => Classic ? .08 : GhostCluePolicy.PlausibleMatch(P.Risk);
 
         /// <summary>Чёрные: как часто врут о своём письме, голосуют и пишут под ложную карту.</summary>
 

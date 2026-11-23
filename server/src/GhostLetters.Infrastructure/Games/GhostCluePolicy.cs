@@ -271,6 +271,8 @@ public static class GhostCluePolicy
     public static double Read(double similarity, double top, double focus = 8) =>
         similarity <= 0 ? 0 : similarity * Math.Exp(-focus * Math.Max(0, top - similarity));
 
+    public static double PlausibleMatch(double risk) => .12 - .08 * risk;
+
     /// <summary>
     /// Открыл бы Призрак это письмо, будь карта истиной: связь заметная (не ниже планки) и не сильно уступает
     /// лучшей альтернативе — иначе письмо увело бы стол к ней, а не к истине. Так читается исчезнувшее письмо:
