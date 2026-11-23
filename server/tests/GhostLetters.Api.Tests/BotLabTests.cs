@@ -30,6 +30,13 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void LaptopAndPlugExplainTheSharedFunctionBeforeHardness()
+    {
+        var reason = Catalog().Explain("orig_0150", "zhizha_0198", (.8, .1, .1), .5);
+        reason.Should().MatchRegex("электричеств|устройств").And.NotContain("твёрдый");
+    }
+
+    [Fact]
     public void VanishedDartDoesNotCheckTheRadiatorOnTheReportedBoard()
     {
         var tags = Catalog();

@@ -106,9 +106,11 @@ class _HistoryCard extends StatelessWidget {
               await Clipboard.setData(ClipboardData(text: g.gameId));
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Код партии скопирован')));
             } on PlatformException {
-              if (context.mounted) await showDialog<void>(context: context, builder: (_) => AlertDialog(
-                title: const Text('Код партии'), content: SelectableText(g.gameId),
-              ));
+              if (context.mounted) {
+                await showDialog<void>(context: context, builder: (_) => AlertDialog(
+                  title: const Text('Код партии'), content: SelectableText(g.gameId),
+                ));
+              }
             }
           },
           icon: const Icon(Icons.copy, size: 16),

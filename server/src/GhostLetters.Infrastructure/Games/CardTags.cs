@@ -312,7 +312,15 @@ public sealed class CardTags
     {
         var key = tag.StartsWith("dominant-", StringComparison.Ordinal) ? tag[9..] :
             tag.StartsWith("accent-", StringComparison.Ordinal) ? tag[7..] : tag;
-        return FeatureLabels.GetValueOrDefault(key);
+        return FeatureLabels.GetValueOrDefault(key) ?? CatalogLabels.GetValueOrDefault(tag);
+    }
+
+    private static readonly IReadOnlyDictionary<string, string> CatalogLabels = LoadCatalogLabels();
+
+    private static Dictionary<string, string> LoadCatalogLabels()
+    {
+        using var stream = typeof(CardTags).Assembly.GetManifestResourceStream("CardFeatureLabels.json")!;
+        return JsonSerializer.Deserialize<Dictionary<string, string>>(stream)!;
     }
 
     private static readonly IReadOnlyDictionary<string, string> FeatureLabels = new Dictionary<string, string>

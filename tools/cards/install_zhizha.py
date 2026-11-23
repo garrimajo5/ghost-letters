@@ -48,7 +48,7 @@ def main():
     sets = read(sets_path)
     sets.update({c['id']: 'zhizha' for c in cards})
     write(sets_path, sets)
-    labels_path = Path(__file__).with_name('retag_labels.json')
+    labels_path = retag_cards.LABELS_PATH
     labels = read(labels_path)
     for tag, label in deck['new_tag_labels'].items():
         labels.setdefault(tag, label)

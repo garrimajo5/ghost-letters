@@ -9,6 +9,8 @@ import csv
 import json
 from pathlib import Path
 
+LABELS_PATH = Path(__file__).resolve().parents[2] / 'server/src/GhostLetters.Infrastructure/Games/retag_labels.json'
+
 ROOT = Path(__file__).resolve().parents[2] / 'client/assets/cards'
 PROFILES = {
 'data-storage': 'device store read write hard information',
@@ -189,7 +191,7 @@ def write_vocabulary(tags, associations, labels):
 def main():
     with Path(__file__).with_name('retag_review.csv').open(encoding='utf-8') as source:
         rows = list(csv.DictReader(source, delimiter=';'))
-    labels = json.loads(Path(__file__).with_name('retag_labels.json').read_text(encoding='utf-8'))
+    labels = json.loads(LABELS_PATH.read_text(encoding='utf-8'))
     tags = {r['card']: reviewed_tags(r) for r in rows}
     associations = {}
     for row in rows:
