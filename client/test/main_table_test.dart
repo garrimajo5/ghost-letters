@@ -609,6 +609,17 @@ void main() {
     expect(find.byTooltip('Сообщник'), findsOneWidget);
   });
 
+  for (final role in ['Witness', 'Expert']) {
+    testWidgets('Призрак видит зелёную отметку $role', (tester) async {
+      await _open(tester, phone, edit: (view) {
+        (view['me'] as Json)['role'] = 'Ghost';
+        (view['players'] as List)[2]['knownRole'] = role;
+      });
+      final badge = tester.widget<Container>(find.byKey(const Key('seat-role-u3')));
+      expect((badge.decoration as BoxDecoration).color, AppColors.green);
+    });
+  }
+
   testWidgets('эмодзи — карта в руке: вытащил — выбор реакции, на стол не играется', (tester) async {
     final app = await _open(tester, phone, phase: 'Mailbox', allowed: const ['SendLetter']);
     await tester.drag(find.byKey(const Key('fan-emoji')), const Offset(0, -150));

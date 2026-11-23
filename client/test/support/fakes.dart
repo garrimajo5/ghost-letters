@@ -27,12 +27,15 @@ class FakeApi extends Api {
 
   List<Json> sandboxList = [];
   Json sandboxResult = {};
+  Json sandboxTraceResult = {};
   Json sandboxReplayResult = {};
   Json sandboxStepResult = {};
   @override
   Future<List<Json>> sandboxRuns() async => _record('sandboxRuns', [], () => sandboxList);
   @override
   Future<Json> runSandbox(String scenario, int seed, {bool ai = false}) async => _record('runSandbox', [scenario, seed], () => sandboxResult);
+  @override
+  Future<Json> sandboxTrace(String scenario, int seed) async => _record('sandboxTrace', [scenario, seed], () => sandboxTraceResult);
   @override
   Future<Json> sandboxReplay(String id) async => _record('sandboxReplay', [id], () => sandboxReplayResult);
   @override

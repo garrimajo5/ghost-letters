@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ghost_letters/models/models.dart';
 
@@ -105,7 +106,7 @@ void main() {
     addTearDown(app.container.dispose);
     app.api.games = [
       MyGame(
-        gameId: 'g9',
+        gameId: '87654321-0000-4000-8000-000000000001',
         status: 'finished',
         phase: 'Finished',
         yourTurn: false,
@@ -129,5 +130,16 @@ void main() {
     expect(find.textContaining('6 игроков'), findsOneWidget);
     expect(find.textContaining('Убийца'), findsOneWidget);
     expect(find.text('Победа'), findsOneWidget);
+    String? copied;
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') copied = call.arguments['text'] as String;
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.tap(find.text('#87654321'));
+    await tester.pumpAndSettle();
+    expect(copied, app.api.games.single.gameId);
+    expect(find.text('ИСТОРИЯ ПАРТИЙ'), findsOneWidget);
   });
 }

@@ -106,7 +106,7 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
   void _reload() => setState(() {
         _runs = ref.read(apiProvider).sandboxRuns();
       });
-  Future<void> _run({int count = 1}) async {
+  Future<void> _run({int count = 1, bool trace = false}) async {
     final seed = int.tryParse(_seed.text);
     if (seed == null || seed < -2147483648 || seed > 2147483647 - count + 1) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -115,6 +115,15 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
       return;
     }
     setState(() => _busy = true);
+    if (trace) {
+      final data = await runAction(context, () => ref.read(apiProvider).sandboxTrace(_scenario, seed));
+      if (!mounted) return;
+      setState(() => _busy = false);
+      if (data != null) {
+        await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => _ActionTrace(data: data)));
+      }
+      return;
+    }
     final completed = <Json>[];
     for (var i = 0; i < count; i++) {
       final result = await runAction(
@@ -204,6 +213,11 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
             onPressed: _busy ? null : () => _run(),
             child: Text(_busy ? 'Боты играют…' : 'Запустить')),
         const SizedBox(height: 24),
+        OutlinedButton.icon(
+            key: const Key('sandbox-trace'),
+            onPressed: _busy ? null : () => _run(trace: true),
+            icon: const Icon(Icons.fast_forward),
+            label: const Text('Быстрый журнал ходов')),
         OutlinedButton(
             key: const Key('sandbox-batch'),
             onPressed: _busy ? null : () => _run(count: 5),
@@ -269,6 +283,60 @@ class _SandboxScreenState extends ConsumerState<SandboxScreen> {
               ]);
             }),
       ]));
+}
+
+class _ActionTrace extends StatelessWidget {
+  const _ActionTrace({required this.data});
+  final Json data;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = (data['actions'] as List).cast<Map>();
+    final players = data['players'] as Map;
+    final roles = data['roles'] as Map;
+    final cards = data['cardNames'] as Map;
+    final board = (data['board'] as List).cast<Map>();
+    String name(Object? id) => players[id] as String? ?? 'Стол';
+    String card(Object? id) => cards[id] as String? ?? id.toString();
+    return Scaffold(
+      appBar: AppBar(title: Text('Журнал · расклад ${data['seed']}')),
+      body: ListView.builder(
+        padding: pageInsets(context, bottom: 32),
+        itemCount: actions.length + 1,
+        itemBuilder: (context, i) {
+          if (i == 0) {
+            final truth = (data['truth'] as List?)?.cast<int>();
+            return ListTile(
+              title: Text(data['error'] as String? ?? 'Победили: ${sideName(data['winner'])} · ряды ${data['correctRows']}/${data['totalRows']}'),
+              subtitle: Text([for (final (r, row) in board.indexed)
+                '${sandboxAction(row['category'])}: ${(row['cards'] as List).asMap().entries.map((e) =>
+                  truth?.elementAtOrNull(r) == e.key ? "${card(e.value)} ✓" : card(e.value)).join(", ")}'
+              ].join('\n')),
+            );
+          }
+          final a = actions[i - 1];
+          final c = a['command'] as Map?;
+          final details = [
+            if (c?['cardIds'] is List) (c!['cardIds'] as List).map(card).join(', '),
+            if (c?['cardId'] != null) card(c!['cardId']),
+            if (a['voteRow'] case final int row when c?['column'] is int)
+              '${sandboxAction(board[row]['category'])} · ${card(board[row]['cards'][c!['column']])}'
+            else if (c != null) sandboxCommand(c, name),
+            for (final m in (a['messages'] as List).cast<Map>()) ...[
+              m['text'] as String,
+              for (final (j, id) in (m['cards'] as List).indexed)
+                '${card(id)} · ${(m['notes'] as List).elementAtOrNull(j) ?? ""}',
+            ],
+          ].where((s) => s.isNotEmpty).join('\n');
+          return ListTile(
+            dense: true,
+            title: Text(['Р${a['round']}', name(a['actor']), if (roles[a['actor']] case final String role) sandboxAction(role), sandboxAction(a['action'])].join(' · ')),
+            subtitle: details.isEmpty ? null : SelectableText(details),
+          );
+        },
+      ),
+    );
+  }
 }
 
 class SandboxReplayScreen extends ConsumerStatefulWidget {

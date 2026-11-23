@@ -6,6 +6,7 @@ Default mode fails on structural errors AND unmet full-catalog rank requirements
 Tie order is deterministic by card ID; tied ranks are also reported explicitly.
 """
 import argparse
+from collections import Counter
 import json
 import math
 import re
@@ -55,6 +56,10 @@ def features(tags, details, associations, secondary=.35, scale=.5):
             if group(d['tag']) == 0 and d['tag'] not in own:
                 own[d['tag']] = min(.95, d['weight']) * secondary * scale
         result[card] = own
+    counts = Counter(t for marks in result.values() for t in marks if group(t) == 0)
+    specificity = {t: min(1, math.log((len(result) + 32) / (n + 1)) / math.log(8)) for t, n in counts.items()}
+    for marks in result.values():
+        marks.specificity = specificity
     return result
 
 
@@ -62,12 +67,15 @@ def similarity(x, y):
     def overlap(a, b):
         union = sum(max(a.get(t,0),b.get(t,0)) for t in a.keys()|b.keys())
         confidence = min(max(a.values(),default=0), max(b.values(),default=0))
-        return confidence * sum(min(a[t],b[t]) for t in a.keys()&b.keys()) / union if union else 0
+        specificity = getattr(x, 'specificity', {})
+        return confidence * sum(specificity.get(t, 1) * min(a[t],b[t]) for t in a.keys()&b.keys()) / union if union else 0
     def match(g):
         a = {t:v for t,v in x.items() if group(t)==g and not is_material(t) and (g!=2 or t.startswith('dominant-'))}
         b = {t:v for t,v in y.items() if group(t)==g and not is_material(t) and (g!=2 or t.startswith('dominant-'))}
         return overlap(a, b)
     meaning = match(0)
+    if any(t.startswith('subject-') and w == 1 and y.get(t) == 1 for t, w in x.items()):
+        meaning = max(meaning, .70)
     shape = match(1)
     if meaning or shape:
         fallback = .05 if meaning >= .25 else 1 - meaning

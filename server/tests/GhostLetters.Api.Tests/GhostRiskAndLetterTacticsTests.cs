@@ -57,6 +57,32 @@ public sealed class GhostRiskAndLetterTacticsTests
     }
 
     [Fact]
+    public void PublicFalseClaimChangesNextLetterAndPreventsClaimingTheReveal()
+    {
+        var view = View(Role.Accomplice) with { Round = 2, Hints = [], AllowedCommands = [nameof(SendLetter)],
+            Me = new(Me, Role.Accomplice, ["a", "b"], []) };
+        view = view with { Players = view.Players.Select(p => p.Id == Other ? p with { KnownRole = Role.Killer } : p).ToList() };
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> { ["a"] = ["glass"], ["b"] = ["glass"],
+            ["truth"] = ["glass"], ["false"] = ["plant"] });
+        BotMind FromChat(Guid author, string card, bool isPublic) => BotService.BuildMind(Me, Mind(1).Personality,
+            new Dictionary<Guid, PlayerHistory>(), [new(author, 1, "Это моё письмо", [card], ["кидал эту"], isPublic)],
+            new HashSet<string> { "truth", "false" }, Mind(1).Names);
+        foreach (var author in new[] { Me, Other })
+        foreach (var claimed in new[] { "a", "b" })
+        {
+            var mind = FromChat(author, claimed, true);
+            var revealed = view with { Hints = [new(2, [claimed])] };
+            foreach (var seed in Enumerable.Range(0, 30))
+            {
+                ((SendLetter)BotPlayer.Decide(view, new Random(seed), tags, mind)!).CardIds.Should().Equal(claimed == "a" ? "b" : "a");
+                BotLetterTactics.Compose(revealed, mind, [], new Random(seed)).Should().BeNull();
+            }
+            BotLetterTactics.Exposure(view, FromChat(author, claimed, false), claimed).Should().Be(0);
+        }
+        BotLetterTactics.Exposure(View(Role.Accomplice) with { Round = 2 }, FromChat(Other, "a", true), "a").Should().Be(0);
+    }
+
+    [Fact]
     public void EvilCanStealOnlyUnclaimedPublicLetter_AndRiskAffectsTiming()
     {
         var view = View(Role.Killer) with { Me = View(Role.Killer).Me! with { Letters = [] } };

@@ -1076,7 +1076,7 @@ class _SeatTile extends StatelessWidget {
               height: 16,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: isKillerTeam(shownRole(v, p)) ? AppColors.red : AppColors.surface2,
+                color: isKillerTeam(shownRole(v, p)) ? AppColors.red : isGreenRole(shownRole(v, p)) ? AppColors.green : AppColors.surface2,
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.bg, width: 1.5),
               ),
@@ -2314,7 +2314,7 @@ class _FlyingReactions extends StatelessWidget {
         return Stack(children: [
           for (final r in screen.reactions)
               _Flying(
-                key: ValueKey('fly-${r.userId}-${r.at.microsecondsSinceEpoch}'),
+                key: ObjectKey(r),
                 reaction: r,
                 size: box.biggest,
               ),

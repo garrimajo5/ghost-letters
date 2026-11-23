@@ -19,7 +19,17 @@ public sealed class CardTags
 
     private readonly IReadOnlyDictionary<string, HashSet<string>> _tags;
 
-    public CardTags(IReadOnlyDictionary<string, HashSet<string>> tags) => _tags = Trusted(tags);
+    private readonly Dictionary<string, double> _specificity;
+
+    public CardTags(IReadOnlyDictionary<string, HashSet<string>> tags)
+    {
+        _tags = Trusted(tags);
+        // Smoothed inverse document frequency. A common property carries less evidence
+        // than a shared subject or purpose; rare annotations retain their original weight.
+        _specificity = _tags.Values.SelectMany(ts => ts).Where(t => Group(t) == 0)
+            .GroupBy(t => t).ToDictionary(g => g.Key,
+                g => Math.Min(1, Math.Log((tags.Count + 32.0) / (g.Count() + 1)) / Math.Log(8)));
+    }
 
     /// <summary>
     /// Форма из нарезки угадана по контуру картинки и часто мимо: «острые выступы» у кнута и шампуня, «по диагонали»
@@ -261,10 +271,11 @@ public sealed class CardTags
             if (weight > 0 && (group != 2 || !weights.HasStructure && weights.Color >= weights.Material))
             {
                 var selected = common.Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-")))
-                    .OrderByDescending(t => FeatureLabel(t) is not null ||
+                    .OrderByDescending(t => SharedSubject(a, b, t))
+                    .ThenByDescending(t => FeatureLabel(t) is not null ||
                         _meanings.GetValueOrDefault(a)?.Any(m => m.Tag == t && m.Label != t) == true ||
                         _meanings.GetValueOrDefault(b)?.Any(m => m.Tag == t && m.Label != t) == true)
-                    .ThenByDescending(t => Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings)))
+                    .ThenByDescending(t => _specificity.GetValueOrDefault(t, 1) * Math.Min(Salience(a, t, secondaryMeanings), Salience(b, t, secondaryMeanings)))
                     .ThenBy(t => t, StringComparer.Ordinal).First();
                 var meaning = _meanings.GetValueOrDefault(a)?.FirstOrDefault(m => m.Tag == selected)
                     ?? _meanings.GetValueOrDefault(b)?.FirstOrDefault(m => m.Tag == selected);
@@ -314,6 +325,7 @@ public sealed class CardTags
         ["gray"] = "серый акцент", ["grey"] = "серый акцент",
         ["water"] = "вода", ["sea"] = "море", ["fire"] = "огонь", ["weapon"] = "оружие",
         ["animal"] = "животные", ["bird"] = "птицы", ["flower"] = "цветы", ["plant"] = "растения",
+        ["subject-plant"] = "растение", ["subject-paper-sheet"] = "лист бумаги",
         ["death"] = "смерть", ["danger"] = "опасность", ["love"] = "любовь", ["heart"] = "сердце",
         ["travel"] = "путешествия", ["transport"] = "транспорт", ["food"] = "еда", ["drink"] = "пить",
         ["writing"] = "письмо и письменные принадлежности", ["book"] = "книги", ["time"] = "время",
@@ -541,6 +553,11 @@ public sealed class CardTags
         return w.Color >= w.Material ? "цвет" : "материал";
     }
 
+    // Both illustrations feature this subject. A small detail or a secondary
+    // association in either annotation does not establish a direct subject link.
+    private bool SharedSubject(string a, string b, string tag) => tag.StartsWith("subject-", StringComparison.Ordinal)
+        && Salience(a, tag, 0) == 1 && Salience(b, tag, 0) == 1;
+
     private (double Meaning, double Shape, double Color, double Material) Contributions(string a, string b,
         (double Meaning, double Shape, double Color) attention, double secondary)
     {
@@ -549,7 +566,8 @@ public sealed class CardTags
             var union = x.Union(y).Sum(t => Math.Max(x.Contains(t) ? Salience(a, t, secondary) : 0, y.Contains(t) ? Salience(b, t, secondary) : 0));
             var confidence = Math.Min(x.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
                 y.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
-            return union <= 0 ? 0 : confidence * x.Intersect(y).Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))) / union;
+            return union <= 0 ? 0 : confidence * x.Intersect(y).Sum(t =>
+                _specificity.GetValueOrDefault(t, 1) * Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))) / union;
         }
 
         double Match(int group) => Overlap(
@@ -557,6 +575,8 @@ public sealed class CardTags
             Of(b).Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"))).ToHashSet());
 
         var meaning = Match(0);
+        if (Of(a).Any(t => SharedSubject(a, b, t) && Of(b).Contains(t)))
+            meaning = Math.Max(meaning, .70);
         var material = AccentMaterials(a).Intersect(AccentMaterials(b)).Any() ? 1 : 0;
         var sum = Math.Max(0, attention.Meaning) + Math.Max(0, attention.Shape) + Math.Max(0, attention.Color);
         var m = sum <= 0 ? .8 : Math.Max(.7, attention.Meaning / sum);

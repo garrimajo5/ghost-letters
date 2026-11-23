@@ -80,7 +80,7 @@ orig_0078;tent;shelter;fabric soft;cone;gray;camping
 orig_0079;crown;jewelry;metal royal;ring;yellow;king
 orig_0080;pond;water-source;garden swim;flat;green;peace
 orig_0081;sarcophagus;enclosure;stone heavy death lie-on;humanoid;brown;egypt
-orig_0082;newspaper;book;news;flat;white;communication:0.9
+orig_0082;newspaper;book;news subject-paper-sheet;flat;white;communication:0.9
 orig_0083;wig;clothing;hair;humanoid;yellow;costume
 orig_0084;balloon;inflatable;party fly gas;ball;pink purple;celebration
 orig_0085;gramophone;recording;metal wood;cone;black;retro
@@ -93,14 +93,14 @@ orig_0091;trophy;vessel;metal award open-top;container;yellow;competition
 orig_0092;padlock;locking;metal;ring;gray;secret
 orig_0093;razor-blade;blade;metal bathroom;flat;gray;shave
 orig_0094;glove;clothing;rubber elastic hospital;pair;blue;doctor
-orig_0095;acorn;plant-food;hard forest;ball;brown green;autumn
+orig_0095;acorn;plant;leaf forest;flat;brown green;autumn
 orig_0096;boot;footwear;leather;pair;black;travel
 orig_0097;rope;cord;fabric;spiral;brown;rescue
 orig_0098;garland;lamp;wire party;chain;yellow;celebration
 orig_0099;wallet;carry;leather money;box;brown;wealth
 orig_0100;axe;blade;wood swing hit;handle-plus-head;red;woodcutting
-orig_0101;letter;book;envelope;flat;brown;communication:0.9
-orig_0102;paper-plane;toy;paper fly throw;flat;white;school
+orig_0101;letter;book;envelope subject-paper-sheet;flat;brown;communication:0.9
+orig_0102;paper-plane;toy;paper fly throw subject-paper-sheet;flat;white;school
 orig_0103;warning-sign;signage;plastic hard;flat;yellow;danger
 orig_0104;pumpkin;plant-food;hard carve halloween;ball;orange;fear
 orig_0105;skeleton;body;bone hard;humanoid;white;death:0.9
@@ -127,7 +127,7 @@ orig_0125;poker-chips;board-game;plastic count money casino;flat;red;gambling
 orig_0126;chest;enclosure;wood lock;box;gray;treasure
 orig_0127;cage;enclosure;metal bird;container cylinder;yellow;captivity
 orig_0128;toxic-barrel;enclosure;metal toxic;container cylinder;yellow;danger
-orig_0129;map;book;travel;flat;brown;exploration
+orig_0129;map;book;travel subject-paper-sheet;flat;brown;exploration
 orig_0130;pitchfork;hand-tool;wood metal stab farm sharp;stick;yellow;harvest
 orig_0131;spellbook;book;leather magic;box;brown;occult
 orig_0132;pendant;jewelry;metal;chain;yellow;love
@@ -187,7 +187,7 @@ orig_0185;spiked-bat;club;wood metal sharp;handle-plus-head;brown;violence
 orig_0186;mirror;mirror;glass broken;flat;blue;bad-luck
 orig_0187;folder;enclosure;paper office read;flat;orange;documents
 orig_0188;cauldron;fluid;metal heat hot magic open-top;container;green;poison
-orig_0189;star-map;book;astronomy;flat;blue;navigation
+orig_0189;star-map;book;astronomy subject-paper-sheet;flat;blue;navigation
 orig_0190;moth;insect;fly;animal;brown;death:0.9
 orig_0191;phone;screen;plastic hold-in-hand;box;blue;communication:0.9
 orig_0192;umbrella;hand-tool;fabric water open-close;handle-plus-head;green;rain
@@ -208,7 +208,7 @@ orig_0206;rose;flower;sharp;stick;pink;love
 orig_0207;deerstalker;clothing;fabric;container;brown;detective
 orig_0208;briefcase;carry;leather office;box;brown;documents
 orig_0209;videotape;recording;plastic;box;black;cinema:0.9
-orig_0210;dart;blade;throw sport;stick;green;accuracy
+orig_0210;dart;throw-sport;sharp aim;stick;green;accuracy
 orig_0211;sextant;measuring;metal sea;flat;yellow;navigation
 orig_0212;ghost-trap;enclosure;metal electric;box;black;ghost
 orig_0213;floppy-disk;data-storage;plastic;flat;black;retro
@@ -230,7 +230,7 @@ orig_0228;violin-case;enclosure;wood music open-top;container;yellow;musician
 orig_0229;ouija;board-game;wood occult;flat;brown;ghost
 orig_0230;pillow;bedding;fabric soft;box;white;sleep
 orig_0231;jack;hand-tool;metal hard push car;box;yellow;repair
-orig_0232;dartboard;board-game;hard throw;flat;black;accuracy
+orig_0232;dartboard;sport-target;throw;flat;black;accuracy
 orig_0233;pocketknife;blade;metal open-close;stick;red;camping
 orig_0234;fitness-band;measuring;plastic wear sport;ring;black;health
 orig_0235;hose;cord;rubber elastic pour garden;spiral;green;water
@@ -248,7 +248,7 @@ orig_0246;valve;hand-tool;metal hard open-close water;ring;red;plumbing
 orig_0247;dice;board-game;plastic throw;ball;red;chance
 orig_0248;scales;measuring;metal hard;pair;gray;justice
 orig_0249;brushwood;fuel;wood dry;stick;brown;campfire
-orig_0250;news-clippings;book;news;flat;white;detective
+orig_0250;news-clippings;book;news subject-paper-sheet;flat;white;detective
 orig_0251;bolt-cutter;blade;metal hold-in-hand;handle-plus-head;orange;burglary
 orig_0252;case;carry;metal hard;box;gray;business
 orig_0253;pills;medicine;hard glass;container cylinder;red blue;illness
@@ -281,7 +281,7 @@ orig_0279;pistol;gun;metal;handle-plus-head;black;crime
 orig_0280;can;enclosure;metal food kitchen open-close;container cylinder;red;camping
 orig_0281;voice-recorder;recording;plastic hold-in-hand;box;gray;interview
 orig_0282;ice;frozen;transparent sharp;cone;blue;winter
-orig_0283;note;book;number;flat;white;secret
+orig_0283;note;book;number subject-paper-sheet;flat;white;secret
 orig_0284;footprints;trace;walk wet;pair;blue;detective
 orig_0285;deer-skull;body;bone hard sharp;animal;brown;death:0.9
 orig_0286;candelabrum;lamp;metal church;stick;yellow;religion:0.9
@@ -321,7 +321,7 @@ orig_0319;paint;fluid;metal draw art open-top;container cylinder;red;renovation
 orig_0320;flower;flower;garden;stick;pink;spring
 orig_0321;crystals;granular;transparent plastic;container;blue;chemistry:0.9
 orig_0322;mirror;mirror;glass broken sharp;flat;yellow;bad-luck
-orig_0323;letter;book;flower;flat;white;love
+orig_0323;letter;book;flower subject-paper-sheet;flat;white;love
 orig_0324;scarecrow;scarecrow;fabric soft farm;humanoid;yellow;harvest
 orig_0325;armchair;seat;fabric soft;box;red;comfort
 orig_0326;toilet-brush;cleaning;plastic toilet;handle-plus-head;gray;housework
@@ -472,7 +472,7 @@ orig_0470;cthulhu;sculpture;stone monster;humanoid;gray;horror
 orig_0471;jump-rope;sport-swing;rubber elastic jump;spiral;yellow;fitness
 orig_0472;birdhouse;enclosure;wood bird garden;box;brown;spring
 orig_0473;garlic;plant-food;hard smell;ball;white;vampire
-orig_0474;paper-boat;toy;paper float water;container;white;childhood
+orig_0474;paper-boat;toy;paper float water subject-paper-sheet;container;white;childhood
 orig_0475;helmet;mask;plastic hard camera;ball;black;sport
 orig_0476;graduation-cap;clothing;fabric school;flat;black;education
 orig_0477;rapier;blade;metal stab;stick;gray;duel
@@ -486,10 +486,10 @@ orig_0484;compressor;electrical-tool;metal blow gas; cylinder;black;repair
 orig_0485;crossbow;gun;metal elastic;cross;black;hunting
 orig_0486;cassette;recording;plastic;box;black;retro
 orig_0487;chainsaw;blade;metal woodcutting;stick;orange;danger
-orig_0488;notebook;book;write office;flat;white;memory
+orig_0488;notebook;book;write office subject-paper-sheet;flat;white;memory
 orig_0489;boxing-glove;boxing;leather;pair;red;competition
 orig_0490;balloon;inflatable;party fly gas;heart star;pink;celebration
-orig_0491;blueprint;book;building;flat;white;planning
+orig_0491;blueprint;book;building subject-paper-sheet;flat;white;planning
 orig_0492;bottle;vessel;glass sea float;container;white;communication:0.9
 orig_0493;dried-flower;flower;dry;container;brown;memory
 orig_0494;vending-machine;appliance;metal food money;box;black;shopping
@@ -603,14 +603,14 @@ orig_0601;safe;enclosure;metal heavy lock;box;gray;security
 orig_0602;butterfly;insect;fly soft;animal;white;freedom
 orig_0603;whip;club;leather elastic swing;spiral;black;control
 orig_0604;eye-drops;medicine;liquid plastic pour;container;white;vision
-orig_0605;notebook;book;write school;flat;white;learning
-orig_0606;origami;toy;paper fly;animal;white;peace
+orig_0605;notebook;book;write school subject-paper-sheet;flat;white;learning
+orig_0606;origami;toy;paper fly subject-paper-sheet;animal;white;peace
 orig_0607;portable-toilet;building;plastic toilet;box;blue;hygiene:0.9
 orig_0608;fishing-float;float-item;wood light-weight water;stick;red yellow;patience
 orig_0609;cup-holder;utensil;metal hard drink open-top;container;gray;tea
 orig_0610;nougat;sweet;sticky soft;box;brown;dessert
 orig_0611;pencil;writing-tool;wood draw measure;stick;orange;school
-orig_0612;prescription;book;medical hospital;flat;white;doctor
+orig_0612;prescription;book;medical hospital subject-paper-sheet;flat;white;doctor
 orig_0613;taxi-sign;signage;plastic light car;box;orange;travel
 orig_0614;ticket;book;music concert;flat;white;celebration
 orig_0615;suitcase;carry;plastic hard;box;blue;travel
@@ -632,7 +632,7 @@ orig_0630;firework;explosive;paper fly burn light;stick;green;celebration
 orig_0631;tarot;board-game;paper magic;flat;black;divination
 orig_0632;popcorn;meal;light-weight dry;container;yellow;cinema:0.9
 orig_0633;feather;ornament;soft bird light-weight;stick;green;beauty
-orig_0634;scroll;book;paper; cylinder;yellow;history
+orig_0634;scroll;book;paper subject-paper-sheet; cylinder;yellow;history
 orig_0635;qr-code;signage;read;flat;green;communication:0.9
 orig_0636;ring-light;lamp;plastic metal;ring;white;photography
 orig_0637;banjo;instrument;wood play pull;handle-plus-head;brown;concert:0.9
@@ -650,7 +650,7 @@ orig_0648;coin;money-item;metal;flat;yellow;wealth
 orig_0649;yoga-mat;bedding;rubber soft gym; cylinder;blue;fitness
 orig_0650;barbed-wire;cord;metal sharp;spiral;gray;prison
 orig_0651;sim-card;electric;plastic hold-in-hand;flat;white;communication:0.9
-orig_0652;sticky-note;writing-surface;paper sticky office;flat;yellow;memory
+orig_0652;sticky-note;writing-surface;paper sticky office subject-paper-sheet;flat;yellow;memory
 orig_0653;pocket-watch;timer;metal hold-in-hand;ring chain;yellow;punctuality
 orig_0654;magnifier;optics;glass hold-in-hand;handle-plus-head;yellow;detective
 orig_0655;chocolate-box;sweet;paper;heart;red;love
@@ -671,7 +671,7 @@ orig_0669;elephant;mammal;heavy;animal;gray;strength
 orig_0670;bonsai;plant;wood hard garden;container;green;patience
 orig_0671;frisbee;toy;plastic throw fly hard;flat;red;beach
 orig_0672;princess;sculpture;ceramic dress;humanoid;green;fairytale
-orig_0673;notebook;book;write school;flat;white;learning
+orig_0673;notebook;book;write school subject-paper-sheet;flat;white;learning
 orig_0674;knife;blade;metal kitchen;stick;gray;cook-person
 orig_0675;postage-stamp;signage;paper sticky;flat;white;communication:0.9
 orig_0676;paper-towel;cleaning;paper soft; cylinder;white;housework

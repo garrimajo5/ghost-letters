@@ -896,7 +896,7 @@ public sealed class BotService(GhostLettersDbContext db, GameService games, Chat
         return new BotMind(personality, history, latestOpinions, names, latestAccusations,
             Breadth(others.Select(m => (m.Author, m.Notes))), affinities ?? new Dictionary<Guid, int>(), claims,
             BotMind.Latest(perMessage.Where(o => o.Count > 0 && o[0].Public)), own,
-            others.Where(m => m.Public)
+            messages.Where(m => m.Public)
                 .SelectMany(m => m.Cards.Select((c, i) => (Card: c, Note: i < m.Notes.Count ? m.Notes[i] : "")).Where(x => x.Note.StartsWith("кидал", StringComparison.Ordinal))
                     .Select(x => new ClaimedLetter(m.Author, x.Card, m.Round))).ToList());
     }

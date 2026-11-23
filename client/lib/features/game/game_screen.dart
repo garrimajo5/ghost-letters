@@ -1104,6 +1104,8 @@ class _PlayerChip extends StatelessWidget {
             ),
           if (suspicionRole)
             Positioned(top: -4, left: -6, child: CountBadge(text: role == 'Killer' ? 'У' : 'С', color: AppColors.red))
+          else if (!isMe && isGreenRole(role))
+            Positioned(top: -4, left: -6, child: CountBadge(text: T.role(role).characters.first, color: AppColors.green))
           else if (!isMe && (screen.suspicion[p.id] ?? 0) > 0)
             Positioned(
               top: -4,

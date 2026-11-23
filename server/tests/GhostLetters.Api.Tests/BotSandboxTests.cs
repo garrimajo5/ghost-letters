@@ -57,6 +57,11 @@ public sealed class BotSandboxRunnerTests(ITestOutputHelper output)
         output.WriteLine($"{scenario}: status={a.Status}, passed={a.Passed}, rows={a.CorrectRows}/{a.TotalRows}, winner={a.Winner}, frames={a.Frames.Count}, messages={a.Messages.Count}, ms={a.ElapsedMs}");
         a.Status.Should().Be("completed", a.Error);
         GameJson.Serialize(a with { ElapsedMs = 0 }).Should().Be(GameJson.Serialize(b with { ElapsedMs = 0 }));
+        var trace = BotSandboxRunner.Trace(scenario, 1000, deck, tags, default);
+        trace.Status.Should().Be(a.Status);
+        trace.Actions.Select(x => (x.Action, x.Actor, x.Command?.GetRawText())).Should()
+            .Equal(a.Frames.Select(x => (x.Action, x.Actor, x.Command?.GetRawText())));
+        GameJson.Serialize(trace.Actions.SelectMany(x => x.Messages)).Should().Be(GameJson.Serialize(a.Messages));
         a.Frames.Count.Should().BeLessThanOrEqualTo(BotSandboxRunner.MaxSteps + 1);
         foreach (var frame in a.Frames.Where(f => f.Observation?.Me?.Role == Role.Detective))
         {
@@ -106,9 +111,15 @@ public sealed class BotSandboxApiTests(PostgresFixture postgres) : IAsyncLifetim
         (await _factory.CreateClient().GetAsync(url)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         await player.GetAsync(url, HttpStatusCode.Forbidden);
         await player.PostAsync(url, new SandboxRequest("witness-reveal", 42), HttpStatusCode.Forbidden);
+        await player.PostAsync(url + "/trace", new SandboxRequest("witness-reveal", 42), HttpStatusCode.Forbidden);
         await player.GetAsync(url + $"/{Guid.NewGuid()}/steps/0", HttpStatusCode.Forbidden);
         _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = player.Id.ToString();
         var before = await _factory.WithDbAsync(async db => (await db.Games.CountAsync(), await db.Users.CountAsync(), await db.BotRelationships.CountAsync()));
+        var saved = await _factory.WithDbAsync(db => db.SandboxRuns.CountAsync());
+        var trace = await player.PostAsync(url + "/trace", new SandboxRequest("witness-reveal", 42));
+        trace.Str("status").Should().Be("completed");
+        trace.GetProperty("actions").GetArrayLength().Should().BeGreaterThan(1);
+        (await _factory.WithDbAsync(db => db.SandboxRuns.CountAsync())).Should().Be(saved);
         var result = await player.PostAsync(url, new SandboxRequest("witness-reveal", 42));
         var id = result.Id("id");
         try

@@ -23,6 +23,21 @@ public sealed class BotSandboxService(GhostLettersDbContext db, BotAdminService 
     /// <summary>Сколько реплик прогона отдаём ИИ-модели — дальше дорого и долго.</summary>
     public const int AiLines = 12;
 
+    public async Task<SandboxTrace> TraceAsync(Guid admin, SandboxRequest request, CancellationToken ct)
+    {
+        admins.RequireAdmin(admin);
+        if (!BotSandboxRunner.Scenarios.Contains(request.Scenario)) throw AppException.Validation("Неизвестный сценарий.");
+        if (!await gate.Semaphore.WaitAsync(0, ct)) throw AppException.Conflict("SANDBOX_BUSY", "Уже выполняется прогон.");
+        try
+        {
+            var deck = await catalog.DeckAsync(LobbySettings.AllCardSets, ct);
+            if (deck.Count < 120) throw AppException.Validation("Для песочницы нужно не менее 120 активных карт.");
+            var tags = await tagStore.LoadAsync(ct);
+            return await Task.Run(() => BotSandboxRunner.Trace(request.Scenario, request.Seed, deck, tags, ct), ct);
+        }
+        finally { gate.Semaphore.Release(); }
+    }
+
     public async Task<IReadOnlyList<SandboxSummary>> ListAsync(Guid admin, CancellationToken ct)
     {
         admins.RequireAdmin(admin);

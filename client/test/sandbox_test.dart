@@ -109,6 +109,37 @@ void main() {
     expect(app.api.named('sandboxReplay'), isEmpty);
   });
 
+  testWidgets('быстрый журнал показывает ход, роль, письмо и слова игрока', (tester) async {
+    final app = await TestApp.create(user: watson);
+    addTearDown(app.container.dispose);
+    app.api.admin = true;
+    app.api.sandboxTraceResult = {
+      'seed': 1000, 'winner': 'Killer', 'correctRows': 1, 'totalRows': 4,
+      'players': {'u2': 'Ватсон'}, 'roles': {'u2': 'Witness'}, 'cardNames': {'d': 'Дротик'},
+      'board': [], 'actions': [
+        {'round': 2, 'action': 'SendLetter', 'actor': 'u2', 'command': {'cardIds': ['d']}, 'messages': []},
+        {'round': 2, 'action': 'Сообщение', 'actor': 'u2', 'messages': [
+          {'text': 'Проверил мишень.', 'cards': ['d'], 'notes': ['кидал эту']}
+        ]}
+      ]
+    };
+    await tester.pumpWidget(app.widget);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.more_horiz).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Песочница ботов'));
+    await tester.pumpAndSettle();
+    final start = find.byKey(const Key('sandbox-trace'));
+    await tester.ensureVisible(start);
+    await tester.tap(start);
+    await tester.pumpAndSettle();
+    expect(app.api.named('sandboxTrace').single.$2, ['full-game', 1000]);
+    expect(find.text('Р2 · Ватсон · Свидетель · Отправил письмо'), findsOneWidget);
+    expect(find.text('Дротик'), findsOneWidget);
+    expect(find.textContaining('Проверил мишень.'), findsOneWidget);
+    expect(app.api.named('sandboxStep'), isEmpty);
+  });
+
   testWidgets('песочница скрыта от обычного игрока', (tester) async {
     final app = await TestApp.create(user: watson);
     addTearDown(app.container.dispose);

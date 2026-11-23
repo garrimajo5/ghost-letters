@@ -963,13 +963,32 @@ public static partial class BotPlayer
             }
 
             string target;
-            if (KillerTeam && Truth is { } truth && (Classic || rng.NextDouble() < SpoilChance))
+            if (KillerTeam && mind is not null && Truth is { } knownTruth)
+            {
+                var table = Model();
+                var conceal = SpoilChance;
+                var before = table.TruthScore(knownTruth);
+                var clearRows = BotTuning.Current.KillerClearRows
+                    ? Enumerable.Range(0, view.Board.Count).Select(r => Math.Clamp(Certainty(r), 0, 1)).ToArray() : [];
+                double Utility(string h)
+                {
+                    var reveal = table.RevealChance(h, knownTruth);
+                    var open = table.With(h, true);
+                    // A lost letter stays private. An opened one shifts everyone's theory.
+                    var safeProbe = clearRows.Select((confidence, r) => confidence * Best(h,
+                        view.Board[r].Cards.Where((_, c) => c != knownTruth[r]))).DefaultIfEmpty().Max();
+                    var misdirection = reveal * (before - open.TruthScore(knownTruth)) + (1 - reveal) * safeProbe;
+                    var cover = table.InfoGain(h);
+                    var exposure = BotLetterTactics.Exposure(view, mind, h);
+                    return conceal * misdirection + (1 - conceal) * cover
+                        - exposure * (.5 + reveal) * (2 - P.Risk) + Soft("letter:" + h, .5 * BotTuning.Current.SoftLetters) + Noise();
+                }
+                return me.Hand.OrderByDescending(Utility).Take(count).ToList();
+            }
+            if (KillerTeam && Truth is { } truth)
             {
                 // Письмо под ложную улику — Призрак его не откроет, но остальным покажется, что её проверяли.
-                // Боты 3.0: ряд, где стол и так уверен, — исчезновение ничего не даст мирным, а ход выглядит работой.
-                var row = !Classic && BotTuning.Current.KillerClearRows
-                    ? Enumerable.Range(0, view.Board.Count).OrderByDescending(r => Certainty(r) + Noise()).First()
-                    : rng.Next(view.Board.Count);
+                var row = rng.Next(view.Board.Count);
                 var fakes = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => c != truth[row]).ToList();
                 target = Card(row, fakes[rng.Next(fakes.Count)]);
             }
@@ -1291,11 +1310,11 @@ public static partial class BotPlayer
             if (scored.Count == 0) return [];
             // Слабая побочная связь — не проверка: Призрак открыл бы письмо ради сильной, её и вычёркиваем.
             // Строгий отсекает всё, что заметно слабее лучшей связи; широкий — только совсем слабое.
-            var cut = Classic ? 0 : scored[0].s * BotTuning.Current.CheckRelative * (.5 + .5 * P.Strictness);
+            var cut = Classic ? 0 : Math.Max(RevealFallback, scored[0].s * BotTuning.Current.CheckRelative * (.5 + .5 * P.Strictness));
             var wideEnough = wide && !Classic && BotTuning.Current.VanishWide;
-            return scored.Where(x => x.s >= cut ||
-                    (wideEnough && GhostCluePolicy.WouldReveal(x.s, scored.Where(y => y.x != x.x).Select(y => y.s).DefaultIfEmpty(0).Max())))
-                .Take(Math.Min(wideEnough ? ChatService.MaxCards - 1 : MyBreadth, ChatService.MaxCards - 1))
+            return scored.Where((x, i) => i < MyBreadth && x.s >= cut ||
+                    (wideEnough && GhostCluePolicy.WouldReveal(x.s, scored[0].s)))
+                .Take(ChatService.MaxCards - 1)
                 .Select(x => x.x)
                 .ToList();
         }
@@ -1313,6 +1332,9 @@ public static partial class BotPlayer
             {
                 return ("", null);
             }
+
+            if (KillerTeam && mind is not null && BotLetterTactics.Exposure(view, mind, letter.CardId) > rng.NextDouble())
+                return ("", null);
 
             // Боты 3.0, этап 4: Эксперт присваивает себе только часть точных писем — иначе он «слишком полезен»
             // и чёрные находят его на охоте. Осторожный молчит о письме чаще, рисковый — реже.

@@ -6,7 +6,19 @@ namespace GhostLetters.Infrastructure.Games;
 
 public static class BotLetterTactics
 {
+    // Estimated chance that the table remembers a conflicting public ownership claim.
+    // Only an exposed teammate (or the bot itself) costs the killer team credibility.
+    public static double Exposure(PlayerView view, BotMind mind, string card)
+    {
+        var claims = mind.ClaimList.Concat(view.Table?.Claims.Select(c => new ClaimedLetter(c.Author, c.Card, c.Round)) ?? []);
+        return claims.Where(c => c.Card == card && c.Round <= view.Round &&
+                (c.Round != view.Round || c.Author != view.Me?.Id) &&
+                (c.Author == view.Me?.Id || view.Players.Any(p => p.Id == c.Author && p.KnownRole?.IsKillerTeam() == true)))
+            .Select(c => Math.Exp(-Math.Max(0, view.Round - c.Round - 1) / (1 + 3 * mind.Personality.Memory)))
+            .DefaultIfEmpty(0).Max();
+    }
     public const string WaitLine = "Сначала послушаю, кто какое письмо отправлял. Своё пока не называю.";
+    private const string PassLine = "По своему письму больше ничего не добавлю.";
 
     private static bool IsClaim(DiscussionLine message, int index) =>
         (message.Notes is { } notes && index < notes.Count && notes[index].StartsWith("кидал", StringComparison.OrdinalIgnoreCase)) ||
@@ -17,7 +29,7 @@ public static class BotLetterTactics
     {
         var wait = messages.LastOrDefault(m => m.Author == bot && m.Text == WaitLine);
         return wait is not null && !messages.Any(m => m.Author == bot && m.At > wait.At &&
-            m.Notes?.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)) == true);
+            (m.Text == PassLine || m.Notes?.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)) == true));
     }
 
     public static (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes)? Compose(
@@ -40,9 +52,12 @@ public static class BotLetterTactics
         }
         var remaining = view.Players.Where(p => !p.IsGhost && p.Id != me.Id && !p.HasActed && !messages.Any(m => m.Author == p.Id)).ToList();
         var waited = own.FirstOrDefault(m => m.Text == WaitLine);
-        if (waited is not null && !own.Any(m => m.At > waited.At && m.Notes?.Any(n => n.StartsWith("кидал", StringComparison.Ordinal)) == true) && letter is not null)
+        if (waited is not null && Pending(me.Id, own) && letter is not null)
         {
             var thief = claims.LastOrDefault(c => c.Card == letter.CardId && c.Message.Author != me.Id);
+            if (me.Role.IsKillerTeam() && (Exposure(view, mind, letter.CardId) > rng.NextDouble() ||
+                view.Players.Any(p => p.Id == thief.Message?.Author && p.KnownRole?.IsKillerTeam() == true)))
+                return (PassLine, [], []);
             if (thief.Message is not null)
                 return ($"{mind.Names.GetValueOrDefault(thief.Message.Author, "Игрок")}, ты назвал моё письмо своим. Я отправлял вот эту карту. Подозреваю, что {mind.Names.GetValueOrDefault(thief.Message.Author, "Игрок")} из чёрных.", [letter.CardId], ["кидал эту"]);
             if ((now ?? messages.LastOrDefault()?.At ?? waited.At) - waited.At >= TimeSpan.FromSeconds(45) || remaining.Count == 0 || messages.Count(m => m.At > waited.At && m.Author != me.Id) >= view.Players.Count - 2)
@@ -55,12 +70,14 @@ public static class BotLetterTactics
         var suspectedLast = remaining.LastOrDefault();
         var suspicious = suspectedLast is not null && mind.AccusationList.Any(a => a.Target == suspectedLast.Id && a.Strength > .3);
         if (view.Discussion == DiscussionMode.FreeChat && letter?.Revealed == true && p.Risk > .6 && cunning > .6 &&
-            (suspicious || me.Role.IsKillerTeam()) && !claims.Any(c => c.Card == letter.CardId))
+            (suspicious || me.Role.IsKillerTeam()) && !claims.Any(c => c.Card == letter.CardId) &&
+            (!me.Role.IsKillerTeam() || rng.NextDouble() >= Exposure(view, mind, letter.CardId)))
             return (WaitLine, [], []);
         var late = remaining.Count == 0 || remaining.All(p => p.KnownRole?.IsKillerTeam() == true);
         if (!me.Role.IsKillerTeam() || (!late && p.Risk < .8) || rng.NextDouble() >= (late ? .25 + .65 * p.Risk : .4 * p.Risk)) return null;
         var unclaimed = view.Hints.Where(h => h.Round == view.Round).SelectMany(h => h.Cards)
-            .Where(c => c != letter?.CardId && !claims.Any(x => x.Card == c)).ToList();
+            .Where(c => c != letter?.CardId && !claims.Any(x => x.Card == c) &&
+                rng.NextDouble() >= Exposure(view, mind, c)).ToList();
         return unclaimed.Count == 0 ? null : ("Я отправлял вот эту — она открылась.", [unclaimed[rng.Next(unclaimed.Count)]], ["кидал эту"]);
     }
 }
