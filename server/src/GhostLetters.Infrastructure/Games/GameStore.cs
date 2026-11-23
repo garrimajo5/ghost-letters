@@ -31,7 +31,7 @@ public static class GameStore
             game.PhaseDeadline = settings.TimerFor(state) is { } timer ? now + timer : null;
         }
 
-        if (state.Phase == Phase.Finished && game.Status == GameStatuses.Active)
+        if (state.Phase == Phase.Finished && game.Status is GameStatuses.Active or GameStatuses.Paused)
         {
             game.Status = GameStatuses.Finished;
             game.FinishedAt = now;

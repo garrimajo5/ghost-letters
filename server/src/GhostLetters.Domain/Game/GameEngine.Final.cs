@@ -9,6 +9,17 @@ public static partial class GameEngine
     public const int MaxAwardCodeLength = 40;
     public const int AwardsPerGame = 2;
 
+    public static IReadOnlyList<GameEvent> CloseAwards(GameState state)
+    {
+        if (state.Phase is not (Phase.AwardNomination or Phase.AwardVoting) || state.Result is null)
+            throw GameRuleException.NotAllowed("Закрыть награды можно только после итогов партии.");
+        var events = new List<GameEvent> { new("AwardsClosed") };
+        if (state.Phase == Phase.AwardNomination) FinishNominations(state, events);
+        if (state.Phase == Phase.AwardVoting) FinishAwards(state, Rng(state), events);
+        state.Version++;
+        return events;
+    }
+
     private static bool ExecuteFinale(GameState state, PlayerState actor, GameCommand command, List<GameEvent> events)
     {
         switch (command)

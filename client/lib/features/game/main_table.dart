@@ -376,7 +376,7 @@ class _TopBar extends StatelessWidget {
               case 'big':
                 screen.setBigBoard(!screen.bigBoard);
               case 'close':
-                if (await confirmCloseGame(context) && context.mounted) {
+                if (await confirmCloseGame(context, hasResult: v.finale?.result != null) && context.mounted) {
                   final closed = await runAction(context, () async {
                     await screen.ref.read(apiProvider).closeGame(v.gameId);
                     return true;

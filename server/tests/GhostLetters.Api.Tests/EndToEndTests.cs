@@ -1,6 +1,9 @@
 using System.Text.Json;
 using GhostLetters.Infrastructure.Games;
+using GhostLetters.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace GhostLetters.Api.Tests;
 
@@ -13,6 +16,39 @@ public sealed class EndToEndTests(PostgresFixture postgres) : IAsyncLifetime
     public Task InitializeAsync() => Task.CompletedTask;
 
     public async Task DisposeAsync() => await _factory.DisposeAsync();
+
+    [Fact]
+    public async Task CloseDuringAwards_KeepsResultInHistory_IncludingPreviouslyClosedGames()
+    {
+        var game = await GameHarness.StartAsync(_factory, 4, new LobbySettings { Rounds = 1 });
+        await new GameDriver(game).RunUntilAsync(p => p == "AwardNomination");
+        _factory.Services.GetRequiredService<IConfiguration>()["Admin:UserIds"] = game.Host.Id.ToString();
+        var saved = await _factory.WithDbAsync(db => db.Games.AsNoTracking().SingleAsync(g => g.Id == game.GameId));
+        var player = game.Players[1];
+        await game.Host.PostAsync($"/api/v1/games/{game.GameId}/close", null, System.Net.HttpStatusCode.NoContent);
+        (await game.StateAsync()).Status.Should().Be(GameStatuses.Finished);
+
+        async Task AssertInHistory()
+        {
+            var history = await player.GetAsync("/api/v1/me/games?status=finished");
+            var entry = history.EnumerateArray().Single(g => g.Id("gameId") == game.GameId);
+            entry.GetProperty("yourTurn").GetBoolean().Should().BeFalse();
+            entry.Str("phase").Should().Be("Finished");
+            var view = await player.ViewAsync(game.GameId);
+            view.Str("phase").Should().Be("Finished");
+            var winners = view.GetProperty("finale").GetProperty("result").GetProperty("winners");
+            entry.GetProperty("won").GetBoolean().Should().Be(winners.EnumerateArray().Any(id => id.GetGuid() == player.Id));
+            (await player.GetAsync($"/api/v1/users/{player.Id}/profile")).GetProperty("stats").GetProperty("games").GetInt32().Should().Be(1);
+        }
+
+        await AssertInHistory();
+        // Old /close preserved the award-phase snapshot, final result and finish timestamp.
+        await _factory.WithDbAsync(db => db.Games.Where(g => g.Id == game.GameId).ExecuteUpdateAsync(u =>
+            u.SetProperty(g => g.Status, GameStatuses.Abandoned).SetProperty(g => g.Phase, saved.Phase)
+                .SetProperty(g => g.Version, saved.Version).SetProperty(g => g.State, saved.State)));
+        await AssertInHistory();
+        (await player.ViewAsync(game.GameId)).GetProperty("allowedCommands").GetArrayLength().Should().Be(0);
+    }
 
     [Fact]
     public async Task CooperativeGame_DoesNotChangeRating()
