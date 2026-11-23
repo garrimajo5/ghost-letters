@@ -261,6 +261,8 @@ class Api {
 
   /// Админ ли я (кабинет ботов).
   Future<List<Json>> sandboxRuns() async => ((await get('/admin/sandbox')) as List).cast<Json>();
+  Future<Json> sandboxTrace(String scenario, int seed) async =>
+      await post('/admin/sandbox/trace', {'scenario': scenario, 'seed': seed}) as Json;
   Future<Json> runSandbox(String scenario, int seed, {bool ai = false}) async => await _call(() => _dio.post<dynamic>('/admin/sandbox',
       data: {'scenario': scenario, 'seed': seed, if (ai) 'ai': true}, options: Options(receiveTimeout: Duration(seconds: ai ? 120 : 45)))) as Json;
   Future<Json> sandboxReplay(String id) async => await get('/admin/sandbox/$id') as Json;

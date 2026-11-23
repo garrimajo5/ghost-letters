@@ -299,7 +299,7 @@ public static partial class BotPlayer
                 : toned.StartsWith("Не уверен", StringComparison.Ordinal) ? ThoughtKind.VersionDoubt
                 : toned.Contains("— уверен", StringComparison.Ordinal) ? ThoughtKind.VersionSure : ThoughtKind.Version, Where(target, column)));
             var linked = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .Where(h => HintWeight(h.Id, card) > 0.01).OrderByDescending(h => HintWeight(h.Id, card)).Take(2).ToList();
+                .Where(h => HintWeight(h.Id, card) > (Classic ? .01 : RevealFallback)).OrderByDescending(h => HintWeight(h.Id, card)).Take(2).ToList();
             if (exclude) linked.Clear();
             var links = linked.Select(h => $"{BotDiscussion.HintRef(h.Round, h.Number)} → {Where(target, column)}: {Connection(h.Id, card)}.").ToList();
             thoughts.AddRange(linked.Select(h => new Thought(ThoughtKind.Link, Where(target, column), Why: Connection(h.Id, card), Hint: BotDiscussion.HintRef(h.Round, h.Number))));

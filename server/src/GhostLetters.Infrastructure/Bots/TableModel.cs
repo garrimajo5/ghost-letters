@@ -21,6 +21,7 @@ public sealed class TableModel
     private readonly Func<string, string, double> _sim;
     private readonly double _focus;
     private readonly double _clarity;
+    private readonly Dictionary<string, double[][]> _readings = new();
 
     private TableModel(IReadOnlyList<IReadOnlyList<string>> rows, double[][] p, Func<string, string, double> sim, double focus, double clarity = 0)
     {
@@ -40,9 +41,9 @@ public sealed class TableModel
     /// <summary>Указание письма с поправкой на осторожность Призрака.</summary>
     private double[][] Readable(string letter)
     {
+        if (_readings.TryGetValue(letter, out var cached)) return cached;
         var w = Pointing(letter);
-        if (_clarity <= 0) return w;
-        return w.Select(row => row.Select((x, c) =>
+        return _readings[letter] = _clarity <= 0 ? w : w.Select(row => row.Select((x, c) =>
             x * (1 - _clarity * row.Where((_, o) => o != c).DefaultIfEmpty(0).Max())).ToArray()).ToArray();
     }
 
@@ -96,7 +97,10 @@ public sealed class TableModel
         var top = s.SelectMany(x => x).DefaultIfEmpty(0).Max();
         if (top <= 0) return s.Select(r => r.Select(_ => 0.0).ToArray()).ToArray();
         // Карта заметно слабее лучшей почти не «читается» — как у живого игрока.
-        return s.Select(r => r.Select(x => x <= 0 ? 0 : x / top * Math.Exp(-_focus * (top - x))).ToArray()).ToArray();
+        // Relative rank identifies a target; absolute similarity determines whether
+        // anyone will read the letter that way in the first place.
+        var scale = Math.Max(.2, top);
+        return s.Select(r => r.Select(x => x / scale * Math.Exp(-_focus * (top - x))).ToArray()).ToArray();
     }
 
     /// <summary>Вероятность, что Призрак откроет письмо при истине (row, column) — ε + (1 − 2ε)·λ.</summary>
@@ -111,6 +115,14 @@ public sealed class TableModel
             none *= 1 - Enumerable.Range(0, _rows[r].Count).Sum(c => _p[r][c] * Lambda(w[r][c]));
         // ε у каждого ряда складывается в шум выше заданного: оставляем один ε на всё письмо.
         return Math.Clamp(1 - none, Noise, 1 - Noise);
+    }
+
+    public double RevealChance(string letter, IReadOnlyList<int> truth)
+    {
+        var pointing = Readable(letter);
+        var miss = 1.0;
+        for (var r = 0; r < truth.Count; r++) miss *= 1 - Lambda(pointing[r][truth[r]]);
+        return Math.Clamp(1 - miss, Noise, 1 - Noise);
     }
 
     /// <summary>

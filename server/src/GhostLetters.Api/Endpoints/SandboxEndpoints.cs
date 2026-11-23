@@ -9,6 +9,7 @@ public static class SandboxEndpoints
         var group = api.MapGroup("/admin/sandbox").RequireAuthorization().WithTags("Admin sandbox");
         group.MapGet("", (HttpContext h, BotSandboxService s, CancellationToken ct) => s.ListAsync(h.User.UserId(), ct));
         group.MapPost("", (SandboxRequest request, HttpContext h, BotSandboxService s, CancellationToken ct) => s.RunAsync(h.User.UserId(), request, ct));
+        group.MapPost("/trace", (SandboxRequest request, HttpContext h, BotSandboxService s, CancellationToken ct) => s.TraceAsync(h.User.UserId(), request, ct));
         // Лаборатория мыслей: своя раскладка и подсказки — что думает каждый характер (без партии и речи).
         group.MapGet("/lab/names", (HttpContext h, BotLabService s, CancellationToken ct) => s.NamesAsync(h.User.UserId(), ct));
         group.MapPost("/lab/deal", (LabDealRequest request, HttpContext h, BotLabService s, CancellationToken ct) => s.DealAsync(h.User.UserId(), request, ct));

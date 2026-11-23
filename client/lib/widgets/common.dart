@@ -168,6 +168,8 @@ String roleImage(String? role) => switch (role) {
 
 bool isKillerTeam(String? role) => role == 'Killer' || role == 'Accomplice';
 
+bool isGreenRole(String? role) => role == 'Witness' || role == 'Expert';
+
 /// Тёмная плашка-панель с мягким скруглением.
 class Panel extends StatelessWidget {
   const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(12), this.color = AppColors.surface, this.border});

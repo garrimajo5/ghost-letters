@@ -9,6 +9,8 @@ import csv
 import json
 from pathlib import Path
 
+LABELS_PATH = Path(__file__).resolve().parents[2] / 'server/src/GhostLetters.Infrastructure/Games/retag_labels.json'
+
 ROOT = Path(__file__).resolve().parents[2] / 'client/assets/cards'
 PROFILES = {
 'data-storage': 'device store read write hard information',
@@ -56,7 +58,7 @@ PROFILES = {
 'fire': 'burn heat light hot wood',
 'fish': 'animal swim wet soft water',
 'float-item': 'float water light-weight hold-in-hand fishing',
-'flower': 'plant grow smell fragile garden decoration',
+'flower': 'plant subject-plant grow smell fragile garden decoration',
 'fluid': 'liquid pour wet container hollow',
 'food-ingredient': 'food cook hold-in-hand dry kitchen',
 'footwear': 'clothes wear walk soft body',
@@ -90,7 +92,7 @@ PROFILES = {
 'ornament': 'decorate display ornament fragile art',
 'pet': 'animal walk eat soft pet',
 'picture': 'art look-at display paper light-weight',
-'plant': 'plant grow biological nature fragile',
+'plant': 'plant subject-plant grow biological nature fragile',
 'plant-food': 'food eat plant biological edible',
 'plumbing': 'water pour hard tool hollow',
 'recording': 'sound play record hard device',
@@ -189,7 +191,7 @@ def write_vocabulary(tags, associations, labels):
 def main():
     with Path(__file__).with_name('retag_review.csv').open(encoding='utf-8') as source:
         rows = list(csv.DictReader(source, delimiter=';'))
-    labels = json.loads(Path(__file__).with_name('retag_labels.json').read_text(encoding='utf-8'))
+    labels = json.loads(LABELS_PATH.read_text(encoding='utf-8'))
     tags = {r['card']: reviewed_tags(r) for r in rows}
     associations = {}
     for row in rows:

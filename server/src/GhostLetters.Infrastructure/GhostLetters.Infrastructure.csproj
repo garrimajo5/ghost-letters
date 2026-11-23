@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Speech\Personas\*.json" LogicalName="Personas.%(Filename).json" />
+    <EmbeddedResource Include="Games/retag_labels.json" LogicalName="CardFeatureLabels.json" />
   </ItemGroup>
 
   <ItemGroup>

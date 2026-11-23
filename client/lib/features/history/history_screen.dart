@@ -62,7 +62,8 @@ class _HistoryCard extends StatelessWidget {
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
-      child: InkWell(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        InkWell(
         key: Key('history-${g.gameId}'),
         borderRadius: BorderRadius.circular(16),
         onTap: () => context.push('/game/${g.gameId}'),
@@ -83,18 +84,6 @@ class _HistoryCard extends StatelessWidget {
                   ].join(' · '),
                   style: const TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
-                const SizedBox(height: 2),
-                // Id партии: по нему партию можно открыть в лаборатории мыслей ботов. Нажатие копирует целиком.
-                GestureDetector(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: g.gameId));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Id партии скопирован — по нему партию можно открыть в лаборатории')));
-                  },
-                  child: Text('#${g.gameId.length <= 8 ? g.gameId : g.gameId.substring(0, 8)}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.muted, decoration: TextDecoration.underline,
-                          decorationStyle: TextDecorationStyle.dotted)),
-                ),
               ]),
             ),
             if (won != null)
@@ -109,7 +98,25 @@ class _HistoryCard extends StatelessWidget {
               ),
           ]),
         ),
-      ),
+        ),
+        TextButton.icon(
+          key: Key('copy-game-${g.gameId}'),
+          onPressed: () async {
+            try {
+              await Clipboard.setData(ClipboardData(text: g.gameId));
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Код партии скопирован')));
+            } on PlatformException {
+              if (context.mounted) {
+                await showDialog<void>(context: context, builder: (_) => AlertDialog(
+                  title: const Text('Код партии'), content: SelectableText(g.gameId),
+                ));
+              }
+            }
+          },
+          icon: const Icon(Icons.copy, size: 16),
+          label: Text('#${g.gameId.length <= 8 ? g.gameId : g.gameId.substring(0, 8)}'),
+        ),
+      ]),
     );
   }
 }

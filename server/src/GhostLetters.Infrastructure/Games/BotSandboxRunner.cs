@@ -17,6 +17,10 @@ public sealed record SandboxMessage(Guid Author, int Round, string Text, IReadOn
     string? Source = null);
 public sealed record SandboxFrame(string Action, Guid? Actor, JsonElement? Command, GameState State, PlayerView? Observation, int MessageCount);
 public sealed record SandboxSeat(Guid Id, string Name, BotPersonality Personality);
+public sealed record SandboxAction(int Round, string Action, Guid? Actor, JsonElement? Command, IReadOnlyList<SandboxMessage> Messages, int? VoteRow);
+public sealed record SandboxTrace(int Seed, string Status, string? Error, string? Winner, int CorrectRows, int TotalRows,
+    IReadOnlyDictionary<Guid, string> Players, IReadOnlyDictionary<Guid, Role> Roles, IReadOnlyDictionary<string, string> CardNames,
+    IReadOnlyList<BoardRowView> Board, IReadOnlyList<int>? Truth, IReadOnlyList<SandboxAction> Actions);
 public sealed record SandboxReport(int Format, string EngineVersion, string Scenario, int Seed, string Status, string? Error,
     bool? Passed, int CorrectRows, int TotalRows, string? Winner, long ElapsedMs, IReadOnlyList<SandboxSeat> Seats,
     IReadOnlyList<SandboxMessage> Messages, IReadOnlyList<SandboxFrame> Frames);
@@ -51,14 +55,27 @@ public static class BotSandboxRunner
     public static SandboxReport Run(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct) =>
         Simulate(scenario, seed, deck, tags, ct).Report;
 
+    public static SandboxTrace Trace(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct)
+    {
+        var actions = new List<SandboxAction>();
+        var (report, state) = Simulate(scenario, seed, deck, tags, ct, trace: actions);
+        var names = report.Seats.ToDictionary(s => s.Id, s => s.Name);
+        var cards = state.Board.SelectMany(r => r.Cards).Concat(state.Letters.Select(l => l.CardId))
+            .Concat(state.Hints.SelectMany(h => h.Cards)).Concat(report.Messages.SelectMany(m => m.Cards))
+            .Concat(state.Players.SelectMany(p => p.Discarded)).Distinct();
+        return new(seed, report.Status, report.Error, report.Winner, report.CorrectRows, report.TotalRows, names, state.Players.ToDictionary(p => p.Id, p => p.Role),
+            cards.ToDictionary(c => c, c => tags.NameOf(c) ?? c), state.Board.Select(r => new BoardRowView(r.Category, r.Cards)).ToList(),
+            state.Truth, actions);
+    }
+
     /// <summary>Прогон с итоговым состоянием партии (роли, исход) — для серий баланса.</summary>
     /// <param name="timeLimit">Страховка от зависшей симуляции; в тестах больше — CI-машины под нагрузкой медленнее в разы.</param>
     public static (SandboxReport Report, GameState State) Simulate(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags,
-        CancellationToken ct, SandboxOptions? options = null, TimeSpan? timeLimit = null)
+        CancellationToken ct, SandboxOptions? options = null, TimeSpan? timeLimit = null, List<SandboxAction>? trace = null)
     {
         if (!Scenarios.Contains(scenario)) throw new ArgumentException("Unknown scenario", nameof(scenario));
         var custom = options is not null && scenario == "full-game";
-        options ??= new SandboxOptions();
+        options ??= new SandboxOptions(Frames: trace is null);
         var watch = Stopwatch.StartNew();
         var limit = timeLimit ?? TimeSpan.FromSeconds(15);
         var count = custom ? options.Players : scenario == "witness-reveal" ? 7 : 6;
@@ -81,8 +98,17 @@ public static class BotSandboxRunner
         var clock = DateTimeOffset.UnixEpoch;
         string? error = null;
         var status = "completed";
+        var tracedMessages = 0;
         void Capture(string action, Guid? actor = null, GameCommand? command = null, PlayerView? observation = null)
         {
+            if (trace is not null)
+            {
+                trace.Add(new(observation?.Round ?? state.Round, action, actor,
+                    command is null ? null : JsonSerializer.SerializeToElement(command, command.GetType(), GameJson.Options),
+                    messages.GetRange(tracedMessages, messages.Count - tracedMessages),
+                    command is CastVote && observation?.Finale?.CurrentStage is { Kind: VoteStageKind.Row } stage ? stage.Row : null));
+                tracedMessages = messages.Count;
+            }
             if (options.Frames) frames.Add(Frame(action, actor, command, observation));
         }
         SandboxFrame Frame(string action, Guid? actor, GameCommand? command, PlayerView? observation) => new(
@@ -168,7 +194,7 @@ public static class BotSandboxRunner
                     {
                         // Шаблон остаётся для разбора ботами; рядом — как это прозвучало бы за столом.
                         var spoken = intent is null ? null : Speech.SpeechComposer.Compose(intent, new Speech.SpeechComposer.Voice(
-                            new Random(HashCode.Combine(seed, step, seat.Id)), Speech.SpokenStyle.MannerOf(seat.Id),
+                            new Random(unchecked(seed * 397 ^ step * 31 ^ seat.Id.GetHashCode())), Speech.SpokenStyle.MannerOf(seat.Id),
                             Speech.PersonaLines.IsFemale(seat.Name) != true, Speech.PersonaLines.KeyOf(seat.Name),
                             Genders: names.Values.Where(n => Speech.PersonaLines.IsFemale(n) is not null)
                                 .ToDictionary(n => BotNames.Bare(n), n => Speech.PersonaLines.IsFemale(n)!.Value)));
