@@ -102,7 +102,8 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         {
             null or "" => query,
             "active" => query.Where(g => g.Status == GameStatuses.Active),
-            "finished" => query.Where(g => g.Status == GameStatuses.Finished),
+            "finished" => query.Where(g => g.Status == GameStatuses.Finished ||
+                g.Status == GameStatuses.Abandoned && g.Result != null),
             _ => throw AppException.Validation("status — active или finished."),
         };
 
@@ -120,9 +121,10 @@ public sealed class ProfileService(GhostLettersDbContext db, GameService games)
         {
             var state = GameStore.Read(g);
             var me = state.Player(userId);
-            var allowed = GameProjection.AllowedCommands(state, me);
-            return new MyGameDto(g.Id, g.LobbyId, g.Status, g.Phase, state.Round,
-                allowed.Any(c => c != nameof(Domain.Game.Like)), g.PhaseDeadline, g.StartedAt, g.FinishedAt,
+            var closedAfterResult = g.Status == GameStatuses.Abandoned && state.Result is not null;
+            var yourTurn = g.Status != GameStatuses.Abandoned && GameProjection.AllowedCommands(state, me).Any(c => c != nameof(Domain.Game.Like));
+            return new MyGameDto(g.Id, g.LobbyId, g.Status, closedAfterResult ? nameof(Phase.Finished) : g.Phase, state.Round,
+                yourTurn, g.PhaseDeadline, g.StartedAt, g.FinishedAt,
                 state.TotalRounds, state.Players.Count,
                 g.LobbyId is { } lobbyId ? titles.GetValueOrDefault(lobbyId) : null,
                 me.Role.ToString(),

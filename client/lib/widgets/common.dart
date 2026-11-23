@@ -423,13 +423,14 @@ class GhostPainter extends CustomPainter {
   bool shouldRepaint(GhostPainter old) => old.color != color || old.eyes != eyes;
 }
 
-/// Подтверждение «Закрыть партию без доигрывания?» — она уйдёт из «Моих партий», рейтинг не изменится.
-Future<bool> confirmCloseGame(BuildContext context) async =>
+Future<bool> confirmCloseGame(BuildContext context, {required bool hasResult}) async =>
     await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Закрыть партию?'),
-        content: const Text('Партия закончится без доигрывания и уйдёт из «Моих партий». Рейтинг и статистика не изменятся.'),
+        content: Text(hasResult
+            ? 'Завершить награды сейчас? Итог партии сохранится в истории.'
+            : 'Партия закончится без доигрывания и уйдёт из «Моих партий». Рейтинг и статистика не изменятся.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Отмена')),
           FilledButton(key: const Key('close-game-confirm'), onPressed: () => Navigator.pop(context, true), child: const Text('Закрыть')),

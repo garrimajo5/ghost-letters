@@ -68,6 +68,7 @@ public sealed class BotTests(PostgresFixture postgres) : IAsyncLifetime
 
         var status = await _factory.WithDbAsync(db => db.Games.AsNoTracking().Where(g => g.Id == gameId).Select(g => g.Status).SingleAsync());
         status.Should().Be(GameStatuses.Abandoned);
+        (await host.GetAsync("/api/v1/me/games?status=finished")).EnumerateArray().Should().NotContain(g => g.Id("gameId") == gameId);
         (await host.GetAsync("/api/v1/me/games?status=active")).EnumerateArray().Should().NotContain(g => g.Id("gameId") == gameId);
         (await host.PostAsync($"/api/v1/games/{gameId}/commands", new { type = "AckRole", payload = new { } }, HttpStatusCode.Conflict))
             .Code().Should().Be("GAME_IN_PROGRESS");

@@ -29,7 +29,8 @@ class _WatchGamesSheetState extends ConsumerState<WatchGamesSheet> {
   }
 
   Future<void> _close(WatchableGame game) async {
-    if (!await confirmCloseGame(context) || !mounted) return;
+    final hasResult = const {'AwardNomination', 'AwardVoting'}.contains(game.phase);
+    if (!await confirmCloseGame(context, hasResult: hasResult) || !mounted) return;
     await runAction(context, () => ref.read(apiProvider).closeGame(game.gameId));
     if (mounted) _refresh();
   }

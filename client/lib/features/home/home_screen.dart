@@ -340,7 +340,7 @@ class _GameCard extends ConsumerWidget {
   final MyGame game;
 
   Future<void> _close(BuildContext context, WidgetRef ref) async {
-    final ok = await confirmCloseGame(context);
+    final ok = await confirmCloseGame(context, hasResult: game.won != null);
     if (!ok || !context.mounted) return;
     await runAction(context, () => ref.read(apiProvider).closeGame(game.gameId));
     ref.invalidate(myGamesProvider);
@@ -385,7 +385,7 @@ class _GameCard extends ConsumerWidget {
               if (g.canClose)
                 IconButton(
                   key: Key('close-game-${g.gameId}'),
-                  tooltip: 'Закрыть партию без доигрывания',
+                  tooltip: g.won != null ? 'Завершить награды' : 'Закрыть партию без доигрывания',
                   onPressed: () => _close(context, ref),
                   icon: const Icon(Icons.close, color: AppColors.muted),
                 ),

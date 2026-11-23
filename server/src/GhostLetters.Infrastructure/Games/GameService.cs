@@ -60,7 +60,7 @@ public sealed class GameService(
     {
         var viewer = await RequireViewerAsync(gameId, userId, ct);
         var game = await db.Games.AsNoTracking().FirstAsync(g => g.Id == gameId, ct);
-        return GameProjection.For(GameStore.Read(game), viewer.IsObserver ? null : userId);
+        return StoredView(game, viewer.IsObserver ? null : userId);
     }
 
     public async Task<GameSnapshot> SnapshotAsync(Guid gameId, Guid userId, CancellationToken ct)
@@ -74,8 +74,16 @@ public sealed class GameService(
                 orderby p.Seat
                 select new RosterEntry(u.Id, u.Nickname, u.AvatarColor, p.Seat, u.AvatarMediaId, u.IsBot))
             .ToListAsync(ct);
-        return new GameSnapshot(GameProjection.For(GameStore.Read(game), viewer.IsObserver ? null : userId), game.PhaseDeadline,
+        return new GameSnapshot(StoredView(game, viewer.IsObserver ? null : userId), game.PhaseDeadline,
             roster, game.LobbyId);
+    }
+
+    private static PlayerView StoredView(Game game, Guid? userId)
+    {
+        var view = GameProjection.For(GameStore.Read(game), userId);
+        // Older servers closed the game during awards without updating the saved phase.
+        return game.Status == GameStatuses.Abandoned && view.Finale?.Result is not null
+            ? view with { Phase = Phase.Finished, AllowedCommands = [] } : view;
     }
 
     public async Task<DateTimeOffset?> GetDeadlineAsync(Guid gameId, CancellationToken ct) =>
@@ -112,13 +120,13 @@ public sealed class GameService(
     {
         if (!await CanCloseAsync(gameId, userId, ct))
             throw AppException.Forbidden("Закрыть без доигрывания можно только свою партию с ботами (или админу — любую).");
-        var gate = Locks.GetOrAdd(gameId, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
-        try
+        await WithGameAsync<bool>(gameId, ct, async (game, state) =>
         {
-            var game = await db.Games.FirstOrDefaultAsync(g => g.Id == gameId, ct) ?? throw AppException.NotFound("Партия не найдена.");
             if (game.Status is not (GameStatuses.Active or GameStatuses.Paused))
                 throw AppException.Conflict(AppException.Codes.GameInProgress, "Партия уже закончена.");
+            if (state.Result is not null)
+                return (true, new Applied(GameEngine.CloseAwards(state), userId, null, "AwardsClosed"));
+
             game.Status = GameStatuses.Abandoned;
             game.FinishedAt = time.GetUtcNow();
             game.PhaseDeadline = null;
@@ -127,11 +135,8 @@ public sealed class GameService(
             if (lobby is not null && lobby.CurrentGameId == gameId && lobby.Status == LobbyStatuses.InGame) lobby.Status = LobbyStatuses.Open;
             await db.SaveChangesAsync(ct);
             logger.LogInformation("Партия {Game} закрыта без доигрывания ({User})", gameId, userId);
-        }
-        finally
-        {
-            gate.Release();
-        }
+            return (true, null);
+        });
     }
 
     public async Task<CommandResult> ExecuteAsync(Guid gameId, Guid userId, CommandRequest request, CancellationToken ct)
