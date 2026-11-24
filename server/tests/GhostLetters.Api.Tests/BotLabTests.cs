@@ -37,6 +37,37 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void DressPointsToSwimwearAndPistolPointsToHolster()
+    {
+        var tags = Catalog();
+        LabRow[] board = [new("Motive", ["orig_0414", "orig_0367"])];
+        foreach (var (hint, expected) in new[] { ("orig_0376", 0), ("orig_0279", 1) })
+        {
+            var result = BotLabService.Think(new(board, [new(1, [hint])]), tags);
+            foreach (var bot in result.Bots) bot.Rows[0].Vote.Should().Be(expected, bot.Bot);
+        }
+    }
+
+    [Fact]
+    public void BroomAndSpinningTopExplainThePlushToyWithoutCertifyingSkis()
+    {
+        var tags = Catalog();
+        LabRow[] board = [
+            new("Motive", ["orig_0562","zhizha_0057","orig_0704","orig_0725","orig_0245"]),
+            new("Place", ["orig_0162","zhizha_0092","orig_0401","zhizha_0073","zhizha_0151"]),
+            new("Method", ["orig_0154","orig_0698","orig_0544","orig_0706","orig_0450"]),
+            new("Secret", ["orig_0188","orig_0460","orig_0445","orig_0120","zhizha_0170"])];
+        var bots = BotLabService.Think(new(board, [new(0, ["orig_0030"]), new(1, ["orig_0496"]), new(2, [])]), tags).Bots;
+        foreach (var bot in bots)
+        {
+            bot.Rows[1].Vote.Should().Be(4, bot.Bot);
+            var skis = bot.Rows[2].Cards[3];
+            skis.Belief.Should().BeLessThan(.30, bot.Bot);
+            skis.Links.Where(l => l.Hint == "orig_0030").Should().NotContain(l => l.Why.Contains("замах"), bot.Bot);
+        }
+    }
+
+    [Fact]
     public void VanishedDartDoesNotCheckTheRadiatorOnTheReportedBoard()
     {
         var tags = Catalog();

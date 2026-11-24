@@ -94,6 +94,9 @@ public sealed class BotPersonalityTests
 
         stubborn.Column.Should().Be(0, "упрямый верит своим глазам");
         agreeable.Column.Should().Be(1, "сговорчивый идёт за столом");
+        var guess = TableReasoning.Read(Ann, ["rose"], [TableReasoning.Tentative], new HashSet<string> { "knife", "rose" }).ToList();
+        var afterGuess = (CastVote)BotPlayer.Decide(view, new Random(2), Tags, Mind(new BotPersonality { Compromise = .9 }, guess))!;
+        afterGuess.Column.Should().Be(0, "одна оговорённая догадка не равна уверенным показаниям двух игроков");
     }
 
     [Fact]

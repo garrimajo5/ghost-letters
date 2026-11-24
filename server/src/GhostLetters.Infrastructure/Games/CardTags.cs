@@ -207,9 +207,20 @@ public sealed class CardTags
 
     private readonly record struct Match(double Meaning, double Details, double Shape, double Color, double Material, bool HasStructure)
     {
-        public double Primary => Meaning + (1 - Meaning) * Details + Shape;
-        public double Score => HasStructure ? Primary : Math.Max(Color, Material);
-        public LinkKind Kind => Meaning > 0 ? LinkKind.Meaning : Details > 0 ? LinkKind.Detail :
+        private double Subject => Meaning + (1 - Meaning) * Details;
+        public bool ShapeLeads => Shape > Subject;
+        // A shared silhouette is another way to read the same drawing. It can corroborate
+        // the subject, but adding both at full weight counts correlated evidence twice.
+        public double Score
+        {
+            get
+            {
+                if (!HasStructure) return Math.Max(Color, Material);
+                var stronger = Math.Max(Subject, Shape);
+                return stronger + (1 - stronger) * .05 * Math.Min(Subject, Shape);
+            }
+        }
+        public LinkKind Kind => ShapeLeads ? LinkKind.Shape : Meaning > 0 ? LinkKind.Meaning : Details > 0 ? LinkKind.Detail :
             Shape > 0 ? LinkKind.Shape : Score > 0 ? LinkKind.Surface : LinkKind.None;
     }
 
@@ -227,6 +238,7 @@ public sealed class CardTags
     {
         private readonly HashSet<string> _board = rows.SelectMany(r => r.Cards).ToHashSet();
         private readonly Dictionary<string, Dictionary<string, Match>> _letters = new();
+        private readonly Dictionary<string, double> _top = new();
 
         private Match For(string letter, string target)
         {
@@ -243,6 +255,12 @@ public sealed class CardTags
         }
 
         public double Similarity(string letter, string target) => letter == target ? 1 : For(letter, target).Score;
+        public double Support(string letter, string target, double focus)
+        {
+            if (!_top.TryGetValue(letter, out var top))
+                _top[letter] = top = _board.Where(c => c != letter).Select(c => Similarity(letter, c)).DefaultIfEmpty().Max();
+            return GhostCluePolicy.Read(Similarity(letter, target), top, focus);
+        }
         public LinkKind Kind(string letter, string target) => For(letter, target).Kind;
 
         public string Explain(string letter, string target) => Similarity(letter, target) <= 0 ? "явной связи не вижу"
@@ -302,7 +320,9 @@ public sealed class CardTags
             if (details > 0 && va.Contains(d.Tag))
                 reasons.Add((.20 * details * d.Weight, "по деталям: " + d.Label));
         // Форма и материал — слабые подсказки: человек вспомнит их, только если общего смысла, цвета или детали не нашлось.
-        if (reasons.Any(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal) && !r.Text.StartsWith("по материалу", StringComparison.Ordinal)))
+        if (weights.ShapeLeads && reasons.Any(r => r.Text.StartsWith("по форме", StringComparison.Ordinal)))
+            reasons.RemoveAll(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal));
+        else if (reasons.Any(r => !r.Text.StartsWith("по форме", StringComparison.Ordinal) && !r.Text.StartsWith("по материалу", StringComparison.Ordinal)))
             reasons.RemoveAll(r => r.Text.StartsWith("по форме", StringComparison.Ordinal) || r.Text.StartsWith("по материалу", StringComparison.Ordinal));
         return reasons.Count == 0 ? "явной связи не вижу" :
             string.Join("; ", reasons.OrderByDescending(r => r.Text.StartsWith("по смыслу", StringComparison.Ordinal)).ThenByDescending(r => r.Score).Take(2).Select(r => r.Text));
@@ -555,6 +575,7 @@ public sealed class CardTags
     {
         var w = Read(a, b, attention, details, secondary);
         if (w.Score <= .01) return null;
+        if (w.ShapeLeads) return "форма";
         if (w.Meaning > 0) return "предмет";
         if (w.Details > 0) return "деталь";
         if (w.Shape > 0) return "форма";
@@ -590,10 +611,9 @@ public sealed class CardTags
         var m = sum <= 0 ? .8 : Math.Max(.7, attention.Meaning / sum);
         // A strong semantic match does not need a visual tie-breaker. Unlabelled
         // background colours are never evidence; dominant-* is an explicit annotation.
-        var fallback = meaning >= .25 ? .05 : 1 - meaning;
-        return (m * meaning, Math.Min(.12, Math.Max(0, attention.Shape)) * fallback * Match(1),
-            Math.Min(.08, Math.Max(0, attention.Color)) * fallback * Match(2),
-            Math.Max(0, BotTuning.Current.MaterialWeight) * fallback * material);
+        return (m * meaning, Math.Min(.12, Math.Max(0, attention.Shape)) * Match(1),
+            Math.Min(.08, Math.Max(0, attention.Color)) * Match(2),
+            Math.Max(0, BotTuning.Current.MaterialWeight) * material);
     }
 
     /// <summary>0 — смысл, 1 — форма, 2 — цвет, 3 — явно отмеченный акцент материала.</summary>

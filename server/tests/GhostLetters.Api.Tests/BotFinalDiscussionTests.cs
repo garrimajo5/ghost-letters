@@ -167,6 +167,12 @@ public sealed class BotFinalDiscussionTests
             ["brick"] = ["stone", "hard"], ["cat"] = ["animal"], ["rose"] = ["flower"] });
         var line = BotDiscussion.Compose(view, tags, Mind, [], new Random(1))!.Value;
         line.Text.Should().Contain("Подсказка р.1 №1").And.Contain("связь с открытыми уликами слабая");
+        var published = TableReasoning.Speech(view, tags, Mind, line);
+        var claims = TableReasoning.Read(Me, published.CardIds!, published.CardNotes!, view.Board.SelectMany(r => r.Cards).ToHashSet()).ToList();
+        claims.Single(c => c.CardId == "charger").Strength.Should().Be(1);
+        var uncertain = claims.Single(c => view.Board[1].Cards.Contains(c.CardId));
+        uncertain.Strength.Should().BeInRange(.01, .3);
+        uncertain.SourceCard.Should().BeNull();
     }
 
     [Theory]
