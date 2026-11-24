@@ -37,6 +37,18 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void DressPointsToSwimwearAndPistolPointsToHolster()
+    {
+        var tags = Catalog();
+        LabRow[] board = [new("Motive", ["orig_0414", "orig_0367"])];
+        foreach (var (hint, expected) in new[] { ("orig_0376", 0), ("orig_0279", 1) })
+        {
+            var result = BotLabService.Think(new(board, [new(1, [hint])]), tags);
+            foreach (var bot in result.Bots) bot.Rows[0].Vote.Should().Be(expected, bot.Bot);
+        }
+    }
+
+    [Fact]
     public void BroomAndSpinningTopExplainThePlushToyWithoutCertifyingSkis()
     {
         var tags = Catalog();

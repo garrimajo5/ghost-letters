@@ -365,7 +365,7 @@
   "orig_0364": ["teddy-bear", "toy", "play", "hold-in-hand", "child", "body", "fabric", "soft", "shape-animal", "dominant-brown"],
   "orig_0365": ["plague-mask", "wear", "protect", "light-weight", "body", "face", "leather", "hard", "shape-animal", "dominant-brown"],
   "orig_0366": ["gavel", "tool", "hold-in-hand", "use", "hard", "handle", "wood", "law", "hit", "swing", "shape-handle-plus-head", "dominant-brown"],
-  "orig_0367": ["holster", "clothes", "wear", "soft", "body", "fashion", "leather", "weapon", "shape-container", "dominant-brown"],
+  "orig_0367": ["holster", "container", "hold-in-hand", "carry", "open-close", "light-weight", "leather", "weapon", "wear", "belt", "bullet", "shape-container", "dominant-brown"],
   "orig_0368": ["memory-module", "electric", "use", "hard", "device", "energy", "metal", "plastic", "shape-flat", "dominant-green"],
   "orig_0369": ["burger", "food", "eat", "cook", "kitchen", "edible", "soft", "meat", "shape-ball", "dominant-yellow"],
   "orig_0370": ["jack-in-box", "toy", "play", "hold-in-hand", "child", "body", "wood", "hard", "open-close", "shape-box", "dominant-orange"],
