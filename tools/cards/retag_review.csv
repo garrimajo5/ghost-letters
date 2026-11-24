@@ -28,7 +28,7 @@ orig_0026;battery;electric;heavy metal;box;black;car
 orig_0027;flask;fluid;glass transparent hard lab open-top;container cone;green;chemistry:0.9 experiment:0.9 poison:0.5 measure:0.5
 orig_0028;glasses;eyewear;metal;pair ring;gray;read
 orig_0029;thermos;vessel;metal hot cool;container cylinder;green;camping
-orig_0030;broom;cleaning;wood swing;stick;brown;magic-user
+orig_0030;broom;cleaning;wood;stick;brown;magic-user swing:0.3
 orig_0031;whistle;instrument;metal hold-in-hand blow sportsman;cone;gray;signal
 orig_0032;cane;hand-tool;wood walk elder;stick;brown;support
 orig_0033;perfume;fluid;glass smell;container box;yellow;beauty

@@ -78,8 +78,9 @@ def similarity(x, y):
         meaning = max(meaning, .70)
     shape = match(1)
     if meaning or shape:
-        fallback = .05 if meaning >= .25 else 1 - meaning
-        return .8 * meaning + .12 * fallback * shape
+        subject, silhouette = .8 * meaning, .12 * shape
+        stronger = max(subject, silhouette)
+        return stronger + (1 - stronger) * .05 * min(subject, silhouette)
     dx, dy = getattr(x, 'details', set()), getattr(y, 'details', set())
     if dx.intersection(dy) or any(y.get(t, 0) > 0 for t in dx) or any(x.get(t, 0) > 0 for t in dy):
         return 0  # Default detail attention is zero, but a visible detail precludes a colour reading.

@@ -24,11 +24,11 @@ public static class BotDiscussion
 
     // A public story can differ from a killer's private vote. Decide the mask
     // once per game/player, without exposing that decision in public text.
-    public static IReadOnlyList<int> PublicPlan(PlayerView view, CardTags tags, BotMind mind)
+    public static IReadOnlyList<int> PublicPlan(PlayerView view, CardTags tags, BotMind mind, Dictionary<string, double>? beliefs = null)
     {
         var calm = view.Me?.Role.IsKillerTeam() == true
             ? view with { Truth = null, Me = view.Me with { Role = Role.Detective } } : view;
-        var plan = BotPlayer.Plan(calm, tags, mind, new Random(0)).ToArray();
+        var plan = BotPlayer.Plan(calm, tags, mind, new Random(0), beliefs).ToArray();
         if (view.Me?.Role.IsKillerTeam() == true && view.Truth is { } truth && plan.Length > 0 &&
             view.Me.Id.ToByteArray()[0] / 255.0 < mind.Personality.Risk)
         {
@@ -80,7 +80,8 @@ public static class BotDiscussion
         if (view.Me is not { Role: not Role.Ghost } me || view.Board.Count == 0) return null;
         var own = messages.Where(m => m.Author == me.Id).ToList();
         if (own.Count >= MaxMessages) return null;
-        var plan = PublicPlan(view, tags, mind);
+        var beliefs = new Dictionary<string, double>();
+        var plan = PublicPlan(view, tags, mind, beliefs);
         var cards = view.Board.Select((r, i) => r.Cards[plan[i]]).Take(ChatService.MaxCards).ToList();
         string Where(int r, int c) => $"{view.Board[r].Category switch { Category.Motive => "мотив", Category.Place => "место", Category.Method => "способ", _ => "тайна" }} {c + 1}";
         string Name(Guid id) => mind.Names.GetValueOrDefault(id, "Игрок");
@@ -100,23 +101,28 @@ public static class BotDiscussion
         var suspicion = BotPlayer.DiscussionSuspicion(view, tags, mind, rng);
         if (string.IsNullOrWhiteSpace(suspicion)) suspicion = " По игрокам пока недостаточно оснований для уверенного обвинения.";
         var reading = tags.AtBoard(view.Board, mind.Personality);
-        var clues = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1,
-            Top: view.Board.SelectMany(r => r.Cards).Where(c => c != id).Select(c => reading.Similarity(id, c)).DefaultIfEmpty().Max()))).ToList();
+        var sources = cards.ToDictionary(c => c, c => TableReasoning.SupportingHint(view, reading, mind.Personality, c));
+        // No direct hint can still be a sound deduction from vanished letters. Compare
+        // posterior odds with the initial 1 : (row size - 1) before labelling it a guess.
+        var supported = view.Board.Select((r, i) => (Card: r.Cards[plan[i]], Size: r.Cards.Count))
+            .Where(x => TableReasoning.HasPrivateSupport(beliefs[x.Card], x.Size)).Select(x => x.Card).ToHashSet();
+        List<string> Notes(IEnumerable<string> selected) =>
+            selected.Select(c => sources[c].Id is null && !supported.Contains(c) ? TableReasoning.Tentative : "думаю, эта").ToList();
         string Argument(int row)
         {
             var card = view.Board[row].Cards[plan[row]];
-            var hint = clues.Select(h => (h.Round, h.Number, h.Id,
-                Weight: GhostCluePolicy.Read(reading.Similarity(h.Id, card), h.Top,
-                    BotTuning.Current.FocusBase + BotTuning.Current.FocusStrict * mind.Personality.Strictness)))
-                .OrderByDescending(h => h.Weight).FirstOrDefault();
-            if (hint.Id is null || hint.Weight < GhostCluePolicy.PlausibleMatch(mind.Personality.Risk))
-                return "связь с открытыми уликами слабая, пока предположение";
+            var hint = sources[card];
+            if (hint.Id is null)
+                return supported.Contains(card) ? "по совокупности улик эта карта стала вероятнее" :
+                    "связь с открытыми уликами слабая, пока предположение";
             var reason = reading.Explain(hint.Id, card);
             return $"{HintRef(hint.Round, hint.Number)}: {(reason.Length <= 120 ? reason : "сходство изображений")}";
         }
-        (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line(string text, int? focus = null) =>
-            (text, focus is { } r ? cards.OrderByDescending(c => c == view.Board[r].Cards[plan[r]]).ToList() : cards,
-                cards.Select(_ => "думаю, эта").ToList());
+        (string Text, IReadOnlyList<string> Cards, IReadOnlyList<string> Notes) Line(string text, int? focus = null)
+        {
+            var ordered = focus is { } r ? cards.OrderByDescending(c => c == view.Board[r].Cards[plan[r]]).ToList() : cards;
+            return (text, ordered, Notes(ordered));
+        }
         string Overview(string prefix) => prefix + "\n" + string.Join("\n", view.Board.Select((_, r) =>
             $"• {Revision(r)}{Where(r, plan[r])} — {Argument(r)}.")) +
             (me.Letters.Any(l => l.Revealed == false)
@@ -143,7 +149,7 @@ public static class BotDiscussion
                 var differ = Enumerable.Range(0, view.Board.Count)
                     .Where(r => last.Cards.FirstOrDefault(view.Board[r].Cards.Contains) is { } theirs && theirs != view.Board[r].Cards[plan[r]]).ToList();
                 if (differ.Count == 0)
-                    return ($"Согласен с версией {Call(last.Author)} целиком.{suspicion}", cards, cards.Select(_ => "думаю, эта").ToList());
+                    return ($"Согласен с версией {Call(last.Author)} целиком.{suspicion}", cards, Notes(cards));
                 var where = string.Join(", ", differ.Select(r => $"{Revision(r)}{Where(r, plan[r])} — {Argument(r)}"));
                 var text = $"С версией {Call(last.Author)} согласен, кроме: {where}.{suspicion}";
                 if (text.Length > ChatService.MaxTextLength) text = $"С версией {Call(last.Author)} согласен, кроме: {string.Join(", ", differ.Select(r => Where(r, plan[r])))}.";
@@ -189,7 +195,7 @@ public static class BotDiscussion
                 var shared = question.Cards.Intersect(cards).ToList();
                 if (shared.Count > 0)
                     return ($"{Call(question.Author)}, договорились поддержать эти карты. По остальным пунктам ещё сверю улики." + suspicion,
-                        shared, shared.Select(_ => "думаю, эта").ToList());
+                        shared, Notes(shared));
                 return Line($"{Call(question.Author)}, пока не договорились: мои улики ведут к другим картам. Показываю свою версию." + suspicion);
             }
             var mentioned = MentionedRows(view, incoming);
@@ -215,7 +221,7 @@ public static class BotDiscussion
                     response = prefix + "\n" + string.Join("; ", mentioned.Select(row => Where(row, plan[row]))) +
                         (asksSuspect ? suspicion : "");
                 var selected = mentioned.Select(row => view.Board[row].Cards[plan[row]]).Take(ChatService.MaxCards).ToList();
-                return (response, selected, selected.Select(_ => "думаю, эта").ToList());
+                return (response, selected, Notes(selected));
             }
             var focus = FocusRow(view, incoming);
             if (focus is null)
@@ -263,7 +269,7 @@ public static class BotDiscussion
                 // Финальное обсуждение — после последнего раунда: новых улик уже не будет.
                 return ($"{Call(ally.Message.Author)}, наши версии здесь совпадают. Предлагаю голосовать вместе за эти карты." + sharedSuspicion +
                     (sharedSuspicion.Contains("Подозреваю", StringComparison.Ordinal) ? " Предлагаю вместе голосовать и против этого подозреваемого." : "") + " Согласен?",
-                    ally.Shared, ally.Shared.Select(_ => "думаю, эта").ToList());
+                    ally.Shared, Notes(ally.Shared));
             }
         }
         if (fresh.Count > 0 && !own.Any(m => m.Text.StartsWith("Итог", StringComparison.Ordinal)))

@@ -16,11 +16,13 @@ public static class GhostCluePolicy
     }
 
     public static Assessment Assess(PlayerView view, CardTags tags, BotMind mind, string letter)
+        => Assess(view, tags.AtBoard(view.Board, mind.Personality), mind, letter);
+
+    private static Assessment Assess(PlayerView view, CardTags.BoardReading reading, BotMind mind, string letter)
     {
         if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return new(0, 0, 0, false);
         var p = mind.Personality;
         var trueCards = view.Board.Select((r, i) => r.Cards[truth[i]]).ToHashSet();
-        var reading = tags.AtBoard(view.Board, p);
         double Match(string card) => reading.Similarity(letter, card);
         var yes = trueCards.Select(Match).DefaultIfEmpty().Max();
         var no = view.Board.SelectMany(r => r.Cards).Where(c => !trueCards.Contains(c)).Select(Match).DefaultIfEmpty().Max();
@@ -51,13 +53,13 @@ public static class GhostCluePolicy
         if (view.Me?.Role != Role.Ghost || view.Truth is not { } truth) return [];
         var tuning = BotTuning.Current;
         if (tuning.GhostModel) return ModelChoose(view, tags, mind, cards.Distinct().ToList(), truth, letters);
+        var ownReading = tags.AtBoard(view.Board, mind.Personality);
         if (!tuning.GhostPlans)
-            return cards.Select(c => (Card: c, Value: Assess(view, tags, mind, c))).Where(x => x.Value.Reveal)
+            return cards.Select(c => (Card: c, Value: Assess(view, ownReading, mind, c))).Where(x => x.Value.Reveal)
                 .OrderByDescending(x => x.Value.TrueMatch - x.Value.FalseMatch * (1 - x.Value.Risk)).Select(x => x.Card).ToList();
-        var p = mind.Personality;
-        var candidates = cards.Distinct().Select(c => (Card: c, Value: Assess(view, tags, mind, c))).ToList();
+        var candidates = cards.Distinct().Select(c => (Card: c, Value: Assess(view, ownReading, mind, c))).ToList();
         if (candidates.Count == 0) return [];
-        var reading = tags.AtBoard(view.Board, tuning.GhostTableDefault ? null : p);
+        var reading = tuning.GhostTableDefault ? tags.AtBoard(view.Board) : ownReading;
         double Sim(string a, string b) => reading.Similarity(a, b);
         var shown = view.Hints.SelectMany(h => h.Cards).ToList();
         var all = candidates.Select(c => c.Card).ToList();
@@ -67,7 +69,7 @@ public static class GhostCluePolicy
         // Призрак слушает стол: голоса мирных — уже сложившееся мнение, его и надо поправить.
         var votes = tuning.GhostListen > 0 ? Voices(view, mind) : null;
         double Score(IReadOnlyList<string> hints, IReadOnlyList<string> hidden) =>
-            TableScore(view, truth, hints, hidden, Sim, focus, votes, tuning.GhostListen);
+            TableScore(view, truth, hints, letters ? hidden : [], Sim, focus, votes, tuning.GhostListen);
         var current = Score(shown, all);
         var risk = candidates[0].Value.Risk;
         var chosen = new List<string>();

@@ -23,6 +23,23 @@ public sealed class GhostRiskAndLetterTacticsTests
         new(Me, role, ["clear", "ambiguous", "empty"], [new(1, "clear", true)]), [0], 0, null, null, null, null, [], [], null);
 
     [Fact]
+    public void GhostSendsEvidenceForTheKnownTruthFromItsOwnHand()
+    {
+        var view = View() with { AllowedCommands = [nameof(SendLetter)], Phase = Phase.Mailbox, Hints = [],
+            Me = new(Me, Role.Ghost, ["flower", "clear"], []) };
+        var tags = new CardTags(new Dictionary<string, HashSet<string>> {
+            ["clear"] = ["weapon", "sharp"], ["flower"] = ["plant", "flower"],
+            ["truth"] = ["weapon", "sharp"], ["false"] = ["plant", "flower"] });
+        foreach (var truth in new[] { 0, 1 })
+        {
+            var letter = (SendLetter)BotPlayer.Decide(view with { Truth = [truth] }, new Random(0), tags, Mind(.5))!;
+            letter.CardIds.Should().Equal(truth == 0 ? "clear" : "flower");
+        }
+        var pair = (SendLetter)BotPlayer.Decide(view with { Players = view.Players.Take(2).ToList() }, new Random(0), tags, Mind(.5))!;
+        pair.CardIds.Should().BeEquivalentTo(["flower", "clear"]);
+    }
+
+    [Fact]
     public void CautiousGhostRejectsAmbiguityButRiskyGhostMayRevealIt()
     {
         GhostCluePolicy.Choose(View(), Tags, Mind(0), ["clear", "ambiguous", "empty"]).Should().Equal("clear");

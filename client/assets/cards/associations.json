@@ -28,7 +28,7 @@
   "orig_0027": [{"tag": "chemistry", "weight": 0.9, "label": "химия"}, {"tag": "experiment", "weight": 0.9, "label": "опыт"}, {"tag": "poison", "weight": 0.5, "label": "яд"}, {"tag": "measure", "weight": 0.5, "label": "измерение"}],
   "orig_0028": [{"tag": "read", "weight": 0.5, "label": "читать"}],
   "orig_0029": [{"tag": "camping", "weight": 0.5, "label": "поход"}],
-  "orig_0030": [{"tag": "magic-user", "weight": 0.5, "label": "маг, волшебник"}],
+  "orig_0030": [{"tag": "magic-user", "weight": 0.5, "label": "маг, волшебник"}, {"tag": "swing", "weight": 0.3, "label": "махать, делать замах"}],
   "orig_0031": [{"tag": "signal", "weight": 0.5, "label": "сигнал"}],
   "orig_0032": [{"tag": "support", "weight": 0.5, "label": "опора, поддержка"}],
   "orig_0033": [{"tag": "beauty", "weight": 0.5, "label": "красота"}],

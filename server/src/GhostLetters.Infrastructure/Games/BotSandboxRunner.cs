@@ -198,7 +198,8 @@ public static class BotSandboxRunner
                             Speech.PersonaLines.IsFemale(seat.Name) != true, Speech.PersonaLines.KeyOf(seat.Name),
                             Genders: names.Values.Where(n => Speech.PersonaLines.IsFemale(n) is not null)
                                 .ToDictionary(n => BotNames.Bare(n), n => Speech.PersonaLines.IsFemale(n)!.Value)));
-                        Say(seat.Id, said.Text, said.Cards, said.Notes, spoken, intent, source);
+                        var publicLine = TableReasoning.Speech(view, tags, mind, said);
+                        Say(seat.Id, said.Text, publicLine.CardIds!, publicLine.CardNotes!, spoken, intent, source);
                         Capture("Сообщение", seat.Id, observation: view); moved = true; break;
                     }
                     if (BotLetterTactics.Pending(seat.Id, discussion)) { waiting = true; continue; }

@@ -72,13 +72,19 @@ public static partial class BotPlayer
         view.Me is { } me ? new Brain(view, me, new Random(0), tags, mind).Evidence(card) : 0;
 
     /// <summary>Версия по всем рядам: те же улики, характер и мнения, что при голосовании.</summary>
-    public static IReadOnlyList<int> Plan(PlayerView view, CardTags tags, BotMind? mind, Random rng)
+    public static IReadOnlyList<int> Plan(PlayerView view, CardTags tags, BotMind? mind, Random rng,
+        Dictionary<string, double>? beliefs = null)
     {
         if (view.Me is not { } me) return [];
         // All rows share the same immutable role projection and evidence for this decision.
         var brain = new Brain(view, me, rng, tags, mind);
-        return view.Board.Select((row, r) => brain
-            .RowVote(new VoteStageView(0, VoteStageKind.Row, r, 1, Enumerable.Range(0, row.Cards.Count).ToList(), [])) ?? 0).ToList();
+        return view.Board.Select((row, r) =>
+        {
+            var column = brain.RowVote(new VoteStageView(0, VoteStageKind.Row, r, 1, Enumerable.Range(0, row.Cards.Count).ToList(), [])) ?? 0;
+            if (beliefs is not null)
+                foreach (var (card, probability) in brain.RowBelief(r)) beliefs[card] = probability;
+            return column;
+        }).ToList();
     }
 
     public static string DiscussionSuspicion(PlayerView view, CardTags tags, BotMind mind, Random rng) =>
@@ -589,11 +595,11 @@ public static partial class BotPlayer
             // Чёрные и тут не выдают истину.
             var options = Enumerable.Range(0, view.Board[row].Cards.Count).Where(c => !KillerTeam || Truth is null || Truth[row] != c).ToList();
             var card = Card(row, BestColumn(row, options));
-            var hint = view.Hints.SelectMany(h => h.Cards.Select((id, i) => (Id: id, h.Round, Number: i + 1)))
-                .OrderByDescending(h => HintWeight(h.Id, card)).FirstOrDefault();
-            var reason = hint.Id is not null && HintWeight(hint.Id, card) > 0.01
+            var hint = TableReasoning.SupportingHint(view, _reading, P, card);
+            var supported = hint.Id is not null || TableReasoning.HasPrivateSupport(RowBelief(row)[card], view.Board[row].Cards.Count);
+            var reason = hint.Id is not null
                 ? $"{BotDiscussion.HintRef(hint.Round, hint.Number)}: {Connection(hint.Id, card)}"
-                : "прямых улик нет, скорее чутьё";
+                : supported ? "по совокупности улик эта карта стала вероятнее" : "прямых улик нет, скорее чутьё";
             var why = System.Text.RegularExpressions.Regex.IsMatch(lower, @"почему|зачем|с чего|отчего");
             // «Подсказка р.1 №2» остаётся с большой буквы — так её узнают чат и озвучка.
             var because = reason.StartsWith("Подсказка", StringComparison.Ordinal) || reason.StartsWith("Зацепка", StringComparison.Ordinal)
@@ -609,7 +615,7 @@ public static partial class BotPlayer
                         ? $"{call}, да, {where} — {because}."
                         : $"{call}, нет, я бы взял другую — {where}. {char.ToUpperInvariant(reason[0])}{reason[1..]}.";
             var cards = new List<string> { card };
-            var notes = new List<string> { "думаю, эта" };
+            var notes = new List<string> { supported ? "думаю, эта" : TableReasoning.Tentative };
             if (askedCard is not null && askedCard != card)
             {
                 cards.Add(askedCard);
@@ -622,24 +628,16 @@ public static partial class BotPlayer
         /// <summary>Своя оценка карт ряда, смешанная с мнением стола в доле компромисса.</summary>
         private double Blend(int row, int column, IReadOnlyList<int> columns)
         {
-            var own = columns.Select(c => Evidence(Card(row, c))).ToList();
-            var social = columns.Select(c => Social(Card(row, c))).ToList();
-            double Norm(double v, List<double> all)
-            {
-                var min = all.Min();
-                var max = all.Max();
-                return max - min < 1e-9 ? 0 : (v - min) / (max - min);
-            }
-
-            var i = columns.ToList().IndexOf(column);
+            var card = Card(row, column);
             var compromise = P.Compromise;
             // Сам не уверен (две лучшие карты почти равны) — сильнее держусь общего мнения стола,
             // чтобы мирные не разбрелись по разным картам.
-            var sorted = own.OrderByDescending(x => x).ToList();
+            var sorted = columns.Select(c => Evidence(Card(row, c))).OrderByDescending(x => x).Take(2).ToList();
             if (!Classic && !KillerTeam && sorted.Count > 1 && sorted[0] - sorted[1] < BotTuning.Current.UnsureFollow)
                 compromise = Math.Max(compromise, .8);
-            var c = Classic ? 0 : compromise * (social.Any(s => Math.Abs(s) > 1e-9) ? 1 : 0);
-            return (1 - c) * Norm(own[i], own) + c * Norm(social[i], social);
+            // The private term is the log weight used in RowBelief. Trust-weighted testimony
+            // adds evidence on that scale; a lone guess retains its small absolute weight.
+            return (1 - .8 * compromise) * Beta * Evidence(card) + compromise * Social(card);
         }
 
         private bool KillerTeam => me.Role.IsKillerTeam();
@@ -963,6 +961,14 @@ public static partial class BotPlayer
             }
 
             string target;
+            if (me.Role == Role.Ghost && mind is not null && Truth is { } ghostTruth)
+            {
+                // Only the chosen cards enter the mailbox. Plan which ones would actually help
+                // the table if opened; the Ghost has no reason to probe a hypothetical truth.
+                var clues = GhostCluePolicy.Choose(view, tags, mind, me.Hand, letters: false);
+                var real = ghostTruth.Select((c, r) => Card(r, c)).ToList();
+                return clues.Concat(me.Hand.Except(clues).OrderBy(h => Best(h, real))).Take(count).ToList();
+            }
             if (KillerTeam && mind is not null && Truth is { } knownTruth)
             {
                 var table = Model();
