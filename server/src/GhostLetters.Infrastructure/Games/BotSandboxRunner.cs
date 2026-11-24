@@ -55,10 +55,11 @@ public static class BotSandboxRunner
     public static SandboxReport Run(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct) =>
         Simulate(scenario, seed, deck, tags, ct).Report;
 
-    public static SandboxTrace Trace(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct)
+    public static SandboxTrace Trace(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags, CancellationToken ct,
+        IReadOnlyList<int>? fixedTruth = null)
     {
         var actions = new List<SandboxAction>();
-        var (report, state) = Simulate(scenario, seed, deck, tags, ct, trace: actions);
+        var (report, state) = Simulate(scenario, seed, deck, tags, ct, trace: actions, fixedTruth: fixedTruth);
         var names = report.Seats.ToDictionary(s => s.Id, s => s.Name);
         var cards = state.Board.SelectMany(r => r.Cards).Concat(state.Letters.Select(l => l.CardId))
             .Concat(state.Hints.SelectMany(h => h.Cards)).Concat(report.Messages.SelectMany(m => m.Cards))
@@ -71,7 +72,8 @@ public static class BotSandboxRunner
     /// <summary>Прогон с итоговым состоянием партии (роли, исход) — для серий баланса.</summary>
     /// <param name="timeLimit">Страховка от зависшей симуляции; в тестах больше — CI-машины под нагрузкой медленнее в разы.</param>
     public static (SandboxReport Report, GameState State) Simulate(string scenario, int seed, IReadOnlyList<string> deck, CardTags tags,
-        CancellationToken ct, SandboxOptions? options = null, TimeSpan? timeLimit = null, List<SandboxAction>? trace = null)
+        CancellationToken ct, SandboxOptions? options = null, TimeSpan? timeLimit = null, List<SandboxAction>? trace = null,
+        IReadOnlyList<int>? fixedTruth = null)
     {
         if (!Scenarios.Contains(scenario)) throw new ArgumentException("Unknown scenario", nameof(scenario));
         var custom = options is not null && scenario == "full-game";
@@ -91,6 +93,9 @@ public static class BotSandboxRunner
             UseSecretRow = !custom || options.SecretRow,
             Roles = custom ? options.Roles ?? new RoleOptions() : new RoleOptions(KillerEnabled: scenario != "clear-hints")
         }, CardCatalog.WithoutDuplicateNames(deck, tags, seed).Order(StringComparer.Ordinal).ToList(), seed);
+        if (fixedTruth is not null && (scenario != "full-game" || fixedTruth.Count != state.Board.Count ||
+            fixedTruth.Where((c, r) => c < 0 || c >= state.Board[r].Cards.Count).Any()))
+            throw new ArgumentException("Для полной партии нужна одна допустимая колонка на каждый ряд.", nameof(fixedTruth));
         var messages = new List<SandboxMessage>();
         var frames = new List<SandboxFrame>();
         var parsedAccusations = new List<Accusation>();
@@ -205,6 +210,8 @@ public static class BotSandboxRunner
                     if (BotLetterTactics.Pending(seat.Id, discussion)) { waiting = true; continue; }
                 }
                 var command = BotPlayer.Decide(view, rng, tags, mind);
+                // Let the chooser consume its normal randomness; replace only the night choice.
+                if (command is ChooseTruth && fixedTruth is not null) command = new ChooseTruth(fixedTruth);
                 if (command is null) continue;
                 // Do not let readiness end discussion before all investigators have spoken.
                 if (command is ReadyNextRound && seats.Any(s => s.Id != state.Ghost.Id && !messages.Any(m => m.Author == s.Id && m.Round == state.Round))) continue;

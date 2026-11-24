@@ -73,6 +73,20 @@ public sealed class BotSandboxRunnerTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void PinnedNightChoiceKeepsTheDealAndDoesNotChangePlayerVisibility()
+    {
+        var (deck, tags) = Cards();
+        int[] truth = [3, 1, 0, 2];
+        var (report, state) = BotSandboxRunner.Simulate("full-game", 1000, deck, tags, default,
+            timeLimit: TimeSpan.FromMinutes(2), fixedTruth: truth);
+        report.Status.Should().Be("completed", report.Error);
+        state.Truth.Should().Equal(truth);
+        var night = report.Frames.Single(f => f.Action == nameof(ChooseTruth));
+        night.Command!.Value.GetProperty("columns").EnumerateArray().Select(c => c.GetInt32()).Should().Equal(truth);
+        report.Frames.Where(f => f.Observation?.Me?.Role == Role.Detective).Should().OnlyContain(f => f.Observation!.Truth == null);
+    }
+
+    [Fact]
     public void MissingTagsInvalidateEasyTask_InsteadOfClaimingBotFailure()
     {
         var (deck, _) = Cards();
