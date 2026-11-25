@@ -14,6 +14,7 @@ public sealed class CardTags
     private IReadOnlyDictionary<string, List<Detail>> _details = new Dictionary<string, List<Detail>>();
     private IReadOnlyDictionary<string, IReadOnlyList<Detail>> _meanings = new Dictionary<string, IReadOnlyList<Detail>>();
     private IReadOnlyDictionary<string, Dictionary<string, double>> _meaningWeights = new Dictionary<string, Dictionary<string, double>>();
+    private IReadOnlySet<string> _graded = new HashSet<string>();
     private IReadOnlyDictionary<string, IReadOnlyList<string>> _names = new Dictionary<string, IReadOnlyList<string>>();
     public static readonly CardTags Empty = new(new Dictionary<string, HashSet<string>>());
 
@@ -89,7 +90,7 @@ public sealed class CardTags
             var clean = CleanNames(list);
             if (clean.Count > 0) names[card] = clean;
         }
-        return new CardTags(_tags) { _details = _details, _meanings = _meanings, _meaningWeights = _meaningWeights, _names = names };
+        return new CardTags(_tags) { _details = _details, _meanings = _meanings, _meaningWeights = _meaningWeights, _graded = _graded, _names = names };
     }
 
     public static IReadOnlyList<string> CleanNames(IEnumerable<string>? list) =>
@@ -97,7 +98,52 @@ public sealed class CardTags
 
     public CardAnnotation AnnotationOf(string card) => new(Of(card).Where(t => Group(t) != 0).Order().ToList(),
         _meanings.GetValueOrDefault(card) ?? Of(card).Where(t => Group(t) == 0).Order().Select(t => new Detail(t, 1, t)).ToList(),
-        _details.GetValueOrDefault(card) ?? [], NamesOf(card));
+        _details.GetValueOrDefault(card) ?? [], NamesOf(card), Visuals(card, "dominant-"), Visuals(card, "shape-"));
+
+    private Dictionary<string, double>? Visuals(string card, string prefix) => !_graded.Contains(card) ? null :
+        Of(card).Where(t => t.StartsWith(prefix, StringComparison.Ordinal))
+            .ToDictionary(t => t[prefix.Length..], t => _meaningWeights[card][t]);
+
+    public CardAnnotation ResolveAnnotation(string card, CardAnnotation saved, CardAnnotation? previous = null)
+    {
+        var result = saved.Names is { Count: > 0 } ? saved : saved with { Names = NamesOf(card) };
+        if (result.Colors is not null || previous?.Colors is null && !_graded.Contains(card)) return result;
+        // Old editor snapshots saved every field, even when only the title changed.
+        // Reuse the reviewed weights for retained primary keys and preserve explicit edits.
+        var basis = previous ?? AnnotationOf(card);
+        var colors = saved.Tags.Where(t => t.StartsWith("dominant-")).Select(t => t[9..]).Distinct().ToList();
+        if (colors.Count == 0 && previous is null) colors = basis.Colors!.Keys.ToList();
+        var palette = colors.Take(3).ToDictionary(t => t, t => basis.Colors!.GetValueOrDefault(t, 1));
+        var sum = palette.Values.Sum();
+        var shapes = saved.Tags.Where(t => Group(t) == 1).Distinct().ToDictionary(t => t[6..], t => basis.Shapes!.GetValueOrDefault(t[6..], 1));
+        return result with
+        {
+            Colors = palette.ToDictionary(v => v.Key, v => v.Value / sum),
+            Shapes = shapes.Count > 0 || previous is not null ? shapes : basis.Shapes,
+            Meanings = saved.Meanings.Select(d => d.Weight == 1 ? basis.Meanings.FirstOrDefault(m => m.Tag == d.Tag) ?? d : d)
+                .OrderByDescending(d => d.Weight).ToList()
+        };
+    }
+
+    private sealed record Reviewed(Dictionary<string, double> Meanings, Dictionary<string, double> Colors,
+        Dictionary<string, double> Shapes, Dictionary<string,double>? Details);
+
+    public CardTags WithReviewedWeights(string json)
+    {
+        var rows = JsonSerializer.Deserialize<Dictionary<string, Reviewed>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        return WithAnnotations(rows.ToDictionary(e => e.Key, e =>
+        {
+            var a = AnnotationOf(e.Key);
+            var meanings = e.Value.Meanings.OrderByDescending(m => m.Value).Select(m =>
+                new Detail(m.Key, m.Value, CatalogLabels.GetValueOrDefault(m.Key) ?? FeatureLabel(m.Key) ?? m.Key)).ToList();
+            // Legacy accent-* details include smoke and background reflections. Only the reviewed palette describes colour.
+            var details = a.Details.Where(d => Group(d.Tag) == 0 && !e.Value.Meanings.ContainsKey(d.Tag))
+                .Select(d => d with { Weight = Math.Round(d.Weight * .15, 3) }).Where(d => d.Weight > 0).ToDictionary(d => d.Tag);
+            foreach (var (tag, weight) in e.Value.Details ?? [])
+                details[tag] = new(tag, weight, CatalogLabels[tag]);
+            return new CardAnnotation(a.Tags, meanings, details.Values.OrderByDescending(d => d.Weight).ToList(), a.Names, e.Value.Colors, e.Value.Shapes);
+        }));
+    }
 
     public CardTags WithAnnotations(IReadOnlyDictionary<string, CardAnnotation> annotations)
     {
@@ -105,21 +151,37 @@ public sealed class CardTags
         var details = _details.ToDictionary(e => e.Key, e => e.Value);
         var meanings = _meanings.ToDictionary(e => e.Key, e => e.Value);
         var weights = _meaningWeights.ToDictionary(e => e.Key, e => e.Value);
-        foreach (var (key, value) in annotations)
+        var graded = _graded.ToHashSet();
+        foreach (var (key, saved) in annotations)
         {
+            var value = ResolveAnnotation(key, saved);
             tags[key] = value.Tags.Concat(value.Meanings.Select(m => m.Tag)).ToHashSet();
             details[key] = value.Details.ToList(); meanings[key] = value.Meanings;
             weights[key] = value.Meanings.ToDictionary(m => m.Tag, m => m.Weight);
+            if (value.Colors is { } colors && value.Shapes is { } shapes)
+            {
+                graded.Add(key);
+                tags[key].RemoveWhere(t => Group(t) is 1 or 2);
+                foreach (var (tag, weight) in colors.Select(c => ("dominant-" + c.Key, c.Value))
+                    .Concat(shapes.Select(s => ("shape-" + s.Key, s.Value))))
+                {
+                    tags[key].Add(tag);
+                    weights[key][tag] = weight;
+                }
+            }
         }
         var names = _names.ToDictionary(e => e.Key, e => e.Value);
         foreach (var (key, value) in annotations)
             if (value.Names is { Count: > 0 } own) names[key] = own;
-        return new CardTags(tags) { _details = details, _meanings = meanings, _meaningWeights = weights, _names = names };
+        return new CardTags(tags) { _details = details, _meanings = meanings, _meaningWeights = weights, _graded = graded, _names = names };
     }
 
     private double Salience(string card, string tag, double secondary)
     {
         var weight = _meaningWeights.GetValueOrDefault(card)?.GetValueOrDefault(tag, 1) ?? 1;
+        if (weight == 1) return 1;
+        if (_graded.Contains(card))
+            return Group(tag) != 0 ? weight : weight * (weight + (1 - weight) * Math.Clamp(secondary * 2 * BotTuning.Current.AssociationScale, 0, 1));
         return weight >= 1 ? 1 : Math.Clamp(weight * Math.Clamp(secondary, 0, 1) * BotTuning.Current.AssociationScale, 0, 1);
     }
 
@@ -190,8 +252,8 @@ public sealed class CardTags
         // Мелкая роза на клетке может связываться и с главным предметом «роза» на другой карте.
         foreach (var t in x.Keys.Union(y.Keys).ToList())
         {
-            if (Visible(a, secondaryMeanings).Contains(t)) x[t] = Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t));
-            if (Visible(b, secondaryMeanings).Contains(t)) y[t] = Math.Max(y.GetValueOrDefault(t), x.GetValueOrDefault(t));
+            if (Of(a).Contains(t) && Salience(a,t,secondaryMeanings) > 0) x[t] = Math.Max(x.GetValueOrDefault(t), y.GetValueOrDefault(t));
+            if (Of(b).Contains(t) && Salience(b,t,secondaryMeanings) > 0) y[t] = Math.Max(y.GetValueOrDefault(t), x.GetValueOrDefault(t));
         }
         // Неразмеченная карта без известных связей не штрафуется за отсутствие разметки.
         if (x.Count == 0 || y.Count == 0) return 0;
@@ -531,6 +593,7 @@ public sealed class CardTags
     /// <summary>Цвета и форма отделены от смысла; цвет связывает карты только через dominant-*.</summary>
     private static readonly HashSet<string> Colors =
         ["red", "orange", "yellow", "green", "blue", "purple", "pink", "brown", "black", "white", "gray"];
+    public static bool IsColor(string tag) => Colors.Contains(tag);
 
     /// <summary>
     /// Материал предмета (категория «материал» в vocabulary.md) — слабый признак: размечается по картинке и может
@@ -553,6 +616,8 @@ public sealed class CardTags
             if (Salience(card, tag, 0) == 0) continue;
             if (tag.StartsWith(MaterialAccent, StringComparison.Ordinal) && IsMaterial(tag))
                 yield return tag[MaterialAccent.Length..];
+            else if (_graded.Contains(card) && Materials.Contains(tag) && _meaningWeights[card].GetValueOrDefault(tag) >= .85)
+                yield return tag;
             else if (tag is "plank" or "brushwood" or "wooden-crutch") yield return "wood";
             else if (tag is "gold-leaf-booklet" or "gold-bar" or "gold-nugget") yield return "gold";
             else if (tag == "silver-bar") yield return "silver";
@@ -590,20 +655,42 @@ public sealed class CardTags
     private (double Meaning, double Shape, double Color, double Material) Contributions(string a, string b,
         (double Meaning, double Shape, double Color) attention, double secondary)
     {
-        double Overlap(IReadOnlyCollection<string> x, IReadOnlyCollection<string> y)
+        var x = Of(a);
+        var y = Of(b);
+        double Match(int group, out double anchor)
         {
-            var union = x.Union(y).Sum(t => Math.Max(x.Contains(t) ? Salience(a, t, secondary) : 0, y.Contains(t) ? Salience(b, t, secondary) : 0));
-            var confidence = Math.Min(x.Select(t => Salience(a, t, secondary)).DefaultIfEmpty(0).Max(),
-                y.Select(t => Salience(b, t, secondary)).DefaultIfEmpty(0).Max());
-            return union <= 0 ? 0 : confidence * x.Intersect(y).Sum(t =>
-                _specificity.GetValueOrDefault(t, 1) * Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))) / union;
+            bool Included(string t) => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"));
+            double union = 0, shared = 0, peakA = 0, peakB = 0;
+            anchor = 0;
+            foreach (var t in x)
+            {
+                if (!Included(t)) continue;
+                var lhs = Salience(a,t,secondary);
+                var rhs = y.Contains(t) ? Salience(b,t,secondary) : 0;
+                union += Math.Max(lhs, rhs);
+                var evidence = _specificity.GetValueOrDefault(t, 1) * Math.Min(lhs, rhs);
+                shared += evidence;
+                anchor = Math.Max(anchor, evidence);
+                peakA = Math.Max(peakA, lhs);
+                peakB = Math.Max(peakB, rhs);
+            }
+            foreach (var t in y)
+            {
+                if (!Included(t) || x.Contains(t)) continue;
+                var rhs = Salience(b,t,secondary);
+                union += rhs;
+                peakB = Math.Max(peakB, rhs);
+            }
+            return union > 0 ? Math.Min(peakA, peakB) * shared / union : 0;
         }
 
-        double Match(int group) => Overlap(
-            Of(a).Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"))).ToHashSet(),
-            Of(b).Where(t => Group(t) == group && !IsMaterial(t) && (group != 2 || t.StartsWith("dominant-"))).ToHashSet());
-
-        var meaning = Match(0);
+        var meaning = Match(0, out var anchor);
+        if (_graded.Contains(a) || _graded.Contains(b))
+        {
+            // Two well-described objects can share one defining function while most of
+            // their other attributes differ. A long annotation must not bury that link.
+            meaning += (1 - meaning) * .45 * anchor * anchor;
+        }
         if (Of(a).Any(t => SharedSubject(a, b, t) && Of(b).Contains(t)))
             meaning = Math.Max(meaning, .70);
         var material = AccentMaterials(a).Intersect(AccentMaterials(b)).Any() ? 1 : 0;
@@ -611,8 +698,15 @@ public sealed class CardTags
         var m = sum <= 0 ? .8 : Math.Max(.7, attention.Meaning / sum);
         // A strong semantic match does not need a visual tie-breaker. Unlabelled
         // background colours are never evidence; dominant-* is an explicit annotation.
-        return (m * meaning, Math.Min(.12, Math.Max(0, attention.Shape)) * Match(1),
-            Math.Min(.08, Math.Max(0, attention.Color)) * Match(2),
+        var reviewed = _graded.Contains(a) && _graded.Contains(b);
+        var shape = reviewed ? Of(a).Where(t => t.StartsWith("shape-") && Of(b).Contains(t))
+            .Select(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary))).DefaultIfEmpty().Max() : Match(1, out _);
+        var color = reviewed
+            ? Of(a).Where(t => t.StartsWith("dominant-") && Of(b).Contains(t))
+                .Sum(t => Math.Min(Salience(a, t, secondary), Salience(b, t, secondary)))
+            : Match(2, out _);
+        return (m * meaning, Math.Min(.12, Math.Max(0, attention.Shape)) * shape,
+            Math.Min(.08, Math.Max(0, attention.Color)) * color,
             Math.Max(0, BotTuning.Current.MaterialWeight) * material);
     }
 
@@ -655,6 +749,8 @@ public sealed class CardTags
         if (File.Exists(associationsPath)) tags = tags.WithAssociations(File.ReadAllText(associationsPath));
         var namesPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "names.json");
         if (File.Exists(namesPath)) tags = tags.WithNames(File.ReadAllText(namesPath));
+        var weightsPath = Path.Combine(Path.GetDirectoryName(path) ?? ".", "weights.json");
+        if (File.Exists(weightsPath)) tags = tags.WithReviewedWeights(File.ReadAllText(weightsPath));
         logger.LogInformation("Теги карт: {Count} из {Path}", tags.Count, path);
         return tags;
     }

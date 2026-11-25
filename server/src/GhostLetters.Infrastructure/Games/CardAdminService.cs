@@ -8,7 +8,8 @@ namespace GhostLetters.Infrastructure.Games;
 
 /// <param name="Names">Как карту называют вслух: основное название и синонимы (пусто — из names.json).</param>
 public sealed record CardAnnotation(IReadOnlyList<string> Tags, IReadOnlyList<CardTags.Detail> Meanings, IReadOnlyList<CardTags.Detail> Details,
-    IReadOnlyList<string>? Names = null);
+    IReadOnlyList<string>? Names = null, IReadOnlyDictionary<string, double>? Colors = null,
+    IReadOnlyDictionary<string, double>? Shapes = null);
 public sealed record AdminCardDto(Guid Id, string ImageKey, string? Title, string SetCode, bool IsActive, int Version, CardAnnotation Annotation);
 public sealed record CardSetDto(string Code, string Title, IReadOnlyList<string> Cards);
 public sealed record AdminCardPage(IReadOnlyList<AdminCardDto> Cards, int Total, IReadOnlyList<CardSetDto> Sets);
@@ -87,6 +88,9 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
             ?? throw AppException.Validation("Набор не найден.");
         var card = await db.Cards.FirstOrDefaultAsync(c => c.Id == id, ct) ?? throw AppException.NotFound("Карта не найдена.");
         if (card.MetadataVersion != request.Version) throw Conflict();
+        if (annotation.Colors is null && card.Annotations is not null &&
+            GameJson.Deserialize<CardAnnotation>(card.Annotations) is { Colors: not null } previous)
+            annotation = Validate(baseline.ResolveAnnotation(card.ImageKey, annotation, previous));
         if (card.SetId != set.Id) card.SetManuallyAssigned = true;
         card.SetId = set.Id;
         card.Title = string.IsNullOrEmpty(title) ? null : title;
@@ -138,10 +142,8 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
     private static AppException Conflict() => AppException.Conflict("CARD_CHANGED", "Карту уже изменили. Обновите список и откройте её заново.");
 
     private AdminCardDto Dto(Card card, string setCode) => new(card.Id, card.ImageKey, card.Title, setCode, card.IsActive,
-        card.MetadataVersion, WithNames(card.ImageKey, card.Annotations is null ? baseline.AnnotationOf(card.ImageKey) : GameJson.Deserialize<CardAnnotation>(card.Annotations)));
-
-    // Разметка из базы, сохранённая до появления названий, — с названиями из names.json.
-    private CardAnnotation WithNames(string key, CardAnnotation a) => a.Names is { Count: > 0 } ? a : a with { Names = baseline.NamesOf(key) };
+        card.MetadataVersion, card.Annotations is null ? baseline.AnnotationOf(card.ImageKey) :
+            baseline.ResolveAnnotation(card.ImageKey, GameJson.Deserialize<CardAnnotation>(card.Annotations)));
 
     private static CardAnnotation Validate(CardAnnotation? value)
     {
@@ -170,6 +172,20 @@ public sealed class CardAdminService(GhostLettersDbContext db, BotAdminService a
         var names = CardTags.CleanNames(value.Names);
         if (names.Count > 8 || names.Any(n => n.Length > 40))
             throw AppException.Validation("Названий карты — до 8, каждое до 40 символов.");
-        return new(tags, meanings, details, names);
+        if ((value.Colors is null) != (value.Shapes is null))
+            throw AppException.Validation("Укажите цвет и форму отдельными группами.");
+        if (value.Colors is { } colors && value.Shapes is { } shapes)
+        {
+            if (colors.Count > 3 || colors.Keys.Any(t => !CardTags.IsColor(t)) ||
+                colors.Count > 0 && Math.Abs(colors.Values.Sum() - 1) > .00001)
+                throw AppException.Validation("Укажите до трёх цветов предмета с общей долей 1.");
+            if (shapes.Count > 20 || shapes.Keys.Any(t => Tag(t) != t || t.StartsWith("shape-")) ||
+                colors.Values.Concat(shapes.Values).Any(w => !double.IsFinite(w) || w <= 0 || w > 1))
+                throw AppException.Validation("Проверьте ключи формы и веса признаков от 0 до 1.");
+            // Older clients display visuals from the flattened tag list.
+            tags = tags.Where(t => CardTags.Group(t) is not (1 or 2))
+                .Concat(colors.Keys.Select(t => "dominant-" + t)).Concat(shapes.Keys.Select(t => "shape-" + t)).ToList();
+        }
+        return new(tags, meanings.OrderByDescending(m => m.Weight).ToList(), details, names, value.Colors, value.Shapes);
     }
 }

@@ -15,6 +15,20 @@ class ReviewedTagsTest(unittest.TestCase):
     def test_catalog_is_complete_and_valid(self):
         self.assertEqual([], check_tags.validate(self.root, self.tags, self.details, self.manual, self.assoc))
 
+    def test_weighted_review_covers_every_noncustom_card_including_inactive(self):
+        # Server membership at the visual review, including manually moved and inactive cards.
+        ranges = [(1,21),(34,89),(294,330),(332,343),(345,345),(456,456),(563,588),(739,758)]
+        custom = {f'orig_{n:04}' for first,last in ranges for n in range(first,last+1)}
+        rows = retag_cards.load('weights.json')
+        self.assertEqual(set(self.tags) - custom, set(rows))
+        self.assertEqual({'black': .5, 'white': .5}, rows['orig_0666']['colors'])
+        self.assertEqual({'green': 1}, rows['zhizha_0161']['colors'])
+        for card, row in rows.items():
+            self.assertLessEqual(len(row['colors']), 3, card)
+            self.assertAlmostEqual(sum(row['colors'].values()), 1, msg=card)
+            self.assertEqual(list(row['meanings'].values()), sorted(row['meanings'].values(), reverse=True), card)
+            self.assertEqual(next(iter(row['meanings'].values())), 1, card)
+
     def test_construction_platform_does_not_describe_a_baby_cradle(self):
         tags = set(self.tags['orig_0718'])
         self.assertTrue({'construction', 'lift', 'metal', 'work'} <= tags)

@@ -26,7 +26,44 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
         var cards = Path.Combine(dir!.FullName, "client", "assets", "cards");
         return CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
             .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")))
-            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
+            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")))
+            .WithNames(File.ReadAllText(Path.Combine(cards, "names.json")))
+            .WithReviewedWeights(File.ReadAllText(Path.Combine(cards, "weights.json")));
+    }
+
+    [Fact]
+    public void ColorSharesAndShapeSalienceAffectTheVotesEvidence()
+    {
+        var tags = CardTags.Parse("""{"a":[],"b":[],"c":[]}""").WithReviewedWeights("""
+            {"a":{"meanings":{"toy":1},"colors":{"red":0.5,"white":0.5},"shapes":{"ring":0.2}},
+             "b":{"meanings":{"book":1},"colors":{"red":1},"shapes":{"flat":1}},
+             "c":{"meanings":{"money":1},"colors":{"red":1},"shapes":{"ring":1}}}
+            """);
+        tags.Similarity("a", "b").Should().BeApproximately(.025, .00001);
+        tags.Similarity("b", "c").Should().BeApproximately(.05, .00001);
+        tags.Similarity("a", "c").Should().BeApproximately(.12 * .2, .00001);
+        var reading = tags.AtBoard([new(Category.Motive, ["b","c"])]);
+        reading.Similarity("a", "b").Should().Be(0, "форма кольца уже объясняет письмо на этом столе");
+        reading.Kind("a", "c").Should().Be(CardTags.LinkKind.Shape);
+    }
+
+    [Fact]
+    public void PhotoAlbumChecksThePhotoInsteadOfCashForEveryPersonality()
+    {
+        var tags = Catalog();
+        var album = tags.AnnotationOf("orig_0099");
+        tags.NameOf("orig_0099").Should().Be("фотоальбом");
+        album.Meanings.First().Tag.Should().Be("photo-album");
+        album.Meanings.Should().NotContain(m => m.Tag == "money" || m.Tag == "wallet");
+        album.Colors!["brown"].Should().Be(.8);
+        album.Details.Should().Contain(d => d.Tag == "stitching" && d.Weight < .1);
+        tags.SearchByTag("кошелёк").Should().NotContain("orig_0099");
+        var board = new LabRow[] { new("Motive", ["orig_0139", "orig_0599", "orig_0208"]) };
+        foreach (var bot in BotLabService.Think(new(board, [new(1, ["orig_0099"])]), tags).Bots)
+            bot.Rows[0].Vote.Should().Be(0, bot.Bot);
+        var hint = BotLabService.Suggest(new(board, [0], [], ["orig_0099", "orig_0648"]), tags);
+        hint.Single(c => c.Card == "orig_0099").Pick.Should().BeTrue();
+        hint.Single(c => c.Card == "orig_0648").Pick.Should().BeFalse();
     }
 
     [Fact]

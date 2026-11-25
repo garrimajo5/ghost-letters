@@ -46,7 +46,8 @@ public sealed class BotBalanceTests
         var tags = CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
             .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")));
         return Environment.GetEnvironmentVariable("BOT_NO_ASSOCIATIONS") == "1" ? tags
-            : tags.WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
+            : tags.WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")))
+            .WithReviewedWeights(File.ReadAllText(Path.Combine(cards, "weights.json")));
     }
 
     [Theory]

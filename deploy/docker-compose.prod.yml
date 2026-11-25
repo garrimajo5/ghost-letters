@@ -52,6 +52,7 @@ services:
       - ./tags.json:/app/cards/tags.json:ro
       - ./details.json:/app/cards/details.json:ro
       - ./associations.json:/app/cards/associations.json:ro
+      - ./weights.json:/app/cards/weights.json:ro
       - ./names.json:/app/cards/names.json:ro
       - media:/app/data/media
     depends_on:

@@ -32,7 +32,8 @@ public sealed class BotMetricsTests
         var cards = Path.Combine(dir!.FullName, "client", "assets", "cards");
         return CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
             .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")))
-            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
+            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")))
+            .WithReviewedWeights(File.ReadAllText(Path.Combine(cards, "weights.json")));
     }
 
     /// <summary>Накопленные метрики серии.</summary>
@@ -179,7 +180,9 @@ public sealed class BotMetricsTests
     {
         var tags = RealTags();
         var metrics = new Metrics();
-        var (report, state) = BotSandboxRunner.Simulate("full-game", 3, Deck, tags, CancellationToken.None, SandboxOptions.Ozon(6));
+        var (report, state) = BotSandboxRunner.Simulate("full-game", 3, Deck, tags, CancellationToken.None, SandboxOptions.Ozon(6),
+            timeLimit: TimeSpan.FromMinutes(2));
+        report.Status.Should().Be("completed", report.Error);
         metrics.Add(report, state, tags);
         metrics.Games.Should().Be(1);
         metrics.GhostRounds.Should().BeGreaterThan(0);

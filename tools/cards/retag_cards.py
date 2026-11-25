@@ -173,6 +173,13 @@ def write_vocabulary(tags, associations, labels):
                 cards = examples.setdefault(mark['tag'], [])
                 if card not in cards:
                     cards.append(card)
+    if (ROOT/'weights.json').exists():
+        for card, row in load('weights.json').items():
+            for tag in [*row['meanings'], *row.get('details', {}),
+                        *('shape-'+s for s in row['shapes']), *('dominant-'+c for c in row['colors'])]:
+                cards = examples.setdefault(tag, [])
+                if card not in cards:
+                    cards.append(card)
     def category(tag):
         if tag.startswith('shape-'): return 'форма'
         if tag.startswith(('dominant-', 'accent-')): return 'цвет'
