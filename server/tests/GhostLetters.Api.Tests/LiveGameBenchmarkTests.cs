@@ -37,7 +37,8 @@ public sealed class LiveGameBenchmarkTests(ITestOutputHelper output)
         var cards = Path.Combine(dir!.FullName, "client", "assets", "cards");
         return CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
             .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")))
-            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
+            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")))
+            .WithReviewedWeights(File.ReadAllText(Path.Combine(cards, "weights.json")));
     }
 
     /// <summary>Сколько рядов угадали мирные боты (сумма по ботам) и что каждый считает истиной.</summary>

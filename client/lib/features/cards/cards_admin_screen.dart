@@ -364,7 +364,82 @@ class CardEditorScreen extends ConsumerStatefulWidget {
 
 class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   final _form = GlobalKey<FormState>();
-  late final TextEditingController _title, _tags, _names;
+  static const _palette = {
+    'white': 'белый',
+    'black': 'чёрный',
+    'gray': 'серый',
+    'blue': 'синий',
+    'brown': 'коричневый',
+    'orange': 'оранжевый',
+    'yellow': 'жёлтый',
+    'green': 'зелёный',
+    'red': 'красный',
+    'pink': 'розовый',
+    'purple': 'фиолетовый'
+  };
+  static const _silhouettes = {
+    'flat': 'плоская',
+    'box': 'коробка',
+    'container': 'сосуд',
+    'pair': 'пара',
+    'cylinder': 'цилиндр',
+    'stick': 'палочка',
+    'cone': 'конус',
+    'ball': 'шар',
+    'ring': 'кольцо',
+    'net': 'сетка',
+    'animal': 'силуэт животного',
+    'humanoid': 'силуэт человека',
+    'chain': 'цепь',
+    'heart': 'сердце',
+    'spiral': 'спираль',
+    'star': 'звезда',
+    'cross': 'крест',
+    'handle-plus-head': 'рукоять с головкой',
+    'prism': 'призма',
+    'rectangle': 'прямоугольник',
+    'triangle': 'треугольник',
+    'curved': 'изгиб'
+  };
+  late final TextEditingController _title, _tags, _names, _colors, _shapes;
+  late final String _initialColors, _initialShapes;
+
+  String _describe(Map<String, double> values, Map<String, String> names) => values
+      .entries
+      .map((e) =>
+          '${names[e.key] ?? e.key} ${double.parse((100 * e.value).toStringAsFixed(3))}%'
+              .replaceFirst('.0%', '%'))
+      .join(', ');
+
+  Map<String, double>? _weights(String text, Map<String, String> names,
+      {bool color = false}) {
+    final result = <String, double>{};
+    if (text.trim().isEmpty) return result;
+    final keys = {for (final e in names.entries) e.value: e.key};
+    for (final entry in text.split(',')) {
+      final match = RegExp(r'^(.+?)\s+(\d+(?:\.\d+)?)\s*%?$')
+          .firstMatch(entry.trim().toLowerCase());
+      if (match == null) return null;
+      final raw = match[1]!;
+      final key = keys[raw] ?? raw;
+      final weight = double.parse(match[2]!) / 100;
+      if (weight <= 0 ||
+          weight > 1 ||
+          result.containsKey(key) ||
+          (color
+              ? !_palette.containsKey(key)
+              : !RegExp(r'^[a-z][a-z0-9_-]*$').hasMatch(key))) {
+        return null;
+      }
+      result[key] = weight;
+    }
+    if (color &&
+        (result.length > 3 ||
+            (result.values.reduce((a, b) => a + b) - 1).abs() > .00001))
+      return null;
+    return result;
+  }
+
   late final List<_FeatureDraft> _meanings, _details;
   late String _set;
   late bool _active;
@@ -375,7 +450,26 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     super.initState();
     final c = widget.card;
     _title = TextEditingController(text: c.title ?? '');
-    _tags = TextEditingController(text: c.tags.join(', '));
+    final legacyColors = c.tags
+        .where((t) => t.startsWith('dominant-'))
+        .map((t) => t.substring(9))
+        .toSet();
+    if (legacyColors.isEmpty)
+      legacyColors.addAll(c.tags.where(_palette.containsKey));
+    _initialColors = _describe(
+        c.colors ?? {for (final t in legacyColors) t: 1 / legacyColors.length},
+        _palette);
+    _initialShapes = _describe(
+        c.shapes ??
+            {
+              for (final t in c.tags.where((t) => t.startsWith('shape-')))
+                t.substring(6): 1
+            },
+        _silhouettes);
+    _colors = TextEditingController(text: _initialColors);
+    _shapes = TextEditingController(text: _initialShapes);
+    _tags = TextEditingController(
+        text: c.tags.where((t) => t.startsWith('material-accent-')).join(', '));
     _names = TextEditingController(text: c.names.join(', '));
     _meanings = c.meanings.map(_FeatureDraft.new).toList();
     _details = c.details.map(_FeatureDraft.new).toList();
@@ -387,6 +481,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
   void dispose() {
     _title.dispose();
     _tags.dispose();
+    _colors.dispose();
+    _shapes.dispose();
     _names.dispose();
     for (final f in [..._meanings, ..._details, ..._removed]) {
       f.dispose();
@@ -398,6 +494,9 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
     if (!_form.currentState!.validate()) return;
     setState(() => _busy = true);
     final c = widget.card;
+    final weighted = c.colors != null ||
+        _colors.text != _initialColors ||
+        _shapes.text != _initialShapes;
     final saved = await runAction(
         context,
         () => ref.read(apiProvider).saveCard(AdminCard(
@@ -407,11 +506,17 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             setCode: _set,
             isActive: _active,
             version: c.version,
-            tags: _tags.text
-                .split(',')
-                .map((t) => t.trim())
-                .where((t) => t.isNotEmpty)
-                .toList(),
+            colors:
+                weighted ? _weights(_colors.text, _palette, color: true) : null,
+            shapes: weighted ? _weights(_shapes.text, _silhouettes) : null,
+            tags: [
+              if (!weighted)
+                ...c.tags.where((t) => !t.startsWith('material-accent-')),
+              ..._tags.text
+                  .split(',')
+                  .map((t) => t.trim())
+                  .where((t) => t.isNotEmpty)
+            ],
             meanings: _meanings.map((m) => m.value).toList(),
             details: _details.map((d) => d.value).toList(),
             names: _names.text
@@ -472,8 +577,12 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                       Expanded(
                           child: Slider(
                               value: f.weight,
-                              min: 0.01,
-                              max: 1,
+                              min: f.weight < .01 ? .001 : .01,
+                              max: id == 'detail' &&
+                                      widget.card.colors != null &&
+                                      f.weight <= .15
+                                  ? .15
+                                  : 1,
                               divisions: 99,
                               onChanged: _busy
                                   ? null
@@ -484,8 +593,8 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
             key: Key('add-$id'),
             onPressed: _busy || values.length >= 60
                 ? null
-                : () => setState(() => values.add(_FeatureDraft(
-                    const CardFeature(tag: '', label: '', weight: 1)))),
+                : () => setState(() => values.add(_FeatureDraft(CardFeature(
+                    tag: '', label: '', weight: id == 'detail' ? .06 : 1)))),
             icon: const Icon(Icons.add),
             label: Text('Добавить: ${title.toLowerCase()}')),
       ]);
@@ -530,15 +639,46 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   minLines: 1,
                   maxLines: 3,
                   validator: (v) {
-                    final names = (v ?? '').split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+                    final names = (v ?? '')
+                        .split(',')
+                        .map((t) => t.trim())
+                        .where((t) => t.isNotEmpty)
+                        .toList();
                     if (names.length > 8) return 'Не больше 8 названий';
-                    if (names.any((n) => n.length > 40)) return 'Каждое название — до 40 символов';
+                    if (names.any((n) => n.length > 40))
+                      return 'Каждое название — до 40 символов';
                     return null;
                   },
                   decoration: const InputDecoration(
                       labelText: 'Как называют вслух — через запятую',
                       helperMaxLines: 3,
-                      helperText: 'Первое — основное название: его говорят боты голосом («мотив — клетка»). Дальше синонимы, по ним узнаётся карта в речи.')),
+                      helperText:
+                          'Первое — основное название: его говорят боты голосом («мотив — клетка»). Дальше синонимы, по ним узнаётся карта в речи.')),
+              const SizedBox(height: 16),
+              TextFormField(
+                  key: const Key('card-colors'),
+                  controller: _colors,
+                  decoration: const InputDecoration(
+                      labelText: 'Цвет предмета',
+                      helperMaxLines: 2,
+                      helperText:
+                          'До трёх цветов, в сумме 100%. Например, красный 50%, белый 50%.'),
+                  validator: (v) =>
+                      _weights(v ?? '', _palette, color: true) == null
+                          ? 'Проверьте названия цветов и сумму долей'
+                          : null),
+              const SizedBox(height: 16),
+              TextFormField(
+                  key: const Key('card-shapes'),
+                  controller: _shapes,
+                  decoration: const InputDecoration(
+                      labelText: 'Форма предмета',
+                      helperMaxLines: 2,
+                      helperText:
+                          'Укажите заметность каждого силуэта. Например, кольцо 95%, цилиндр 20%.'),
+                  validator: (v) => _weights(v ?? '', _silhouettes) == null
+                      ? 'Укажите форму и заметность от 0 до 100%'
+                      : null),
               const SizedBox(height: 16),
               TextFormField(
                   key: const Key('card-tags'),
@@ -546,12 +686,13 @@ class _CardEditorScreenState extends ConsumerState<CardEditorScreen> {
                   minLines: 1,
                   maxLines: 4,
                   decoration: const InputDecoration(
-                      labelText: 'Цвет и форма — через запятую',
+                      labelText: 'Акцент материала',
                       helperMaxLines: 3,
-                      helperText: 'Форма: shape-round. Главный цветовой акцент: dominant-red, dominant-blue. Обычные red, blue не считаются доводом.')),
+                      helperText:
+                          'Например, material-accent-gold для золотого слитка.')),
               const SizedBox(height: 20),
               const Text(
-                  'Вес 1 — основной смысл. Меньший вес — второстепенный: насколько бот замечает его, задаётся в характере бота. Одинаковые ключи связывают карты.',
+                  'Смыслы перечислены от главного к второстепенным. Мелкие детали слабо влияют на выбор бота.',
                   style: TextStyle(color: AppColors.muted)),
               const SizedBox(height: 12),
               _features('Смыслы', 'meaning', _meanings),

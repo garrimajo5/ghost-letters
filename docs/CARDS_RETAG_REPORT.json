@@ -4,19 +4,19 @@
       "kind": "rank",
       "source": "orig_0706",
       "target": "orig_0628",
-      "rank": 2,
+      "rank": 1,
       "tied_rank": 1,
       "limit": 3,
       "passed": true,
-      "score": 0.3646228255143374
+      "score": 0.48081524027402367
     },
     {
       "kind": "comparison",
       "source": "orig_0706",
       "target": "orig_0628",
       "distractor": "orig_0339",
-      "score": 0.3646228255143374,
-      "distractor_score": 0.10543657331136738,
+      "score": 0.48081524027402367,
+      "distractor_score": 0.39679131431384984,
       "passed": true
     },
     {
@@ -27,62 +27,62 @@
       "tied_rank": 1,
       "limit": 5,
       "passed": true,
-      "score": 0.3917302361029833
+      "score": 0.499613029055652
     },
     {
       "kind": "rank",
       "source": "orig_0575",
       "target": "orig_0279",
-      "rank": 15,
-      "tied_rank": 15,
+      "rank": 3,
+      "tied_rank": 3,
       "limit": 5,
-      "passed": false,
-      "score": 0.18512173272853844
+      "passed": true,
+      "score": 0.3988736312819586
     },
     {
       "kind": "rank",
       "source": "orig_0421",
       "target": "orig_0027",
-      "rank": 5,
-      "tied_rank": 5,
+      "rank": 16,
+      "tied_rank": 16,
       "limit": 5,
-      "passed": true,
-      "score": 0.32258053229316364
+      "passed": false,
+      "score": 0.38051309065670785
     },
     {
       "kind": "rank",
       "source": "orig_0402",
       "target": "orig_0027",
-      "rank": 2,
-      "tied_rank": 2,
+      "rank": 12,
+      "tied_rank": 12,
       "limit": 5,
-      "passed": true,
-      "score": 0.3201319896666878
+      "passed": false,
+      "score": 0.38759468577213313
     },
     {
       "kind": "comparison",
       "source": "orig_0435",
       "target": "orig_0027",
       "distractor": "orig_0117",
-      "score": 0.15186444007858546,
-      "distractor_score": 0.11245826743981727,
-      "passed": true
+      "score": 0.1938698948370614,
+      "distractor_score": 0.37649101982222727,
+      "passed": false
     },
     {
       "kind": "comparison",
       "source": "orig_0435",
       "target": "orig_0027",
       "distractor": "orig_0395",
-      "score": 0.15186444007858546,
-      "distractor_score": 0.11245826743981727,
-      "passed": true
+      "score": 0.1938698948370614,
+      "distractor_score": 0.37649101982222727,
+      "passed": false
     },
     {
       "kind": "comparison",
       "source": "orig_0523",
       "target": "orig_0015",
       "distractor": "orig_0268",
-      "score": 0.38385191581777217,
+      "score": 0.37926423180792296,
       "distractor_score": 0.0,
       "passed": true
     },
@@ -91,7 +91,7 @@
       "source": "orig_0523",
       "target": "orig_0015",
       "distractor": "orig_0628",
-      "score": 0.38385191581777217,
+      "score": 0.37926423180792296,
       "distractor_score": 0.0,
       "passed": true
     },
@@ -100,7 +100,7 @@
       "source": "orig_0106",
       "target": "orig_0015",
       "distractor": "orig_0268",
-      "score": 0.3801327120903141,
+      "score": 0.3823416564103014,
       "distractor_score": 0.0,
       "passed": true
     },
@@ -109,7 +109,7 @@
       "source": "orig_0106",
       "target": "orig_0015",
       "distractor": "orig_0628",
-      "score": 0.3801327120903141,
+      "score": 0.3823416564103014,
       "distractor_score": 0.0,
       "passed": true
     },
@@ -121,7 +121,7 @@
       "tied_rank": 1,
       "limit": 3,
       "passed": true,
-      "score": 0.5760954908388074
+      "score": 0.6312130559473654
     },
     {
       "kind": "rank",
@@ -131,22 +131,22 @@
       "tied_rank": 1,
       "limit": 3,
       "passed": true,
-      "score": 0.5760954908388074
+      "score": 0.6312130559473654
     },
     {
       "kind": "comparison",
       "source": "orig_0427",
       "target": "orig_0134",
       "distractor": "orig_0120",
-      "score": 0.5760954908388074,
-      "distractor_score": 0.06,
+      "score": 0.6312130559473654,
+      "distractor_score": 0.0648,
       "passed": true
     },
     {
       "kind": "far",
       "source": "orig_0427",
       "target": "orig_0120",
-      "rank": 111,
+      "rank": 261,
       "limit": 10,
       "passed": true
     },
@@ -155,15 +155,15 @@
       "source": "orig_0134",
       "target": "orig_0427",
       "distractor": "orig_0120",
-      "score": 0.5760954908388074,
-      "distractor_score": 0.12,
+      "score": 0.6312130559473654,
+      "distractor_score": 0.0648,
       "passed": true
     },
     {
       "kind": "far",
       "source": "orig_0134",
       "target": "orig_0120",
-      "rank": 65,
+      "rank": 209,
       "limit": 10,
       "passed": true
     }
@@ -171,470 +171,470 @@
   "top10": {
     "orig_0706": [
       {
-        "card": "orig_0471",
-        "name": "скакалка",
-        "score": 0.36462283
-      },
-      {
         "card": "orig_0628",
         "name": "ракетка",
-        "score": 0.36462283
-      },
-      {
-        "card": "orig_0267",
-        "name": "гольф",
-        "score": 0.29891441
+        "score": 0.48081524
       },
       {
         "card": "orig_0575",
         "name": "нунчаки",
-        "score": 0.25541038
+        "score": 0.42213255
       },
       {
-        "card": "orig_0603",
-        "name": "плеть",
-        "score": 0.21550534
+        "card": "orig_0471",
+        "name": "скакалка",
+        "score": 0.41077938
       },
       {
-        "card": "orig_0426",
-        "name": "мяч",
-        "score": 0.20030214
+        "card": "orig_0565",
+        "name": "боксёрская перчатка",
+        "score": 0.39966018
+      },
+      {
+        "card": "orig_0339",
+        "name": "боулинг",
+        "score": 0.39679131
+      },
+      {
+        "card": "orig_0267",
+        "name": "гольф",
+        "score": 0.39571253
       },
       {
         "card": "zhizha_0043",
         "name": "Камень для кёрлинга",
-        "score": 0.16276771
+        "score": 0.39156216
       },
       {
-        "card": "orig_0489",
-        "name": "боксёрские перчатки",
-        "score": 0.14643316
+        "card": "orig_0022",
+        "name": "конёк",
+        "score": 0.38036831
       },
       {
-        "card": "orig_0287",
-        "name": "бумеранг",
-        "score": 0.14386475
+        "card": "orig_0015",
+        "name": "куртка",
+        "score": 0.36973895
       },
       {
-        "card": "orig_0485",
-        "name": "арбалет",
-        "score": 0.14386475
+        "card": "orig_0426",
+        "name": "мяч",
+        "score": 0.34651896
       }
     ],
     "orig_0575": [
       {
         "card": "orig_0628",
         "name": "ракетка",
-        "score": 0.39173024
-      },
-      {
-        "card": "orig_0267",
-        "name": "гольф",
-        "score": 0.37580583
-      },
-      {
-        "card": "orig_0185",
-        "name": "бита",
-        "score": 0.34264406
-      },
-      {
-        "card": "orig_0405",
-        "name": "кастет",
-        "score": 0.34264406
-      },
-      {
-        "card": "orig_0576",
-        "name": "кастет",
-        "score": 0.34264406
-      },
-      {
-        "card": "orig_0603",
-        "name": "плеть",
-        "score": 0.32113681
-      },
-      {
-        "card": "orig_0471",
-        "name": "скакалка",
-        "score": 0.29509693
+        "score": 0.49961303
       },
       {
         "card": "orig_0706",
         "name": "лыжи",
-        "score": 0.25541038
+        "score": 0.42213255
       },
       {
-        "card": "orig_0114",
-        "name": "бильярдный шар",
-        "score": 0.24999098
+        "card": "orig_0279",
+        "name": "пистолет",
+        "score": 0.39887363
       },
       {
-        "card": "orig_0489",
-        "name": "боксёрские перчатки",
-        "score": 0.232537
+        "card": "orig_0507",
+        "name": "ружьё",
+        "score": 0.39887363
+      },
+      {
+        "card": "orig_0716",
+        "name": "револьвер",
+        "score": 0.39887363
+      },
+      {
+        "card": "orig_0603",
+        "name": "плеть",
+        "score": 0.38886872
+      },
+      {
+        "card": "orig_0185",
+        "name": "бита",
+        "score": 0.38196011
+      },
+      {
+        "card": "orig_0405",
+        "name": "кастет",
+        "score": 0.37844484
+      },
+      {
+        "card": "orig_0267",
+        "name": "гольф",
+        "score": 0.37841977
+      },
+      {
+        "card": "orig_0471",
+        "name": "скакалка",
+        "score": 0.36517658
       }
     ],
     "orig_0421": [
       {
         "card": "orig_0039",
         "name": "шампунь",
-        "score": 0.42176617
+        "score": 0.50606454
       },
       {
         "card": "orig_0736",
         "name": "жидкое мыло",
-        "score": 0.4213255
+        "score": 0.49603978
       },
       {
         "card": "orig_0712",
         "name": "шайка",
-        "score": 0.41865346
+        "score": 0.49260993
       },
       {
         "card": "orig_0402",
         "name": "кокос",
-        "score": 0.35445225
-      },
-      {
-        "card": "orig_0027",
-        "name": "колба",
-        "score": 0.32258053
-      },
-      {
-        "card": "orig_0319",
-        "name": "краска",
-        "score": 0.31512131
-      },
-      {
-        "card": "orig_0422",
-        "name": "краска",
-        "score": 0.31512131
-      },
-      {
-        "card": "orig_0188",
-        "name": "котёл",
-        "score": 0.29812919
-      },
-      {
-        "card": "orig_0568",
-        "name": "котёл",
-        "score": 0.29812919
+        "score": 0.40698865
       },
       {
         "card": "orig_0060",
         "name": "колодец",
-        "score": 0.28341148
-      }
-    ],
-    "orig_0402": [
-      {
-        "card": "orig_0421",
-        "name": "ванна",
-        "score": 0.35445225
-      },
-      {
-        "card": "orig_0027",
-        "name": "колба",
-        "score": 0.32013199
-      },
-      {
-        "card": "orig_0319",
-        "name": "краска",
-        "score": 0.31266148
-      },
-      {
-        "card": "orig_0422",
-        "name": "краска",
-        "score": 0.31266148
-      },
-      {
-        "card": "orig_0077",
-        "name": "коктейль",
-        "score": 0.29958212
-      },
-      {
-        "card": "orig_0188",
-        "name": "котёл",
-        "score": 0.29444945
-      },
-      {
-        "card": "orig_0568",
-        "name": "котёл",
-        "score": 0.29444945
-      },
-      {
-        "card": "orig_0060",
-        "name": "колодец",
-        "score": 0.27956033
+        "score": 0.40608544
       },
       {
         "card": "orig_0075",
         "name": "колодец",
-        "score": 0.27956033
+        "score": 0.40608544
       },
       {
-        "card": "orig_0033",
-        "name": "духи",
-        "score": 0.27883773
+        "card": "orig_0332",
+        "name": "водопад",
+        "score": 0.39999555
+      },
+      {
+        "card": "orig_0080",
+        "name": "пруд",
+        "score": 0.39183924
+      },
+      {
+        "card": "orig_0647",
+        "name": "фляга",
+        "score": 0.38940505
+      },
+      {
+        "card": "orig_0245",
+        "name": "репеллент",
+        "score": 0.38839478
+      }
+    ],
+    "orig_0402": [
+      {
+        "card": "orig_0275",
+        "name": "бокал вина",
+        "score": 0.41477669
+      },
+      {
+        "card": "orig_0525",
+        "name": "лимонад",
+        "score": 0.41477669
+      },
+      {
+        "card": "orig_0437",
+        "name": "пиво",
+        "score": 0.40973514
+      },
+      {
+        "card": "orig_0421",
+        "name": "ванна",
+        "score": 0.40698865
+      },
+      {
+        "card": "orig_0457",
+        "name": "молоко",
+        "score": 0.40354163
+      },
+      {
+        "card": "orig_0647",
+        "name": "фляга",
+        "score": 0.39832699
+      },
+      {
+        "card": "orig_0077",
+        "name": "коктейль",
+        "score": 0.397593
+      },
+      {
+        "card": "orig_0273",
+        "name": "стакан кофе",
+        "score": 0.39750392
+      },
+      {
+        "card": "orig_0245",
+        "name": "репеллент",
+        "score": 0.39697283
+      },
+      {
+        "card": "orig_0737",
+        "name": "лейка",
+        "score": 0.39399901
       }
     ],
     "orig_0435": [
       {
         "card": "orig_0044",
         "name": "песочные часы",
-        "score": 0.76197103
+        "score": 0.57038509
       },
       {
-        "card": "orig_0700",
-        "name": "амфора",
-        "score": 0.2193621
+        "card": "orig_0243",
+        "name": "карманные часы",
+        "score": 0.39359472
       },
       {
-        "card": "orig_0465",
-        "name": "пробирка",
-        "score": 0.19586081
+        "card": "orig_0653",
+        "name": "карманные часы",
+        "score": 0.39359472
       },
       {
-        "card": "zhizha_0087",
-        "name": "Штормгласс",
-        "score": 0.18024784
+        "card": "orig_0117",
+        "name": "солнечные часы",
+        "score": 0.37649102
       },
       {
-        "card": "zhizha_0155",
-        "name": "Стеклянная ловушка для ос",
-        "score": 0.17265037
+        "card": "orig_0395",
+        "name": "солнечные часы",
+        "score": 0.37649102
       },
       {
-        "card": "orig_0702",
-        "name": "бочка",
-        "score": 0.16927807
+        "card": "orig_0557",
+        "name": "часы",
+        "score": 0.37649102
       },
       {
-        "card": "orig_0647",
-        "name": "фляга",
-        "score": 0.15924492
+        "card": "orig_0140",
+        "name": "таймер",
+        "score": 0.37083703
       },
       {
-        "card": "orig_0321",
-        "name": "пакетик",
-        "score": 0.15843822
+        "card": "orig_0418",
+        "name": "метроном",
+        "score": 0.36622542
       },
       {
-        "card": "orig_0069",
-        "name": "кружка",
-        "score": 0.15670743
+        "card": "orig_0054",
+        "name": "часы",
+        "score": 0.3514974
       },
       {
-        "card": "orig_0237",
-        "name": "канистра",
-        "score": 0.15670743
+        "card": "orig_0587",
+        "name": "часы с кукушкой",
+        "score": 0.34717079
       }
     ],
     "orig_0523": [
       {
         "card": "orig_0537",
         "name": "галстук",
-        "score": 0.65057148
+        "score": 0.60662542
       },
       {
         "card": "orig_0259",
         "name": "бабочка",
-        "score": 0.57099087
+        "score": 0.56010553
       },
       {
         "card": "orig_0729",
         "name": "ремень",
-        "score": 0.57099087
+        "score": 0.56010553
       },
       {
         "card": "orig_0662",
         "name": "смирительная рубашка",
-        "score": 0.51170499
+        "score": 0.52582404
+      },
+      {
+        "card": "orig_0544",
+        "name": "чулки",
+        "score": 0.49259077
       },
       {
         "card": "orig_0108",
         "name": "балаклава",
-        "score": 0.47629275
+        "score": 0.48948233
       },
       {
         "card": "orig_0376",
         "name": "платье",
-        "score": 0.47629275
-      },
-      {
-        "card": "orig_0588",
-        "name": "пиджак",
-        "score": 0.47629275
+        "score": 0.48948233
       },
       {
         "card": "orig_0023",
         "name": "шляпа",
-        "score": 0.47313154
+        "score": 0.48800779
       },
       {
         "card": "orig_0141",
         "name": "шарф",
-        "score": 0.47313154
+        "score": 0.48800779
       },
       {
         "card": "orig_0171",
         "name": "тюрбан",
-        "score": 0.47313154
+        "score": 0.48800779
       }
     ],
     "orig_0106": [
       {
         "card": "orig_0540",
         "name": "свитер",
-        "score": 0.58582384
+        "score": 0.57114085
       },
       {
         "card": "orig_0713",
         "name": "шуба",
-        "score": 0.58582384
+        "score": 0.57114085
       },
       {
         "card": "orig_0141",
         "name": "шарф",
-        "score": 0.48690576
+        "score": 0.52700878
       },
       {
         "card": "orig_0023",
         "name": "шляпа",
-        "score": 0.47629275
+        "score": 0.50357751
       },
       {
         "card": "orig_0171",
         "name": "тюрбан",
-        "score": 0.47629275
+        "score": 0.50357751
       },
       {
         "card": "orig_0207",
         "name": "шляпа шерлока",
-        "score": 0.47629275
+        "score": 0.50357751
       },
       {
         "card": "orig_0108",
         "name": "балаклава",
-        "score": 0.47313154
-      },
-      {
-        "card": "orig_0292",
-        "name": "перчатки",
-        "score": 0.47313154
+        "score": 0.50244308
       },
       {
         "card": "orig_0363",
         "name": "джинсы",
-        "score": 0.47313154
+        "score": 0.50244308
       },
       {
         "card": "orig_0376",
         "name": "платье",
-        "score": 0.47313154
+        "score": 0.50244308
+      },
+      {
+        "card": "orig_0537",
+        "name": "галстук",
+        "score": 0.50244308
       }
     ],
     "orig_0427": [
       {
         "card": "orig_0134",
         "name": "уточка",
-        "score": 0.57609549
+        "score": 0.63121306
       },
       {
         "card": "orig_0474",
         "name": "кораблик",
-        "score": 0.28571429
-      },
-      {
-        "card": "orig_0084",
-        "name": "шарики",
-        "score": 0.26986571
-      },
-      {
-        "card": "orig_0490",
-        "name": "шарики",
-        "score": 0.26986571
+        "score": 0.44927805
       },
       {
         "card": "zhizha_0003",
         "name": "Пружинка-радуга",
-        "score": 0.24526533
+        "score": 0.40385572
       },
       {
-        "card": "orig_0374",
-        "name": "кукла",
-        "score": 0.23690829
+        "card": "orig_0084",
+        "name": "шарики",
+        "score": 0.39680771
       },
       {
         "card": "orig_0364",
         "name": "плюшевый мишка",
-        "score": 0.23241285
+        "score": 0.39547049
       },
       {
-        "card": "orig_0415",
-        "name": "лошадка на палке",
-        "score": 0.22183676
+        "card": "orig_0374",
+        "name": "кукла",
+        "score": 0.38639209
       },
       {
-        "card": "zhizha_0151",
-        "name": "Плюшевый лев",
-        "score": 0.21383211
+        "card": "orig_0121",
+        "name": "машинка",
+        "score": 0.38392714
       },
       {
-        "card": "orig_0295",
-        "name": "игрушка для взрослых",
-        "score": 0.18001125
+        "card": "orig_0490",
+        "name": "шарики",
+        "score": 0.37943636
+      },
+      {
+        "card": "orig_0154",
+        "name": "спасательный круг",
+        "score": 0.37882931
+      },
+      {
+        "card": "orig_0496",
+        "name": "волчок",
+        "score": 0.37855735
       }
     ],
     "orig_0134": [
       {
         "card": "orig_0427",
         "name": "фламинго",
-        "score": 0.57609549
+        "score": 0.63121306
       },
       {
         "card": "orig_0474",
         "name": "кораблик",
-        "score": 0.30728577
-      },
-      {
-        "card": "zhizha_0003",
-        "name": "Пружинка-радуга",
-        "score": 0.26515305
-      },
-      {
-        "card": "orig_0374",
-        "name": "кукла",
-        "score": 0.25625564
+        "score": 0.45930127
       },
       {
         "card": "orig_0364",
         "name": "плюшевый мишка",
-        "score": 0.25326886
+        "score": 0.41947795
       },
       {
-        "card": "orig_0415",
-        "name": "лошадка на палке",
-        "score": 0.23919757
+        "card": "zhizha_0003",
+        "name": "Пружинка-радуга",
+        "score": 0.41189011
+      },
+      {
+        "card": "orig_0121",
+        "name": "машинка",
+        "score": 0.4069597
+      },
+      {
+        "card": "orig_0496",
+        "name": "волчок",
+        "score": 0.40170895
       },
       {
         "card": "zhizha_0151",
         "name": "Плюшевый лев",
-        "score": 0.23175926
+        "score": 0.40023494
       },
       {
-        "card": "orig_0084",
-        "name": "шарики",
-        "score": 0.21404852
-      },
-      {
-        "card": "orig_0490",
-        "name": "шарики",
-        "score": 0.21404852
+        "card": "orig_0374",
+        "name": "кукла",
+        "score": 0.39404822
       },
       {
         "card": "orig_0295",
         "name": "игрушка для взрослых",
-        "score": 0.19460774
+        "score": 0.39109277
+      },
+      {
+        "card": "orig_0313",
+        "name": "игрушка для взрослых",
+        "score": 0.39109277
       }
     ]
   },
@@ -654,12 +654,13 @@
   },
   "stats": {
     "cards": 961,
-    "tag_assignments": 10296,
-    "unique_main_tags": 1239,
+    "tag_assignments": 10307,
+    "unique_main_tags": 1240,
     "group_assignments": {
-      "0": 8061,
+      "0": 8071,
       "1": 1079,
-      "2": 1156
-    }
+      "2": 1157
+    },
+    "reviewed_cards": 787
   }
 }

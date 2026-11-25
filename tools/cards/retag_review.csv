@@ -97,7 +97,7 @@ orig_0095;acorn;plant;leaf forest;flat;brown green;autumn
 orig_0096;boot;footwear;leather;pair;black;travel
 orig_0097;rope;cord;fabric;spiral;brown;rescue
 orig_0098;garland;lamp;wire party;chain;yellow;celebration
-orig_0099;wallet;carry;leather money;box;brown;wealth
+orig_0099;photo-album;picture;book photo photography open-close;flat;brown white;memory:0.8
 orig_0100;axe;blade;wood swing hit;handle-plus-head;red;woodcutting
 orig_0101;letter;book;envelope subject-paper-sheet;flat;brown;communication:0.9
 orig_0102;paper-plane;toy;paper fly throw subject-paper-sheet;flat;white;school
@@ -137,7 +137,7 @@ orig_0135;gas-mask;mask;rubber elastic;humanoid;black;danger
 orig_0136;combination-lock;locking;metal elastic;spiral;black;bicycle
 orig_0137;key;locking;metal hold-in-hand;stick;gray;secret
 orig_0138;hacksaw;blade;metal pull push;box;red;repair
-orig_0139;photo;picture;person;flat;brown;memory
+orig_0139;photo;picture;person photography;flat;brown;memory
 orig_0140;kitchen-timer;timer;plastic cook kitchen;animal;white;food
 orig_0141;scarf;clothing;wool;stick;yellow;winter
 orig_0142;soap;cleaning;wash bathroom slippery;flat;white;freshness
@@ -195,7 +195,7 @@ orig_0193;squirrel;mammal;climb forest;animal;orange;autumn
 orig_0194;weather-station;measuring;plastic street;stick;white;weather
 orig_0195;crystal-ball;ornament;glass transparent magic;ball;blue;divination
 orig_0196;brush;cleaning;wood wash bathroom;handle-plus-head;yellow;relaxation
-orig_0197;film;recording;plastic flexible;spiral;brown;memory
+orig_0197;film;data-storage;plastic flexible photo photography record;spiral;brown;memory
 orig_0198;motorcycle;vehicle;ride;pair;green;freedom
 orig_0199;match;fuel;wood hold-in-hand light;stick;yellow;danger
 orig_0200;incense;fuel;wood smell religion open-top;stick;yellow;meditation
@@ -261,7 +261,7 @@ orig_0259;bow-tie;clothing;fabric tie;pair;gray;formal
 orig_0260;toothpaste;cleaning;sticky bathroom;container;white;freshness
 orig_0261;binoculars;optics;metal hold-in-hand;pair cylinder;black;exploration
 orig_0262;money-envelope;paper-money;paper;flat;yellow;payment
-orig_0263;camera;optics;metal hold-in-hand;box;gray;memory
+orig_0263;camera;optics;metal hold-in-hand photo photography record;box;gray;memory
 orig_0264;car-key;locking;metal car hold-in-hand;stick;black;travel
 orig_0265;vitruvian-man;picture;anatomy;flat;yellow;science
 orig_0266;microscope;optics;metal lab;handle-plus-head;yellow;scientist

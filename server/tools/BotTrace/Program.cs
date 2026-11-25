@@ -16,7 +16,7 @@ if (root is null) throw new DirectoryNotFoundException("Не найден кат
 var assets = Path.Combine(root.FullName, "client/assets/cards");
 string Read(string name) => File.ReadAllText(Path.Combine(assets, name));
 var tags = CardTags.Parse(Read("tags.json")).WithDetails(Read("details.json"))
-    .WithAssociations(Read("associations.json")).WithNames(Read("names.json"));
+    .WithAssociations(Read("associations.json")).WithNames(Read("names.json")).WithReviewedWeights(Read("weights.json"));
 using var manifest = JsonDocument.Parse(Read("cards.json"));
 var deck = manifest.RootElement.GetProperty("sets").EnumerateArray()
     .SelectMany(s => s.GetProperty("cards").EnumerateArray()).Select(c => c.GetProperty("id").GetString()!)

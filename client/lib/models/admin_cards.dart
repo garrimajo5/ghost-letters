@@ -22,6 +22,8 @@ class AdminCard {
       required this.version,
       this.title,
       this.tags = const [],
+      this.colors,
+      this.shapes,
       this.meanings = const [],
       this.details = const [],
       this.names = const []});
@@ -30,6 +32,8 @@ class AdminCard {
     List<CardFeature> features(String key) => (a[key] as List)
         .map((e) => CardFeature.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
+    Map<String, double>? weights(String key) => (a[key] as Map?)
+        ?.map((k, v) => MapEntry(k as String, (v as num).toDouble()));
     return AdminCard(
         id: j['id'] as String,
         imageKey: j['imageKey'] as String,
@@ -38,6 +42,8 @@ class AdminCard {
         isActive: j['isActive'] as bool,
         version: j['version'] as int,
         tags: (a['tags'] as List).cast<String>(),
+        colors: weights('colors'),
+        shapes: weights('shapes'),
         meanings: features('meanings'),
         details: features('details'),
         names: ((a['names'] as List?) ?? const []).cast<String>());
@@ -49,6 +55,7 @@ class AdminCard {
   final bool isActive;
   final int version;
   final List<String> tags;
+  final Map<String, double>? colors, shapes;
   final List<CardFeature> meanings;
   final List<CardFeature> details;
 
@@ -63,6 +70,8 @@ class AdminCard {
         'version': version,
         'annotation': {
           'tags': tags,
+          if (colors != null) 'colors': colors,
+          if (shapes != null) 'shapes': shapes,
           'meanings': meanings.map((m) => m.toJson()).toList(),
           'details': details.map((d) => d.toJson()).toList(),
           'names': names

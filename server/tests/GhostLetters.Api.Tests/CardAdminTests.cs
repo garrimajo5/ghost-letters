@@ -64,10 +64,14 @@ public sealed class CardAdminTests(PostgresFixture postgres) : IAsyncLifetime
             var tags = await _factory.WithServiceAsync<CardTagStore, CardTags>(s => s.LoadAsync(default));
             tags.AnnotationOf(card.ImageKey).Meanings.Should().ContainSingle(m => m.Tag == "memory" && m.Weight == .4);
             _factory.Services.GetRequiredService<CardTags>().Of(card.ImageKey).Should().BeEmpty("singleton baseline must stay immutable");
-            await admin.PutAsync($"/api/v1/admin/cards/{card.Id}", request with { Version = 1, IsActive = true, Annotation = Annotation(.8) });
+            var graded = Annotation(.8) with { Colors = new Dictionary<string,double> { ["red"] = .6, ["white"] = .4 },
+                Shapes = new Dictionary<string,double> { ["round"] = .72 } };
+            await admin.PutAsync($"/api/v1/admin/cards/{card.Id}", request with { Version = 1, IsActive = true, Annotation = graded });
             (await _factory.WithServiceAsync<CardCatalog, List<string>>(c => c.DeckAsync(["mirror"], default))).Should().Contain(card.ImageKey);
-            (await _factory.WithServiceAsync<CardTagStore, CardTags>(s => s.LoadAsync(default)))
-                .AnnotationOf(card.ImageKey).Meanings.Should().ContainSingle(m => m.Tag == "memory" && m.Weight == .8);
+            var effective = (await _factory.WithServiceAsync<CardTagStore, CardTags>(s => s.LoadAsync(default))).AnnotationOf(card.ImageKey);
+            effective.Meanings.Should().ContainSingle(m => m.Tag == "memory" && m.Weight == .8);
+            effective.Colors!["white"].Should().Be(.4);
+            effective.Shapes!["round"].Should().Be(.72);
             (await _factory.WithDbAsync(db => db.Cards.AsNoTracking().SingleAsync(c => c.Id == card.Id))).SetManuallyAssigned.Should().BeTrue();
         }
         finally { await _factory.WithDbAsync(db => db.Cards.Where(c => c.Id == card.Id).ExecuteDeleteAsync()); }
@@ -100,6 +104,10 @@ public sealed class CardAdminTests(PostgresFixture postgres) : IAsyncLifetime
         var url = $"/api/v1/admin/cards/{Guid.NewGuid()}";
         foreach (var weight in new[] { 0, -1, 1.01 })
             await admin.PutAsync(url, new SaveCardRequest(null, "original", true, 0, Annotation(weight)), HttpStatusCode.BadRequest);
+        foreach (var colors in new Dictionary<string,double>[] { new() { ["red"] = .5 }, new() { ["paper"] = 1 },
+            new() { ["white"] = .25, ["red"] = .25, ["green"] = .25, ["blue"] = .25 } })
+            await admin.PutAsync(url, new SaveCardRequest(null, "original", true, 0,
+                Annotation() with { Colors = colors, Shapes = new Dictionary<string,double>() }), HttpStatusCode.BadRequest);
         await admin.PutAsync(url, new SaveCardRequest(null, "unknown", true, 0, Annotation()), HttpStatusCode.BadRequest);
         await admin.PutAsync(url, new SaveCardRequest(null, "original", true, 0,
             new CardAnnotation(["red"], [new("flower", 1, "Цветок")], [new("flower", .3, "Цветок")])), HttpStatusCode.BadRequest);

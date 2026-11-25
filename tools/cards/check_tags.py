@@ -43,7 +43,7 @@ def group(t):
     return 1 if t.startswith('shape-') else 2 if t in COLORS or (t.startswith(('accent-', 'dominant-')) and t.split('-', 1)[1] in COLORS) else 0
 
 
-def features(tags, details, associations, secondary=.35, scale=.5):
+def features(tags, details, associations, secondary=.35, scale=.5, reviewed=None):
     result = {}
     for card, values in tags.items():
         removed = {d['tag'] for d in details.get(card, [])}
@@ -55,6 +55,17 @@ def features(tags, details, associations, secondary=.35, scale=.5):
         for d in associations.get(card, []):
             if group(d['tag']) == 0 and d['tag'] not in own:
                 own[d['tag']] = min(.95, d['weight']) * secondary * scale
+        own.graded = reviewed is not None and card in reviewed
+        if own.graded:
+            row = reviewed[card]
+            own.clear()
+            own.update({t: w * (w + (1-w) * min(1, secondary * 2 * scale)) for t,w in row['meanings'].items()})
+            own.material_accents = {t for t,w in row['meanings'].items() if is_material(t) and w >= .85}
+            own.update({'shape-'+t: w for t,w in row['shapes'].items()})
+            own.update({'dominant-'+t: w for t,w in row['colors'].items()})
+            own.update({t: 1 for t in main if group(t) == 3})
+            own.details.difference_update(row['meanings'])
+            own.details.update(row.get('details',{}))
         result[card] = own
     counts = Counter(t for marks in result.values() for t in marks if group(t) == 0)
     specificity = {t: min(1, math.log((len(result) + 32) / (n + 1)) / math.log(8)) for t, n in counts.items()}
@@ -74,9 +85,14 @@ def similarity(x, y):
         b = {t:v for t,v in y.items() if group(t)==g and not is_material(t) and (g!=2 or t.startswith('dominant-'))}
         return overlap(a, b)
     meaning = match(0)
+    if getattr(x, 'graded', False) or getattr(y, 'graded', False):
+        anchor = max((getattr(x,'specificity',{}).get(t,1) * min(x[t],y[t])
+                      for t in x.keys() & y.keys() if group(t)==0 and not is_material(t)), default=0)
+        meaning += (1-meaning) * .45 * anchor * anchor
     if any(t.startswith('subject-') and w == 1 and y.get(t) == 1 for t, w in x.items()):
         meaning = max(meaning, .70)
-    shape = match(1)
+    graded = getattr(x,'graded',False) and getattr(y,'graded',False)
+    shape = max((min(w,y.get(t,0)) for t,w in x.items() if t.startswith('shape-')),default=0) if graded else match(1)
     if meaning or shape:
         subject, silhouette = .8 * meaning, .12 * shape
         stronger = max(subject, silhouette)
@@ -87,10 +103,12 @@ def similarity(x, y):
 
     def accents(features):
         marks = {t.removeprefix('material-accent-') for t, w in features.items() if w == 1 and t.startswith('material-accent-') and is_material(t)}
-        return marks | {MATERIAL_SUBJECTS[t] for t, w in features.items() if w == 1 and t in MATERIAL_SUBJECTS}
+        return marks | getattr(features, 'material_accents', set()) | {MATERIAL_SUBJECTS[t] for t, w in features.items() if w == 1 and t in MATERIAL_SUBJECTS}
 
     material = MATERIAL_WEIGHT if accents(x).intersection(accents(y)) else 0
-    return max(.05 * match(2), material)
+    color = (sum(min(w,y.get(t,0)) for t,w in x.items() if t.startswith('dominant-'))
+             if graded else match(2))
+    return max(.05 * color, material)
 
 
 def control_report(data, names):
@@ -159,10 +177,25 @@ def main():
     def read(f):return json.loads((a.root/f).read_text('utf-8'))
     tags,details,manual,assoc=(read(f) for f in ('tags.json','details.json','details_manual.json','associations.json'))
     errors=validate(a.root,tags,details,manual,assoc)
-    report=control_report(features(tags,details,assoc),read('names.json')) if not errors else {'checks': [], 'top10': {}}
+    reviewed = read('weights.json')
+    for card, row in reviewed.items():
+        if card not in tags or set(row)-{'details'} != {'meanings','colors','shapes'}:
+            errors.append(f'{card}: unknown card or feature group')
+            continue
+        colors, meanings = row['colors'], row['meanings']
+        if not 1 <= len(colors) <= 3 or set(colors)-COLORS or abs(sum(colors.values())-1) > 1e-8:
+            errors.append(f'{card}: invalid palette')
+        if not row['shapes'] or not meanings or max(meanings.values()) != 1 or list(meanings.values()) != sorted(meanings.values(), reverse=True):
+            errors.append(f'{card}: missing shape or unordered meanings')
+        if any(not math.isfinite(w) or not 0 < w <= 1 for marks in row.values() for w in marks.values()):
+            errors.append(f'{card}: invalid weight')
+        if any(t in meanings or group(t) != 0 or w > .15 for t,w in row.get('details',{}).items()):
+            errors.append(f'{card}: details must have distinct keys and small weights')
+    report=control_report(features(tags,details,assoc,reviewed=reviewed),read('names.json')) if not errors else {'checks': [], 'top10': {}}
     report['structural_errors']=errors
     report['scoring']={'method':'CardTags.Similarity(a,b)', 'attention':[.8,.15,.05], 'secondary_meanings':.35, 'association_scale':.5, 'details_attention':0, 'candidate_scope':f'all {len(tags)} cards except the query', 'tie_break':'card ID ascending; tied_rank also reported'}
     report['stats']={'cards':len(tags),'tag_assignments':sum(map(len,tags.values())),'unique_main_tags':len(set(t for v in tags.values() for t in v)), 'group_assignments':{str(g):sum(group(t)==g for v in tags.values() for t in v) for g in range(3)}}
+    report['stats']['reviewed_cards'] = len(reviewed)
     if a.report:a.report.parent.mkdir(parents=True,exist_ok=True);a.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report['stats'],ensure_ascii=False))
     for e in errors:print('ERROR',e)

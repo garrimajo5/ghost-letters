@@ -16,7 +16,8 @@ public sealed class ReviewedCardCatalogTests
         var cards = Path.Combine(root, "client", "assets", "cards");
         var tags = CardTags.Parse(File.ReadAllText(Path.Combine(cards, "tags.json")))
             .WithDetails(File.ReadAllText(Path.Combine(cards, "details.json")))
-            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")));
+            .WithAssociations(File.ReadAllText(Path.Combine(cards, "associations.json")))
+            .WithReviewedWeights(File.ReadAllText(Path.Combine(cards, "weights.json")));
         using var tuning = BotTuning.Use(BotTuning.Default);
         using var report = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "docs", "CARDS_RETAG_REPORT.json")));
         foreach (var query in report.RootElement.GetProperty("top10").EnumerateObject())

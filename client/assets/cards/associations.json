@@ -97,7 +97,7 @@
   "orig_0096": [{"tag": "travel", "weight": 0.5, "label": "путешествия"}],
   "orig_0097": [{"tag": "rescue", "weight": 0.5, "label": "спасать"}],
   "orig_0098": [{"tag": "celebration", "weight": 0.5, "label": "праздник"}],
-  "orig_0099": [{"tag": "wealth", "weight": 0.5, "label": "богатство"}],
+  "orig_0099": [{"tag": "memory", "weight": 0.8, "label": "воспоминания"}],
   "orig_0100": [{"tag": "woodcutting", "weight": 0.5, "label": "рубка дерева"}],
   "orig_0101": [{"tag": "communication", "weight": 0.9, "label": "общение"}],
   "orig_0102": [{"tag": "school", "weight": 0.5, "label": "школа"}],

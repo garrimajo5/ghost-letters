@@ -41,11 +41,15 @@ void main() {
       await tester.pumpAndSettle();
       Future<void> reveal(String key) async {
         await tester.scrollUntilVisible(find.byKey(Key(key)), 180,
-            scrollable: find.byType(Scrollable).last);
+            scrollable: find.descendant(of: find.byType(ListView).last, matching: find.byType(Scrollable)).first);
         await tester.ensureVisible(find.byKey(Key(key)));
         await tester.pumpAndSettle();
       }
 
+      await reveal('card-colors');
+      await tester.enterText(find.byKey(const Key('card-colors')), 'красный 50%, белый 50%');
+      await reveal('card-shapes');
+      await tester.enterText(find.byKey(const Key('card-shapes')), 'цилиндр 85%');
       await reveal('add-meaning');
       expect(find.text('Цветок'), findsOneWidget);
       await tester.drag(find.byType(Slider).first, const Offset(-80, 0));
@@ -65,6 +69,8 @@ void main() {
       expect(saved.isActive, false);
       expect(saved.setCode, 'mirror');
       expect(saved.version, 3);
+      expect(saved.colors, {'red': .5, 'white': .5});
+      expect(AdminCard.fromJson(saved.toJson()).shapes, {'cylinder': .85});
       expect(saved.meanings.single.weight, lessThan(1));
       expect(AdminCard.fromJson(saved.toJson()).meanings.single.tag, 'flower');
       expect(tester.takeException(), isNull);
