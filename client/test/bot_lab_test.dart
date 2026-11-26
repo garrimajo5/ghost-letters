@@ -38,7 +38,7 @@ void main() {
             'theoryBest': ['orig_0001', 'orig_0003'],
             'unexplained': <String>[],
             'explanations': [
-              {'hint': 'orig_0010', 'round': 1, 'card': 'orig_0001', 'kind': 'direct', 'with': null, 'lift': 2.4},
+              {'hint': 'orig_0010', 'round': 1, 'card': 'orig_0001', 'secondCard': 'orig_0003', 'kind': 'direct', 'with': null, 'lift': 2.4},
             ],
             'rows': [
               {
@@ -128,7 +128,7 @@ void main() {
       expect(find.text('по смыслу: золото'), findsOneWidget);
       await tester.tap(find.text('Закрыть'));
       await tester.pumpAndSettle();
-      expect(find.text('корона — указывает на «клетка» ×2.4'), findsOneWidget);
+      expect(find.text('корона — указывает на «клетка» и «нож» ×2.4'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

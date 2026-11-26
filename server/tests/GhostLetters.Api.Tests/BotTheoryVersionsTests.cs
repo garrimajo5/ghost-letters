@@ -68,6 +68,44 @@ public sealed class BotTheoryVersionsTests
     }
 
     [Fact]
+    public void OneLetterCanIntroduceTwoRowsAndTheNextCanConfirmItsSecondTarget()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["duet"] = ["music", "pair"], ["piano"] = ["music"], ["twins"] = ["pair"],
+            ["again"] = ["pair"], ["boat"] = ["sail"], ["rose"] = ["flower"],
+        });
+        var view = View(new HintGroupView(1, ["duet"]), new HintGroupView(2, ["again"])) with
+        {
+            Board = [new(Category.Motive, ["piano", "boat"]), new(Category.Method, ["twins", "rose"])],
+        };
+        var theory = BotPlayer.Theory(view, tags, Mind())!;
+        var duet = theory.Explanations[0];
+        new[] { duet.Card, duet.SecondCard }.Should().BeEquivalentTo(new[] { "piano", "twins" });
+        theory.Explanations[1].Should().Match<HintExplanation>(e => e.Card == "twins" && e.Kind == "confirm" && e.SecondCard == null);
+    }
+
+    [Fact]
+    public void VoteKeepsAClueExplainedWhenMarginalizingWouldLoseIt()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["bells"] = ["music"], ["song"] = ["music"], ["piano"] = ["music"], ["flute"] = ["music"],
+            ["oven"] = ["cook", "electric", "kitchen"], ["pot"] = ["cook", "container", "liquid"],
+        });
+        var view = View(new HintGroupView(1, ["bells"]), new HintGroupView(2, ["song"]), new HintGroupView(3, ["pot"])) with
+        {
+            Board = [new(Category.Motive, ["piano", "a", "b", "c", "d"]), new(Category.Place, ["flute", "oven", "e", "f", "g"])],
+        };
+        var mind = Mind();
+        using var _ = BotTuning.Use(BotTuning.Default with { TheoryMulti = 0 });
+        var theory = BotPlayer.Theory(view, tags, mind)!;
+        theory.Truth["flute"].Should().BeGreaterThan(theory.Truth["oven"]);
+        theory.Best.Should().Equal("piano", "oven");
+        BotPlayer.Plan(view, tags, mind, new Random(1)).Should().Equal(0, 1);
+    }
+
+    [Fact]
     public void PairOfHints_PointTogether_AndEveryHintExplained()
     {
         var view = View(new HintGroupView(1, ["mitten", "boots", "tv"]));
