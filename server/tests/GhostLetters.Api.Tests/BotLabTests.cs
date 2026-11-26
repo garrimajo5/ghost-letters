@@ -87,6 +87,14 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void PetBowlPointsToFoodBeforeBubbleWrap()
+    {
+        LabRow[] board = [new("Motive", ["orig_0688", "orig_0443"])];
+        var result = BotLabService.Think(new(board, [new(1, ["orig_0215"])]), Catalog());
+        foreach (var bot in result.Bots) bot.Rows[0].Vote.Should().Be(1, bot.Bot);
+    }
+
+    [Fact]
     public void LaptopAndPlugExplainTheSharedFunctionBeforeHardness()
     {
         var reason = Catalog().Explain("orig_0150", "zhizha_0198", (.8, .1, .1), .5);
