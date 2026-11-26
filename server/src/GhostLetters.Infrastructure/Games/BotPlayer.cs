@@ -632,12 +632,12 @@ public static partial class BotPlayer
             var compromise = P.Compromise;
             // Сам не уверен (две лучшие карты почти равны) — сильнее держусь общего мнения стола,
             // чтобы мирные не разбрелись по разным картам.
-            var sorted = columns.Select(c => Evidence(Card(row, c))).OrderByDescending(x => x).Take(2).ToList();
+            var sorted = columns.Select(c => ChoiceEvidence(Card(row, c))).OrderByDescending(x => x).Take(2).ToList();
             if (!Classic && !KillerTeam && sorted.Count > 1 && sorted[0] - sorted[1] < BotTuning.Current.UnsureFollow)
                 compromise = Math.Max(compromise, .8);
             // The private term is the log weight used in RowBelief. Trust-weighted testimony
             // adds evidence on that scale; a lone guess retains its small absolute weight.
-            return (1 - .8 * compromise) * Beta * Evidence(card) + compromise * Social(card);
+            return (1 - .8 * compromise) * Beta * ChoiceEvidence(card) + compromise * Social(card);
         }
 
         private bool KillerTeam => me.Role.IsKillerTeam();
@@ -761,11 +761,26 @@ public static partial class BotPlayer
 
         private bool Outshone(string letter, int? round, string card) => OutshoneBy(letter, round, card) is not null;
 
+        // A vote proposes one complete solution. Compare changing this row while keeping the other
+        // proposed cards. RowBelief still marginalizes over all possibilities for investigation.
+        private double ChoiceEvidence(string card)
+        {
+            if (!TheoryOn || Theory() is not { } theory || !theory.VoteLogOdds.TryGetValue(card, out var joint))
+                return Evidence(card);
+            var weight = BotTuning.Current.TheoryWeight;
+            return ((1 - weight) * Math.Log(Math.Max(1e-9, theory.Before[card])) + weight * joint) / Beta;
+        }
+
+        private bool InChosenVersion(int row, int column) => BotTuning.Current.TheoryWeight > 0 &&
+            _theory is { VoteLogOdds.Count: > 0 } theory && theory.Best[row] == Card(row, column);
+
         /// <summary>Лучший столбец ряда по подсказкам (среди кандидатов, если заданы).</summary>
         public int BestColumn(int row, IReadOnlyList<int>? candidates)
         {
             var columns = candidates ?? Enumerable.Range(0, view.Board[row].Cards.Count).ToList();
-            return columns.OrderByDescending(c => Evidence(Card(row, c)) + Soft("card:" + Card(row, c), BotTuning.Current.SoftCards))
+            return columns.OrderByDescending(c => ChoiceEvidence(Card(row, c)) + Soft("card:" + Card(row, c), BotTuning.Current.SoftCards))
+                .ThenByDescending(c => InChosenVersion(row, c))
+                .ThenByDescending(c => Evidence(Card(row, c)))
                 .ThenBy(c => CardPreference(row, c)).ThenBy(c => c).First();
         }
 
@@ -830,7 +845,9 @@ public static partial class BotPlayer
                 return candidates.OrderByDescending(c => Evidence(Card(stage.Row, c))).ThenBy(c => CardPreference(stage.Row, c)).Skip(1).First();
             }
 
-            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
+            return candidates.OrderByDescending(c => Blend(stage.Row, c, candidates)).ThenByDescending(c => InChosenVersion(stage.Row, c))
+                .ThenByDescending(c => Evidence(Card(stage.Row, c)))
+                .ThenBy(c => CardPreference(stage.Row, c)).ThenBy(c => c).First();
         }
 
         /// <summary>Карта ряда, за которую, судя по чату, стол (кроме команды Убийцы) голосует охотнее всего; null — мнений нет.</summary>

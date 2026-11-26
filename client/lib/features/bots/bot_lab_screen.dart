@@ -408,6 +408,10 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
         title: Text('${b['bot']}${b['correct'] == null ? '' : ' · угадал ${b['correct']}/${_rows.length}'}'),
         subtitle: Text(b['about'] as String? ?? '', style: const TextStyle(fontSize: 12, color: AppColors.muted)),
         children: [
+          const Align(alignment: Alignment.centerLeft, child: Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text('Проценты — шанс карты во всех версиях. Голубая рамка — голос за карту в общей версии.',
+                  style: TextStyle(fontSize: 12, color: AppColors.muted)))),
           for (final row in (b['rows'] as List).cast<Map>()) _thoughtRow(row),
           if (((b['explanations'] as List?) ?? const []).isNotEmpty) _version(b),
           if (unexplained.isNotEmpty)
@@ -446,10 +450,12 @@ class _BotLabScreenState extends ConsumerState<BotLabScreen> {
                       child: Text(
                           '${_name(e['hint'] as String)} — ${_kinds[e['kind']] ?? e['kind']}'
                           '${e['card'] == null ? '' : ' «${_name(e['card'] as String)}»'}'
+                          '${e['secondCard'] == null ? '' : ' и «${_name(e['secondCard'] as String)}»'}'
                           '${e['with'] == null ? '' : ' (с «${_name(e['with'] as String)}»)'}'
                           '${e['card'] == null ? '' : ' ×${((e['lift'] as num?) ?? 1).toStringAsFixed(1)}'}',
                           style: const TextStyle(fontSize: 12))),
                   if (e['card'] != null) CardImage(cardId: e['card'] as String, size: 32),
+                  if (e['secondCard'] != null) CardImage(cardId: e['secondCard'] as String, size: 32),
                 ])),
         ]));
   }

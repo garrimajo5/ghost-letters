@@ -129,6 +129,31 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void Deal1384647065_BootsSupportTwoRowsAndCauldronResolvesTheSecret()
+    {
+        var tags = Catalog();
+        LabRow[] board = [
+            new("Motive", ["zhizha_0147","orig_0381","orig_0103","orig_0123","orig_0679"]),
+            new("Place", ["orig_0176","orig_0159","orig_0292","orig_0351","zhizha_0117"]),
+            new("Method", ["zhizha_0170","orig_0523","orig_0710","orig_0093","orig_0184"]),
+            new("Secret", ["orig_0025","orig_0355","zhizha_0198","orig_0591","orig_0500"])];
+        LabHint[] hints = [new(1, ["orig_0095"]), new(2, ["orig_0096"]), new(3, ["orig_0376"]), new(4, ["orig_0188"])];
+        var bootsRound = BotLabService.Think(new(board, hints[..2], Rounds: 5), tags).Bots.ToDictionary(b => b.Bot);
+        var dressRound = BotLabService.Think(new(board, hints[..3], Rounds: 5), tags).Bots.ToDictionary(b => b.Bot);
+        foreach (var bot in BotLabService.Think(new(board, hints, Rounds: 5), tags).Bots)
+        {
+            var boots = bootsRound[bot.Bot].Explanations[1];
+            new[] { boots.Card, boots.SecondCard }.Should().BeEquivalentTo(["orig_0292", "orig_0523"], bot.Bot);
+            var dress = dressRound[bot.Bot].Explanations[2];
+            dress.Should().Match<HintExplanation>(e => e.Kind == "confirm" && e.Card == "orig_0523" && e.SecondCard == null, bot.Bot);
+            dressRound[bot.Bot].Rows[2].Cards[1].Belief.Should().BeGreaterThan(bootsRound[bot.Bot].Rows[2].Cards[1].Belief, bot.Bot);
+            bot.Explanations[3].Should().Match<HintExplanation>(e => e.Card == "orig_0500" && e.SecondCard == null, bot.Bot);
+            bot.Rows.Select(r => r.Vote).Should().Equal([3, 2, 1, 4], bot.Bot);
+            bot.Rows.Select(r => r.Cards[r.Vote].Card).Should().Equal(bot.TheoryBest, bot.Bot);
+        }
+    }
+
+    [Fact]
     public void Deal1423066809_PaperPlaneAndTwoPlantsPointToNotebookAndDriedFlowers()
     {
         var tags = Catalog();

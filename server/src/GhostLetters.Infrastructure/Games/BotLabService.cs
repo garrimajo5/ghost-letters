@@ -160,7 +160,7 @@ public sealed class BotLabService(BotAdminService admins, CardCatalog catalog, C
         foreach (var preset in presets)
         {
             var p = preset.P.Clamped();
-            var view = new PlayerView(Guid.NewGuid(), 1, Phase.Discussion, round, Math.Max(round, request.Rounds), DiscussionMode.FreeChat,
+            var view = new PlayerView(Guid.Empty, 1, Phase.Discussion, round, Math.Max(round, request.Rounds), DiscussionMode.FreeChat,
                 board, hints, 0, Players(Role.Detective), new MeView(Me, Role.Detective, [], []), null, 0, null, null, null, null, [], [], null);
             var mind = BotService.BuildMind(Me, p, new Dictionary<Guid, PlayerHistory>(), [], boardSet, Names());
             var reading = tags.AtBoard(board, p);
