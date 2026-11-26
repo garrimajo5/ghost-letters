@@ -22,6 +22,23 @@ public sealed class TableModelTests
 
     private static TableModel Uniform() => TableModel.Uniform(Board, (a, b) => Tags.Similarity(a, b));
 
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    public void IrrelevantRows_DoNotChangeTheRevealOrTheInformationInAProbe(int rowCount)
+    {
+        var rows = Enumerable.Range(0, rowCount).Select(r => (IReadOnlyList<string>)new[] { $"a{r}", $"b{r}" }).ToArray();
+        var model = TableModel.Uniform(rows, (letter, card) => letter == "probe" && card == "a0" ? 1 : 0);
+        var truth = new int[rowCount];
+        model.RevealChance("blank").Should().BeApproximately(TableModel.Noise, 1e-12);
+        model.RevealChance("blank", truth).Should().BeApproximately(TableModel.Noise, 1e-12);
+        model.RevealChance("probe", truth).Should().BeApproximately(1 - TableModel.Noise, 1e-12);
+        model.RevealChance("probe").Should().BeApproximately(.5, 1e-12);
+        model.With("probe", true).P("a0").Should().BeApproximately(1 - TableModel.Noise, 1e-12);
+        model.With("probe", false).P("a0").Should().BeApproximately(TableModel.Noise, 1e-12);
+        model.InfoGain("blank").Should().BeApproximately(0, 1e-12);
+    }
+
     [Fact]
     public void RevealRaises_AndVanishLowers_TheCardTheLetterPointsTo()
     {

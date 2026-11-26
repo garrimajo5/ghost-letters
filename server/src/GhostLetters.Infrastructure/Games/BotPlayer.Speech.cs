@@ -444,11 +444,12 @@ public static partial class BotPlayer
                 }
             }
 
-            // Одной фразой, как сказал бы человек: что проверял и почему (по первой связи).
-            var checkedNames = checkedCards.Select(x => Where(x.Row, x.Column)).ToList();
-            var checkedText = checkedCards.Count == 0 ? "Проверял: явной связи с полем нет." :
-                $"Проверял: {(checkedNames.Count == 1 ? checkedNames[0] : string.Join(", ", checkedNames[..^1]) + " и " + checkedNames[^1])}" +
-                $" — {Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))}.";
+            // Называем вместе только цели с одинаковой основной связью.
+            var checks = checkedCards.GroupBy(x => Connection(claimCard, Card(x.Row, x.Column)).Split(';')[0])
+                .Select(group => new Thought(ThoughtKind.Check, Why: group.Key,
+                    Cards: group.Select(x => Where(x.Row, x.Column)).ToList())).ToList();
+            var checkedText = checks.Count == 0 ? "Проверял: явной связи с полем нет." :
+                "Проверял: " + string.Join("; ", checks.Select(check => $"{string.Join(", ", check.Cards!)} — {check.Why}")) + ".";
             var vanished = claimText.Contains("исчезла", StringComparison.Ordinal);
             var outshoneText = outshone.Count == 0 ? "" :
                 $"Но {OutshoneHint(lostRound!.Value, outshone[0].By!)} ведёт на {SpeechWords.Acc(Where(outshone[0].Row, outshone[0].Column))} не хуже — Призрак просто выбрал лучшее, эту карту не вычёркиваю.";
@@ -470,9 +471,9 @@ public static partial class BotPlayer
             {
                 new(claimText.Contains("исчезла", StringComparison.Ordinal) ? ThoughtKind.ClaimLost
                     : claimText.Contains("открылось", StringComparison.Ordinal) ? ThoughtKind.ClaimOpen : ThoughtKind.ClaimWait),
-                checkedCards.Count == 0 ? new(ThoughtKind.CheckNothing)
-                    : new(ThoughtKind.Check, Cards: checkedNames, Why: Connection(claimCard, Card(checkedCards[0].Row, checkedCards[0].Column))),
             };
+            if (checks.Count == 0) letterThoughts.Add(new(ThoughtKind.CheckNothing));
+            else letterThoughts.AddRange(checks);
             if (vanished && checkedCards.Count > 0 && outshone.Count < checkedCards.Count)
                 letterThoughts.Add(new(NegativeWeight > 0 ? ThoughtKind.LostConclusion : ThoughtKind.LostIgnored));
             if (vanished && outshone.Count > 0)

@@ -179,6 +179,27 @@ public sealed class BotWinrateTests
     }
 
     [Fact]
+    public void LetterChecks_GroupOnlyTargetsWithTheSameReason()
+    {
+        var tags = new CardTags(new Dictionary<string, HashSet<string>>
+        {
+            ["stove"] = ["electric", "cook"], ["remote"] = ["electric"],
+            ["apron"] = ["cook"], ["pan"] = ["cook"],
+        });
+        var view = View(Role.Detective, [], [], phase: Phase.Discussion,
+            letters: [new MyLetterView(1, "stove", false)]) with
+        {
+            Board = [new(Category.Motive, ["remote", "apron", "pan"])],
+        };
+        var line = BotPlayer.SayPlanned(view, new Random(3), tags, Mind())!.Value;
+        var checks = line.Intent!.Thoughts.Where(t => t.Kind == ThoughtKind.Check).ToList();
+        checks.Should().HaveCount(2);
+        checks.Single(t => t.Cards!.Contains("мотив 1")).Cards.Should().Equal("мотив 1");
+        checks.Single(t => t.Cards!.Contains("мотив 2")).Cards.Should().BeEquivalentTo(["мотив 2", "мотив 3"]);
+        foreach (var check in checks) line.Line.Text.Should().Contain(check.Why!);
+    }
+
+    [Fact]
     public void Bot_DoesNotGuess_WithoutAnyClues()
     {
         var view = View(Role.Detective, [], ["stone"], phase: Phase.Discussion);

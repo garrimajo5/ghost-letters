@@ -103,26 +103,24 @@ public sealed class TableModel
         return s.Select(r => r.Select(x => x / scale * Math.Exp(-_focus * (top - x))).ToArray()).ToArray();
     }
 
-    /// <summary>Вероятность, что Призрак откроет письмо при истине (row, column) — ε + (1 − 2ε)·λ.</summary>
-    private static double Lambda(double pointing) => Noise + (1 - 2 * Noise) * pointing;
+    // The Ghost makes one reveal decision for the letter, across all rows.
+    private static double RevealGivenMiss(double miss) => Noise + (1 - 2 * Noise) * (1 - miss);
+
+    private double[] RowMiss(double[][] pointing) => _p.Select((row, r) =>
+        row.Select((p, c) => p * (1 - pointing[r][c])).Sum()).ToArray();
 
     /// <summary>Шанс, что Призрак откроет письмо — по текущим вероятностям рядов.</summary>
     public double RevealChance(string letter)
     {
-        var w = Readable(letter);
-        var none = 1.0;
-        for (var r = 0; r < _rows.Count; r++)
-            none *= 1 - Enumerable.Range(0, _rows[r].Count).Sum(c => _p[r][c] * Lambda(w[r][c]));
-        // ε у каждого ряда складывается в шум выше заданного: оставляем один ε на всё письмо.
-        return Math.Clamp(1 - none, Noise, 1 - Noise);
+        return RevealGivenMiss(RowMiss(Readable(letter)).Aggregate(1.0, (miss, row) => miss * row));
     }
 
     public double RevealChance(string letter, IReadOnlyList<int> truth)
     {
         var pointing = Readable(letter);
         var miss = 1.0;
-        for (var r = 0; r < truth.Count; r++) miss *= 1 - Lambda(pointing[r][truth[r]]);
-        return Math.Clamp(1 - miss, Noise, 1 - Noise);
+        for (var r = 0; r < truth.Count; r++) miss *= 1 - pointing[r][truth[r]];
+        return RevealGivenMiss(miss);
     }
 
     /// <summary>
@@ -134,16 +132,18 @@ public sealed class TableModel
     {
         var w = Readable(letter);
         // Вероятность, что ряд r «не сработал» (Призрак не открыл бы письмо ради этого ряда), в среднем по ряду.
-        var miss = Enumerable.Range(0, _rows.Count)
-            .Select(r => 1 - Enumerable.Range(0, _rows[r].Count).Sum(c => _p[r][c] * Lambda(w[r][c]))).ToArray();
+        var miss = RowMiss(w);
         var next = new double[_rows.Count][];
         for (var r = 0; r < _rows.Count; r++)
         {
             var others = 1.0;
             for (var o = 0; o < _rows.Count; o++) if (o != r) others *= miss[o];
             // Открыл: хоть один ряд сработал. Исчезло: ни один не сработал.
-            var likelihood = Enumerable.Range(0, _rows[r].Count)
-                .Select(c => revealed ? 1 - (1 - Lambda(w[r][c])) * others : (1 - Lambda(w[r][c])) * others).ToArray();
+            var likelihood = w[r].Select(pointing =>
+            {
+                var open = RevealGivenMiss((1 - pointing) * others);
+                return revealed ? open : 1 - open;
+            }).ToArray();
             // Доверие к источнику: смесь со средним правдоподобием ряда — «ничего не узнали».
             var mean = Enumerable.Range(0, likelihood.Length).Sum(c => _p[r][c] * likelihood[c]);
             var row = Enumerable.Range(0, likelihood.Length).Select(c => _p[r][c] * (weight * likelihood[c] + (1 - weight) * mean)).ToArray();

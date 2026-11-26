@@ -87,6 +87,29 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void PetBowlPointsToFoodBeforeBubbleWrap()
+    {
+        LabRow[] board = [new("Motive", ["orig_0688", "orig_0443"])];
+        var result = BotLabService.Think(new(board, [new(1, ["orig_0215"])]), Catalog());
+        foreach (var bot in result.Bots) bot.Rows[0].Vote.Should().Be(1, bot.Bot);
+    }
+
+    [Fact]
+    public void WeldingAndMedicalMasksPointToTheFencingMask()
+    {
+        // Поле живой партии c00dc2ed после второго раунда. На столе также шлем и каска.
+        LabRow[] board = [
+            new("Motive", ["orig_0448", "zhizha_0113", "orig_0700", "orig_0387", "orig_0489"]),
+            new("Place", ["orig_0475", "zhizha_0033", "orig_0159", "zhizha_0084", "orig_0464"]),
+            new("Method", ["orig_0659", "orig_0620", "orig_0690", "orig_0432", "orig_0703"]),
+            new("Secret", ["zhizha_0187", "zhizha_0110", "orig_0601", "zhizha_0161", "orig_0560"]),
+        ];
+        LabHint[] hints = [new(0, ["zhizha_0032"]), new(1, ["orig_0176"]), new(2, ["orig_0488", "orig_0272"])];
+        var result = BotLabService.Think(new(board, hints), Catalog());
+        foreach (var bot in result.Bots) bot.Rows[0].Vote.Should().Be(1, bot.Bot);
+    }
+
+    [Fact]
     public void LaptopAndPlugExplainTheSharedFunctionBeforeHardness()
     {
         var reason = Catalog().Explain("orig_0150", "zhizha_0198", (.8, .1, .1), .5);
