@@ -48,6 +48,26 @@ public sealed class BotLabTests(Xunit.Abstractions.ITestOutputHelper output)
     }
 
     [Fact]
+    public void ReviewedMeaningsKeepObjectsActionsAndColoursDistinct()
+    {
+        var tags = Catalog();
+        string Label(string card, string key) => tags.AnnotationOf(card).Meanings.Single(m => m.Tag == key).Label;
+        Label("orig_0241", "handle").Should().Be("рукоятка");
+        Label("orig_0102", "fly").Should().Be("летать");
+        Label("orig_0539", "housefly").Should().Be("муха");
+        Label("orig_0523", "tie").Should().Be("завязывать");
+        Label("orig_0537", "necktie").Should().Be("галстук");
+        Label("orig_0679", "orange-fruit").Should().Be("апельсин");
+        tags.AnnotationOf("orig_0679").Colors!["orange"].Should().Be(1);
+        tags.SearchByTag("муха").Should().Contain("orig_0539").And.NotContain("orig_0102");
+        tags.AnnotationOf("orig_0655").Details.Should().Contain(d => d.Tag == "ribbon-bow" && d.Label == "бант");
+        tags.Of("orig_0529").Should().Contain("fly").And.NotContain("ride");
+        tags.Of("orig_0711").Should().Contain("run").And.NotContain("ride");
+        var orange = BotLabService.Think(new([new("Motive", ["orig_0679", "orig_0718"])], [new(1, ["orig_0685"])]), tags);
+        foreach (var bot in orange.Bots) bot.Rows[0].Vote.Should().Be(0, bot.Bot);
+    }
+
+    [Fact]
     public void PhotoAlbumChecksThePhotoInsteadOfCashForEveryPersonality()
     {
         var tags = Catalog();

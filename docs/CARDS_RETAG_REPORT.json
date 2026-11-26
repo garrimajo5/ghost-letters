@@ -8,15 +8,15 @@
       "tied_rank": 1,
       "limit": 3,
       "passed": true,
-      "score": 0.48081524027402367
+      "score": 0.44479950083641057
     },
     {
       "kind": "comparison",
       "source": "orig_0706",
       "target": "orig_0628",
       "distractor": "orig_0339",
-      "score": 0.48081524027402367,
-      "distractor_score": 0.39679131431384984,
+      "score": 0.44479950083641057,
+      "distractor_score": 0.40050631635812856,
       "passed": true
     },
     {
@@ -27,17 +27,17 @@
       "tied_rank": 1,
       "limit": 5,
       "passed": true,
-      "score": 0.499613029055652
+      "score": 0.4996201303438141
     },
     {
       "kind": "rank",
       "source": "orig_0575",
       "target": "orig_0279",
-      "rank": 3,
-      "tied_rank": 3,
+      "rank": 2,
+      "tied_rank": 2,
       "limit": 5,
       "passed": true,
-      "score": 0.3988736312819586
+      "score": 0.3988800990073409
     },
     {
       "kind": "rank",
@@ -146,7 +146,7 @@
       "kind": "far",
       "source": "orig_0427",
       "target": "orig_0120",
-      "rank": 261,
+      "rank": 236,
       "limit": 10,
       "passed": true
     },
@@ -163,7 +163,7 @@
       "kind": "far",
       "source": "orig_0134",
       "target": "orig_0120",
-      "rank": 209,
+      "rank": 183,
       "limit": 10,
       "passed": true
     }
@@ -173,104 +173,104 @@
       {
         "card": "orig_0628",
         "name": "ракетка",
-        "score": 0.48081524
-      },
-      {
-        "card": "orig_0575",
-        "name": "нунчаки",
-        "score": 0.42213255
-      },
-      {
-        "card": "orig_0471",
-        "name": "скакалка",
-        "score": 0.41077938
+        "score": 0.4447995
       },
       {
         "card": "orig_0565",
         "name": "боксёрская перчатка",
-        "score": 0.39966018
+        "score": 0.40359738
       },
       {
         "card": "orig_0339",
         "name": "боулинг",
-        "score": 0.39679131
+        "score": 0.40050632
       },
       {
-        "card": "orig_0267",
-        "name": "гольф",
-        "score": 0.39571253
-      },
-      {
-        "card": "zhizha_0043",
-        "name": "Камень для кёрлинга",
-        "score": 0.39156216
+        "card": "orig_0575",
+        "name": "нунчаки",
+        "score": 0.39771768
       },
       {
         "card": "orig_0022",
         "name": "конёк",
-        "score": 0.38036831
+        "score": 0.38589598
+      },
+      {
+        "card": "zhizha_0043",
+        "name": "Камень для кёрлинга",
+        "score": 0.37720464
       },
       {
         "card": "orig_0015",
         "name": "куртка",
-        "score": 0.36973895
+        "score": 0.37152726
+      },
+      {
+        "card": "orig_0471",
+        "name": "скакалка",
+        "score": 0.36629614
       },
       {
         "card": "orig_0426",
         "name": "мяч",
-        "score": 0.34651896
+        "score": 0.35353179
+      },
+      {
+        "card": "orig_0267",
+        "name": "гольф",
+        "score": 0.34796224
       }
     ],
     "orig_0575": [
       {
         "card": "orig_0628",
         "name": "ракетка",
-        "score": 0.49961303
-      },
-      {
-        "card": "orig_0706",
-        "name": "лыжи",
-        "score": 0.42213255
+        "score": 0.49962013
       },
       {
         "card": "orig_0279",
         "name": "пистолет",
-        "score": 0.39887363
+        "score": 0.3988801
       },
       {
         "card": "orig_0507",
         "name": "ружьё",
-        "score": 0.39887363
+        "score": 0.3988801
       },
       {
         "card": "orig_0716",
         "name": "револьвер",
-        "score": 0.39887363
+        "score": 0.3988801
+      },
+      {
+        "card": "orig_0706",
+        "name": "лыжи",
+        "score": 0.39771768
       },
       {
         "card": "orig_0603",
         "name": "плеть",
-        "score": 0.38886872
+        "score": 0.38887708
       },
       {
         "card": "orig_0185",
         "name": "бита",
-        "score": 0.38196011
+        "score": 0.38196846
       },
       {
         "card": "orig_0405",
         "name": "кастет",
-        "score": 0.37844484
+        "score": 0.37845296
       },
       {
         "card": "orig_0267",
         "name": "гольф",
-        "score": 0.37841977
+        "score": 0.37842844
       },
       {
         "card": "orig_0471",
         "name": "скакалка",
-        "score": 0.36517658
+        "score": 0.36518443
       }
     ],
     "orig_0421": [
@@ -381,17 +381,17 @@
       {
         "card": "orig_0044",
         "name": "песочные часы",
-        "score": 0.57038509
+        "score": 0.57039297
       },
       {
         "card": "orig_0243",
         "name": "карманные часы",
-        "score": 0.39359472
+        "score": 0.39360787
       },
       {
         "card": "orig_0653",
         "name": "карманные часы",
-        "score": 0.39359472
+        "score": 0.39360787
       },
       {
         "card": "orig_0117",
@@ -421,7 +421,7 @@
       {
         "card": "orig_0054",
         "name": "часы",
-        "score": 0.3514974
+        "score": 0.35150656
       },
       {
         "card": "orig_0587",
@@ -431,24 +431,24 @@
     ],
     "orig_0523": [
       {
-        "card": "orig_0537",
-        "name": "галстук",
-        "score": 0.60662542
-      },
-      {
-        "card": "orig_0259",
-        "name": "бабочка",
-        "score": 0.56010553
-      },
-      {
         "card": "orig_0729",
         "name": "ремень",
         "score": 0.56010553
       },
       {
+        "card": "orig_0537",
+        "name": "галстук",
+        "score": 0.54379653
+      },
+      {
         "card": "orig_0662",
         "name": "смирительная рубашка",
         "score": 0.52582404
+      },
+      {
+        "card": "orig_0259",
+        "name": "бабочка",
+        "score": 0.52570614
       },
       {
         "card": "orig_0544",
@@ -528,9 +528,9 @@
         "score": 0.50244308
       },
       {
-        "card": "orig_0537",
-        "name": "галстук",
-        "score": 0.50244308
+        "card": "zhizha_0054",
+        "name": "Меховая муфта",
+        "score": 0.50126606
       }
     ],
     "orig_0427": [
@@ -654,12 +654,12 @@
   },
   "stats": {
     "cards": 961,
-    "tag_assignments": 10307,
-    "unique_main_tags": 1240,
+    "tag_assignments": 10311,
+    "unique_main_tags": 1246,
     "group_assignments": {
-      "0": 8071,
+      "0": 8076,
       "1": 1079,
-      "2": 1157
+      "2": 1156
     },
     "reviewed_cards": 787
   }

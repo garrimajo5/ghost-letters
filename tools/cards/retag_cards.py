@@ -131,7 +131,7 @@ PROFILES = {
 # A material declared on a reviewed row replaces the generic fabric default.
 MATERIALS = set('metal wood glass stone paper fabric leather rubber plastic ceramic clay bone fur wool straw wax'.split())
 PROPERTIES = set('liquid powder gas soft hard fragile transparent elastic sticky hot cold wet sharp heavy light-weight inflatable dry slippery flexible microscopic cold-blooded hollow edible granular flat long toxic open-top'.split())
-ACTIONS = set('hold-in-hand swing hit cut stab shoot throw pour drink eat wear ride sit-on lie-on open-close lock write read measure play clean wash cook heat cool light burn tie pull push climb swim fly float ring count walk grow enter carry store touch look-through look-at decorate display build apply make use attach ignite melt move jump roll rest orbit reflect explore aim place-on inhale record protect rescue lift balance follow catch rotate pay heal infect multiply draw print sew grind spin speak hear kiss smell think slide run scratch dig twist blow sing carve rock knit crawl illuminate spray drill'.split())
+ACTIONS = set('hold-in-hand swing hit cut stab shoot throw pour drink eat wear ride sit-on lie-on open-close lock write read measure play clean wash cook heat cool light burn tie pull push climb swim fly float ring count walk grow enter carry store touch look-through look-at decorate display build apply make use attach ignite melt move jump roll rest orbit reflect explore aim place-on inhale record protect rescue lift balance follow catch rotate pay heal infect multiply draw print sew grind spin speak hear kiss smell think slide run scratch dig twist blow sing carve rock knit crawl illuminate spray drill iron-clothes make-music'.split())
 
 
 def load(name):

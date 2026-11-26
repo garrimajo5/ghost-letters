@@ -174,7 +174,7 @@ orig_0172;crescent;ornament;metal hard religion;ring;yellow;islam
 orig_0173;frisbee;toy;plastic throw fly hard;flat;blue;beach
 orig_0174;puzzle-box;enclosure;metal play;box;yellow;secret
 orig_0175;angel;sculpture;glass fragile;humanoid;blue;religion:0.9
-orig_0176;helmet;mask;plastic hard ride;container;black;safety
+orig_0176;welding-mask;mask;plastic hard helmet welding work;container;black;safety
 orig_0177;stereo-glasses;eyewear;paper;pair;white;cinema:0.9
 orig_0178;power-bank;electric;metal hold-in-hand;box;black;travel
 orig_0179;beads;jewelry;stone;chain;white;beauty
@@ -426,7 +426,7 @@ orig_0424;fly-agaric;fungus;poison;handle-plus-head;red white;danger
 orig_0425;furry-handcuffs;locking;metal soft fur;pair ring;pink;intimacy
 orig_0426;volleyball;ball;rubber elastic throw hit;ball;white;friendship
 orig_0427;flamingo-ring;water-toy;bird inflatable;animal ring;pink;childhood:0.9 summer:0.5
-orig_0428;fan;electrical-tool;metal plastic cool blow;ring;white;summer
+orig_0428;electric-fan;electrical-tool;metal plastic cool blow;ring;white;summer
 orig_0429;backgammon;board-game;wood;box;brown;strategy
 orig_0430;portrait;picture;man;flat;brown;history
 orig_0431;sneaker;footwear;fabric sport;pair;green red;youth
@@ -535,9 +535,9 @@ orig_0533;music-stand;furniture;metal read music;flat;black;musician
 orig_0534;rocket;vehicle;metal fly space;stick;white;exploration
 orig_0535;ship;vehicle;wood float sea;container;white;pirate
 orig_0536;brain;body;soft think;ball;brown;intelligence
-orig_0537;tie;clothing;fabric tie;stick;red;formal
+orig_0537;necktie;clothing;fabric tie;stick;red;formal
 orig_0538;mummy;body;fabric dry lie-on;humanoid;white;death:0.9
-orig_0539;fly;insect;fly;animal;gray;illness
+orig_0539;housefly;insect;fly;animal;gray;illness
 orig_0540;sweater;clothing;wool cold;humanoid;red;winter
 orig_0541;bagel;sweet;hard;ring;brown;tea
 orig_0542;saddle;seat;leather ride horse;container;brown;cowboy
@@ -677,7 +677,7 @@ orig_0675;postage-stamp;signage;paper sticky;flat;white;communication:0.9
 orig_0676;paper-towel;cleaning;paper soft; cylinder;white;housework
 orig_0677;robot-vacuum;electrical-tool;plastic clean;flat;black;housework
 orig_0678;sushi;meal;soft fish;box;orange;japan
-orig_0679;orange;plant-food;soft liquid;ball;orange;vitamin
+orig_0679;orange-fruit;plant-food;soft liquid;ball;orange;vitamin
 orig_0680;stun-gun;hand-tool;plastic electric weapon;stick;black;self-defense
 orig_0681;saucepan;vessel;metal cook heat hot;container;red;cook-person
 orig_0682;pine;plant;wood forest sharp;stick;green;winter
